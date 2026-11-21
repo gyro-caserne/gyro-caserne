@@ -31,7 +31,7 @@
 			<div><dt>Participants</dt><dd>{p.participants.join(', ')}</dd></div>
 			<div><dt>Écarts signalés</dt><dd>{p.signalees.length ? pluriel(p.signalees.length, 'anomalie créée', 'anomalies créées') : 'Aucun'}</dd></div>
 			{#if p.retrouvees.length}<div><dt>Retrouvés</dt><dd>{pluriel(p.retrouvees.length, 'signalement clos', 'signalements clos')}</dd></div>{/if}
-			{#if p.traces.rouverte}<div><dt>Rouverte</dt><dd>{`Par ${p.traces.rouverte.par}, ${jourHeure(p.traces.rouverte.le)}. Motif : ${p.traces.rouverte.motif}`}</dd></div>{/if}
+			{#if p.traces.rouverte}<div><dt>Rouverte</dt><dd>{`Par ${p.traces.rouverte.par}, ${jourHeure(p.traces.rouverte.le)}. Motif : ${/[.!?…]$/.test(p.traces.rouverte.motif) ? p.traces.rouverte.motif : `${p.traces.rouverte.motif}.`}`}</dd></div>{/if}
 			{#if p.traces.participants}<div><dt>Participants modifiés</dt><dd>{`Par ${p.traces.participants.par}, ${jourHeure(p.traces.participants.le)}`}</dd></div>{/if}
 		</dl>
 	</section>

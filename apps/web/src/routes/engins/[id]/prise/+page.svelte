@@ -29,7 +29,9 @@
 	const propre = (ref: number) => data.propres.find((o) => o.ref === ref);
 	const rouverte = $derived(p?.traces.rouverte ?? null);
 	const nbEcarts = $derived(Object.keys(s?.ecarts ?? {}).filter((ref) => !propre(Number(ref))).length);
-	const nbAnnulees = $derived(data.propres.filter((o) => !o.suivie && o.ref !== null && !s?.ecarts[String(o.ref)]).length);
+	const nbAnnulees = $derived(data.propres.filter((o) => !o.close && !o.suivie && o.ref !== null && !s?.ecarts[String(o.ref)]).length);
+	// Un motif tapé sans point final en reçoit un.
+	const finDePhrase = (t: string) => (/[.!?…]$/.test(t) ? t : `${t}.`);
 	const nbRetrouves = $derived(s?.retrouves.length ?? 0);
 	const premiereAVoir = $derived(data.zones.find((z) => !vue(z.ref))?.ref);
 	const toutVu = $derived(vues === data.zones.length);
@@ -133,14 +135,14 @@
 </script>
 
 <svelte:head>
-	<title>Prise de garde · {e.nom} · Gyro Caserne</title>
+	<title>Prise de garde du {e.nom}, Gyro Caserne</title>
 </svelte:head>
 
 {#snippet message(cible: string)}
 	{#if pour(cible)?.message}<p class="echec" role="alert">{pour(cible)?.message}</p>{/if}
 {/snippet}
 
-{#snippet trace(quoi: string, t: { par: string; le: string; motif?: string })}{`${quoi} par ${t.par}, ${jourHeure(t.le)}.${t.motif ? ` Motif : ${t.motif}` : ''}`}{/snippet}
+{#snippet trace(quoi: string, t: { par: string; le: string; motif?: string })}{`${quoi} par ${t.par}, ${jourHeure(t.le)}.${t.motif ? ` Motif : ${finDePhrase(t.motif)}` : ''}`}{/snippet}
 
 {#snippet marque()}
 	<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>
@@ -186,7 +188,7 @@
 		{/if}
 	</section>
 
-	<div role="status" class="masque">{form?.succes ?? ''}</div>
+	<div role="status" class="masque">{form?.succes ?? (page.url.searchParams.has('rouverte') ? 'Prise rouverte.' : '')}</div>
 
 	{#if p?.etat === 'validee'}
 		{@const etat = etatPrise({ etat: 'validee', valideeLe: p.valideeLe, equipe: data.releve.equipe?.nom ?? null, par: p.modifieePar })}
@@ -207,7 +209,7 @@
 					<summary>Demander la réouverture</summary>
 					<form method="POST" action="?/demanderReouverture" use:enhance class="formulaire">
 						<input type="hidden" name="prise" value={p.id} />
-						<p>Le chef de garde de l’équipe d’astreinte est prévenu.</p>
+						<p>Un chef sera prévenu.</p>
 						<div class="champ">
 							<label for="motif-demande">Motif</label>
 							<textarea id="motif-demande" name="motif" maxlength="200" rows="2" required>{pour('demander')?.motif ?? ''}</textarea>
@@ -395,9 +397,9 @@
 										{/if}
 									</div>
 								{/if}
-								{#if propre(el.ref)?.suivie}
+								{#if propre(el.ref)?.suivie && !propre(el.ref)?.close}
 									{@const o = propre(el.ref)!}
-									<p class="doux">{o.suiviePar ? `Déjà suivie par ${o.suiviePar} : à clore par lui.` : 'Déjà suivie : à clore depuis son suivi.'} Changer ou retirer l’écart ne la modifie pas.</p>
+									<p class="doux">{o.suiviePar ? `Déjà suivie par ${o.suiviePar}, qui la clora.` : 'Déjà suivie, à clore depuis son suivi.'} Changer ou retirer l’écart ne la modifie pas.</p>
 								{/if}
 								{@render message(`element:${el.ref}`)}
 							</li>

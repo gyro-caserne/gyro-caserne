@@ -32,7 +32,7 @@ export type EquipeReleve = { id: number; nom: string; couleur: string };
 export type Releve = { debut: string; equipe: EquipeReleve | null };
 export type AnomalieVue = { id: number; ref: number | null; zone: string; libelle: string; genre: GenreEcart; manque: number | null; note: string | null; photo: number | null; signaleeLe: string; signaleePar: string; etape: EtapeAnomalie; motif: MotifAttente | null; bloquante: boolean };
 // Après la validation : qui a modifié les participants, rouvert la prise ou demandé sa réouverture (identifiants en base, noms à l'écran).
-export type TracesPrise = { participants?: { par: number; le: string }; rouverte?: { par: number; le: string; motif: string }; demande?: { par: number; le: string; motif: string } };
+export type TracesPrise = { participants?: { par: number; le: string }; rouverte?: { par: number; le: string; motif: string; valideeLe?: string }; demande?: { par: number; le: string; motif: string } };
 type Trace = { par: string; le: string };
 export type TracesVues = { participants: Trace | null; rouverte: (Trace & { motif: string }) | null; demande: (Trace & { motif: string }) | null };
 export type PriseVue = { id: number; etat: EtatPrise; commenceePar: string; commenceeLe: string; modifieePar: string; modifieeLe: string; valideeLe: string | null; saisie: Saisie; traces: TracesVues };
@@ -40,7 +40,7 @@ export type AgentPrise = { id: number; nom: string; astreinte: boolean };
 // Sur une prise validée de la relève en cours : modifier les participants, rouvrir, demander la réouverture.
 export type GestesValidee = { participants: boolean; rouvrir: boolean; demander: boolean };
 // Les anomalies encore ouvertes créées par cette prise (une prise rouverte) : `suivie`, quelqu'un s'en occupe déjà.
-export type AnomaliePropre = { id: number; ref: number | null; suivie: boolean; suiviePar: string | null };
+export type AnomaliePropre = { id: number; ref: number | null; suivie: boolean; suiviePar: string | null; close: boolean };
 export type VuePrise = { engin: EnginVu; releve: Releve; peutFaire: boolean; prise: PriseVue | null; zones: ZoneFiche[]; ouvertes: AnomalieVue[]; propres: AnomaliePropre[]; agents: AgentPrise[]; gestes: GestesValidee };
 
 export const LIMITES_PRISE = { note: 300, participants: 60, motif: 200 } as const;
@@ -106,7 +106,7 @@ const idsDesTraces = (t: TracesPrise) => [t.participants?.par, t.rouverte?.par, 
 function tracesVues(t: TracesPrise, nom: (id: number) => string): TracesVues {
 	return {
 		participants: t.participants ? { par: nom(t.participants.par), le: t.participants.le } : null,
-		rouverte: t.rouverte ? { ...t.rouverte, par: nom(t.rouverte.par) } : null,
+		rouverte: t.rouverte ? { par: nom(t.rouverte.par), le: t.rouverte.le, motif: t.rouverte.motif } : null,
 		demande: t.demande ? { ...t.demande, par: nom(t.demande.par) } : null
 	};
 }
@@ -172,17 +172,19 @@ const colonnesAnomalie = {
 };
 // Quelqu'un s'occupe déjà de l'anomalie : une étape, un preneur, un blocage ou une ligne d'historique.
 const suivieSql = sql<number>`(${anomalie.etape} <> 'signalee' OR ${anomalie.priseEnChargePar} IS NOT NULL OR ${anomalie.bloquante} = 1 OR EXISTS (SELECT 1 FROM ${anomalieSuivi} WHERE ${anomalieSuivi.anomalieId} = ${anomalie.id}))`;
-const ouvertesDe = (base: Base, enginId: number) =>
+// `dela` : la prise de la relève ; ses anomalies se lisent aussi closes (une prise rouverte ne les compte pas comme nouveaux écarts).
+const ouvertesDe = (base: Base, enginId: number, dela: SQL) =>
 	base
 		.select({
 			...colonnesAnomalie,
 			priseId: anomalie.priseId,
 			suivie: suivieSql.as('suivie'),
-			suiviePar: sql<string | null>`(SELECT p.prenom || ' ' || p.nom FROM ${personne} p WHERE p.id = ${anomalie.priseEnChargePar})`.as('suivie_par')
+			suiviePar: sql<string | null>`(SELECT p.prenom || ' ' || p.nom FROM ${personne} p WHERE p.id = ${anomalie.priseEnChargePar})`.as('suivie_par'),
+			close: sql<number>`${anomalie.closeLe} IS NOT NULL`.as('close')
 		})
 		.from(anomalie)
 		.innerJoin(personne, eq(personne.id, anomalie.signaleePar))
-		.where(and(eq(anomalie.enginId, enginId), isNull(anomalie.closeLe)))
+		.where(and(eq(anomalie.enginId, enginId), or(isNull(anomalie.closeLe), sql`${anomalie.priseId} = ${dela}`)))
 		.orderBy(asc(anomalie.id));
 const vueAnomalie = ({ prenom, nom, bloquante, ...a }: { prenom: string; nom: string; bloquante: number } & Omit<AnomalieVue, 'signaleePar' | 'bloquante'>): AnomalieVue => ({ ...a, bloquante: bloquante === 1, signaleePar: `${prenom} ${nom}` });
 
@@ -198,7 +200,7 @@ export async function lirePrise(base: Base, acteur: Acteur, enginId: number, mai
 	const [prises, zones, elements, ouvertes, annees, changees, equipes, agents, affectations, roles] = await base.batch([
 		base.select().from(priseGarde).where(laPrise),
 		...lecturesVersion(base, version),
-		ouvertesDe(base, enginId),
+		ouvertesDe(base, enginId, sql`(SELECT ${priseGarde.id} FROM ${priseGarde} WHERE ${laPrise})`),
 		...lecturesEquipe(base, releve),
 		base
 			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom })
@@ -224,17 +226,19 @@ export async function lirePrise(base: Base, acteur: Acteur, enginId: number, mai
 	const deLEquipe = validee && affectations.some((a) => a.personneId === moi && a.equipeId === p.equipeId && enCours(a.debut, a.fin, aujourdhui));
 	// Les anomalies ouvertes créées par cette prise sont ses propres écarts (une prise rouverte) : pas « déjà signalés ».
 	const propres = ouvertes.filter((o) => p !== undefined && o.priseId === p.id);
+	const peutFaire = e.situation !== 'parti' && (await peutFairePrise(base, acteur, aujourdhui));
 	return {
 		engin: e,
 		releve: { debut: releve, equipe: eq_ },
-		peutFaire: e.situation !== 'parti' && (await peutFairePrise(base, acteur, aujourdhui)),
+		peutFaire,
 		prise: p
 			? { id: p.id, etat: p.etat, commenceePar: nom(p.commenceePar), commenceeLe: p.commenceeLe, modifieePar: nom(p.modifieePar), modifieeLe: p.modifieeLe, valideeLe: p.valideeLe, saisie, traces: tracesVues(traces, nom) }
 			: null,
 		zones: zonesDe(zones, elements),
-		ouvertes: ouvertes.filter((o) => !propres.includes(o)).map(({ priseId: _, suivie: __, suiviePar: ___, ...o }) => vueAnomalie(o)),
-		propres: propres.map((o) => ({ id: o.id, ref: o.ref, suivie: o.suivie === 1, suiviePar: o.suiviePar })),
-		gestes: { participants: participant || chef, rouvrir: chef, demander: !chef && (participant || deLEquipe) },
+		ouvertes: ouvertes.filter((o) => !propres.includes(o) && o.close === 0).map(({ priseId: _, suivie: __, suiviePar: ___, close: ____, ...o }) => vueAnomalie(o)),
+		propres: propres.map((o) => ({ id: o.id, ref: o.ref, suivie: o.suivie === 1, suiviePar: o.suiviePar, close: o.close === 1 })),
+		// Rouvrir sans pouvoir faire la prise laisserait une prise que l'on ne peut pas corriger.
+		gestes: { participants: participant || chef, rouvrir: chef && peutFaire, demander: !chef && (participant || deLEquipe) },
 		agents: agents.map((a) => ({ id: a.id, nom: `${a.prenom} ${a.nom}`, astreinte: dAstreinte(a.id) })).sort((a, b) => Number(b.astreinte) - Number(a.astreinte))
 	};
 }
@@ -247,6 +251,15 @@ async function nomsDe(base: Base, ids: number[]): Promise<Map<number, string>> {
 
 // Une prise rouverte a déjà créé ses anomalies : elle ne s'abandonne pas et n'est jamais effacée.
 const pasRouverte = sql`json_extract(${priseGarde.traces}, '$.rouverte') IS NULL`;
+// Rouverte et pas revalidée avant la relève suivante : elle redevient validée, à la date de sa validation d'avant.
+const valideeAvant = sql<string | null>`json_extract(${priseGarde.traces}, '$.rouverte.valideeLe')`;
+const revaliderPassees = (base: Base, enginId: number, releve: string) =>
+	base
+		.update(priseGarde)
+		.set({ etat: 'validee', valideeLe: valideeAvant, compteur: sql`${priseGarde.compteur} + 1` })
+		.where(and(eq(priseGarde.enginId, enginId), eq(priseGarde.etat, 'en_cours'), ne(priseGarde.releve, releve), sql`${valideeAvant} IS NOT NULL`));
+// Validée, ou rouverte avec une validation d'avant : lisible dans l'historique et en prise faite, sans attendre la relève suivante.
+const faiteSql = sql`(${priseGarde.etat} = 'validee' OR ${valideeAvant} IS NOT NULL)`;
 
 // Commencer la prise d'un engin pour la relève en cours ; si un collègue l'a déjà commencée, c'est la sienne qu'on reprend.
 // La version de fiche suivie est marquée utilisée : la modifier en crée une nouvelle, la prise garde la sienne.
@@ -266,7 +279,8 @@ export async function commencerPrise(base: Base, basePhotos: BasePhotos, acteur:
 	if (!version?.id) throw new DonneeInvalide('Type inconnu');
 	const equipeId = equipeDe(releve, annees, changees, equipes, reglage)?.id ?? null;
 	const saisie: Saisie = { ...SAISIE_VIDE, participants: [moi] };
-	const [, , , [ligne]] = await base.batch([
+	const [, , , , [ligne]] = await base.batch([
+		revaliderPassees(base, enginId, releve),
 		base.delete(priseGarde).where(passes),
 		base
 			.insert(priseGarde)
@@ -452,14 +466,14 @@ export async function validerPrise(base: Base, acteur: Acteur, id: number, maint
 		...avisAnomalies(
 			base,
 			traitent,
-			{ titre: `Prise de garde · ${b.nomEngin}`, texte: `${nouvelles.length} ${nouvelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${nouvelles.map((e) => e.libelle).join(', ')}`, url: `/engins/anomalies?engin=${enginId}` },
+			{ titre: `Prise de garde du ${b.nomEngin}`, texte: `${nouvelles.length} ${nouvelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${nouvelles.map((e) => e.libelle).join(', ')}`, url: `/engins/anomalies?engin=${enginId}` },
 			maintenant,
 			validee
 		),
 		...b.ouvertes
 			.filter((o) => saisie.retrouves.includes(o.id))
 			// Seulement si c'est bien cette prise qui l'a close (un collègue a pu la clore entre-temps).
-			.flatMap((o) => avisAnomalies(base, [...new Set([o.signaleePar, o.priseEnChargePar])].filter((x): x is number => x !== null && x !== moi), { titre: `${b.nomEngin} · ${o.libelle}`, texte: `Retrouvée à la prise de garde par ${qui}`, url: `/engins/anomalies/${o.id}` }, maintenant, sql`${validee} AND EXISTS (SELECT 1 FROM ${anomalie} WHERE ${anomalie.id} = ${o.id} AND ${anomalie.closePriseId} = ${id})`))
+			.flatMap((o) => avisAnomalies(base, [...new Set([o.signaleePar, o.priseEnChargePar])].filter((x): x is number => x !== null && x !== moi), { titre: `${b.nomEngin}, ${o.libelle}`, texte: `Retrouvée à la prise de garde par ${qui}`, url: `/engins/anomalies/${o.id}` }, maintenant, sql`${validee} AND EXISTS (SELECT 1 FROM ${anomalie} WHERE ${anomalie.id} = ${o.id} AND ${anomalie.closePriseId} = ${id})`))
 	];
 	const [ecrit] = await base.batch([
 		base
@@ -493,7 +507,7 @@ export async function validerPrise(base: Base, acteur: Acteur, id: number, maint
 						.where(and(libre, sql`${anomalie.ref} NOT IN ${refs}`, validee)),
 					instruction(
 						base,
-						sql`INSERT INTO ${anomalieSuivi} (anomalie_id, quoi, texte, par, le) SELECT ${anomalie.id}, 'close', ${'Annulée : l’écart a été retiré de la prise de garde'}, ${moi}, ${maintenant}
+						sql`INSERT INTO ${anomalieSuivi} (anomalie_id, quoi, texte, par, le) SELECT ${anomalie.id}, 'close', ${'Annulée, écart retiré de la prise de garde'}, ${moi}, ${maintenant}
 							FROM ${anomalie} WHERE ${anomalie.id} IN (SELECT value FROM json_each(${JSON.stringify(b.propres.map((o) => o.id))})) AND ${anomalie.priseId} IS NULL AND ${anomalie.closeLe} = ${maintenant}
 							AND NOT EXISTS (SELECT 1 FROM ${anomalieSuivi} s WHERE s.anomalie_id = ${anomalie.id})`
 					)
@@ -564,9 +578,11 @@ export async function modifierParticipantsPrise(base: Base, acteur: Acteur, id: 
 export async function rouvrirPrise(base: Base, acteur: Acteur, id: number, motif: string, maintenant: string, reglage: Reglage, enginId?: number): Promise<void> {
 	const v = await lireValidee(base, acteur, id, maintenant, reglage, enginId);
 	if (!v.chef) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé au chef de garde, au chef de centre et à l’adjoint');
+	// Sinon il rouvrirait une prise qu'il ne pourrait pas corriger.
+	if (!(await peutFairePrise(base, acteur, maintenant.slice(0, 10)))) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé à qui fait la prise de garde');
 	const texte = motifDe(motif);
 	const { demande: _, ...traces } = v.traces;
-	await ecrireValidee(base, v, { traces: { ...traces, rouverte: { par: v.moi, le: maintenant, motif: texte } }, rouvrir: true }, maintenant, (si) => [journalPrise(base, v, 'rouvrir_prise', maintenant, si, { motif: texte })]);
+	await ecrireValidee(base, v, { traces: { ...traces, rouverte: { par: v.moi, le: maintenant, motif: texte, valideeLe: v.prise.valideeLe ?? undefined } }, rouvrir: true }, maintenant, (si) => [journalPrise(base, v, 'rouvrir_prise', maintenant, si, { motif: texte })]);
 }
 
 // Demander la réouverture (un participant ou un agent de l'équipe d'astreinte), avec un motif : à la cloche du chef de garde de l'équipe,
@@ -579,7 +595,7 @@ export async function demanderReouverture(base: Base, acteur: Acteur, id: number
 	const prevenus = deGarde.length ? deGarde : v.chefs.filter((c) => c.systeme !== 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
 	if (prevenus.length === 0) throw new DonneeInvalide('Aucun chef à prévenir');
 	const qui = v.noms.get(v.moi) ?? 'Un agent';
-	const avis = { titre: `Prise de garde : ${v.nomEngin}`, texte: `${qui} demande la réouverture : ${texte}`, url: `/engins/${v.prise.enginId}/prise` };
+	const avis = { titre: `Réouverture demandée par ${qui}`, texte: `${v.nomEngin}. Motif : ${texte}`, url: `/engins/${v.prise.enginId}/prise` };
 	await ecrireValidee(base, v, { traces: { ...v.traces, demande: { par: v.moi, le: maintenant, motif: texte } } }, maintenant, (si) => [...avisAnomalies(base, [...new Set(prevenus)], avis, maintenant, si)]);
 }
 
@@ -647,7 +663,7 @@ export async function historiquePrises(base: Base, enginId: number): Promise<Pri
 		.select({
 			id: priseGarde.id,
 			releve: priseGarde.releve,
-			valideeLe: priseGarde.valideeLe,
+			valideeLe: sql<string>`coalesce(${priseGarde.valideeLe}, ${valideeAvant})`.as('validee_le'),
 			equipe: equipe.nom,
 			prenom: personne.prenom,
 			nom: personne.nom,
@@ -657,10 +673,10 @@ export async function historiquePrises(base: Base, enginId: number): Promise<Pri
 		.from(priseGarde)
 		.innerJoin(personne, eq(personne.id, priseGarde.modifieePar))
 		.leftJoin(equipe, eq(equipe.id, priseGarde.equipeId))
-		.where(and(eq(priseGarde.enginId, enginId), eq(priseGarde.etat, 'validee')))
+		.where(and(eq(priseGarde.enginId, enginId), faiteSql))
 		.orderBy(desc(priseGarde.releve))
 		.limit(20);
-	return lignes.map(({ prenom, nom, ...l }) => ({ ...l, valideeLe: l.valideeLe!, par: `${prenom} ${nom}` }));
+	return lignes.map(({ prenom, nom, ...l }) => ({ ...l, par: `${prenom} ${nom}` }));
 }
 
 export type PriseFaite = {
@@ -668,6 +684,8 @@ export type PriseFaite = {
 	engin: EnginVu;
 	releve: string;
 	valideeLe: string;
+	// Rouverte, pas encore revalidée : pendant sa relève, la page renvoie à la prise en cours.
+	enCours: boolean;
 	equipe: string | null;
 	participants: string[];
 	zones: ZoneFiche[];
@@ -679,11 +697,12 @@ export type PriseFaite = {
 
 // Une prise validée, telle qu'elle a été faite : la fiche de son époque, les écarts signalés et les anomalies retrouvées.
 export async function lirePriseFaite(base: Base, acteur: Acteur, id: number): Promise<PriseFaite> {
-	const [p] = await base.select().from(priseGarde).where(and(eq(priseGarde.id, id), eq(priseGarde.etat, 'validee')));
+	const [p] = await base.select().from(priseGarde).where(and(eq(priseGarde.id, id), faiteSql));
 	if (!p) throw new DonneeInvalide('Prise inconnue');
-	const { engin: e } = await lireEngin(base, acteur, p.enginId, p.valideeLe!.slice(0, 10));
-	const saisie = lireSaisie(p.saisie);
 	const traces = lireTraces(p.traces);
+	const valideeLe = p.valideeLe ?? traces.rouverte!.valideeLe!;
+	const { engin: e } = await lireEngin(base, acteur, p.enginId, valideeLe.slice(0, 10));
+	const saisie = lireSaisie(p.saisie);
 	const ids = [...saisie.participants, ...idsDesTraces(traces)];
 	const [zones, elements, liees, [eq_], gens] = await base.batch([
 		...lecturesVersion(base, sql<number>`${p.versionId}`),
@@ -698,7 +717,8 @@ export async function lirePriseFaite(base: Base, acteur: Acteur, id: number): Pr
 		id,
 		engin: e,
 		releve: p.releve,
-		valideeLe: p.valideeLe!,
+		valideeLe,
+		enCours: p.etat === 'en_cours',
 		equipe: eq_?.nom ?? null,
 		participants: saisie.participants.map((pid) => nomComplet(gens.find((g) => g.id === pid))),
 		zones: zonesDe(zones, elements),

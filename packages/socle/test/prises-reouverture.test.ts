@@ -92,13 +92,14 @@ describe('réouverture', () => {
 		const [p] = await j.base.select().from(priseGarde).where(eq(priseGarde.id, j.id));
 		expect(p).toMatchObject({ etat: 'en_cours', valideeLe: null });
 		expect(JSON.parse(p!.saisie).zones).toHaveLength(j.fiche.zones.length);
-		expect(await tracesDe(j)).toEqual({ rouverte: { par: idDe(j.chefDeGarde), le: APRES, motif: 'Écart oublié sur la radio' } });
+		// La date de la première validation est gardée : la prise reste dans l'historique.
+		expect(await tracesDe(j)).toEqual({ rouverte: { par: idDe(j.chefDeGarde), le: APRES, motif: 'Écart oublié sur la radio', valideeLe: PENDANT } });
 		const vue = await lirePrise(j.base, j.alice, j.vsav, APRES, reglage);
 		expect(vue.prise!.traces.rouverte).toEqual({ par: 'Chloé Fictif', le: APRES, motif: 'Écart oublié sur la radio' });
 		expect((await j.base.select().from(journal).where(eq(journal.action, 'rouvrir_prise')))[0]).toMatchObject({ cibleType: 'engin', cibleId: j.vsav });
 		expect((await suiviDuCentre(j.base, j.chefCentre, '2026-10-30')).lignes[0]).toMatchObject({ qui: 'Chloé Fictif', phrase: 'a rouvert la prise de garde : VSAV 1' });
-		// Rouverte, elle n'est plus dans l'historique jusqu'à la nouvelle validation ; on ne l'abandonne pas.
-		expect(await historiquePrises(j.base, j.vsav)).toEqual([]);
+		// Rouverte, elle reste dans l'historique avec sa première validation ; on ne l'abandonne pas.
+		expect(await historiquePrises(j.base, j.vsav)).toMatchObject([{ id: j.id, valideeLe: PENDANT }]);
 		await expect(abandonnerPrise(j.base, j.base.photos, j.alice, j.id, APRES)).rejects.toThrow('Prise inconnue');
 		await expect(rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Encore', APRES, reglage)).rejects.toThrow('Prise pas encore validée');
 	});
@@ -121,7 +122,7 @@ describe('réouverture', () => {
 		// L'écart de la première validation n'est pas « déjà signalé » : il est à la prise.
 		const vue = await lirePrise(j.base, j.alice, j.vsav, APRES, reglage);
 		expect(vue.ouvertes).toEqual([]);
-		expect(vue.propres).toEqual([{ id: premiere!.id, ref: j.gilets.ref, suiviePar: null, suivie: false }]);
+		expect(vue.propres).toEqual([{ id: premiere!.id, ref: j.gilets.ref, suiviePar: null, suivie: false, close: false }]);
 		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'ecart', element: j.gilets.ref, genre: 'manquant', manque: 2, note: 'Deux' }, APRES, reglage);
 		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'ecart', element: j.radio.ref, genre: 'abime', manque: null, note: '' }, APRES, reglage);
 		await validerPrise(j.base, j.chefDeGarde, j.id, '2026-10-30T20:10', reglage);
@@ -145,13 +146,13 @@ describe('réouverture', () => {
 		await gesteAnomalie(j.base, j.referent, radio.id, { quoi: 'prendre' }, APRES, REGLAGE_ANOMALIES);
 		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Tout retrouvé', '2026-10-30T21:00', reglage);
 		const vue = await lirePrise(j.base, j.alice, j.vsav, '2026-10-30T21:00', reglage);
-		expect(vue.propres.find((p) => p.id === radio.id)).toEqual({ id: radio.id, ref: j.radio.ref, suiviePar: 'Rémi Fictif', suivie: true });
+		expect(vue.propres.find((p) => p.id === radio.id)).toEqual({ id: radio.id, ref: j.radio.ref, suiviePar: 'Rémi Fictif', suivie: true, close: false });
 		for (const element of [j.gilets.ref, j.radio.ref]) await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'retirer_ecart', element }, '2026-10-30T21:00', reglage);
 		await validerPrise(j.base, j.alice, j.id, '2026-10-30T21:05', reglage);
 		const lignes = await j.base.select().from(anomalie).orderBy(anomalie.id);
 		expect(lignes.find((l) => l.id === gilets!.id)).toMatchObject({ closeLe: '2026-10-30T21:05', closePar: idDe(j.alice), priseId: null });
 		expect(lignes.find((l) => l.id === radio.id)).toMatchObject({ closeLe: null, priseId: j.id });
-		expect(await j.base.select({ quoi: anomalieSuivi.quoi, texte: anomalieSuivi.texte }).from(anomalieSuivi).where(eq(anomalieSuivi.anomalieId, gilets!.id))).toEqual([{ quoi: 'close', texte: 'Annulée : l’écart a été retiré de la prise de garde' }]);
+		expect(await j.base.select({ quoi: anomalieSuivi.quoi, texte: anomalieSuivi.texte }).from(anomalieSuivi).where(eq(anomalieSuivi.anomalieId, gilets!.id))).toEqual([{ quoi: 'close', texte: 'Annulée, écart retiré de la prise de garde' }]);
 		expect((await historiquePrises(j.base, j.vsav))[0]).toMatchObject({ id: j.id, signalees: 1 });
 	});
 });
@@ -161,11 +162,11 @@ describe('demande de réouverture', () => {
 		const j = await preparer();
 		await demanderReouverture(j.base, j.alice, j.id, 'J’ai oublié la radio', APRES, reglage, j.vsav);
 		const avis = await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`));
-		expect(avis).toMatchObject([{ personneId: idDe(j.chefDeGarde), titre: 'Prise de garde : VSAV 1', texte: 'Alice Fictif demande la réouverture : J’ai oublié la radio', url: `/engins/${j.vsav}/prise` }]);
+		expect(avis).toMatchObject([{ personneId: idDe(j.chefDeGarde), titre: 'Réouverture demandée par Alice Fictif', texte: 'VSAV 1. Motif : J’ai oublié la radio', url: `/engins/${j.vsav}/prise` }]);
 		expect(await tracesDe(j)).toEqual({ demande: { par: idDe(j.alice), le: APRES, motif: 'J’ai oublié la radio' } });
 		// La réouverture efface la demande et garde sa propre trace.
 		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Radio', APRES, reglage);
-		expect(await tracesDe(j)).toEqual({ rouverte: { par: idDe(j.chefDeGarde), le: APRES, motif: 'Radio' } });
+		expect(await tracesDe(j)).toEqual({ rouverte: { par: idDe(j.chefDeGarde), le: APRES, motif: 'Radio', valideeLe: PENDANT } });
 	});
 
 	it('sans chef de garde en fonction : au chef de centre et à l’adjoint ; refusée à qui n’est ni participant ni d’astreinte', async () => {
@@ -176,6 +177,67 @@ describe('demande de réouverture', () => {
 		await expect(demanderReouverture(j.base, j.alice, j.id, 'Oubli', SUIVANTE, reglage)).rejects.toThrow('Relève passée');
 		await demanderReouverture(j.base, j.alice, j.id, 'Oubli', APRES, reglage);
 		expect((await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`))).map((a) => a.personneId)).toEqual([j.chefCentre.id]);
+	});
+});
+
+const jpeg = () => ({ type: 'image/jpeg' as const, donnees: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]) });
+const avisVers = async (j: Awaited<ReturnType<typeof preparer>>, url: string) => j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, url));
+
+describe('les anomalies à la nouvelle validation', () => {
+	it('une anomalie de la prise déjà close : marquée close, jamais recréée', async () => {
+		const j = await preparer();
+		const [gilets] = await j.base.select().from(anomalie);
+		await gesteAnomalie(j.base, j.referent, gilets!.id, { quoi: 'clore', texte: 'Remplacés' }, APRES, REGLAGE_ANOMALIES);
+		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Oubli', APRES, reglage);
+		expect((await lirePrise(j.base, j.alice, j.vsav, APRES, reglage)).propres).toEqual([{ id: gilets!.id, ref: j.gilets.ref, suiviePar: null, suivie: true, close: true }]);
+		await validerPrise(j.base, j.alice, j.id, APRES, reglage);
+		expect(await j.base.select().from(anomalie)).toHaveLength(1);
+	});
+
+	it('un écart modifié sur une anomalie déjà suivie : elle ne change pas', async () => {
+		const j = await preparer();
+		const [gilets] = await j.base.select().from(anomalie);
+		await gesteAnomalie(j.base, j.referent, gilets!.id, { quoi: 'prendre' }, APRES, REGLAGE_ANOMALIES);
+		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Oubli', APRES, reglage);
+		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'ecart', element: j.gilets.ref, genre: 'a_remplacer', manque: null, note: 'Autre', photo: jpeg() }, APRES, reglage);
+		await validerPrise(j.base, j.alice, j.id, APRES, reglage);
+		expect((await j.base.select().from(anomalie))[0]).toMatchObject({ genre: 'manquant', manque: 1, note: null, photoId: null });
+	});
+
+	it('la photo d’une anomalie que personne ne suit : remplacée par celle de l’écart', async () => {
+		const j = await preparer();
+		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Photo', APRES, reglage);
+		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'ecart', element: j.gilets.ref, genre: 'manquant', manque: 1, note: '', photo: jpeg() }, APRES, reglage);
+		await validerPrise(j.base, j.alice, j.id, APRES, reglage);
+		const [photo] = await j.base.photos.select().from(octets);
+		expect((await j.base.select().from(anomalie))[0]!.photoId).toBe(photo!.id);
+	});
+
+	it('l’anomalie ouverte d’une prise précédente reste intacte', async () => {
+		const j = await preparer();
+		const [ancienne] = await j.base
+			.insert(anomalie)
+			.values({ enginId: j.vsav, ref: j.radio.ref, zone: 'Cabine', libelle: j.radio.libelle, genre: 'abime', signaleePar: idDe(j.referent), signaleeLe: '2026-10-20T10:00' })
+			.returning();
+		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Oubli', APRES, reglage);
+		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'retirer_ecart', element: j.gilets.ref }, APRES, reglage);
+		await validerPrise(j.base, j.alice, j.id, APRES, reglage);
+		expect((await j.base.select().from(anomalie).where(eq(anomalie.id, ancienne!.id)))[0]).toEqual(ancienne);
+	});
+
+	it('un élément retrouvé, puis la réouverture : pas de seconde cloche', async () => {
+		const j = await preparer();
+		const [ancienne] = await j.base
+			.insert(anomalie)
+			.values({ enginId: j.vsav, ref: j.radio.ref, zone: 'Cabine', libelle: j.radio.libelle, genre: 'abime', signaleePar: idDe(j.referent), signaleeLe: '2026-10-20T10:00' })
+			.returning();
+		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Radio', APRES, reglage);
+		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'retrouve', anomalie: ancienne!.id, oui: true }, APRES, reglage);
+		await validerPrise(j.base, j.alice, j.id, APRES, reglage);
+		expect(await avisVers(j, `/engins/anomalies/${ancienne!.id}`)).toHaveLength(1);
+		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Encore', '2026-10-30T21:00', reglage);
+		await validerPrise(j.base, j.alice, j.id, '2026-10-30T21:05', reglage);
+		expect(await avisVers(j, `/engins/anomalies/${ancienne!.id}`)).toHaveLength(1);
 	});
 });
 
@@ -201,15 +263,45 @@ describe('garde-fous', () => {
 		await expect(demanderReouverture(j.base, j.alice, j.id, 'Oubli', APRES, reglage)).rejects.toThrow('Aucun chef à prévenir');
 	});
 
-	it('rouverte, ses photos restent (celles de ses anomalies) ; elle n’est pas effacée comme un brouillon passé', async () => {
+	it('rouverte, ses photos restent (celles de ses anomalies)', async () => {
 		const j = await preparer();
-		const jpeg = { type: 'image/jpeg' as const, donnees: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]) };
 		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Photo', APRES, reglage);
-		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'ecart', element: j.radio.ref, genre: 'abime', manque: null, note: '', photo: jpeg }, APRES, reglage);
+		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'ecart', element: j.radio.ref, genre: 'abime', manque: null, note: '', photo: jpeg() }, APRES, reglage);
 		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'retirer_ecart', element: j.radio.ref }, APRES, reglage);
 		expect(await j.base.photos.select().from(octets)).toHaveLength(1);
+	});
+
+	it('rouverte puis relève suivante sans nouvelle validation : elle revient validée, avec sa première date', async () => {
+		const j = await preparer();
+		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Oubli', APRES, reglage);
+		// Avant toute prise de la relève suivante : l'historique et la prise faite la lisent déjà validée.
+		expect(await historiquePrises(j.base, j.vsav)).toMatchObject([{ id: j.id, valideeLe: PENDANT }]);
+		expect(await lirePriseFaite(j.base, j.alice, j.id)).toMatchObject({ valideeLe: PENDANT, enCours: true, releve: '2026-10-30T18:00' });
 		await commencerPrise(j.base, j.base.photos, j.alice, j.vsav, '2026-11-06T18:10', reglage);
-		expect((await j.base.select().from(priseGarde).where(eq(priseGarde.id, j.id)))[0]).toMatchObject({ etat: 'en_cours' });
+		expect((await j.base.select().from(priseGarde).where(eq(priseGarde.id, j.id)))[0]).toMatchObject({ etat: 'validee', valideeLe: PENDANT });
+		expect(await lirePriseFaite(j.base, j.alice, j.id)).toMatchObject({ valideeLe: PENDANT, enCours: false });
+	});
+
+	it('deux chefs rouvrent en même temps : un seul y parvient, une seule ligne de journal', async () => {
+		const j = await preparer();
+		const batch = j.base.batch.bind(j.base);
+		const espion = vi.spyOn(j.base, 'batch');
+		espion.mockImplementationOnce(batch as never).mockImplementationOnce((async (q: Parameters<typeof batch>[0]) => {
+			const r = await batch(q);
+			await rouvrirPrise(j.base, j.chefCentre, j.id, 'Par Claire', APRES, reglage);
+			return r;
+		}) as never);
+		await expect(rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Par Chloé', APRES, reglage)).rejects.toThrow('Prise changée entre-temps');
+		espion.mockRestore();
+		expect(await tracesDe(j)).toMatchObject({ rouverte: { motif: 'Par Claire' } });
+		expect(await j.base.select().from(journal).where(eq(journal.action, 'rouvrir_prise'))).toHaveLength(1);
+	});
+
+	it('rouvrir demande aussi de pouvoir faire la prise : sinon on rouvrirait sans pouvoir corriger', async () => {
+		const j = await preparer();
+		await j.base.update(personne).set({ profilId: null }).where(eq(personne.id, j.chefCentre.id));
+		await expect(rouvrirPrise(j.base, j.chefCentre, j.id, 'Oubli', APRES, reglage)).rejects.toThrow(RefusDroit);
+		expect((await lirePrise(j.base, j.chefCentre, j.vsav, APRES, reglage)).gestes).toEqual({ participants: true, rouvrir: false, demander: false });
 	});
 
 	it('l’adjoint du chef de centre rouvre aussi', async () => {

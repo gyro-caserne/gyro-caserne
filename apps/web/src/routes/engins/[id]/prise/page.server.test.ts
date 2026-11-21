@@ -110,7 +110,7 @@ describe('/engins/[id]/prise', () => {
 
 		expect(await agir('demanderReouverture', moi, vsav, [['prise', id], ['motif', '']])).toMatchObject({ status: 400, data: { cible: 'demander', message: 'Dites en quelques mots pourquoi.' } });
 		expect(await agir('demanderReouverture', moi, vsav, [['prise', id], ['motif', 'Radio oubliée']])).toMatchObject({ cible: 'demander', succes: 'Demande envoyée.' });
-		expect(await base.select({ texte: avisAnomalie.texte }).from(avisAnomalie)).toContainEqual({ texte: 'Alice Test demande la réouverture : Radio oubliée' });
+		expect(await base.select({ titre: avisAnomalie.titre, texte: avisAnomalie.texte }).from(avisAnomalie)).toContainEqual({ titre: 'Réouverture demandée par Alice Test', texte: 'VSAV 1. Motif : Radio oubliée' });
 
 		// Un agent ne rouvre pas ; le chef confirme et dit pourquoi.
 		expect(await agir('rouvrir', moi, vsav, [['prise', id], ['motif', 'Radio'], ['confirmation', 'oui']])).toMatchObject({ status: 403, data: { message: 'Seuls le chef de garde de l’équipe d’astreinte, le chef de centre et l’adjoint rouvrent une prise.' } });
@@ -119,8 +119,10 @@ describe('/engins/[id]/prise', () => {
 		const rouverte = await charger(moi, vsav);
 		expect(rouverte.prise).toMatchObject({ etat: 'en_cours', traces: { rouverte: { par: 'Chloe Test', motif: 'Radio' }, demande: null } });
 		expect((await base.select({ action: journal.action }).from(journal)).map((l) => l.action)).toEqual(expect.arrayContaining(['modifier_participants_prise', 'rouvrir_prise']));
-		// Rouverte : elle ne s'abandonne pas.
+		// Rouverte : elle ne s'abandonne pas ; sa page de prise faite renvoie à la prise en cours.
 		expect(await agir('abandonner', moi, vsav, [['prise', id]])).toMatchObject({ status: 400 });
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		await expect((chargerFaite as any)({ locals: moi, params: { id: String(vsav), prise: id } })).rejects.toMatchObject({ status: 303, location: `/engins/${vsav}/prise` });
 	});
 
 	it('un geste inconnu ou une photo trop lourde : refusés avec un message', async () => {

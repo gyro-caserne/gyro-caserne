@@ -31,6 +31,8 @@ const data = (saisie: Record<string, unknown> = {}) => ({
 });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const html = (d: unknown, form: unknown = null) => render(Page as any, { props: { data: d, form } }).body;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tete = (d: unknown) => render(Page as any, { props: { data: d, form: null } }).head;
 
 const zonesLongues = [
 	{ ref: 1, nom: 'Cabine', elements: [{ ref: 10, libelle: 'Radio : essai', quantite: null }] },
@@ -261,7 +263,7 @@ describe('/engins/[id]/prise', () => {
 			adresse.url = new URL('http://x/engins/1/prise');
 			const page = html(validee({ participants: true, demander: true }));
 			expect(page).toMatch(/<div class="bande[^"]*">[\s\S]*?href="\?participants"[\s\S]*?Participants :<\/span> <strong>vous \+ 2<\/strong>[\s\S]*?Modifier/);
-			expect(page).toContain('Le chef de garde de l’équipe d’astreinte est prévenu.');
+			expect(page).toContain('Un chef sera prévenu.');
 			expect(page).not.toContain('lui seul');
 			expect(page).toMatch(/<details class="plus[^"]*"[^>]*><summary[^>]*>Demander la réouverture<\/summary>[\s\S]*?action="\?\/demanderReouverture"[\s\S]*?name="motif"[\s\S]*?Envoyer la demande/);
 			expect(page).not.toContain('?/rouvrir');
@@ -296,9 +298,9 @@ describe('/engins/[id]/prise', () => {
 		it('la trace : participants modifiés, réouverture et demande, qui, quand, pourquoi', () => {
 			adresse.url = new URL('http://x/engins/1/prise');
 			const page = html(validee({}, { participants: { par: 'Mila Clément', le: '2026-10-30T20:00' }, rouverte: { par: 'Élodie Chef-de-Garde', le: '2026-10-30T19:30', motif: 'Radio oubliée' }, demande: { par: 'Adam Fournier', le: '2026-10-30T20:05', motif: 'Lances' } }));
-			expect(page).toContain('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30. Motif : Radio oubliée');
+			expect(page).toContain('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30. Motif : Radio oubliée.');
 			expect(page).toContain('Participants modifiés par Mila Clément, ven. 20 h.');
-			expect(page).toContain('Réouverture demandée par Adam Fournier, ven. 20 h 05. Motif : Lances');
+			expect(page).toContain('Réouverture demandée par Adam Fournier, ven. 20 h 05. Motif : Lances.');
 			expect(page).not.toContain('[object Object]');
 		});
 	});
@@ -312,7 +314,7 @@ describe('/engins/[id]/prise', () => {
 		it('la trace en tête ; les écarts se modifient ; pas d’abandon', () => {
 			adresse.url = new URL('http://x/engins/1/prise?zone=1');
 			const page = html(rouverte([{ id: 4, ref: 10, suivie: false, suiviePar: null }]));
-			expect(avant('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30. Motif : Radio oubliée', 'Zones de l’engin', page)).toBe(true);
+			expect(avant('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30. Motif : Radio oubliée.', 'Zones de l’engin', page)).toBe(true);
 			expect(page).toMatch(/<summary[^>]*>Modifier<span class="masque[^"]*"> : Radio : essai/);
 			expect(page).toContain('Retirer l’écart');
 			expect(page).not.toContain('Abandonner la prise');
@@ -321,8 +323,8 @@ describe('/engins/[id]/prise', () => {
 
 		it('un écart dont l’anomalie est déjà suivie : l’écran prévient qui la close', () => {
 			adresse.url = new URL('http://x/engins/1/prise?zone=1');
-			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: 'Rémi Fictif' }]))).toContain('Déjà suivie par Rémi Fictif : à clore par lui. Changer ou retirer l’écart ne la modifie pas.');
-			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: null }]))).toContain('Déjà suivie : à clore depuis son suivi. Changer ou retirer l’écart ne la modifie pas.');
+			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: 'Rémi Fictif' }]))).toContain('Déjà suivie par Rémi Fictif, qui la clora. Changer ou retirer l’écart ne la modifie pas.');
+			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: null }]))).toContain('Déjà suivie, à clore depuis son suivi. Changer ou retirer l’écart ne la modifie pas.');
 		});
 
 		it('à la validation : les anomalies sans suivi annulées, au pluriel juste', () => {
@@ -332,6 +334,27 @@ describe('/engins/[id]/prise', () => {
 			expect(page).toContain('2 anomalies sans suivi seront annulées, leur écart retiré.');
 			expect(page).toContain('1 nouvel écart deviendra une anomalie suivie.');
 		});
+
+		it('une anomalie de la prise déjà close : ni nouvel écart, ni annulation, ni avertissement', () => {
+			adresse.url = new URL('http://x/engins/1/prise?zone=1');
+			const d = rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: null, close: true }]);
+			const page = html({ ...d, prise: { ...d.prise, saisie: { ...d.prise.saisie, zones: [1, 2] } } });
+			expect(page).toContain('Aucun nouvel écart.');
+			expect(page).not.toContain('sera annulée');
+			expect(page).not.toContain('Déjà suivie');
+		});
+
+		it('après « Rouvrir la prise » : annoncé aux lecteurs d’écran', () => {
+			adresse.url = new URL('http://x/engins/1/prise?rouverte');
+			expect(html(rouverte())).toMatch(/<div role="status" class="masque[^"]*">Prise rouverte\.<\/div>/);
+			adresse.url = new URL('http://x/engins/1/prise');
+			expect(html(rouverte())).toMatch(/<div role="status" class="masque[^"]*"><\/div>/);
+		});
+	});
+
+	it('le titre de l’onglet, sans point médian', () => {
+		adresse.url = new URL('http://x/engins/1/prise');
+		expect(tete(data())).toContain('<title>Prise de garde du FPT, Gyro Caserne</title>');
 	});
 
 	it('les photos d’écart, signalé ou noté pendant la prise, s’ouvrent en grand dans la visionneuse', () => {
