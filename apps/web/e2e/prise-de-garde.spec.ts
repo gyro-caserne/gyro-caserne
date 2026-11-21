@@ -130,10 +130,11 @@ test.describe('prise validée', () => {
 		await page.waitForLoadState('networkidle');
 		const complet = page.getByRole('button', { name: /^Tout est complet/ });
 		const valider = page.getByRole('button', { name: 'Valider la prise', exact: true });
-		// Une zone à la fois, jusqu'à ce que « Valider la prise » soit actif (le bouton « Tout est complet » reste affiché pour revoir une zone).
-		for (let i = 0; i < 30 && (await valider.getAttribute('aria-disabled')) === 'true'; i++) {
+		// Une zone à la fois : après chaque geste, on attend que le compteur de la plaque l'ait pris en compte.
+		const nombre = await page.getByRole('navigation', { name: 'Zones de l’engin' }).getByRole('link').count();
+		for (let i = 0; i < nombre; i++) {
 			await complet.click();
-			await page.waitForLoadState('networkidle');
+			await expect(page.locator('.compteur')).toContainText(`${i + 1} / sur ${nombre}`);
 		}
 		await expect(valider).not.toHaveAttribute('aria-disabled');
 		await valider.click();
