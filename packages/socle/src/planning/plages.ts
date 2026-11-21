@@ -1,7 +1,8 @@
-import { and, eq, gte, isNotNull, lte } from 'drizzle-orm';
+import { and, asc, eq, gte, isNotNull, lte } from 'drizzle-orm';
 import type { Base } from '../base.ts';
-import { reunir } from '../remplacements/tranches.ts';
-import { ete, plageEte } from '../schema.ts';
+import { reunir, soustraire } from '../remplacements/tranches.ts';
+import { ajouterJours } from '../dates.ts';
+import { ete, feteCentre, plageEte } from '../schema.ts';
 import type { Periode, SemaineCalculee } from './calendrier.ts';
 
 // Les plages de l'été publié et les vacances des agents : ce que le planning, l'agenda et les remplacements en retiennent.
@@ -18,11 +19,27 @@ export function requetePlagesPubliees(base: Base, du: string, au: string) {
 		.where(and(isNotNull(ete.publieeLe), gte(plageEte.debut, du), lte(plageEte.debut, `${au}T23:59`)));
 }
 
+// Les fêtes qui touchent ces jours (une fête dure 24 h au plus : elle commence au plus tard la veille). Quelques lignes, à placer
+// dans le batch qui lit déjà l'astreinte.
+export function requeteFetes(base: Base, du: string, au: string) {
+	return base
+		.select({ id: feteCentre.id, nom: feteCentre.nom, debut: feteCentre.debut, fin: feteCentre.fin, equipeId: feteCentre.equipeId })
+		.from(feteCentre)
+		.where(and(gte(feteCentre.debut, ajouterJours(du.slice(0, 10), -1)), lte(feteCentre.debut, `${au.slice(0, 10)}T23:59`)))
+		.orderBy(asc(feteCentre.debut));
+}
+
 export const dansLaSemaine = (s: SemaineCalculee, p: Periode) => s.periodes.some((x) => x.debut <= p.debut && p.fin <= x.fin);
 
-// Les heures d'astreinte de la personne cette semaine : celles de son équipe ; en été publié, ses plages.
-// `equipeId` : son équipe au jour de relève.
+// Les heures d'astreinte de la personne cette semaine : celles de son équipe ; en été publié, ses plages. Pendant une fête du centre,
+// ces heures passent à l'équipe imposée. `equipeId` : son équipe au jour de relève.
 export function heuresDe(s: SemaineCalculee, equipeId: number | null, id: number, plages: PlageLue[]): Periode[] {
+	const h = heuresDuRoulement(s, equipeId, id, plages);
+	if (!s.imposees) return h;
+	const prises = s.imposees.filter((i) => i.equipeId === equipeId).map(({ debut, fin }) => ({ debut, fin }));
+	return reunir([...soustraire(h, s.imposees), ...prises]);
+}
+function heuresDuRoulement(s: SemaineCalculee, equipeId: number | null, id: number, plages: PlageLue[]): Periode[] {
 	const deBase = equipeId === s.equipeId;
 	const siennes = plages.filter((p) => dansLaSemaine(s, p));
 	if (siennes.length === 0) return deBase ? s.periodes : [];

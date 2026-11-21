@@ -583,6 +583,37 @@ export const gardeFete = sqliteTable(
 	(t) => [primaryKey({ columns: [t.annee, t.fete] }), check('garde_fete_fete', checkDans('fete', FETES))]
 );
 
+// Une fête du centre (Sainte-Barbe, méchoui de l'Amicale) : pendant ces heures, l'équipe choisie tient l'astreinte à la place
+// de celle du roulement (planning/fetes.ts). Au plus 24 h, jamais deux fêtes en même temps. `cree_par` : nom de l'auteur.
+export const feteCentre = sqliteTable(
+	'fete_centre',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		nom: text('nom').notNull(),
+		debut: text('debut').notNull(),
+		fin: text('fin').notNull(),
+		equipeId: integer('equipe_id')
+			.notNull()
+			.references(() => equipe.id),
+		creePar: text('cree_par').notNull(),
+		creeLe: text('cree_le').notNull()
+	},
+	(t) => [index('fete_centre_debut').on(t.debut)]
+);
+
+// Qui a tenu une fête du centre les années passées (saisi par le chef), pour son tour. `nom` : celui de la fête.
+export const gardeFeteCentre = sqliteTable(
+	'garde_fete_centre',
+	{
+		annee: integer('annee').notNull(),
+		nom: text('nom').notNull(),
+		equipeId: integer('equipe_id')
+			.notNull()
+			.references(() => equipe.id)
+	},
+	(t) => [primaryKey({ columns: [t.annee, t.nom] })]
+);
+
 // La clé secrète du lien d'agenda d'une personne : la changer invalide l'ancien lien.
 export const cleAgenda = sqliteTable('cle_agenda', {
 	personneId: integer('personne_id')
