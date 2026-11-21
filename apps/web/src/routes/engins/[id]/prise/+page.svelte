@@ -46,8 +46,7 @@
 		const signales = z.elements.filter((x) => { const o = ouverteSur(x.ref); return o && !s?.retrouves.includes(o.id); }).length;
 		const etat = vue(z.ref) ? [n ? `Complet sauf ${pluriel(n, 'écart')}` : 'Tout est complet'] : n ? ['À finir', pluriel(n, 'écart')] : [z.elements.length ? `${z.elements.length} à voir` : 'À voir'];
 		const infos = signales ? [...etat, pluriel(signales, 'signalé')] : etat;
-		// Deux infos courtes : un point ; trois : des virgules.
-		return infos.join(infos.length > 2 ? ', ' : ' · ');
+		return infos.join(', ');
 	};
 	// Signalés sur des éléments absents de la fiche : ils ne se voient dans aucune zone.
 	const horsFiche = $derived(data.ouvertes.filter((o) => !data.zones.some((z) => z.elements.some((x) => x.ref === o.ref))));
@@ -141,7 +140,7 @@
 	{#if pour(cible)?.message}<p class="echec" role="alert">{pour(cible)?.message}</p>{/if}
 {/snippet}
 
-{#snippet trace(quoi: string, t: { par: string; le: string; motif?: string })}{`${quoi} par ${t.par}, ${jourHeure(t.le)}${t.motif ? ` : « ${t.motif} »` : ''}.`}{/snippet}
+{#snippet trace(quoi: string, t: { par: string; le: string; motif?: string })}{`${quoi} par ${t.par}, ${jourHeure(t.le)}.${t.motif ? ` Motif : ${t.motif}` : ''}`}{/snippet}
 
 {#snippet marque()}
 	<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>
@@ -150,7 +149,7 @@
 {#snippet signale(o: (typeof data.ouvertes)[number])}
 	<span class="signale">
 		<strong>{texteEcart(o)}</strong>
-		<span class="doux">Signalé le {dateCourte(o.signaleeLe)} par {o.signaleePar} · <a href="/engins/anomalies/{o.id}">{texteEtape(o)}<span class="masque">{' '}: suivi de l’anomalie {o.libelle}</span></a></span>
+		<span class="doux">Signalé le {dateCourte(o.signaleeLe)} par {o.signaleePar}. Suivi : <a href="/engins/anomalies/{o.id}">{texteEtape(o)}<span class="masque">{' '}: suivi de l’anomalie {o.libelle}</span></a></span>
 	</span>
 	{#if o.photo}<a class="vignette" href="/engins/photo/{o.photo}" data-visionneuse><img src="/engins/photo/{o.photo}" alt="Photo de l’écart : {o.libelle}" width="56" height="56" loading="lazy" /></a>{/if}
 {/snippet}
@@ -266,7 +265,7 @@
 				<h2 id="titre-hors-fiche">Signalé hors de la fiche</h2>
 				<ul class="ouvertes" role="list">
 					{#each horsFiche as o (o.id)}
-						<li><span class="quoi">{o.libelle}{#if o.zone}{' '}<span class="doux">· {o.zone}</span>{/if}</span>{@render signale(o)}</li>
+						<li><span class="quoi">{o.libelle}{#if o.zone}<span class="doux">, {o.zone}</span>{/if}</span>{@render signale(o)}</li>
 					{/each}
 				</ul>
 			</section>
@@ -867,8 +866,9 @@
 		cursor: pointer;
 		list-style: none;
 	}
-	/* « Écart » : un lien discret, de 44 px de cible. */
-	summary {
+	/* « Écart » : un lien discret, de 44 px de cible. « Plus » garde le bouton écrit d'app.css. */
+	.geste > summary,
+	.abandon > summary {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -883,7 +883,8 @@
 		list-style: none;
 	}
 	/* Le repère du clavier reste dans la ligne : la carte rogne ce qui dépasse. */
-	summary:focus-visible {
+	.geste > summary:focus-visible,
+	.abandon > summary:focus-visible {
 		outline-offset: -3px;
 	}
 	details[open] {

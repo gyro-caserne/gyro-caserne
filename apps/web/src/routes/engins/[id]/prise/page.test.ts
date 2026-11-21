@@ -156,7 +156,7 @@ describe('/engins/[id]/prise', () => {
 		const page = html(lecture({ ouvertes: [surRadio, horsFiche] }));
 		expect(page).toContain('1 écart encore signalé sur cet engin, à voir dans sa zone.');
 		expect(page).toMatch(/Signalé hors de la fiche[\s\S]*?Phare avant[\s\S]*?Signalé le/);
-		expect(page).toContain('1 à voir · 1 signalé');
+		expect(page).toContain('1 à voir, 1 signalé');
 		expect(page).toContain('Oui, clore le signalement');
 		expect(page).not.toContain('Aucun écart ouvert');
 	});
@@ -173,9 +173,9 @@ describe('/engins/[id]/prise', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
 		const page = html({ ...data(), ouvertes: [surRadio, horsFiche] });
 		expect(page).toContain('Phare avant');
-		expect(page).toContain('1 à voir · 1 signalé');
+		expect(page).toContain('1 à voir, 1 signalé');
 		// Retrouvé, il n'est plus compté.
-		expect(html({ ...data({ retrouves: [3] }), ouvertes: [surRadio] })).not.toContain('· 1 signalé');
+		expect(html({ ...data({ retrouves: [3] }), ouvertes: [surRadio] })).not.toContain(', 1 signalé');
 	});
 
 	it('« Annuler » vient après le titre de la zone, où se pose le focus', () => {
@@ -220,13 +220,13 @@ describe('/engins/[id]/prise', () => {
 		expect(page).toMatch(/href="\?zone=2#titre-zone" class="vue[^"]*" aria-current="true"[^>]*>[\s\S]*?Complet sauf 1 écart/);
 	});
 
-	it('l’état d’une zone : trois infos en virgules, deux avec un point', () => {
+	it('l’état d’une zone : des virgules, jamais de point médian', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
 		const ouverte = { id: 3, ref: 20, zone: 'Coffres', libelle: 'Lances', genre: 'abime', manque: null, note: null, photo: null, signaleeLe: '2026-10-23T18:30', signaleePar: 'Mila Clément', etape: 'signalee', motif: null, bloquante: false };
 		const zones2 = [zones[0], { ...zones[1], elements: [...zones[1].elements, { ref: 21, libelle: 'Tricoises', quantite: null }] }];
 		const page = html({ ...data({ ecarts: { '21': { genre: 'manquant', manque: null, note: '', photo: null } } }), zones: zones2, ouvertes: [ouverte] });
 		expect(page).toContain('À finir, 1 écart, 1 signalé');
-		expect(html({ ...data({ ecarts: { '21': { genre: 'manquant', manque: null, note: '', photo: null } } }), zones: zones2 })).toContain('À finir · 1 écart');
+		expect(html({ ...data({ ecarts: { '21': { genre: 'manquant', manque: null, note: '', photo: null } } }), zones: zones2 })).toContain('À finir, 1 écart');
 	});
 
 	it('la zone choisie : titre en majuscules espacées avec son nombre d’éléments, la liste dans une seule carte', () => {
@@ -294,9 +294,9 @@ describe('/engins/[id]/prise', () => {
 		it('la trace : participants modifiés, réouverture et demande, qui, quand, pourquoi', () => {
 			adresse.url = new URL('http://x/engins/1/prise');
 			const page = html(validee({}, { participants: { par: 'Mila Clément', le: '2026-10-30T20:00' }, rouverte: { par: 'Élodie Chef-de-Garde', le: '2026-10-30T19:30', motif: 'Radio oubliée' }, demande: { par: 'Adam Fournier', le: '2026-10-30T20:05', motif: 'Lances' } }));
-			expect(page).toContain('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30 : « Radio oubliée ».');
+			expect(page).toContain('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30. Motif : Radio oubliée');
 			expect(page).toContain('Participants modifiés par Mila Clément, ven. 20 h.');
-			expect(page).toContain('Réouverture demandée par Adam Fournier, ven. 20 h 05 : « Lances ».');
+			expect(page).toContain('Réouverture demandée par Adam Fournier, ven. 20 h 05. Motif : Lances');
 			expect(page).not.toContain('[object Object]');
 		});
 	});
@@ -310,7 +310,7 @@ describe('/engins/[id]/prise', () => {
 		it('la trace en tête ; les écarts se modifient ; pas d’abandon', () => {
 			adresse.url = new URL('http://x/engins/1/prise?zone=1');
 			const page = html(rouverte([{ id: 4, ref: 10, suivie: false, suiviePar: null }]));
-			expect(avant('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30 : « Radio oubliée ».', 'Zones de l’engin', page)).toBe(true);
+			expect(avant('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30. Motif : Radio oubliée', 'Zones de l’engin', page)).toBe(true);
 			expect(page).toMatch(/<summary[^>]*>Modifier<span class="masque[^"]*"> : Radio : essai/);
 			expect(page).toContain('Retirer l’écart');
 			expect(page).not.toContain('Abandonner la prise');

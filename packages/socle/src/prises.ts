@@ -576,7 +576,7 @@ export async function demanderReouverture(base: Base, acteur: Acteur, id: number
 	const deGarde = v.chefs.filter((c) => c.systeme === 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
 	const prevenus = deGarde.length ? deGarde : v.chefs.filter((c) => c.systeme !== 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
 	const qui = v.noms.get(v.moi) ?? 'Un agent';
-	const avis = { titre: `Prise de garde · ${v.nomEngin}`, texte: `${qui} demande la réouverture : ${texte}`, url: `/engins/${v.prise.enginId}/prise` };
+	const avis = { titre: `Prise de garde : ${v.nomEngin}`, texte: `${qui} demande la réouverture : ${texte}`, url: `/engins/${v.prise.enginId}/prise` };
 	await ecrireValidee(base, v, { traces: { ...v.traces, demande: { par: v.moi, le: maintenant, motif: texte } } }, maintenant, (si) => [...avisAnomalies(base, [...new Set(prevenus)], avis, maintenant, si)]);
 }
 

@@ -1,6 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { ETAT_CONNECTE, ETAT_SUPER } from './serveur.ts';
+
+const appli = fileURLToPath(new URL('..', import.meta.url));
+const centre = fileURLToPath(new URL('../../../centres/exemple/', import.meta.url));
+function executer(sql: string) {
+	execFileSync('pnpm', ['exec', 'wrangler', 'd1', 'execute', 'BASE', '--local', '--config', `${centre}wrangler.jsonc`, '--persist-to', `${centre}.wrangler/state`, '--command', sql], { cwd: appli, stdio: 'pipe' });
+}
 
 async function sansViolation(page: Page) {
 	// Une fenêtre qui apparaît fausserait le calcul du contraste : on attend la fin de ce qui n'est pas sans fin.
@@ -104,6 +112,50 @@ test.describe('prise de garde', () => {
 		await abandon.click();
 		await page.getByRole('button', { name: 'Oui, abandonner' }).click();
 		await expect(page.getByText('Commencée par')).toBeHidden();
+	});
+});
+
+test.describe('prise validée', () => {
+	test.use({ storageState: ETAT_CONNECTE });
+	// Le compte de test devient chef de centre le temps du test ; la prise du VSAV 23 (engin 4), sans écart, repart de zéro.
+	const MARQUE = 'super:e2e-reouverture';
+	test.beforeAll(() => {
+		executer(`DELETE FROM prise_garde WHERE engin_id = 4 AND NOT EXISTS (SELECT 1 FROM anomalie WHERE prise_id = prise_garde.id OR close_prise_id = prise_garde.id);`);
+		executer(`INSERT INTO attribution (personne_id, responsabilite_id, perimetre_type, perimetre_id, debut, saisie_par, saisie_le) SELECT p.id, r.id, 'centre', NULL, '2026-01-01', '${MARQUE}', '2026-01-01' FROM personne p, responsabilite r WHERE p.email = 'test@exemple.fr' AND r.systeme = 'chef_centre';`);
+	});
+	test.afterAll(() => executer(`DELETE FROM attribution WHERE saisie_par = '${MARQUE}';`));
+
+	test('valider, rouvrir avec un motif, puis valider de nouveau ; la trace reste', async ({ page }) => {
+		await page.goto('/engins/4/prise');
+		await page.waitForLoadState('networkidle');
+		const complet = page.getByRole('button', { name: /^Tout est complet/ });
+		const valider = page.getByRole('button', { name: 'Valider la prise', exact: true });
+		while (await complet.count()) await complet.click().then(() => page.waitForLoadState('networkidle'));
+		await valider.click();
+		await expect(page.getByRole('heading', { name: 'Prise validée, merci.' })).toBeVisible();
+
+		// Validée : les participants restent modifiables sous la plaque.
+		await expect(page.locator('.bande a.participants')).toBeVisible();
+		const plus = page.locator('summary').filter({ hasText: /^Plus$/ });
+		await plus.click();
+		await sansViolation(page);
+		const rouvrir = page.getByRole('button', { name: 'Rouvrir la prise', exact: true });
+		// Sans « Je confirme » : refusé, rien ne change.
+		await page.getByLabel('Motif').fill('Radio oubliée');
+		await rouvrir.click();
+		await expect(page.getByRole('alert')).toHaveText('Cochez « Je confirme » pour rouvrir la prise.');
+		await page.getByLabel('Je confirme').check();
+		await rouvrir.click();
+
+		// Rouverte : la trace sous la plaque, les zones vues gardées, plus d'abandon.
+		await expect(page.locator('.bande')).toContainText('Rouverte par Test Fictif');
+		await expect(page.locator('.bande')).toContainText('Motif : Radio oubliée');
+		await expect(page.getByText('Abandonner la prise…')).toBeHidden();
+		await expect(valider).not.toHaveAttribute('aria-disabled');
+		await sansViolation(page);
+		await valider.click();
+		await expect(page.getByRole('heading', { name: 'Prise validée, merci.' })).toBeVisible();
+		await expect(page.locator('.traces')).toContainText('Rouverte par Test Fictif');
 	});
 });
 

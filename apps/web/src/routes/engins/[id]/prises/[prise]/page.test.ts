@@ -21,7 +21,7 @@ const html = (p: unknown) => render(Page as any, { props: { data: { prise: p } }
 describe('/engins/[id]/prises/[prise]', () => {
 	it('la trace d’une prise rouverte ou dont les participants ont changé : qui, quand, pourquoi', () => {
 		const page = html(prise({ rouverte: { par: 'Élodie Chef-de-Garde', le: '2026-10-30T19:30', motif: 'Radio oubliée' }, participants: { par: 'Mila Clément', le: '2026-10-30T20:30' } }));
-		expect(page).toMatch(/<dt[^>]*>Rouverte<\/dt><dd[^>]*>Par Élodie Chef-de-Garde, ven\. 19 h 30 : « Radio oubliée »<\/dd>/);
+		expect(page).toMatch(/<dt[^>]*>Rouverte<\/dt><dd[^>]*>Par Élodie Chef-de-Garde, ven\. 19 h 30\. Motif : Radio oubliée<\/dd>/);
 		expect(page).toMatch(/<dt[^>]*>Participants modifiés<\/dt><dd[^>]*>Par Mila Clément, ven\. 20 h 30<\/dd>/);
 		expect(html(prise())).not.toContain('Rouverte');
 	});

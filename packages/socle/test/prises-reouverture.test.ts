@@ -160,7 +160,7 @@ describe('demande de réouverture', () => {
 		const j = await preparer();
 		await demanderReouverture(j.base, j.alice, j.id, 'J’ai oublié la radio', APRES, reglage, j.vsav);
 		const avis = await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`));
-		expect(avis).toMatchObject([{ personneId: idDe(j.chefDeGarde), titre: 'Prise de garde · VSAV 1', texte: 'Alice Fictif demande la réouverture : J’ai oublié la radio', url: `/engins/${j.vsav}/prise` }]);
+		expect(avis).toMatchObject([{ personneId: idDe(j.chefDeGarde), titre: 'Prise de garde : VSAV 1', texte: 'Alice Fictif demande la réouverture : J’ai oublié la radio', url: `/engins/${j.vsav}/prise` }]);
 		expect(await tracesDe(j)).toEqual({ demande: { par: idDe(j.alice), le: APRES, motif: 'J’ai oublié la radio' } });
 		// La réouverture efface la demande et garde sa propre trace.
 		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Radio', APRES, reglage);
