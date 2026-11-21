@@ -17,12 +17,16 @@ const preparation = (autres: Record<string, unknown> = {}) => ({
 	feries: feries(2027),
 	// Noël 2027 : semaine du 24 décembre, Équipe 4.
 	fetes: { noel: 4, nouvelAn: 1, attendues: { noel: [2], nouvelAn: [1, 3] }, historique: [{ annee: 2026, fete: 'noel', equipeId: 1 }] },
+	fetesCentre: {
+		fetes: [{ id: 7, nom: 'Sainte-Barbe', debut: '2027-12-04T18:00', fin: '2027-12-05T02:00', equipeId: 3, attendues: [4] }],
+		historique: [{ annee: 2026, nom: 'Sainte-Barbe', equipeId: 2 }]
+	},
 	equipes,
 	...autres
 });
 const page = (data: Record<string, unknown> = {}, form: unknown = null) =>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	render(Page as any, { props: { data: { preparation: preparation(), annees: [2026, 2027], etape: 'roulement', apercu: semaines.slice(0, 6), manoeuvre: null, semaine: null, semaineTouche: null, proposer: null, ...data }, form } }).body;
+	render(Page as any, { props: { data: { preparation: preparation(), annees: [2026, 2027], etape: 'roulement', apercu: semaines.slice(0, 6), manoeuvre: null, semaine: null, semaineTouche: null, proposer: null, fete: null, supprimer: false, maintenant: '2026-11-21T10:00', ...data }, form } }).body;
 
 describe('Préparer l’année en cinq étapes', () => {
 	it('la progression et l’étiquette Brouillon / Publiée à chaque étape', () => {
@@ -55,6 +59,50 @@ describe('Préparer l’année en cinq étapes', () => {
 		expect(propose).toContain('Accepter l’échange');
 		expect(propose).toMatch(/name="semaine-2027-12-24" value="2"/);
 		expect(propose).toMatch(/name="semaine-2027-12-10" value="4"/);
+	});
+
+	it('Fêtes du centre : la fête, son équipe et son tour, l’historique ; ajout et modification dans un panneau', () => {
+		const html = page({ etape: 'fetes' });
+		expect(html).toContain('Fêtes du centre');
+		expect(html).toContain('Sainte-Barbe');
+		expect(html).toContain('samedi 4 décembre de 18 h à 2 h');
+		expect(html).toContain('Hors de son tour. Le tour revient à Équipe 4.');
+		expect(html).toContain('href="?annee=2027&amp;etape=fetes&amp;fete=7"');
+		expect(html).toContain('href="?annee=2027&amp;etape=fetes&amp;fete=nouvelle"');
+		expect(html).toContain('Sainte-Barbe 2026');
+		expect(html).toContain('action="?/noterFeteCentre&amp;annee=2027&amp;etape=fetes"');
+		expect(html).not.toContain('class="panneau');
+		expect(html).not.toMatch(/[·—|→]/);
+		const nouvelle = page({ etape: 'fetes', fete: 'nouvelle' });
+		expect(nouvelle).toMatch(/<dialog class="panneau[^"]*"/);
+		expect(nouvelle).toContain('Nouvelle fête');
+		expect(nouvelle).toContain('action="?/feteCentre&amp;annee=2027&amp;etape=fetes&amp;fete=nouvelle"');
+		expect(nouvelle).toContain('Ajouter la fête');
+		const modifier = page({ etape: 'fetes', fete: 7 });
+		expect(modifier).toContain('Modifier la fête');
+		expect(modifier).toContain('value="Sainte-Barbe"');
+		expect(modifier).toContain('value="2027-12-04"');
+		expect(modifier).toContain('value="02:00"');
+		expect(modifier).toMatch(/name="equipe" value="3" checked/);
+		expect(modifier).toContain('href="?annee=2027&amp;etape=fetes&amp;fete=7&amp;supprimer=1"');
+		// Enregistrée : le panneau se ferme.
+		expect(page({ etape: 'fetes', fete: 7 }, { cible: 'fete', succes: 'Fête enregistrée.' })).not.toContain('class="panneau');
+	});
+
+	it('Fêtes du centre : supprimer est confirmé ; des remplacements devenus inutiles sont montrés avant d’enregistrer', () => {
+		const confirmer = page({ etape: 'fetes', fete: 7, supprimer: true });
+		expect(confirmer).toContain('Supprimer cette fête ?');
+		expect(confirmer).toContain('Garder la fête');
+		expect(confirmer).toMatch(/<button[^>]*class="grave[^"]*"[^>]*>(<!---->)?Supprimer la fête(<!---->)?<\/button>/);
+		const valeurs = { id: '7', nom: 'Sainte-Barbe', date: '2027-12-04', debut: '18:00', fin: '02:00', equipe: '3' };
+		const inutiles = page({ etape: 'fetes', fete: 7 }, { cible: 'fete', inutiles: ['Samedi 4 décembre, de 20 h à 23 h, Alice Test remplacé par Bruno Test', 'Dimanche 5 décembre, de 0 h à 2 h, Alice Test cherche un remplaçant'], valeurs });
+		expect(inutiles).toContain('2 remplacements deviennent inutiles');
+		expect(inutiles).toContain('Alice Test remplacé par Bruno Test');
+		expect(inutiles).toContain('Ils seront annulés et leurs personnes prévenues.');
+		expect(inutiles).toMatch(/name="confirme" value="oui"/);
+		expect(inutiles).toContain('Enregistrer et annuler les remplacements');
+		// Passée, une fête ne se modifie plus.
+		expect(page({ etape: 'fetes', maintenant: '2027-12-04T19:00' })).not.toContain('fete=7');
 	});
 
 	it('Manœuvres : des rangées ; ajout et modification dans un panneau', () => {

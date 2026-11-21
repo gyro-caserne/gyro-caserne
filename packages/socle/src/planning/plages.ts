@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, isNotNull, lte } from 'drizzle-orm';
 import type { Base } from '../base.ts';
-import { reunir, soustraire } from '../remplacements/tranches.ts';
+import { dePlage, jourEnLettres, reunir, soustraire } from '../remplacements/tranches.ts';
 import { ajouterJours } from '../dates.ts';
 import { ete, feteCentre, plageEte } from '../schema.ts';
 import type { Periode, SemaineCalculee } from './calendrier.ts';
@@ -50,3 +50,7 @@ function heuresDuRoulement(s: SemaineCalculee, equipeId: number | null, id: numb
 export const enVacances = (vacances: { personneId: number; debut: string; fin: string }[], id: number, p: Periode) =>
 	vacances.some((v) => v.personneId === id && v.debut <= p.debut.slice(0, 10) && p.debut.slice(0, 10) <= v.fin);
 
+
+// Les fêtes du centre de la semaine, en clair : « Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h ».
+export const textesFetes = (s: SemaineCalculee, equipes: { id: number; nom: string }[]) =>
+	(s.imposees ?? []).map((i) => `${i.nom}, ${jourEnLettres(i.debut)}, ${equipes.find((x) => x.id === i.equipeId)?.nom ?? 'une autre équipe'} ${dePlage(i)}`);

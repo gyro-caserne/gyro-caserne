@@ -122,10 +122,19 @@ describe('les fêtes du centre, enregistrées', async () => {
 		// L'équipe 3 tient la Sainte-Barbe : à l'accueil, sa prochaine astreinte, à sa couleur.
 		const trois = await astreinteDe(base, a(agents[2]!), '2026-12-01T10:00', reglage);
 		expect(trois).toMatchObject({ debut: '2026-12-05T18:00', fin: '2026-12-06T02:00', equipe: { id: ids[2] }, mienne: true });
+		expect(trois!.fetes).toEqual(['Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h']);
+		// L'équipe 1, libérée pendant la fête : sa semaine le dit.
+		expect((await astreinteDe(base, a(agents[0]!), '2026-12-01T10:00', reglage))!.fetes).toEqual(['Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h']);
+		expect((await astreinteDe(base, a(agents[1]!), '2026-12-01T10:00', reglage))!.fetes).toEqual([]);
 		// Le chef de centre, pendant la fête : l'équipe 3 d'astreinte.
 		expect(await astreinteDe(base, chef, '2026-12-05T20:00', reglage)).toMatchObject({ mienne: false, equipe: { id: ids[2] } });
 		const p = await planningDe(base, a(agents[0]!), 2026, AVANT, reglage);
 		if (!p.publiee) throw new Error('publiée');
+		// Sa semaine du 4 décembre : la fête y est dite.
+		expect(p.prochaine.astreinte!.fetes).toEqual(['Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h']);
+		const p3 = await planningDe(base, a(agents[2]!), 2026, '2026-12-01T10:00', reglage);
+		if (!p3.publiee) throw new Error('publiée');
+		expect(p3.prochaine.astreinte).toMatchObject({ debut: '2026-12-05T18:00', equipeId: ids[2], fetes: ['Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h'] });
 		expect(p.semaines.find((s) => s.debut === '2026-12-04')!.imposees).toEqual([{ debut: '2026-12-05T18:00', fin: '2026-12-06T02:00', nom: 'Sainte-Barbe', equipeId: ids[2] }]);
 		const ctx = await lireContexte(base, AVANT, reglage);
 		const pendant = { debut: '2026-12-05T20:00', fin: '2026-12-05T22:00' };

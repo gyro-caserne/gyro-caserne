@@ -6,10 +6,11 @@ import { affectationEquipe, anneePlanning, equipe, semaineChangee } from '../sch
 import { equipeLe, semainesCalculees, type EquipePlanning } from './annee.ts';
 import { appliquerFetes, equipeAuMoment, semainesDe, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
 import { groupeDeLaSemaine, nomsDeGroupes, requeteEtes } from './groupes.ts';
-import { heuresDe, lirePlage, requeteFetes, requetePlagesPubliees } from './plages.ts';
+import { heuresDe, lirePlage, requeteFetes, requetePlagesPubliees, textesFetes } from './plages.ts';
 import { courtsCedes, requeteCourtsCedes } from '../remplacements/effectifs.ts';
 
-export type Astreinte = { debut: string; fin: string; equipe: EquipePlanning; enCours: boolean; mienne: boolean; periodes: Periode[] };
+// `fetes` : les fêtes du centre de la semaine, avec l'équipe imposée (« Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h »).
+export type Astreinte = { debut: string; fin: string; equipe: EquipePlanning; enCours: boolean; mienne: boolean; periodes: Periode[]; fetes?: string[] };
 // À l'Accueil, en plus : mes plages courtes cédées du jour, pas encore finies (qui me remplace quelques heures).
 export type AstreinteAccueil = Astreinte & { courtsCedes: (Periode & { remplacant: string })[] };
 
@@ -68,5 +69,5 @@ export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string
 	const trouvee = equipes.find((x) => x.id === id);
 	const groupe = id === semaine.equipeId ? groupeDeLaSemaine(etes, nomsDeGroupes(equipes), semaine) : null;
 	const e = trouvee ? { id: trouvee.id, nom: groupe ?? trouvee.nom, couleur: trouvee.couleur } : { id, nom: 'Équipe archivée', couleur: '#8a949e' };
-	return { debut: semaine.periodes[0]!.debut, fin: fin(semaine), equipe: e, enCours: semaine.periodes[0]!.debut <= m, mienne: aMoi, periodes: semaine.periodes, courtsCedes: courtsCedes(lignesCourts, m) };
+	return { debut: semaine.periodes[0]!.debut, fin: fin(semaine), equipe: e, enCours: semaine.periodes[0]!.debut <= m, mienne: aMoi, periodes: semaine.periodes, fetes: textesFetes(semaine, equipes), courtsCedes: courtsCedes(lignesCourts, m) };
 }

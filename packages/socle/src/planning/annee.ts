@@ -15,7 +15,7 @@ import { colonnesPublication } from './manoeuvres.ts';
 import { avis } from './avis.ts';
 import { jourEnLettres, texteDemande } from '../remplacements/tranches.ts';
 import { groupeDeLaSemaine, nomsDeGroupes, requeteEtes } from './groupes.ts';
-import { heuresDe, lirePlage, requeteFetes, requetePlagesPubliees } from './plages.ts';
+import { heuresDe, lirePlage, requeteFetes, requetePlagesPubliees, textesFetes } from './plages.ts';
 import { fetesDeLAnnee } from './fetes.ts';
 import { appliquerFetes, calculerAnnee, equipeAuMoment, feries, fetes, semainesDe, tourDesFetes, type Fete, type FeteCentre, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
 
@@ -386,7 +386,7 @@ export type PlanningAgent =
 			// Les remplacements conclus de l'année ; `moi` : je cède ma période, ou je prends celle d'un autre.
 			remplacements: { debut: string; fin: string; titulaire: string; remplacant: string; moi: 'cede' | 'prend' | null }[];
 			prochaine: {
-				astreinte: { debut: string; fin: string; equipeId: number; groupe: string | null; enCours: boolean; periodes: Periode[] } | null;
+				astreinte: { debut: string; fin: string; equipeId: number; groupe: string | null; enCours: boolean; periodes: Periode[]; fetes: string[] } | null;
 				// `reponse` : la mienne, si la manœuvre est déjà annoncée.
 				// `enCours` : commencée, pas finie ; on ne peut plus y répondre ni échanger sa place.
 				manoeuvre: (ManoeuvreVue & { reponse: ReponseEvenement | null; enCours: boolean }) | null;
@@ -481,7 +481,7 @@ export async function planningDe(base: Base, acteur: Acteur, annee: number, main
 			.map(({ debut, fin, titulaire, remplacant, titulaireId, remplacantId }) => ({ debut, fin, titulaire, remplacant, moi: titulaireId === moi ? ('cede' as const) : remplacantId === moi ? ('prend' as const) : null })),
 		prochaine: {
 			astreinte: prochaineSemaine
-				? { debut: prochaineSemaine.periodes[0]!.debut, fin: prochaineSemaine.periodes.at(-1)!.fin, equipeId: equipeAuMoment(prochaineSemaine, prochaineSemaine.periodes[0]!.debut), groupe: equipeAuMoment(prochaineSemaine, prochaineSemaine.periodes[0]!.debut) === prochaineSemaine.equipeId ? prochaineSemaine.groupe : null, enCours: prochaineSemaine.periodes[0]!.debut <= maintenant.slice(0, 16), periodes: prochaineSemaine.periodes }
+				? { debut: prochaineSemaine.periodes[0]!.debut, fin: prochaineSemaine.periodes.at(-1)!.fin, equipeId: equipeAuMoment(prochaineSemaine, prochaineSemaine.periodes[0]!.debut), groupe: equipeAuMoment(prochaineSemaine, prochaineSemaine.periodes[0]!.debut) === prochaineSemaine.equipeId ? prochaineSemaine.groupe : null, enCours: prochaineSemaine.periodes[0]!.debut <= maintenant.slice(0, 16), periodes: prochaineSemaine.periodes, fetes: textesFetes(prochaineSemaine, equipes) }
 				: null,
 			manoeuvre: prochaineManoeuvre ? { ...prochaineManoeuvre, reponse: reponse?.reponse ?? null, enCours: momentEvenement(prochaineManoeuvre.debut, maintenant, prochaineManoeuvre.fin) === 'enCours' } : null,
 			fete

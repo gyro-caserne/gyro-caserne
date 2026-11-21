@@ -32,7 +32,7 @@ export const quandFete = (f: FeteCentre) => `${f.nom}, ${jourEnLettres(f.debut)}
 const majuscule = (t: string) => `${t[0]!.toUpperCase()}${t.slice(1)}`;
 
 function exigerDonnees(d: DonneesFete): FeteCentre {
-	const nom = texte(d.nom, 'Nom', 60);
+	const nom = texte(d.nom, 'Nom de la fête', 60);
 	exigerDateHeure(d.debut, 'Début');
 	exigerDateHeure(d.fin, 'Fin');
 	const p = { debut: d.debut.slice(0, 16), fin: d.fin.slice(0, 16) };
@@ -142,7 +142,7 @@ export async function supprimerFete(base: Base, acteur: Acteur, id: number, main
 export async function noterFeteCentre(base: Base, acteur: Acteur, annee: number, nom: string, equipeId: number | null, maintenant: string): Promise<void> {
 	exigerAnnee(annee);
 	await exigerGestion(base, acteur, maintenant);
-	const propre = texte(nom, 'Nom', 60);
+	const propre = texte(nom, 'Nom de la fête', 60);
 	if (equipeId !== null) {
 		const [connue] = await base.select({ id: equipe.id }).from(equipe).where(eq(equipe.id, equipeId));
 		if (!connue) throw new DonneeInvalide('Équipe inconnue');

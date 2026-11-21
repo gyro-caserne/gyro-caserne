@@ -1,5 +1,8 @@
 <script lang="ts">
 	import Choix from '#lib/ui/Choix.svelte';
+	import ChoixRadio from '#lib/ui/ChoixRadio.svelte';
+	import Champ from '#lib/ui/Champ.svelte';
+	import { dePlage } from '@gyro-caserne/socle';
 	import { enhance } from '$app/forms';
 	import Celebration from '#lib/animations/Celebration.svelte';
 	import { momentPlanningPublie } from '#lib/animations/celebration.ts';
@@ -41,6 +44,14 @@
 	const semaineOuverte = $derived(data.etape === 'publier' ? (p.semaines.find((s) => s.debut === data.semaine) ?? null) : null);
 	// Une année sans roulement peut partir d'une proposition, s'il reste au moins deux équipes.
 	const peutProposer = $derived(!p.ordre.length && !p.publiee && p.ordrePropose.length >= 2);
+	// Les fêtes du centre : le panneau d'ajout ou de modification se ferme une fois la fête enregistrée.
+	const fetesCentre = $derived(p.fetesCentre.fetes);
+	const feteOuverte = $derived(typeof data.fete === 'number' ? (fetesCentre.find((f) => f.id === data.fete) ?? null) : null);
+	const panneauFete = $derived(data.etape === 'fetes' && (data.fete === 'nouvelle' || feteOuverte !== null) && !(concerne('fete') && form?.succes));
+	const saisieFete = (cle: string, defaut: string) => (concerne('fete') && typeof form?.valeurs?.[cle] === 'string' ? (form.valeurs[cle] as string) : defaut);
+	const quandFete = (f: { debut: string; fin: string }) => `${jourLong(f.debut)} ${dePlage(f)}`;
+	const actionFete = (nom: string) => `?/${nom}&annee=${p.annee}&etape=fetes&fete=${data.fete}`;
+	const nomsDesFetes = $derived([...new Set([...p.fetesCentre.historique.map((h) => h.nom), ...fetesCentre.map((f) => f.nom)])]);
 	const garder = () => async ({ update }: { update: (o?: { reset?: boolean }) => Promise<void> }) => update({ reset: false });
 </script>
 
@@ -183,13 +194,38 @@
 						</li>
 					{/each}
 				</ul>
+				<h3>Fêtes du centre</h3>
+				<p class="doux">Pendant ces heures, l’équipe choisie tient l’astreinte à la place de celle du roulement.</p>
+				{@render retour('fete')}
+				{#if fetesCentre.length}
+					<ul role="list" class="fetes">
+						{#each fetesCentre as f (f.id)}
+							{@const e = equipe(f.equipeId)}
+							<li class="fete" style:--equipe={e.couleur}>
+								<p class="fete-titre"><strong>{f.nom}</strong> <span class="doux">({quandFete(f)})</span></p>
+								<p><PastilleEquipe nom={e.nom} couleur={e.couleur} /></p>
+								{#if f.attendues.length && !f.attendues.includes(f.equipeId)}
+									<p class="avertissement">Hors de son tour. Le tour revient à {noms(f.attendues)}.</p>
+								{/if}
+								{#if f.debut > data.maintenant}<a class="lien-secondaire" href={ici({ fete: String(f.id) })} data-sveltekit-reset="false">Modifier<span class="masque"> la fête {f.nom}</span></a>{/if}
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="doux">Aucune fête du centre en {p.annee}.</p>
+				{/if}
+				<p><a class="bouton-lien" href={ici({ fete: 'nouvelle' })} data-sveltekit-reset="false">Ajouter une fête</a></p>
 				<h3>Historique du tour</h3>
 				{@render retour('fetes')}
-				{#if p.fetes.historique.length}
+				{#if p.fetes.historique.length || p.fetesCentre.historique.length}
 					<ul role="list" class="historique">
 						{#each p.fetes.historique as h (`${h.annee}-${h.fete}`)}
 							{@const e = equipe(h.equipeId)}
 							<li><span>{FETES[h.fete]} {h.annee}</span><PastilleEquipe nom={e.nom} couleur={e.couleur} /></li>
+						{/each}
+						{#each p.fetesCentre.historique as h (`${h.annee}-${h.nom}`)}
+							{@const e = equipe(h.equipeId)}
+							<li><span>{h.nom} {h.annee}</span><PastilleEquipe nom={e.nom} couleur={e.couleur} /></li>
 						{/each}
 					</ul>
 				{:else}
@@ -204,6 +240,23 @@
 						</div>
 						<Choix id="fete-fete" name="fete" libelle="Fête" options={[{ valeur: 'noel', libelle: 'Noël' }, { valeur: 'nouvel_an', libelle: 'Nouvel An' }]} valeur="noel" />
 						<Choix id="fete-equipe" name="equipe" libelle="Équipe" options={[...p.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom })), { valeur: '', libelle: 'Effacer cette ligne' }]} valeur={String(p.equipes[0]?.id ?? '')} />
+						<Bouton type="submit" variante="secondaire">Noter</Bouton>
+					</form>
+				</details>
+				{@render retour('historique-fetes')}
+				<details class="repli">
+					<summary>Noter une fête du centre passée</summary>
+					<form method="POST" action={action('noterFeteCentre')} class="en-ligne">
+						<div class="champ">
+							<label for="fete-centre-annee">Année</label>
+							<input id="fete-centre-annee" name="annee" type="number" min="2020" max={p.annee} value={p.annee - 1} required />
+						</div>
+						<div class="champ">
+							<label for="fete-centre-nom">Fête</label>
+							<input id="fete-centre-nom" name="nom" maxlength="60" required list="noms-des-fetes" placeholder="Sainte-Barbe" />
+							<datalist id="noms-des-fetes">{#each nomsDesFetes as n (n)}<option value={n}></option>{/each}</datalist>
+						</div>
+						<Choix id="fete-centre-equipe" name="equipe" libelle="Équipe" options={[...p.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom })), { valeur: '', libelle: 'Effacer cette ligne' }]} valeur={String(p.equipes[0]?.id ?? '')} />
 						<Bouton type="submit" variante="secondaire">Noter</Bouton>
 					</form>
 				</details>
@@ -324,6 +377,51 @@
 {#if panneauManoeuvre}
 	<Panneau titre={manoeuvreOuverte ? 'Modifier la manœuvre' : 'Nouvelle manœuvre'} fermer={ici()}>
 		<FormulaireManoeuvre manoeuvre={manoeuvreOuverte} equipes={p.equipes} />
+	</Panneau>
+{/if}
+
+{#if panneauFete}
+	<Panneau titre={feteOuverte ? 'Modifier la fête' : 'Nouvelle fête'} fermer={ici()}>
+		{#if feteOuverte && data.supprimer}
+			<div class="touches" role="region" aria-label="Supprimer la fête">
+				<h3>Supprimer cette fête ?</h3>
+				<p>{feteOuverte.nom}, {quandFete(feteOuverte)}. L’astreinte reviendra au roulement et les deux équipes seront prévenues.</p>
+				<form method="POST" action={actionFete('supprimerFete')} class="en-ligne">
+					<input type="hidden" name="id" value={feteOuverte.id} />
+					<a class="lien-secondaire" href={ici({ fete: String(feteOuverte.id) })} data-sveltekit-reset="false">Garder la fête</a>
+					<Bouton type="submit" variante="grave">Supprimer la fête</Bouton>
+				</form>
+			</div>
+		{:else}
+			{@const inutiles = concerne('fete') && Array.isArray(form?.inutiles) ? (form.inutiles as string[]) : []}
+			{#if inutiles.length}
+				<div class="touches" role="alert">
+					<h3>{inutiles.length === 1 ? '1 remplacement devient inutile' : `${inutiles.length} remplacements deviennent inutiles`}</h3>
+					<ul role="list">{#each inutiles as r (r)}<li>{r}</li>{/each}</ul>
+					<p class="doux">{inutiles.length === 1 ? 'Il sera annulé et ses personnes prévenues.' : 'Ils seront annulés et leurs personnes prévenues.'}</p>
+					<form method="POST" action={actionFete(form?.suppression ? 'supprimerFete' : 'feteCentre')}>
+						{#each Object.entries(form?.valeurs ?? {}) as [cle, v] (cle)}<input type="hidden" name={cle} value={v} />{/each}
+						<input type="hidden" name="confirme" value="oui" />
+						<Bouton type="submit" variante="grave">{form?.suppression ? 'Supprimer et annuler les remplacements' : 'Enregistrer et annuler les remplacements'}</Bouton>
+					</form>
+				</div>
+			{/if}
+			<form method="POST" action={actionFete('feteCentre')} class="formulaire-fete">
+				<div role="alert">{#if concerne('fete') && form?.message}<p class="echec">{form.message}</p>{/if}</div>
+				{#if feteOuverte}<input type="hidden" name="id" value={feteOuverte.id} />{/if}
+				<Champ id="fete-nom" name="nom" libelle="Nom" requis maxlength={60} aide="Par exemple Sainte-Barbe ou Méchoui de l’Amicale." valeur={saisieFete('nom', feteOuverte?.nom ?? '')} />
+				<Champ id="fete-date" name="date" type="date" libelle="Date" requis valeur={saisieFete('date', feteOuverte?.debut.slice(0, 10) ?? '')} />
+				<div class="deux">
+					<Champ id="fete-debut" name="debut" type="time" libelle="Début" requis valeur={saisieFete('debut', feteOuverte?.debut.slice(11, 16) ?? '18:00')} />
+					<Champ id="fete-fin" name="fin" type="time" libelle="Fin" requis aide="Avant le début, elle tombe le lendemain." valeur={saisieFete('fin', feteOuverte?.fin.slice(11, 16) ?? '')} />
+				</div>
+				<ChoixRadio id="fete-equipe" legende="Équipe d’astreinte" name="equipe" disposition="rangees" valeur={saisieFete('equipe', String(feteOuverte?.equipeId ?? ''))} requis options={p.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom }))} />
+				<Bouton type="submit">{feteOuverte ? 'Enregistrer la fête' : 'Ajouter la fête'}</Bouton>
+			</form>
+			{#if feteOuverte}
+				<p><a class="lien-grave" href={ici({ fete: String(feteOuverte.id), supprimer: '1' })} data-sveltekit-reset="false">Supprimer la fête</a></p>
+			{/if}
+		{/if}
 	</Panneau>
 {/if}
 
@@ -570,6 +668,32 @@
 	}
 
 	/* Fêtes */
+	.formulaire-fete {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-16);
+	}
+	.formulaire-fete > :global(button) {
+		align-self: flex-start;
+	}
+	.deux {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--espace-12);
+	}
+	/* Une action grave : un contour et un texte d'alerte, comme le bouton « grave ». */
+	.lien-grave {
+		display: inline-flex;
+		align-items: center;
+		min-height: var(--cible);
+		padding: 0 var(--espace-20);
+		border: 1px solid var(--accent);
+		border-radius: var(--rayon-bouton);
+		background: var(--surface);
+		color: var(--accent);
+		font-weight: 600;
+		text-decoration: none;
+	}
 	.fetes {
 		display: grid;
 		gap: var(--espace-12);
