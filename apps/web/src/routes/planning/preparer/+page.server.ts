@@ -93,7 +93,7 @@ export const actions: Actions = {
 	// Des remplacements deviendraient inutiles : la liste est rendue à confirmer (`confirme`).
 	feteCentre: async ({ locals, request }) => {
 		const f = await request.formData();
-		const valeurs = { id: champ(f, 'id'), nom: champ(f, 'nom'), date: champ(f, 'date'), debut: champ(f, 'debut'), fin: champ(f, 'fin'), equipe: champ(f, 'equipe') };
+		const valeurs: Record<string, string> = { id: champ(f, 'id'), nom: champ(f, 'nom'), date: champ(f, 'date'), debut: champ(f, 'debut'), fin: champ(f, 'fin'), equipe: champ(f, 'equipe') };
 		const jourDeFin = valeurs.fin && valeurs.fin <= valeurs.debut && /^\d{4}-\d{2}-\d{2}$/.test(valeurs.date) ? ajouterJours(valeurs.date, 1) : valeurs.date;
 		const donnees = { ...(valeurs.id ? { id: Number(valeurs.id) } : {}), nom: valeurs.nom, debut: `${valeurs.date}T${valeurs.debut}`, fin: `${jourDeFin}T${valeurs.fin}`, equipeId: Number(valeurs.equipe) };
 		let inutiles: string[] = [];
@@ -105,7 +105,7 @@ export const actions: Actions = {
 	},
 	supprimerFete: async ({ locals, request }) => {
 		const f = await request.formData();
-		const valeurs = { id: champ(f, 'id') };
+		const valeurs: Record<string, string> = { id: champ(f, 'id') };
 		let inutiles: string[] = [];
 		const reponse = await agir(locals, 'fete', 'Fête supprimée.', async (m) => {
 			inutiles = (await supprimerFete(locals.base, locals.acteur!, Number(valeurs.id), m, centre.astreinte, champ(f, 'confirme') === 'oui')).inutiles;
