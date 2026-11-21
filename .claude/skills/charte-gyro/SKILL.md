@@ -74,7 +74,19 @@ Chaque règle vérifiable est gardée par un test (`apps/web/src/formes.test.ts`
 
 ## Les textes
 
-- Français simple, phrases courtes. Au plus deux infos reliées par « · », au-delà des virgules.
+Règles validées par le porteur le 21/11/2026. Elles valent pour les écrans, les notifications, les e-mails et les données saisies pour un centre (fiches, rôles, comités, fêtes).
+
+- Français simple, phrases courtes.
+- **Titre de page** : un nom, sans verbe ni ponctuation finale, majuscule au premier mot seulement (« Suivi du centre », « Me faire remplacer »).
+- **Titre de section ou de zone** : un nom simple qui dit où l'on est (« Dessus de cabine », « Tiroir rouge », « Mes demandes ») ; pas de numérotation, sauf une vraie suite d'étapes.
+- **Libellé d'une ligne** : le nom de la chose, au plus court (« Masques FFP2 », « Julie Martin ») ; la quantité va dans sa colonne ou sa pastille, sauf si elle fait partie du nom (« Bouteille d'O2 5 L »).
+- **Sous-ligne** : une phrase ou un groupe de mots, avec des virgules et des mots de liaison, jamais un séparateur graphique (« Remplacé par Marc, de 20 h à 22 h »).
+- **Bouton** : un verbe à l'infinitif qui dit ce qui se passe (« Valider la prise ») ; une action grave nomme son objet (« Supprimer la fête »).
+- **Pastille** : un ou deux mots pour un état (« Annulée », « À pourvoir »), jamais une phrase.
+- **Notification** : le titre dit le fait, le texte le détail, en phrases (« Manœuvre modifiée par Claire Martin », puis « Feux de forêt, samedi 6 décembre à 8 h »).
+- **Écran vide, erreur** : ce qui se passe, puis quoi faire, sans excuse (« Aucune demande en cours. Pour en créer une, appuyez sur Me faire remplacer. »).
+- **Précisions** entre parenthèses (« Sac PS, pochette rouge (pansement) »).
+- **Interdits partout** : point médian « · » comme séparateur, tiret cadratin « — » en incise, barre « | » ou flèche « → » comme séparateur, emoji, majuscules espacées, deux-points suivis d'une révélation (« Résultat : … »), guillemets autour d'un mot inventé. Une garde automatique fait échouer la CI sur ces caractères.
 - Dates et heures par les fonctions communes, jamais à la main : `heure`, `jourEtHeure`, `deNom` (`lib/murs/quand.ts`), `jourLong`, `momentLong`, `duAu` (`lib/planning/dates.ts`), `dateCourte`, `jourCourt` (`lib/engins/textes.ts`) ; les nombres par `pluriel` (`lib/pluriel.ts`). Heures en « 19 h », « 16 h 04 ».
 - « Appuyer », pas « toucher », sur un écran qui sert aussi à l'ordinateur.
 - Un mot dit une fois : pas de description qui répète le titre, pas d'état dit deux fois (pastille et texte).
@@ -82,7 +94,7 @@ Chaque règle vérifiable est gardée par un test (`apps/web/src/formes.test.ts`
 
 ## Ce qui ferait « interface générée »
 
-À ne pas réintroduire : fond crème, cartes à ombre douce partout, petits titres en majuscules espacées, tuiles d'icônes pastel, dégradés, halo sous un bouton, bande de couleur sur le côté d'une carte, description sous chaque ligne, boutons de même poids alignés par cinq.
+À ne pas réintroduire : point médian « · » ou tiret cadratin pour séparer des infos, fond crème, cartes à ombre douce partout, petits titres en majuscules espacées, tuiles d'icônes pastel, dégradés, halo sous un bouton, bande de couleur sur le côté d'une carte, description sous chaque ligne, boutons de même poids alignés par cinq.
 
 ## Les écrans modèles
 
