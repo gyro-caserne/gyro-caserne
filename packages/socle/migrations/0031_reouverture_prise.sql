@@ -1,0 +1,1 @@
+ALTER TABLE `prise_garde` ADD `traces` text DEFAULT '{}' NOT NULL;

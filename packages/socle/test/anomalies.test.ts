@@ -365,7 +365,7 @@ describe('la prise de garde', () => {
 		await gestePrise(j.base, j.base.photos, j.chefDeGarde, p1, { quoi: 'ecart', element: radio.ref, genre: 'abime', manque: null, note: '' }, QUAND, reglage);
 		await toutVoir(p1, QUAND);
 		await validerPrise(j.base, j.chefDeGarde, p1, QUAND, reglage);
-		expect(await j.avis(j.referent)).toMatchObject([{ titre: 'Prise de garde · VSAV 1', texte: '1 anomalie signalée par Chloé Fictif : Radio : essai', url: `/engins/anomalies?engin=${j.vsav}` }]);
+		expect(await j.avis(j.referent)).toMatchObject([{ titre: 'Prise de garde du VSAV 1', texte: '1 anomalie signalée par Chloé Fictif : Radio : essai', url: `/engins/anomalies?engin=${j.vsav}` }]);
 		const [a] = await j.base.select().from(anomalie).where(eq(anomalie.enginId, j.vsav));
 		// La relève suivante la retrouve.
 		const suivante = '2026-11-06T18:10';
@@ -387,7 +387,7 @@ describe('la prise de garde', () => {
 		expect((await j.avis(j.chefDeGarde)).length).toBe(avant);
 		// La cloche les montre.
 		const fil = await filDeNotifications(j.base, j.chefDeGarde, '2026-11-13T18:20');
-		expect(fil.lignes).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'anomalie', titre: 'VSAV 1 · Radio : essai', lue: false })]));
+		expect(fil.lignes).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'anomalie', titre: 'VSAV 1, Radio : essai', lue: false })]));
 		expect(fil.nonLues).toBeGreaterThan(0);
 	});
 });

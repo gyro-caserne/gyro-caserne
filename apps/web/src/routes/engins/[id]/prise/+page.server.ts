@@ -1,6 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import centre from '$centre';
-import { abandonnerPrise, commencerPrise, DonneeInvalide, gestePrise, lirePrise, premierGestePrise, RefusDroit, TAILLE_PHOTO_MAX, validerPrise, type GenreEcart, type GestePrise } from '@gyro-caserne/socle';
+import { abandonnerPrise, commencerPrise, demanderReouverture, DonneeInvalide, gestePrise, lirePrise, modifierParticipantsPrise, premierGestePrise, RefusDroit, rouvrirPrise, TAILLE_PHOTO_MAX, validerPrise, type GenreEcart, type GestePrise } from '@gyro-caserne/socle';
 import { maintenantParis } from '#lib/aujourdhui.ts';
 import { accesEngins, champ, idDe, phraseDe } from '#lib/server/engins.ts';
 import type { Actions, PageServerLoad } from './$types';
@@ -20,8 +20,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 // Les refus dits sur la page ; `zone` : celle à garder ouverte, `cible` : le formulaire concerné.
-function refusPrise(erreur: unknown, plus: Record<string, unknown> = {}) {
-	if (erreur instanceof RefusDroit) return fail(403, { ...plus, message: REFUS_PRISE });
+// Après la validation, le refus dit qui peut faire le geste.
+function refusPrise(erreur: unknown, plus: Record<string, unknown> = {}, apresValidation = false) {
+	if (erreur instanceof RefusDroit) return fail(403, { ...plus, message: apresValidation ? phraseDe(erreur.message) : REFUS_PRISE });
 	if (erreur instanceof DonneeInvalide) return fail(400, { ...plus, message: phraseDe(erreur.message) });
 	throw erreur;
 }
@@ -109,6 +110,38 @@ export const actions: Actions = {
 		// Les nouvelles anomalies : aussi par e-mail à ceux qui les reçoivent, après la réponse.
 		envoyerDemandeParCourriel(locals, url, { genre: 'prise', enginId: idDe(params.id), quand });
 		redirect(303, `/engins/${params.id}/prise?validee`);
+	},
+	// Sur une prise validée, jusqu'à la relève suivante : les participants, la réouverture, la demande de réouverture.
+	participants: async ({ locals, params, request }) => {
+		const { acteur, base } = await accesEngins(locals);
+		const f = await request.formData();
+		try {
+			await modifierParticipantsPrise(base, acteur, idDe(champ(f, 'prise')), f.getAll('participant').map(idDe), maintenantParis(), centre.astreinte, idDe(params.id));
+		} catch (erreur) {
+			return refusPrise(erreur, { cible: 'participants' }, true);
+		}
+		return { cible: 'participants', succes: 'Participants enregistrés.' };
+	},
+	rouvrir: async ({ locals, params, request }) => {
+		const { acteur, base } = await accesEngins(locals);
+		const f = await request.formData();
+		if (champ(f, 'confirmation') !== 'oui') return fail(400, { cible: 'rouvrir', motif: champ(f, 'motif'), message: 'Cochez « Je confirme » pour rouvrir la prise.' });
+		try {
+			await rouvrirPrise(base, acteur, idDe(champ(f, 'prise')), champ(f, 'motif'), maintenantParis(), centre.astreinte, idDe(params.id));
+		} catch (erreur) {
+			return refusPrise(erreur, { cible: 'rouvrir', motif: champ(f, 'motif') }, true);
+		}
+		redirect(303, `/engins/${params.id}/prise?rouverte`);
+	},
+	demanderReouverture: async ({ locals, params, request }) => {
+		const { acteur, base } = await accesEngins(locals);
+		const f = await request.formData();
+		try {
+			await demanderReouverture(base, acteur, idDe(champ(f, 'prise')), champ(f, 'motif'), maintenantParis(), centre.astreinte, idDe(params.id));
+		} catch (erreur) {
+			return refusPrise(erreur, { cible: 'demander', motif: champ(f, 'motif') }, true);
+		}
+		return { cible: 'demander', succes: 'Demande envoyée.' };
 	},
 	abandonner: async ({ locals, params, request }) => {
 		const { acteur, base } = await accesEngins(locals);

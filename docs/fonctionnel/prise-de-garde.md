@@ -18,7 +18,7 @@ Vérifier qu'un engin est complet et prêt avant la garde, garder la trace de qu
 ## Le déroulé
 
 1. L'agent choisit l'engin. L'appli ouvre la fiche de son type, dans sa version en vigueur.
-2. **Zone par zone**, il lit la liste et touche « Tout est complet ». Pour un élément manquant, abîmé ou à remplacer, il touche « Écart » sur sa ligne (nombre manquant, note et photo facultatives).
+2. **Zone par zone**, il lit la liste et appuie sur « Tout est complet ». Pour un élément manquant, abîmé ou à remplacer, il appuie sur « Écart » sur sa ligne (nombre manquant, note et photo facultatives).
 3. Il valide. Chaque écart crée une anomalie, sauf si une anomalie est déjà ouverte pour cet élément sur cet engin. L'engin reste disponible : l'indisponibilité est une décision à part.
 4. Si un élément signalé à une prise précédente est retrouvé, l'appli propose de clore l'anomalie liée.
 
@@ -40,7 +40,7 @@ Il y a une seule prise par engin et par relève, et le brouillon est gardé sur 
 
 ## Exemple
 
-Le VSAV 1 part en réparation. Le centre reçoit en prêt le VSAV 23 d'un autre CIS : il l'ajoute, « Prêté par CIS Bruz ». À la prise de garde, l'agent choisit le VSAV 23 et l'appli ouvre la fiche VSAV. Il manque un masque FFP2 dans la cellule : il touche « Écart » sur sa ligne, et à la validation une anomalie est créée sur le VSAV 23. Au retour du VSAV 1, le VSAV 23 passe « parti » : il sort de la liste à la date du jour, son historique reste.
+Le VSAV 1 part en réparation. Le centre reçoit en prêt le VSAV 23 d'un autre CIS : il l'ajoute, « Prêté par CIS Bruz ». À la prise de garde, l'agent choisit le VSAV 23 et l'appli ouvre la fiche VSAV. Il manque un masque FFP2 dans la cellule : il appuie sur « Écart » sur sa ligne, et à la validation une anomalie est créée sur le VSAV 23. Au retour du VSAV 1, le VSAV 23 passe « parti » : il sort de la liste à la date du jour, son historique reste.
 
 ## Rythme
 
@@ -57,7 +57,7 @@ La prise est au nom de ses participants (celui qui valide en fait partie) et de 
 - **Depuis l'accueil** : sur la carte d'astreinte, « Faire la prise de garde », de 2 h avant à 24 h après **la relève du centre**, pour les agents qui ont une astreinte dans la semaine de cette relève. Une plage d'été qui commence le dimanche n'y change rien : le lien suit la relève du vendredi.
 - **Caserne → Engins → Prise de garde** : la relève en cours (« Relève du ven. 30 oct., équipe 2 ») et chaque engin : « Prise faite par l'équipe 2, ven. 18 h 40 », « Prise en cours (Alice Martin) » ou « Prise à faire », et ses écarts encore ouverts. La liste des engins dit la même chose sous chaque engin.
 - **La prise d'un engin** : en tête, la plaque de l'engin (son nom en grand sur un à-plat rouge, la relève, « 1 / 4 zones vues ») ; dessous, une fois la prise commencée, les participants avec « Modifier » et qui l'a commencée. La fiche se lit avant de commencer, sans rien créer. Toutes les zones sont au sélecteur, en tuiles (en haut au téléphone, à gauche à l'ordinateur ; elles passent à la ligne quels que soient leur nombre et leurs noms), le contenu de la zone dessous. Une zone vue est verte, avec la coche et « Tout est complet » (ou « Complet sauf 1 écart ») écrits ; la zone affichée est en encre pleine. Le titre de la zone dit son nombre d'éléments, la liste tient dans une carte. Par ligne, un lien « Écart » et la quantité attendue. **« Tout est complet » vient après la liste** : on ne valide pas une check-list sans l'avoir sous les yeux (décision du porteur : pas de bouton fixé en bas). L'appli passe alors à la zone suivante à voir, son titre en haut de l'écran, et propose « Annuler » ; une zone complète se revoit aussi depuis le sélecteur. Un écart : manquant avec le nombre manquant s'il se compte, abîmé, à remplacer ; note et photo facultatives. « Oui, clore le signalement » si un élément signalé est retrouvé. Les participants : sous la plaque, « Participants : vous + 2 » et « Modifier », qui ouvre un panneau (l'équipe d'astreinte d'abord, une recherche pour un remplaçant ou un renfort).
-- **Écarts déjà signalés** : le sélecteur compte ceux de chaque zone (« 7 à voir · 1 signalé ») ; ceux sans élément de la fiche (signalés hors prise) sont listés au-dessus des zones.
+- **Écarts déjà signalés** : le sélecteur compte ceux de chaque zone (« 7 à voir, 1 signalé ») ; ceux sans élément de la fiche (signalés hors prise) sont listés au-dessus des zones.
 - **Commencer** : le premier geste sur la fiche (« Tout est complet », un écart ou un signalement retrouvé) commence la prise, ou reprend celle qu'un collègue vient de commencer. Le bouton « Commencer la prise » ne reste que pour une fiche sans zone, où aucun autre geste n'existe.
 - **Valider** : un bandeau toujours là, en bas du contenu. Tant qu'il reste des zones : « Encore 2 zones à voir avant de valider. » et « Valider la prise » grisé (atteignable au clavier, lu avec cette raison). Toutes vues : le bloc « Valider », avec le résumé et le nom des participants, et le bouton actif ; le focus y va.
 - **Brouillon partagé** : une prise par engin et par relève, gardée sur le serveur ; un collègue la reprend sur son téléphone. On peut l'abandonner (brouillon et photos effacés).
@@ -65,3 +65,18 @@ La prise est au nom de ses participants (celui qui valide en fait partie) et de 
 - **Relève** : le moment de prise d'astreinte du centre ; on peut commencer deux heures avant. **Retard** : trois heures après la relève, les engins sans prise validée apparaissent dans « À décider » du chef de garde de l'équipe d'astreinte (« Prise de garde en retard : VSAV 1, FPT »), sinon dans « Le centre ».
 - **Historique** : sur la page de l'engin, les dernières prises ; chacune se relit telle qu'elle a été faite, avec la fiche de son époque.
 - **Qui** : tout agent (droit « Faire la prise de garde », profil Agent) ; les autres lisent les zones et les écarts, sans aucun geste.
+
+## Après la validation
+
+Jusqu'à la relève suivante (plus exactement deux heures avant, quand sa prise peut commencer), une prise validée se corrige encore. Cadrage : [la spec](../superpowers/specs/2026-11-21-reouverture-prise-design.md).
+
+- **Participants** : un participant, le chef de garde de l'équipe d'astreinte, le chef de centre ou l'adjoint les modifie (« Modifier » sous la plaque), sans rouvrir. L'inventaire reste figé. La prise le note : « Participants modifiés par Alice Martin, ven. 20 h. »
+- **Rouvrir** : le chef de garde de l'équipe d'astreinte, le chef de centre ou l'adjoint, sous « Plus », avec un motif court et « Je confirme ». La prise redevient en cours : zones vues gardées, écarts modifiables, puis nouvelle validation. Elle garde la trace : « Rouverte par Bruno Petit, ven. 19 h 30. Motif : radio oubliée. » Une prise rouverte ne s'abandonne pas.
+- **Demander la réouverture** : un participant ou un agent de l'équipe d'astreinte, avec un motif court. Le chef de garde de l'équipe d'astreinte est prévenu à la cloche (« Réouverture demandée par Alice Martin », puis « VSAV 1. Motif : radio oubliée »), avec un lien vers la prise ; sans chef de garde en fonction, le chef de centre et l'adjoint. La dernière demande reste écrite sur la prise jusqu'à la réouverture. Sans aucun chef en fonction, la demande est refusée.
+- **Anomalies de la première validation** : un écart retiré annule son anomalie à la nouvelle validation si personne ne la suit encore (close, avec « Annulée, écart retiré de la prise de garde » dans son historique). Si elle est déjà suivie, elle reste ouverte et l'écran prévient : « Déjà suivie par Rémi Fictif, qui la clora. Changer ou retirer l’écart ne la modifie pas. » Un écart modifié met à jour son anomalie non suivie ; un nouvel écart crée la sienne, sans doublon.
+- **Suivi du centre** : la réouverture et les participants modifiés y apparaissent (« a rouvert la prise de garde : VSAV 1 »).
+- Une prise rouverte reste dans l'historique de l'engin avec sa première validation ; pendant sa relève, sa page renvoie à la prise en cours. Pas revalidée avant la relève suivante, elle redevient validée, à la date de sa première validation (décision du porteur). Les écarts changés entre-temps restent dans sa saisie mais ne touchent pas les anomalies.
+- Rouvrir demande aussi de pouvoir faire la prise (droit « Faire la prise de garde ») : sinon on rouvrirait sans pouvoir corriger.
+- Pas de modification après la relève suivante, pas d'historique ligne à ligne : la trace dit qui, quand et pourquoi.
+
+**Exemple.** Vendredi 18 h 40, Alice valide la prise du VSAV 1 avec un écart sur les gilets. À 19 h, elle s'aperçoit que la radio grésille : elle appuie sur « Demander la réouverture », motif « radio oubliée ». Bruno, chef de garde, reçoit la demande, ouvre la prise, « Plus », « Rouvrir la prise ». Alice ajoute l'écart sur la radio et valide : une seule anomalie de plus, celle de la radio.

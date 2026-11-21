@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import type { BatchItem } from 'drizzle-orm/batch';
 import { instruction, type Base, type BasePhotos } from './base.ts';
 import { avecPhotos, effacerPhotos, exigerPhotos, lireOctets, type Photo } from './commun.ts';
 import { ajouterJours, enCours, exigerDateHeure } from './dates.ts';
@@ -7,9 +8,10 @@ import { lireEngin, voitLesEngins, type EnginVu } from './engins.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import type { ElementFiche, ZoneFiche } from './fiches.ts';
 import { avisAnomalies, quiTraite } from './anomalies-avis.ts';
+import { ligneJournalSi } from './journal.ts';
 import { GENRES_ECART, STATUTS_AVEC_ACCES, type EtapeAnomalie, type EtatPrise, type GenreEcart, type MotifAttente } from './listes.ts';
 import { rangDuJour, semainesDe, type Reglage } from './planning/calendrier.ts';
-import { affectationEquipe, anneePlanning, anomalie, engin, equipe, ficheElement, ficheVersion, ficheZone, personne, priseGarde, profil, semaineChangee, typeEngin } from './schema.ts';
+import { affectationEquipe, anneePlanning, anomalie, anomalieSuivi, attribution, engin, equipe, ficheElement, ficheVersion, ficheZone, personne, priseGarde, profil, responsabilite, semaineChangee, typeEngin } from './schema.ts';
 
 // La prise de garde : à la relève, l'équipe d'astreinte vérifie chaque engin zone par zone. Un brouillon sur le serveur
 // (une prise par engin et par relève), repris par n'importe qui ; à la validation, chaque écart devient une anomalie.
@@ -29,11 +31,19 @@ export type GestePrise =
 export type EquipeReleve = { id: number; nom: string; couleur: string };
 export type Releve = { debut: string; equipe: EquipeReleve | null };
 export type AnomalieVue = { id: number; ref: number | null; zone: string; libelle: string; genre: GenreEcart; manque: number | null; note: string | null; photo: number | null; signaleeLe: string; signaleePar: string; etape: EtapeAnomalie; motif: MotifAttente | null; bloquante: boolean };
-export type PriseVue = { id: number; etat: EtatPrise; commenceePar: string; commenceeLe: string; modifieePar: string; modifieeLe: string; valideeLe: string | null; saisie: Saisie };
+// Après la validation : qui a modifié les participants, rouvert la prise ou demandé sa réouverture (identifiants en base, noms à l'écran).
+export type TracesPrise = { participants?: { par: number; le: string }; rouverte?: { par: number; le: string; motif: string; valideeLe?: string }; demande?: { par: number; le: string; motif: string } };
+type Trace = { par: string; le: string };
+export type TracesVues = { participants: Trace | null; rouverte: (Trace & { motif: string }) | null; demande: (Trace & { motif: string }) | null };
+export type PriseVue = { id: number; etat: EtatPrise; commenceePar: string; commenceeLe: string; modifieePar: string; modifieeLe: string; valideeLe: string | null; saisie: Saisie; traces: TracesVues };
 export type AgentPrise = { id: number; nom: string; astreinte: boolean };
-export type VuePrise = { engin: EnginVu; releve: Releve; peutFaire: boolean; prise: PriseVue | null; zones: ZoneFiche[]; ouvertes: AnomalieVue[]; agents: AgentPrise[] };
+// Sur une prise validée de la relève en cours : modifier les participants, rouvrir, demander la réouverture.
+export type GestesValidee = { participants: boolean; rouvrir: boolean; demander: boolean };
+// Les anomalies encore ouvertes créées par cette prise (une prise rouverte) : `suivie`, quelqu'un s'en occupe déjà.
+export type AnomaliePropre = { id: number; ref: number | null; suivie: boolean; suiviePar: string | null; close: boolean };
+export type VuePrise = { engin: EnginVu; releve: Releve; peutFaire: boolean; prise: PriseVue | null; zones: ZoneFiche[]; ouvertes: AnomalieVue[]; propres: AnomaliePropre[]; agents: AgentPrise[]; gestes: GestesValidee };
 
-export const LIMITES_PRISE = { note: 300, participants: 60 } as const;
+export const LIMITES_PRISE = { note: 300, participants: 60, motif: 200 } as const;
 // On peut commencer la prise deux heures avant la relève ; elle est en retard trois heures après.
 const AVANCE_MIN = 120;
 const RETARD_MIN = 180;
@@ -91,6 +101,36 @@ export function equipeDe(releve: string, annees: (typeof anneePlanning.$inferSel
 
 const nomComplet = (p: { prenom: string; nom: string } | undefined) => (p ? `${p.prenom} ${p.nom}` : 'Un ancien agent');
 const lireSaisie = (texte: string): Saisie => ({ ...SAISIE_VIDE, ...(JSON.parse(texte) as Partial<Saisie>) });
+const lireTraces = (texte: string) => JSON.parse(texte) as TracesPrise;
+const idsDesTraces = (t: TracesPrise) => [t.participants?.par, t.rouverte?.par, t.demande?.par].filter((id): id is number => id !== undefined);
+function tracesVues(t: TracesPrise, nom: (id: number) => string): TracesVues {
+	return {
+		participants: t.participants ? { par: nom(t.participants.par), le: t.participants.le } : null,
+		rouverte: t.rouverte ? { par: nom(t.rouverte.par), le: t.rouverte.le, motif: t.rouverte.motif } : null,
+		demande: t.demande ? { ...t.demande, par: nom(t.demande.par) } : null
+	};
+}
+
+// Les chefs d'une prise : le chef de garde de son équipe d'astreinte, le chef de centre et l'adjoint, en fonction.
+const SYSTEMES_CHEF = ['chef_equipe', 'chef_centre', 'chef_centre_adjoint'] as const;
+type RoleChef = { id: number; systeme: string | null; perimetreId: number | null; debut: string; fin: string | null };
+const lectureChefs = (base: Base, qui?: number) =>
+	base
+		.select({ id: attribution.personneId, systeme: responsabilite.systeme, perimetreId: attribution.perimetreId, debut: attribution.debut, fin: attribution.fin })
+		.from(attribution)
+		.innerJoin(responsabilite, eq(responsabilite.id, attribution.responsabiliteId))
+		.innerJoin(personne, eq(personne.id, attribution.personneId))
+		.where(and(inArray(responsabilite.systeme, [...SYSTEMES_CHEF]), inArray(personne.statut, [...STATUTS_AVEC_ACCES]), qui === undefined ? undefined : eq(attribution.personneId, qui)));
+const chefsDe = (roles: RoleChef[], equipeId: number | null, aujourdhui: string) =>
+	roles.filter((r) => enCours(r.debut, r.fin, aujourdhui) && (r.systeme !== 'chef_equipe' || (equipeId !== null && r.perimetreId === equipeId)));
+
+// Un motif court, obligatoire.
+function motifDe(texte: unknown): string {
+	const motif = typeof texte === 'string' ? texte.trim().replace(/\s+/g, ' ') : '';
+	if (!motif) throw new DonneeInvalide('Motif manquant');
+	if (motif.length > LIMITES_PRISE.motif) throw new DonneeInvalide('Motif trop long');
+	return motif;
+}
 
 // Faire la prise : FAIRE_PRISE_DE_GARDE sur le centre, et être un agent (la prise est au nom de personnes).
 export async function peutFairePrise(base: Base, acteur: Acteur, aujourdhui: string): Promise<boolean> {
@@ -130,8 +170,22 @@ const colonnesAnomalie = {
 	prenom: personne.prenom,
 	nom: personne.nom
 };
-const ouvertesDe = (base: Base, enginId: number) =>
-	base.select(colonnesAnomalie).from(anomalie).innerJoin(personne, eq(personne.id, anomalie.signaleePar)).where(and(eq(anomalie.enginId, enginId), isNull(anomalie.closeLe))).orderBy(asc(anomalie.id));
+// Quelqu'un s'occupe déjà de l'anomalie : une étape, un preneur, un blocage ou une ligne d'historique.
+const suivieSql = sql<number>`(${anomalie.etape} <> 'signalee' OR ${anomalie.priseEnChargePar} IS NOT NULL OR ${anomalie.bloquante} = 1 OR EXISTS (SELECT 1 FROM ${anomalieSuivi} WHERE ${anomalieSuivi.anomalieId} = ${anomalie.id}))`;
+// `dela` : la prise de la relève ; ses anomalies se lisent aussi closes (une prise rouverte ne les compte pas comme nouveaux écarts).
+const ouvertesDe = (base: Base, enginId: number, dela: SQL) =>
+	base
+		.select({
+			...colonnesAnomalie,
+			priseId: anomalie.priseId,
+			suivie: suivieSql.as('suivie'),
+			suiviePar: sql<string | null>`(SELECT p.prenom || ' ' || p.nom FROM ${personne} p WHERE p.id = ${anomalie.priseEnChargePar})`.as('suivie_par'),
+			close: sql<number>`${anomalie.closeLe} IS NOT NULL`.as('close')
+		})
+		.from(anomalie)
+		.innerJoin(personne, eq(personne.id, anomalie.signaleePar))
+		.where(and(eq(anomalie.enginId, enginId), or(isNull(anomalie.closeLe), sql`${anomalie.priseId} = ${dela}`)))
+		.orderBy(asc(anomalie.id));
 const vueAnomalie = ({ prenom, nom, bloquante, ...a }: { prenom: string; nom: string; bloquante: number } & Omit<AnomalieVue, 'signaleePar' | 'bloquante'>): AnomalieVue => ({ ...a, bloquante: bloquante === 1, signaleePar: `${prenom} ${nom}` });
 
 // La prise d'un engin pour la relève en cours : le brouillon (ou la prise faite), la fiche suivie, les anomalies encore ouvertes
@@ -142,10 +196,11 @@ export async function lirePrise(base: Base, acteur: Acteur, enginId: number, mai
 	const releve = releveDe(maintenant, reglage);
 	const laPrise = and(eq(priseGarde.enginId, enginId), eq(priseGarde.releve, releve));
 	const version = sql<number>`coalesce((SELECT ${priseGarde.versionId} FROM ${priseGarde} WHERE ${laPrise}), (SELECT max(${ficheVersion.id}) FROM ${ficheVersion} WHERE ${ficheVersion.typeId} = ${e.typeId}))`;
-	const [prises, zones, elements, ouvertes, annees, changees, equipes, agents, affectations] = await base.batch([
+	const moi = acteur.type === 'personne' ? acteur.id : 0;
+	const [prises, zones, elements, ouvertes, annees, changees, equipes, agents, affectations, roles] = await base.batch([
 		base.select().from(priseGarde).where(laPrise),
 		...lecturesVersion(base, version),
-		ouvertesDe(base, enginId),
+		ouvertesDe(base, enginId, sql`(SELECT ${priseGarde.id} FROM ${priseGarde} WHERE ${laPrise})`),
 		...lecturesEquipe(base, releve),
 		base
 			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom })
@@ -153,23 +208,37 @@ export async function lirePrise(base: Base, acteur: Acteur, enginId: number, mai
 			.innerJoin(profil, eq(profil.id, personne.profilId))
 			.where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), eq(profil.typePersonne, 'agent')))
 			.orderBy(asc(personne.nom), asc(personne.prenom)),
-		base.select().from(affectationEquipe)
+		base.select().from(affectationEquipe),
+		lectureChefs(base, moi)
 	]);
 	const eq_ = equipeDe(releve, annees, changees, equipes, reglage);
 	const p = prises[0];
+	const traces = p ? lireTraces(p.traces) : {};
 	const noms = new Map(agents.map((a) => [a.id, `${a.prenom} ${a.nom}`]));
-	const autres = p ? await nomsDe(base, [p.commenceePar, p.modifieePar].filter((id) => !noms.has(id))) : new Map<number, string>();
+	const autres = p ? await nomsDe(base, [p.commenceePar, p.modifieePar, ...idsDesTraces(traces)].filter((id) => !noms.has(id))) : new Map<number, string>();
 	const nom = (id: number) => noms.get(id) ?? autres.get(id) ?? 'Un ancien agent';
 	const dAstreinte = (id: number) => eq_ !== null && affectations.some((a) => a.personneId === id && a.equipeId === eq_.id && enCours(a.debut, a.fin, aujourdhui));
+	const saisie = p ? lireSaisie(p.saisie) : SAISIE_VIDE;
+	// Sur une prise validée : un participant ou un chef modifie les participants ; un chef rouvre ; un participant ou un agent d'astreinte le demande.
+	const validee = p?.etat === 'validee' && e.situation !== 'parti' && acteur.type === 'personne';
+	const chef = validee && chefsDe(roles, p.equipeId, aujourdhui).length > 0;
+	const participant = validee && saisie.participants.includes(moi);
+	const deLEquipe = validee && affectations.some((a) => a.personneId === moi && a.equipeId === p.equipeId && enCours(a.debut, a.fin, aujourdhui));
+	// Les anomalies ouvertes créées par cette prise sont ses propres écarts (une prise rouverte) : pas « déjà signalés ».
+	const propres = ouvertes.filter((o) => p !== undefined && o.priseId === p.id);
+	const peutFaire = e.situation !== 'parti' && (await peutFairePrise(base, acteur, aujourdhui));
 	return {
 		engin: e,
 		releve: { debut: releve, equipe: eq_ },
-		peutFaire: e.situation !== 'parti' && (await peutFairePrise(base, acteur, aujourdhui)),
+		peutFaire,
 		prise: p
-			? { id: p.id, etat: p.etat, commenceePar: nom(p.commenceePar), commenceeLe: p.commenceeLe, modifieePar: nom(p.modifieePar), modifieeLe: p.modifieeLe, valideeLe: p.valideeLe, saisie: lireSaisie(p.saisie) }
+			? { id: p.id, etat: p.etat, commenceePar: nom(p.commenceePar), commenceeLe: p.commenceeLe, modifieePar: nom(p.modifieePar), modifieeLe: p.modifieeLe, valideeLe: p.valideeLe, saisie, traces: tracesVues(traces, nom) }
 			: null,
 		zones: zonesDe(zones, elements),
-		ouvertes: ouvertes.map(vueAnomalie),
+		ouvertes: ouvertes.filter((o) => !propres.includes(o) && o.close === 0).map(({ priseId: _, suivie: __, suiviePar: ___, close: ____, ...o }) => vueAnomalie(o)),
+		propres: propres.map((o) => ({ id: o.id, ref: o.ref, suivie: o.suivie === 1, suiviePar: o.suiviePar, close: o.close === 1 })),
+		// Rouvrir sans pouvoir faire la prise laisserait une prise que l'on ne peut pas corriger.
+		gestes: { participants: participant || chef, rouvrir: chef && peutFaire, demander: !chef && (participant || deLEquipe) },
 		agents: agents.map((a) => ({ id: a.id, nom: `${a.prenom} ${a.nom}`, astreinte: dAstreinte(a.id) })).sort((a, b) => Number(b.astreinte) - Number(a.astreinte))
 	};
 }
@@ -180,13 +249,25 @@ async function nomsDe(base: Base, ids: number[]): Promise<Map<number, string>> {
 	return new Map(lignes.map((l) => [l.id, nomComplet(l)]));
 }
 
+// Une prise rouverte a déjà créé ses anomalies : elle ne s'abandonne pas et n'est jamais effacée.
+const pasRouverte = sql`json_extract(${priseGarde.traces}, '$.rouverte') IS NULL`;
+// Rouverte et pas revalidée avant la relève suivante : elle redevient validée, à la date de sa validation d'avant.
+const valideeAvant = sql<string | null>`json_extract(${priseGarde.traces}, '$.rouverte.valideeLe')`;
+const revaliderPassees = (base: Base, enginId: number, releve: string) =>
+	base
+		.update(priseGarde)
+		.set({ etat: 'validee', valideeLe: valideeAvant, compteur: sql`${priseGarde.compteur} + 1` })
+		.where(and(eq(priseGarde.enginId, enginId), eq(priseGarde.etat, 'en_cours'), ne(priseGarde.releve, releve), sql`${valideeAvant} IS NOT NULL`));
+// Validée, ou rouverte avec une validation d'avant : lisible dans l'historique et en prise faite, sans attendre la relève suivante.
+const faiteSql = sql`(${priseGarde.etat} = 'validee' OR ${valideeAvant} IS NOT NULL)`;
+
 // Commencer la prise d'un engin pour la relève en cours ; si un collègue l'a déjà commencée, c'est la sienne qu'on reprend.
 // La version de fiche suivie est marquée utilisée : la modifier en crée une nouvelle, la prise garde la sienne.
 // Un brouillon d'une relève passée, jamais validé, ne se reprend plus : il est effacé, ses photos aussi.
 export async function commencerPrise(base: Base, basePhotos: BasePhotos, acteur: Acteur, enginId: number, maintenant: string, reglage: Reglage): Promise<number> {
 	const moi = await exigerPrise(base, acteur, maintenant);
 	const releve = releveDe(maintenant, reglage);
-	const passes = and(eq(priseGarde.enginId, enginId), eq(priseGarde.etat, 'en_cours'), ne(priseGarde.releve, releve));
+	const passes = and(eq(priseGarde.enginId, enginId), eq(priseGarde.etat, 'en_cours'), ne(priseGarde.releve, releve), pasRouverte);
 	const [[e], anciens, [version], annees, changees, equipes] = await base.batch([
 		base.select({ situation: engin.situation, typeId: engin.typeId }).from(engin).where(eq(engin.id, enginId)),
 		base.select({ saisie: priseGarde.saisie }).from(priseGarde).where(passes),
@@ -198,7 +279,8 @@ export async function commencerPrise(base: Base, basePhotos: BasePhotos, acteur:
 	if (!version?.id) throw new DonneeInvalide('Type inconnu');
 	const equipeId = equipeDe(releve, annees, changees, equipes, reglage)?.id ?? null;
 	const saisie: Saisie = { ...SAISIE_VIDE, participants: [moi] };
-	const [, , , [ligne]] = await base.batch([
+	const [, , , , [ligne]] = await base.batch([
+		revaliderPassees(base, enginId, releve),
 		base.delete(priseGarde).where(passes),
 		base
 			.insert(priseGarde)
@@ -265,12 +347,26 @@ async function lireBrouillon(base: Base, id: number, enginId?: number) {
 	const [[p], zones, elements, ouvertes, agents] = await base.batch([
 		base.select({ prise: priseGarde, situation: engin.situation, nomEngin: sql<string>`${engin.nom}`.as('nom_engin') }).from(priseGarde).innerJoin(engin, eq(engin.id, priseGarde.enginId)).where(eq(priseGarde.id, id)),
 		...lecturesVersion(base, version),
-		base.select({ id: anomalie.id, ref: anomalie.ref, zone: anomalie.zone, libelle: anomalie.libelle, signaleePar: anomalie.signaleePar, priseEnChargePar: anomalie.priseEnChargePar }).from(anomalie).where(and(sql`${anomalie.enginId} = (SELECT ${priseGarde.enginId} FROM ${priseGarde} WHERE ${priseGarde.id} = ${id})`, isNull(anomalie.closeLe))),
+		base
+			.select({ id: anomalie.id, ref: anomalie.ref, zone: anomalie.zone, libelle: anomalie.libelle, signaleePar: anomalie.signaleePar, priseEnChargePar: anomalie.priseEnChargePar, priseId: anomalie.priseId, closeLe: anomalie.closeLe })
+			.from(anomalie)
+			.where(and(sql`${anomalie.enginId} = (SELECT ${priseGarde.enginId} FROM ${priseGarde} WHERE ${priseGarde.id} = ${id})`, or(isNull(anomalie.closeLe), eq(anomalie.priseId, id)))),
 		base.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom }).from(personne).innerJoin(profil, eq(profil.id, personne.profilId)).where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), eq(profil.typePersonne, 'agent')))
 	]);
 	if (!p || (enginId !== undefined && p.prise.enginId !== enginId)) throw new DonneeInvalide('Prise inconnue');
 	if (p.situation === 'parti') throw new DonneeInvalide('Engin parti');
-	return { prise: p.prise, nomEngin: p.nomEngin, saisie: lireSaisie(p.prise.saisie), zones: zonesDe(zones, elements), ouvertes, agents: agents.map((a) => a.id), noms: new Map(agents.map((a) => [a.id, `${a.prenom} ${a.nom}`])) };
+	// `ouvertes` : celles des autres prises, encore ouvertes ; `propres` : celles que cette prise a créées (rouverte), closes ou non.
+	return {
+		prise: p.prise,
+		nomEngin: p.nomEngin,
+		saisie: lireSaisie(p.prise.saisie),
+		traces: lireTraces(p.prise.traces),
+		zones: zonesDe(zones, elements),
+		ouvertes: ouvertes.filter((o) => o.priseId !== id && o.closeLe === null),
+		propres: ouvertes.filter((o) => o.priseId === id),
+		agents: agents.map((a) => a.id),
+		noms: new Map(agents.map((a) => [a.id, `${a.prenom} ${a.nom}`]))
+	};
 }
 
 function exigerEnCours(p: { etat: EtatPrise; releve: string }, maintenant: string, reglage: Reglage) {
@@ -298,7 +394,8 @@ export async function gestePrise(base: Base, basePhotos: BasePhotos, acteur: Act
 				.where(and(eq(priseGarde.id, id), eq(priseGarde.compteur, b.prise.compteur), eq(priseGarde.etat, 'en_cours')))
 				.returning({ id: priseGarde.id });
 			if (ecrit.length > 0) {
-				await effacerPhotos(basePhotos, photosDe(b.saisie).filter((ph) => !photosDe(saisie).includes(ph)));
+				// Rouverte, ses photos peuvent être celles de ses anomalies : le ménage de nuit efface les orphelines.
+				if (!b.traces.rouverte) await effacerPhotos(basePhotos, photosDe(b.saisie).filter((ph) => !photosDe(saisie).includes(ph)));
 				return;
 			}
 			if (essai > 0) throw new DonneeInvalide('Prise changée entre-temps');
@@ -329,7 +426,7 @@ export async function abandonnerPrise(base: Base, basePhotos: BasePhotos, acteur
 	await exigerPrise(base, acteur, maintenant);
 	const [p] = await base
 		.delete(priseGarde)
-		.where(and(eq(priseGarde.id, id), eq(priseGarde.etat, 'en_cours'), enginId === undefined ? undefined : eq(priseGarde.enginId, enginId)))
+		.where(and(eq(priseGarde.id, id), eq(priseGarde.etat, 'en_cours'), pasRouverte, enginId === undefined ? undefined : eq(priseGarde.enginId, enginId)))
 		.returning({ saisie: priseGarde.saisie });
 	if (!p) throw new DonneeInvalide('Prise inconnue');
 	await effacerPhotos(basePhotos, photosDe(lireSaisie(p.saisie)));
@@ -356,22 +453,27 @@ export async function validerPrise(base: Base, acteur: Acteur, id: number, maint
 		)
 	);
 	const enginId = b.prise.enginId;
-	// Un écart sur un élément encore signalé (et non retrouvé) ne crée pas d'anomalie.
-	const nouvelles = b.zones.flatMap((z) => z.elements).filter((e) => saisie.ecarts[String(e.ref)] && !b.ouvertes.some((o) => o.ref === e.ref && !saisie.retrouves.includes(o.id)));
+	// Un écart sur un élément encore signalé (et non retrouvé), ou qui a déjà son anomalie de cette prise (rouverte), n'en crée pas.
+	const nouvelles = b.zones
+		.flatMap((z) => z.elements)
+		.filter((e) => saisie.ecarts[String(e.ref)] && !b.ouvertes.some((o) => o.ref === e.ref && !saisie.retrouves.includes(o.id)) && !b.propres.some((o) => o.ref === e.ref));
+	// Rouverte : les anomalies de la première validation que personne ne suit encore suivent leur écart, modifié ou retiré.
+	const libre = sql`${anomalie.priseId} = ${id} AND ${anomalie.closeLe} IS NULL AND NOT ${suivieSql}`;
+	const refs = sql`(SELECT json_extract(value, '$.ref') FROM json_each(${ecarts}))`;
 	const traitent = nouvelles.length ? (await quiTraite(base, maintenant.slice(0, 10), b.prise.equipeId, moi)).filter((x) => x !== moi) : [];
 	const qui = b.noms.get(moi) ?? 'un agent';
 	const avis = [
 		...avisAnomalies(
 			base,
 			traitent,
-			{ titre: `Prise de garde · ${b.nomEngin}`, texte: `${nouvelles.length} ${nouvelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${nouvelles.map((e) => e.libelle).join(', ')}`, url: `/engins/anomalies?engin=${enginId}` },
+			{ titre: `Prise de garde du ${b.nomEngin}`, texte: `${nouvelles.length} ${nouvelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${nouvelles.map((e) => e.libelle).join(', ')}`, url: `/engins/anomalies?engin=${enginId}` },
 			maintenant,
 			validee
 		),
 		...b.ouvertes
 			.filter((o) => saisie.retrouves.includes(o.id))
 			// Seulement si c'est bien cette prise qui l'a close (un collègue a pu la clore entre-temps).
-			.flatMap((o) => avisAnomalies(base, [...new Set([o.signaleePar, o.priseEnChargePar])].filter((x): x is number => x !== null && x !== moi), { titre: `${b.nomEngin} · ${o.libelle}`, texte: `Retrouvée à la prise de garde par ${qui}`, url: `/engins/anomalies/${o.id}` }, maintenant, sql`${validee} AND EXISTS (SELECT 1 FROM ${anomalie} WHERE ${anomalie.id} = ${o.id} AND ${anomalie.closePriseId} = ${id})`))
+			.flatMap((o) => avisAnomalies(base, [...new Set([o.signaleePar, o.priseEnChargePar])].filter((x): x is number => x !== null && x !== moi), { titre: `${b.nomEngin}, ${o.libelle}`, texte: `Retrouvée à la prise de garde par ${qui}`, url: `/engins/anomalies/${o.id}` }, maintenant, sql`${validee} AND EXISTS (SELECT 1 FROM ${anomalie} WHERE ${anomalie.id} = ${o.id} AND ${anomalie.closePriseId} = ${id})`))
 	];
 	const [ecrit] = await base.batch([
 		base
@@ -389,8 +491,28 @@ export async function validerPrise(base: Base, acteur: Acteur, id: number, maint
 				SELECT ${enginId}, json_extract(value, '$.ref'), json_extract(value, '$.zone'), json_extract(value, '$.libelle'), json_extract(value, '$.genre'),
 					json_extract(value, '$.manque'), json_extract(value, '$.note'), json_extract(value, '$.photo'), ${id}, ${moi}, ${maintenant}
 				FROM json_each(${ecarts})
-				WHERE ${validee} AND NOT EXISTS (SELECT 1 FROM ${anomalie} a WHERE a.engin_id = ${enginId} AND a.ref = json_extract(value, '$.ref') AND a.close_le IS NULL)`
+				WHERE ${validee} AND NOT EXISTS (SELECT 1 FROM ${anomalie} a WHERE a.engin_id = ${enginId} AND a.ref = json_extract(value, '$.ref') AND (a.close_le IS NULL OR a.prise_id = ${id}))`
 		),
+		...(b.propres.length
+			? [
+					instruction(
+						base,
+						sql`UPDATE ${anomalie} SET genre = json_extract(e.value, '$.genre'), manque = json_extract(e.value, '$.manque'), note = json_extract(e.value, '$.note'), photo_id = json_extract(e.value, '$.photo')
+							FROM json_each(${ecarts}) e WHERE ${libre} AND ${anomalie.ref} = json_extract(e.value, '$.ref') AND ${validee}`
+					),
+					// L'écart retiré : son anomalie est annulée (close, détachée de la prise), puis son historique le dit.
+					base
+						.update(anomalie)
+						.set({ closePar: moi, closeLe: maintenant, priseId: null })
+						.where(and(libre, sql`${anomalie.ref} NOT IN ${refs}`, validee)),
+					instruction(
+						base,
+						sql`INSERT INTO ${anomalieSuivi} (anomalie_id, quoi, texte, par, le) SELECT ${anomalie.id}, 'close', ${'Annulée, écart retiré de la prise de garde'}, ${moi}, ${maintenant}
+							FROM ${anomalie} WHERE ${anomalie.id} IN (SELECT value FROM json_each(${JSON.stringify(b.propres.map((o) => o.id))})) AND ${anomalie.priseId} IS NULL AND ${anomalie.closeLe} = ${maintenant}
+							AND NOT EXISTS (SELECT 1 FROM ${anomalieSuivi} s WHERE s.anomalie_id = ${anomalie.id})`
+					)
+				]
+			: []),
 		...avis
 	]);
 	if (ecrit.length === 0) {
@@ -398,6 +520,83 @@ export async function validerPrise(base: Base, acteur: Acteur, id: number, maint
 		const [relue] = await base.select({ etat: priseGarde.etat }).from(priseGarde).where(eq(priseGarde.id, id));
 		throw new DonneeInvalide(relue?.etat === 'validee' ? 'Prise déjà validée' : 'Prise changée entre-temps');
 	}
+}
+
+// Une prise validée de la relève en cours, et les chefs du centre (une lecture de plus) : de quoi vérifier un geste après validation.
+async function lireValidee(base: Base, acteur: Acteur, id: number, maintenant: string, reglage: Reglage, enginId?: number) {
+	const aujourdhui = exigerDateHeure(maintenant, 'Date');
+	if (acteur.type !== 'personne') throw new DonneeInvalide('Réservé aux agents');
+	const b = await lireBrouillon(base, id, enginId);
+	if (b.prise.etat !== 'validee') throw new DonneeInvalide('Prise pas encore validée');
+	if (b.prise.releve !== releveDe(maintenant, reglage)) throw new DonneeInvalide('Relève passée');
+	const [chefs, equipiers] = await base.batch([
+		lectureChefs(base),
+		base.select({ personneId: affectationEquipe.personneId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe).where(and(eq(affectationEquipe.personneId, acteur.id), eq(affectationEquipe.equipeId, b.prise.equipeId ?? 0)))
+	]);
+	const chefsPrise = chefsDe(chefs, b.prise.equipeId, aujourdhui);
+	return { ...b, moi: acteur.id, chefs: chefsPrise, chef: chefsPrise.some((c) => c.id === acteur.id), deLEquipe: equipiers.some((a) => enCours(a.debut, a.fin, aujourdhui)) };
+}
+
+// La prise validée est écrite seulement si personne ne l'a changée entre-temps (compteur) ; `apres` : la ligne de journal ou la
+// cloche, écrites seulement si la prise l'a été.
+async function ecrireValidee(base: Base, v: Awaited<ReturnType<typeof lireValidee>>, maj: { saisie?: Saisie; traces: TracesPrise; rouvrir?: boolean }, maintenant: string, apres: (ecrite: SQL) => BatchItem<'sqlite'>[]) {
+	const compteur = v.prise.compteur + 1;
+	// Notre écriture, pas celle d'un collègue parti du même compteur : la trace porte qui et quand.
+	const traces = JSON.stringify(maj.traces);
+	const ecrite = sql`EXISTS (SELECT 1 FROM ${priseGarde} WHERE ${priseGarde.id} = ${v.prise.id} AND ${priseGarde.compteur} = ${compteur} AND ${priseGarde.traces} = ${traces})`;
+	const [ecrit] = await base.batch([
+		base
+			.update(priseGarde)
+			.set({
+				traces,
+				compteur,
+				...(maj.saisie ? { saisie: JSON.stringify(maj.saisie) } : {}),
+				...(maj.rouvrir ? { etat: 'en_cours' as const, valideeLe: null, modifieePar: v.moi, modifieeLe: maintenant } : {})
+			})
+			.where(and(eq(priseGarde.id, v.prise.id), eq(priseGarde.compteur, v.prise.compteur), eq(priseGarde.etat, 'validee')))
+			.returning({ id: priseGarde.id }),
+		...apres(ecrite)
+	]);
+	if (ecrit.length === 0) throw new DonneeInvalide('Prise changée entre-temps');
+}
+
+const journalPrise = (base: Base, v: { moi: number; prise: { enginId: number } }, action: string, maintenant: string, si: SQL, details?: object) =>
+	ligneJournalSi(base, { acteur: `personne:${v.moi}`, action, cibleType: 'engin', cibleId: v.prise.enginId, details }, maintenant, si);
+
+// Après la validation, jusqu'à la relève suivante : les participants se corrigent (un collègue oublié), sans toucher à l'inventaire.
+// Par un participant, le chef de garde de l'équipe d'astreinte, le chef de centre ou l'adjoint. Au journal (suivi du centre).
+export async function modifierParticipantsPrise(base: Base, acteur: Acteur, id: number, ids: number[], maintenant: string, reglage: Reglage, enginId?: number): Promise<void> {
+	const v = await lireValidee(base, acteur, id, maintenant, reglage, enginId);
+	if (!v.chef && !v.saisie.participants.includes(v.moi)) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé aux participants et aux chefs');
+	if (ids.length === 0) throw new DonneeInvalide('Participants manquants');
+	const saisie = appliquerGestePrise(v.saisie, { quoi: 'participants', ids }, v);
+	await ecrireValidee(base, v, { saisie, traces: { ...v.traces, participants: { par: v.moi, le: maintenant } } }, maintenant, (si) => [journalPrise(base, v, 'modifier_participants_prise', maintenant, si)]);
+}
+
+// Rouvrir une prise validée, jusqu'à la relève suivante, avec un motif : par le chef de garde de l'équipe d'astreinte, le chef de centre
+// ou l'adjoint. Elle redevient en cours (zones vues gardées, écarts modifiables) ; une demande en attente est effacée.
+export async function rouvrirPrise(base: Base, acteur: Acteur, id: number, motif: string, maintenant: string, reglage: Reglage, enginId?: number): Promise<void> {
+	const v = await lireValidee(base, acteur, id, maintenant, reglage, enginId);
+	if (!v.chef) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé au chef de garde, au chef de centre et à l’adjoint');
+	// Sinon il rouvrirait une prise qu'il ne pourrait pas corriger.
+	if (!(await peutFairePrise(base, acteur, maintenant.slice(0, 10)))) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé à qui fait la prise de garde');
+	const texte = motifDe(motif);
+	const { demande: _, ...traces } = v.traces;
+	await ecrireValidee(base, v, { traces: { ...traces, rouverte: { par: v.moi, le: maintenant, motif: texte, valideeLe: v.prise.valideeLe ?? undefined } }, rouvrir: true }, maintenant, (si) => [journalPrise(base, v, 'rouvrir_prise', maintenant, si, { motif: texte })]);
+}
+
+// Demander la réouverture (un participant ou un agent de l'équipe d'astreinte), avec un motif : à la cloche du chef de garde de l'équipe,
+// à défaut du chef de centre et de l'adjoint, avec un lien vers la prise. La dernière demande reste notée sur la prise.
+export async function demanderReouverture(base: Base, acteur: Acteur, id: number, motif: string, maintenant: string, reglage: Reglage, enginId?: number): Promise<void> {
+	const v = await lireValidee(base, acteur, id, maintenant, reglage, enginId);
+	if (!v.saisie.participants.includes(v.moi) && !v.deLEquipe) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé aux participants et à l’équipe d’astreinte');
+	const texte = motifDe(motif);
+	const deGarde = v.chefs.filter((c) => c.systeme === 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
+	const prevenus = deGarde.length ? deGarde : v.chefs.filter((c) => c.systeme !== 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
+	if (prevenus.length === 0) throw new DonneeInvalide('Aucun chef à prévenir');
+	const qui = v.noms.get(v.moi) ?? 'Un agent';
+	const avis = { titre: `Réouverture demandée par ${qui}`, texte: `${v.nomEngin}. Motif : ${texte}`, url: `/engins/${v.prise.enginId}/prise` };
+	await ecrireValidee(base, v, { traces: { ...v.traces, demande: { par: v.moi, le: maintenant, motif: texte } } }, maintenant, (si) => [...avisAnomalies(base, [...new Set(prevenus)], avis, maintenant, si)]);
 }
 
 export type PriseDeLaReleve = { engin: EnginVu; prise: { etat: EtatPrise; valideeLe: string | null; equipe: string | null; par: string } | null; ouvertes: number };
@@ -464,7 +663,7 @@ export async function historiquePrises(base: Base, enginId: number): Promise<Pri
 		.select({
 			id: priseGarde.id,
 			releve: priseGarde.releve,
-			valideeLe: priseGarde.valideeLe,
+			valideeLe: sql<string>`coalesce(${priseGarde.valideeLe}, ${valideeAvant})`.as('validee_le'),
 			equipe: equipe.nom,
 			prenom: personne.prenom,
 			nom: personne.nom,
@@ -474,10 +673,10 @@ export async function historiquePrises(base: Base, enginId: number): Promise<Pri
 		.from(priseGarde)
 		.innerJoin(personne, eq(personne.id, priseGarde.modifieePar))
 		.leftJoin(equipe, eq(equipe.id, priseGarde.equipeId))
-		.where(and(eq(priseGarde.enginId, enginId), eq(priseGarde.etat, 'validee')))
+		.where(and(eq(priseGarde.enginId, enginId), faiteSql))
 		.orderBy(desc(priseGarde.releve))
 		.limit(20);
-	return lignes.map(({ prenom, nom, ...l }) => ({ ...l, valideeLe: l.valideeLe!, par: `${prenom} ${nom}` }));
+	return lignes.map(({ prenom, nom, ...l }) => ({ ...l, par: `${prenom} ${nom}` }));
 }
 
 export type PriseFaite = {
@@ -485,25 +684,31 @@ export type PriseFaite = {
 	engin: EnginVu;
 	releve: string;
 	valideeLe: string;
+	// Rouverte, pas encore revalidée : pendant sa relève, la page renvoie à la prise en cours.
+	enCours: boolean;
 	equipe: string | null;
 	participants: string[];
 	zones: ZoneFiche[];
 	signalees: AnomalieVue[];
 	retrouvees: AnomalieVue[];
 	dejaOuvertes: number[];
+	traces: TracesVues;
 };
 
 // Une prise validée, telle qu'elle a été faite : la fiche de son époque, les écarts signalés et les anomalies retrouvées.
 export async function lirePriseFaite(base: Base, acteur: Acteur, id: number): Promise<PriseFaite> {
-	const [p] = await base.select().from(priseGarde).where(and(eq(priseGarde.id, id), eq(priseGarde.etat, 'validee')));
+	const [p] = await base.select().from(priseGarde).where(and(eq(priseGarde.id, id), faiteSql));
 	if (!p) throw new DonneeInvalide('Prise inconnue');
-	const { engin: e } = await lireEngin(base, acteur, p.enginId, p.valideeLe!.slice(0, 10));
+	const traces = lireTraces(p.traces);
+	const valideeLe = p.valideeLe ?? traces.rouverte!.valideeLe!;
+	const { engin: e } = await lireEngin(base, acteur, p.enginId, valideeLe.slice(0, 10));
 	const saisie = lireSaisie(p.saisie);
+	const ids = [...saisie.participants, ...idsDesTraces(traces)];
 	const [zones, elements, liees, [eq_], gens] = await base.batch([
 		...lecturesVersion(base, sql<number>`${p.versionId}`),
 		base.select(colonnesAnomalie).from(anomalie).innerJoin(personne, eq(personne.id, anomalie.signaleePar)).where(or(eq(anomalie.priseId, id), eq(anomalie.closePriseId, id))).orderBy(asc(anomalie.id)),
 		base.select({ nom: equipe.nom }).from(equipe).where(eq(equipe.id, p.equipeId ?? 0)),
-		base.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom }).from(personne).where(inArray(personne.id, saisie.participants.length ? saisie.participants : [0]))
+		base.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom }).from(personne).where(inArray(personne.id, ids.length ? ids : [0]))
 	]);
 	const signalees = liees.filter((a) => !saisie.retrouves.includes(a.id)).map(vueAnomalie);
 	// Un écart noté sur un élément déjà signalé et ouvert n'a pas créé d'anomalie de plus.
@@ -512,13 +717,15 @@ export async function lirePriseFaite(base: Base, acteur: Acteur, id: number): Pr
 		id,
 		engin: e,
 		releve: p.releve,
-		valideeLe: p.valideeLe!,
+		valideeLe,
+		enCours: p.etat === 'en_cours',
 		equipe: eq_?.nom ?? null,
 		participants: saisie.participants.map((pid) => nomComplet(gens.find((g) => g.id === pid))),
 		zones: zonesDe(zones, elements),
 		signalees,
 		retrouvees: liees.filter((a) => saisie.retrouves.includes(a.id)).map(vueAnomalie),
-		dejaOuvertes
+		dejaOuvertes,
+		traces: tracesVues(traces, (pid) => nomComplet(gens.find((g) => g.id === pid)))
 	};
 }
 
