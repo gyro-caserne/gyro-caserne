@@ -194,34 +194,6 @@
 						</li>
 					{/each}
 				</ul>
-				<h3>Historique du tour</h3>
-				{@render retour('fetes')}
-				{#if p.fetes.historique.length || p.fetesCentre.historique.length}
-					<ul role="list" class="historique">
-						{#each p.fetes.historique as h (`${h.annee}-${h.fete}`)}
-							{@const e = equipe(h.equipeId)}
-							<li><span>{FETES[h.fete]} {h.annee}</span><PastilleEquipe nom={e.nom} couleur={e.couleur} /></li>
-						{/each}
-						{#each p.fetesCentre.historique as h (`${h.annee}-${h.nom}`)}
-							{@const e = equipe(h.equipeId)}
-							<li><span>{h.nom} {h.annee}</span><PastilleEquipe nom={e.nom} couleur={e.couleur} /></li>
-						{/each}
-					</ul>
-				{:else}
-					<p class="doux">Aucune année passée. Saisissez les dernières pour que l’appli suive le tour.</p>
-				{/if}
-				<details class="repli">
-					<summary>Noter une année passée</summary>
-					<form method="POST" action={action('fete')} class="en-ligne">
-						<div class="champ">
-							<label for="fete-annee">Année</label>
-							<input id="fete-annee" name="annee" type="number" min="2020" max={p.annee} value={p.annee - 1} required />
-						</div>
-						<Choix id="fete-fete" name="fete" libelle="Fête" options={[{ valeur: 'noel', libelle: 'Noël' }, { valeur: 'nouvel_an', libelle: 'Nouvel An' }]} valeur="noel" />
-						<Choix id="fete-equipe" name="equipe" libelle="Équipe" options={[...p.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom })), { valeur: '', libelle: 'Effacer cette ligne' }]} valeur={String(p.equipes[0]?.id ?? '')} />
-						<Bouton type="submit" variante="secondaire">Noter</Bouton>
-					</form>
-				</details>
 			{/if}
 		{/if}
 		{#if data.etape === 'fetes'}
@@ -237,6 +209,8 @@
 							<p><PastilleEquipe nom={e.nom} couleur={e.couleur} /></p>
 							{#if f.attendues.length && !f.attendues.includes(f.equipeId)}
 								<p class="avertissement">Hors de son tour. Le tour revient à {noms(f.attendues)}.</p>
+							{:else if f.attendues.length}
+								<p class="doux">Dans son tour.</p>
 							{/if}
 							{#if f.debut > data.maintenant}<a class="lien-secondaire" href={ici({ fete: String(f.id) })} data-sveltekit-reset="false">Modifier<span class="masque"> la fête {f.nom}</span></a>{/if}
 						</li>
@@ -246,6 +220,34 @@
 				<p class="doux">Aucune fête du centre en {p.annee}.</p>
 			{/if}
 			<p><a class="bouton-lien" href={ici({ fete: 'nouvelle' })} data-sveltekit-reset="false">Ajouter une fête</a></p>
+			<h3>Historique du tour</h3>
+			{@render retour('fetes')}
+			{#if p.fetes.historique.length || p.fetesCentre.historique.length}
+				<ul role="list" class="historique">
+					{#each p.fetes.historique as h (`${h.annee}-${h.fete}`)}
+						{@const e = equipe(h.equipeId)}
+						<li><span>{FETES[h.fete]} {h.annee}</span><PastilleEquipe nom={e.nom} couleur={e.couleur} /></li>
+					{/each}
+					{#each p.fetesCentre.historique as h (`${h.annee}-${h.nom}`)}
+						{@const e = equipe(h.equipeId)}
+						<li><span>{h.nom} {h.annee}</span><PastilleEquipe nom={e.nom} couleur={e.couleur} /></li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="doux">Aucune année passée. Saisissez les dernières pour que l’appli suive le tour.</p>
+			{/if}
+			<details class="repli">
+				<summary>Noter une année passée</summary>
+				<form method="POST" action={action('fete')} class="en-ligne">
+					<div class="champ">
+						<label for="fete-annee">Année</label>
+						<input id="fete-annee" name="annee" type="number" min="2020" max={p.annee} value={p.annee - 1} required />
+					</div>
+					<Choix id="fete-fete" name="fete" libelle="Fête" options={[{ valeur: 'noel', libelle: 'Noël' }, { valeur: 'nouvel_an', libelle: 'Nouvel An' }]} valeur="noel" />
+					<Choix id="fete-equipe" name="equipe" libelle="Équipe" options={[...p.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom })), { valeur: '', libelle: 'Effacer cette ligne' }]} valeur={String(p.equipes[0]?.id ?? '')} />
+					<Bouton type="submit" variante="secondaire">Noter</Bouton>
+				</form>
+			</details>
 			{@render retour('historique-fetes')}
 			<details class="repli">
 				<summary>Noter une fête du centre passée</summary>
@@ -716,6 +718,9 @@
 		padding: var(--espace-12) var(--espace-16);
 		border-radius: var(--rayon-grand);
 		background: color-mix(in srgb, var(--equipe) 10%, var(--surface));
+	}
+	.fete > .lien-secondaire {
+		align-self: flex-start;
 	}
 	.proposition {
 		display: flex;
