@@ -64,6 +64,7 @@ L'essentiel, pour ne pas retomber dans les travers corrigés par la refonte :
 - rouge pour l'action courante seulement, actions rares sous « Plus », actions graves en contour rouge et toujours confirmées ;
 - jetons d'`app.css` pour toute valeur, composants communs pour tout contrôle ;
 - Gyro seulement sur l'accueil, la connexion, les écrans vides et les réussites ; humour varié, jamais dans l'urgence.
+- textes selon les règles de la charte (titres, libellés, sous-lignes, boutons, notifications) : jamais de point médian « · » ni de tiret cadratin pour séparer des infos.
 
 ## Données et sécurité
 
