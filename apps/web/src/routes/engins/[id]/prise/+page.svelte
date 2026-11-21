@@ -207,7 +207,7 @@
 					<summary>Demander la réouverture</summary>
 					<form method="POST" action="?/demanderReouverture" use:enhance class="formulaire">
 						<input type="hidden" name="prise" value={p.id} />
-						<p>Le chef de garde de l’équipe d’astreinte est prévenu ; lui seul rouvre la prise.</p>
+						<p>Le chef de garde de l’équipe d’astreinte est prévenu.</p>
 						<div class="champ">
 							<label for="motif-demande">Motif</label>
 							<textarea id="motif-demande" name="motif" maxlength="200" rows="2" required>{pour('demander')?.motif ?? ''}</textarea>
@@ -216,7 +216,7 @@
 						<div><Bouton type="submit">Envoyer la demande</Bouton></div>
 					</form>
 				</details>
-				{#if pour('demander')?.succes}<p class="ok">{@render marque()} Demande envoyée au chef de garde.</p>{/if}
+				{#if pour('demander')?.succes}<p class="ok">{@render marque()} Demande envoyée.</p>{/if}
 			{/if}
 			{#if data.gestes.rouvrir}
 				<details class="plus" open={pour('rouvrir')?.message !== undefined || undefined}>
@@ -397,7 +397,7 @@
 								{/if}
 								{#if propre(el.ref)?.suivie}
 									{@const o = propre(el.ref)!}
-									<p class="doux">{o.suiviePar ? `Déjà suivie par ${o.suiviePar} : à clore par lui` : 'Déjà suivie : à clore depuis son suivi'}, même si l’écart est retiré.</p>
+									<p class="doux">{o.suiviePar ? `Déjà suivie par ${o.suiviePar} : à clore par lui.` : 'Déjà suivie : à clore depuis son suivi.'} Changer ou retirer l’écart ne la modifie pas.</p>
 								{/if}
 								{@render message(`element:${el.ref}`)}
 							</li>
@@ -433,7 +433,7 @@
 					<p>
 						{#if rouverte}
 							{nbEcarts ? `${pluriel(nbEcarts, 'nouvel écart deviendra', 'nouveaux écarts deviendront')} ${nbEcarts > 1 ? 'des anomalies suivies' : 'une anomalie suivie'}.` : 'Aucun nouvel écart.'}
-							{#if nbAnnulees}{pluriel(nbAnnulees, 'anomalie sans suivi sera annulée', 'anomalies sans suivi seront annulées')}, son écart retiré.{/if}
+							{#if nbAnnulees}{pluriel(nbAnnulees, 'anomalie sans suivi sera annulée, son écart retiré', 'anomalies sans suivi seront annulées, leur écart retiré')}.{/if}
 						{:else}
 							{nbEcarts ? `${pluriel(nbEcarts, 'écart deviendra', 'écarts deviendront')} ${nbEcarts > 1 ? 'des anomalies suivies' : 'une anomalie suivie'}.` : 'Aucun écart.'}
 						{/if}

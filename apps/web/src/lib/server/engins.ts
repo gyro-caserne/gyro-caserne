@@ -65,6 +65,7 @@ const PHRASES: Record<string, string> = {
 	'Prise pas encore validée': 'Cette prise est en cours : elle se modifie directement.',
 	'Participants manquants': 'Cochez au moins un participant.',
 	'Motif manquant': 'Dites en quelques mots pourquoi.',
+	'Aucun chef à prévenir': 'Aucun chef de garde, chef de centre ni adjoint en fonction à prévenir : appelez un chef.',
 	'Motif trop long': 'Le motif se dit en 200 caractères au plus.',
 	'Réservé aux participants et aux chefs': 'Seuls les participants de la prise et les chefs modifient ses participants.',
 	'Réservé au chef de garde, au chef de centre et à l’adjoint': 'Seuls le chef de garde de l’équipe d’astreinte, le chef de centre et l’adjoint rouvrent une prise.',

@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import { eq, inArray, sql } from 'drizzle-orm';
+import { describe, expect, it, vi } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
 import { gesteAnomalie, REGLAGE_ANOMALIES } from '../src/anomalies.ts';
 import { enregistrerEngin } from '../src/engins.ts';
@@ -9,6 +9,7 @@ import { publierAnnee, reglerRoulement } from '../src/planning/annee.ts';
 import { abandonnerPrise, commencerPrise, demanderReouverture, gestePrise, historiquePrises, lirePrise, lirePriseFaite, modifierParticipantsPrise, rouvrirPrise, validerPrise } from '../src/prises.ts';
 import { suiviDuCentre } from '../src/suivi.ts';
 import { affectationEquipe, anomalie, anomalieSuivi, attribution, avisAnomalie, equipe, journal, personne, priseGarde, responsabilite } from '../src/schema.ts';
+import { photo as octets } from '../src/schema-photos.ts';
 import { jeuEngins } from './de-test-engins.ts';
 
 const reglage = centreExemple.astreinte;
@@ -175,6 +176,47 @@ describe('demande de réouverture', () => {
 		await expect(demanderReouverture(j.base, j.alice, j.id, 'Oubli', SUIVANTE, reglage)).rejects.toThrow('Relève passée');
 		await demanderReouverture(j.base, j.alice, j.id, 'Oubli', APRES, reglage);
 		expect((await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`))).map((a) => a.personneId)).toEqual([j.chefCentre.id]);
+	});
+});
+
+describe('garde-fous', () => {
+	it('un collègue écrit entre la lecture et l’écriture : refusé, ni cloche ni journal', async () => {
+		const j = await preparer();
+		// Après les deux lectures de la demande, un collègue modifie la prise.
+		const batch = j.base.batch.bind(j.base);
+		const espion = vi.spyOn(j.base, 'batch');
+		espion.mockImplementationOnce(batch as never).mockImplementationOnce((async (q: Parameters<typeof batch>[0]) => {
+			const r = await batch(q);
+			await j.base.update(priseGarde).set({ compteur: sql`${priseGarde.compteur} + 1` }).where(eq(priseGarde.id, j.id));
+			return r;
+		}) as never);
+		await expect(demanderReouverture(j.base, j.alice, j.id, 'Oubli', APRES, reglage)).rejects.toThrow('Prise changée entre-temps');
+		espion.mockRestore();
+		expect(await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`))).toEqual([]);
+	});
+
+	it('une demande sans aucun chef à prévenir : refusée', async () => {
+		const j = await preparer();
+		await j.base.delete(attribution).where(inArray(attribution.personneId, [idDe(j.chefDeGarde), j.chefCentre.id]));
+		await expect(demanderReouverture(j.base, j.alice, j.id, 'Oubli', APRES, reglage)).rejects.toThrow('Aucun chef à prévenir');
+	});
+
+	it('rouverte, ses photos restent (celles de ses anomalies) ; elle n’est pas effacée comme un brouillon passé', async () => {
+		const j = await preparer();
+		const jpeg = { type: 'image/jpeg' as const, donnees: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]) };
+		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Photo', APRES, reglage);
+		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'ecart', element: j.radio.ref, genre: 'abime', manque: null, note: '', photo: jpeg }, APRES, reglage);
+		await gestePrise(j.base, j.base.photos, j.alice, j.id, { quoi: 'retirer_ecart', element: j.radio.ref }, APRES, reglage);
+		expect(await j.base.photos.select().from(octets)).toHaveLength(1);
+		await commencerPrise(j.base, j.base.photos, j.alice, j.vsav, '2026-11-06T18:10', reglage);
+		expect((await j.base.select().from(priseGarde).where(eq(priseGarde.id, j.id)))[0]).toMatchObject({ etat: 'en_cours' });
+	});
+
+	it('l’adjoint du chef de centre rouvre aussi', async () => {
+		const j = await preparer();
+		const [adjoint] = await j.base.select().from(responsabilite).where(eq(responsabilite.systeme, 'chef_centre_adjoint'));
+		await j.base.update(attribution).set({ responsabiliteId: adjoint!.id }).where(eq(attribution.personneId, j.chefCentre.id));
+		await rouvrirPrise(j.base, j.chefCentre, j.id, 'Oubli', APRES, reglage);
 	});
 });
 

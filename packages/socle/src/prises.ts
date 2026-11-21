@@ -527,12 +527,14 @@ async function lireValidee(base: Base, acteur: Acteur, id: number, maintenant: s
 // cloche, écrites seulement si la prise l'a été.
 async function ecrireValidee(base: Base, v: Awaited<ReturnType<typeof lireValidee>>, maj: { saisie?: Saisie; traces: TracesPrise; rouvrir?: boolean }, maintenant: string, apres: (ecrite: SQL) => BatchItem<'sqlite'>[]) {
 	const compteur = v.prise.compteur + 1;
-	const ecrite = sql`EXISTS (SELECT 1 FROM ${priseGarde} WHERE ${priseGarde.id} = ${v.prise.id} AND ${priseGarde.compteur} = ${compteur})`;
+	// Notre écriture, pas celle d'un collègue parti du même compteur : la trace porte qui et quand.
+	const traces = JSON.stringify(maj.traces);
+	const ecrite = sql`EXISTS (SELECT 1 FROM ${priseGarde} WHERE ${priseGarde.id} = ${v.prise.id} AND ${priseGarde.compteur} = ${compteur} AND ${priseGarde.traces} = ${traces})`;
 	const [ecrit] = await base.batch([
 		base
 			.update(priseGarde)
 			.set({
-				traces: JSON.stringify(maj.traces),
+				traces,
 				compteur,
 				...(maj.saisie ? { saisie: JSON.stringify(maj.saisie) } : {}),
 				...(maj.rouvrir ? { etat: 'en_cours' as const, valideeLe: null, modifieePar: v.moi, modifieeLe: maintenant } : {})
@@ -575,6 +577,7 @@ export async function demanderReouverture(base: Base, acteur: Acteur, id: number
 	const texte = motifDe(motif);
 	const deGarde = v.chefs.filter((c) => c.systeme === 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
 	const prevenus = deGarde.length ? deGarde : v.chefs.filter((c) => c.systeme !== 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
+	if (prevenus.length === 0) throw new DonneeInvalide('Aucun chef à prévenir');
 	const qui = v.noms.get(v.moi) ?? 'Un agent';
 	const avis = { titre: `Prise de garde : ${v.nomEngin}`, texte: `${qui} demande la réouverture : ${texte}`, url: `/engins/${v.prise.enginId}/prise` };
 	await ecrireValidee(base, v, { traces: { ...v.traces, demande: { par: v.moi, le: maintenant, motif: texte } } }, maintenant, (si) => [...avisAnomalies(base, [...new Set(prevenus)], avis, maintenant, si)]);

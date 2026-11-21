@@ -334,7 +334,7 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 	});
 
 	it('prise de garde : la relève, la prise d’un engin, premier geste, un geste, valider (12 engins, 150 agents)', async () => {
-		const { base, locals, compter } = await centreDe150();
+		const { base, locals, agent, compter } = await centreDe150();
 		const [vsav] = await base.select().from(typeEngin).where(eq(typeEngin.nom, 'VSAV'));
 		for (let i = 1; i <= 12; i++) await base.insert(engin).values({ nom: `VSAV ${i}`, typeId: vsav!.id, creeLe: '2026-11-01T10:00' });
 		const params = { id: '1' };
@@ -362,8 +362,10 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 		})).toBeLessThanOrEqual(BUDGET);
 		// Validée : les participants modifiés, la demande, la réouverture, chacun suivi de la page.
 		const moi = String(locals.acteur.id);
-		expect(await compter(async () => { expect(await (actionsPrise.participants as any)({ locals, params, request: await requeteFormulaire([['prise', id], ['participant', moi]]) })).toMatchObject({ succes: expect.any(String) }); await page(); })).toBeLessThanOrEqual(BUDGET);
-		expect(await compter(async () => { expect(await (actionsPrise.demanderReouverture as any)({ locals, params, request: await requeteFormulaire([['prise', id], ['motif', 'Radio']]) })).toMatchObject({ succes: expect.any(String) }); await page(); })).toBeLessThanOrEqual(BUDGET);
+		expect(await compter(async () => { expect(await (actionsPrise.participants as any)({ locals, params, request: await requeteFormulaire([['prise', id], ['participant', moi], ['participant', String(agent.id)]]) })).toMatchObject({ succes: expect.any(String) }); await page(); })).toBeLessThanOrEqual(BUDGET);
+		// La demande vient d'un agent participant ; le chef de centre est prévenu.
+		const deLAgent = { ...locals, acteur: { type: 'personne' as const, id: agent.id } };
+		expect(await compter(async () => { expect(await (actionsPrise.demanderReouverture as any)({ locals: deLAgent, params, request: await requeteFormulaire([['prise', id], ['motif', 'Radio']]) })).toMatchObject({ succes: expect.any(String) }); await page(); })).toBeLessThanOrEqual(BUDGET);
 		expect(await compter(async () => {
 			await (actionsPrise.rouvrir as any)({ locals, params, request: await requeteFormulaire([['prise', id], ['motif', 'Radio'], ['confirmation', 'oui']]) }).catch((r: { status?: number }) => expect(r.status).toBe(303));
 			await page();

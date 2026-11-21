@@ -261,6 +261,8 @@ describe('/engins/[id]/prise', () => {
 			adresse.url = new URL('http://x/engins/1/prise');
 			const page = html(validee({ participants: true, demander: true }));
 			expect(page).toMatch(/<div class="bande[^"]*">[\s\S]*?href="\?participants"[\s\S]*?Participants :<\/span> <strong>vous \+ 2<\/strong>[\s\S]*?Modifier/);
+			expect(page).toContain('Le chef de garde de l’équipe d’astreinte est prévenu.');
+			expect(page).not.toContain('lui seul');
 			expect(page).toMatch(/<details class="plus[^"]*"[^>]*><summary[^>]*>Demander la réouverture<\/summary>[\s\S]*?action="\?\/demanderReouverture"[\s\S]*?name="motif"[\s\S]*?Envoyer la demande/);
 			expect(page).not.toContain('?/rouvrir');
 			expect(page).not.toContain('Commencée par');
@@ -319,8 +321,16 @@ describe('/engins/[id]/prise', () => {
 
 		it('un écart dont l’anomalie est déjà suivie : l’écran prévient qui la close', () => {
 			adresse.url = new URL('http://x/engins/1/prise?zone=1');
-			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: 'Rémi Fictif' }]))).toContain('Déjà suivie par Rémi Fictif : à clore par lui, même si l’écart est retiré.');
-			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: null }]))).toContain('Déjà suivie : à clore depuis son suivi, même si l’écart est retiré.');
+			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: 'Rémi Fictif' }]))).toContain('Déjà suivie par Rémi Fictif : à clore par lui. Changer ou retirer l’écart ne la modifie pas.');
+			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: null }]))).toContain('Déjà suivie : à clore depuis son suivi. Changer ou retirer l’écart ne la modifie pas.');
+		});
+
+		it('à la validation : les anomalies sans suivi annulées, au pluriel juste', () => {
+			adresse.url = new URL('http://x/engins/1/prise');
+			const d = rouverte([{ id: 4, ref: 20, suivie: false, suiviePar: null }, { id: 5, ref: 21, suivie: false, suiviePar: null }]);
+			const page = html({ ...d, prise: { ...d.prise, saisie: { ...d.prise.saisie, zones: [1, 2] } } });
+			expect(page).toContain('2 anomalies sans suivi seront annulées, leur écart retiré.');
+			expect(page).toContain('1 nouvel écart deviendra une anomalie suivie.');
 		});
 	});
 
