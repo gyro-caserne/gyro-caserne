@@ -872,7 +872,9 @@ export const priseGarde = sqliteTable(
 			.notNull()
 			.references(() => personne.id),
 		modifieeLe: text('modifiee_le').notNull(),
-		valideeLe: text('validee_le')
+		valideeLe: text('validee_le'),
+		// Après la validation : participants modifiés, réouverture, demande de réouverture (qui, quand, motif), en JSON.
+		traces: text('traces').notNull().default('{}')
 	},
 	(t) => [
 		uniqueIndex('prise_garde_engin_releve').on(t.enginId, t.releve),
