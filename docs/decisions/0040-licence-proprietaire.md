@@ -9,5 +9,6 @@
 - **Pourquoi** : garder la paternité du projet, et autoriser chaque centre au cas par cas, par écrit. Le code reste visible, par transparence.
 - **Versions antérieures** : une licence MIT accordée ne se retire pas. Les versions jusqu'au commit `789c48a` inclus (20/11/2026, version 1.4.0) et les branches publiées à cette date restent sous MIT. La nouvelle licence ne vaut que pour la suite.
 - **Titulaire des droits** : Maxime CHABI, auteur du projet. Le dépôt indiquait jusqu'ici « CIS Laillé » ; une convention d'utilisation avec le CIS de Laillé est en préparation, qui le reconnaîtra.
+- **Dépôt** : transféré le 21/11/2026 de `cislaille35/gyro-caserne` à l'organisation `gyro-caserne`, propriété de l'auteur ; le compte du centre `cislaille35` y reste administrateur du dépôt. L'ancienne adresse redirige vers la nouvelle.
 - **Dépendances** : les bibliothèques tierces restent sous leur propre licence.
 - **Validé par** : le porteur, le 20/11/2026.

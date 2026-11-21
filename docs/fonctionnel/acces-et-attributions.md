@@ -111,7 +111,7 @@ Exemple : le comité « Sport » attribue « Référent sport », avec le droit 
 
 ## Super administrateur
 
-- C'est le compte technique du centre : il possède les comptes Cloudflare, Brevo et GitHub. Pour Laillé : `cislaille35@gmail.com`.
+- C'est le compte technique du centre : il possède les comptes Cloudflare et Brevo, et son compte GitHub administre le dépôt de l'appli. Pour Laillé : `cislaille35@gmail.com`. Le dépôt appartient à l'organisation GitHub [`gyro-caserne`](https://github.com/gyro-caserne/gyro-caserne) de l'auteur (décision [0040](../decisions/0040-licence-proprietaire.md)).
 - Il nomme le chef de centre. À l'installation, il peut aussi reprendre l'organisation réelle du centre : comités, membres, responsabilités.
 - **Passation** : on change le mot de passe de la boîte du centre, on remplace les clés (Cloudflare, Brevo, secrets de l'appli) et on ferme ses sessions. La procédure pas à pas sera dans `docs/technique/`.
 
