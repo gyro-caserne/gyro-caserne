@@ -360,6 +360,15 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 			await page();
 			await (pageEngin as any)({ locals, params });
 		})).toBeLessThanOrEqual(BUDGET);
+		// Validée : les participants modifiés, la demande, la réouverture, chacun suivi de la page.
+		const moi = String(locals.acteur.id);
+		expect(await compter(async () => { expect(await (actionsPrise.participants as any)({ locals, params, request: await requeteFormulaire([['prise', id], ['participant', moi]]) })).toMatchObject({ succes: expect.any(String) }); await page(); })).toBeLessThanOrEqual(BUDGET);
+		expect(await compter(async () => { expect(await (actionsPrise.demanderReouverture as any)({ locals, params, request: await requeteFormulaire([['prise', id], ['motif', 'Radio']]) })).toMatchObject({ succes: expect.any(String) }); await page(); })).toBeLessThanOrEqual(BUDGET);
+		expect(await compter(async () => {
+			await (actionsPrise.rouvrir as any)({ locals, params, request: await requeteFormulaire([['prise', id], ['motif', 'Radio'], ['confirmation', 'oui']]) }).catch((r: { status?: number }) => expect(r.status).toBe(303));
+			await page();
+		})).toBeLessThanOrEqual(BUDGET);
+		expect((await page()).prise.etat).toBe('en_cours');
 	});
 
 	it('anomalies : la liste (40 anomalies, 12 engins), signaler, une anomalie, un geste, l’Accueil du chef (150 agents)', async () => {

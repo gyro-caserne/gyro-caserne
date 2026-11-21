@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { anomalie, lireFiche, priseGarde } from '@gyro-caserne/socle';
+import { anomalie, attribution, avisAnomalie, journal, lireFiche, priseGarde, responsabilite } from '@gyro-caserne/socle';
 import { jpeg, requeteFormulaire } from '../../../echanges/de-test.ts';
 import { locaux, preparer } from '../../de-test.ts';
 import { actions, load } from './+page.server';
@@ -88,6 +88,39 @@ describe('/engins/[id]/prise', () => {
 		const zone = String((await lireFiche(base, types.VSAV)).zones[0]!.ref);
 		expect(await agir('geste', locaux(base, alice), vsav, [['prise', 'abc'], ['quoi', 'zone'], ['zone', zone], ['vue', '1']])).toMatchObject({ status: 400 });
 		expect(await base.select().from(priseGarde)).toHaveLength(0);
+	});
+
+	it('validée : modifier les participants, demander la réouverture, rouvrir (confirmé, avec un motif)', async () => {
+		const { base, alice, chef, sans, vsav, types } = await preparer();
+		// Chloé est aussi cheffe de centre : sans planning publié, c'est elle qui rouvre.
+		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.systeme, 'chef_centre'));
+		await base.insert(attribution).values({ personneId: (chef as { id: number }).id, responsabiliteId: r!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		const moi = locaux(base, alice);
+		await agir('commencer', moi, vsav, []);
+		const id = String((await charger(moi, vsav)).prise.id);
+		for (const z of (await lireFiche(base, types.VSAV)).zones) await agir('geste', moi, vsav, [['prise', id], ['quoi', 'zone'], ['zone', String(z.ref)], ['vue', '1']]);
+		await agir('valider', moi, vsav, [['prise', id]]).catch(() => undefined);
+		expect((await charger(moi, vsav)).gestes).toEqual({ participants: true, rouvrir: false, demander: true });
+
+		const chloe = String((chef as { id: number }).id);
+		expect(await agir('participants', moi, vsav, [['prise', id], ['participant', String((alice as { id: number }).id)], ['participant', chloe]])).toMatchObject({ succes: 'Participants enregistrés.' });
+		expect((await charger(moi, vsav)).prise.traces.participants).toMatchObject({ par: 'Alice Test' });
+		expect(await agir('participants', moi, vsav, [['prise', id]])).toMatchObject({ status: 400, data: { cible: 'participants', message: 'Cochez au moins un participant.' } });
+		await expect(agir('participants', locaux(base, sans), vsav, [['prise', id], ['participant', chloe]])).rejects.toMatchObject({ status: 403 });
+
+		expect(await agir('demanderReouverture', moi, vsav, [['prise', id], ['motif', '']])).toMatchObject({ status: 400, data: { cible: 'demander', message: 'Dites en quelques mots pourquoi.' } });
+		expect(await agir('demanderReouverture', moi, vsav, [['prise', id], ['motif', 'Radio oubliée']])).toMatchObject({ cible: 'demander', succes: 'Demande envoyée.' });
+		expect(await base.select({ texte: avisAnomalie.texte }).from(avisAnomalie)).toContainEqual({ texte: 'Alice Test demande la réouverture : Radio oubliée' });
+
+		// Un agent ne rouvre pas ; le chef confirme et dit pourquoi.
+		expect(await agir('rouvrir', moi, vsav, [['prise', id], ['motif', 'Radio'], ['confirmation', 'oui']])).toMatchObject({ status: 403, data: { message: 'Seuls le chef de garde de l’équipe d’astreinte, le chef de centre et l’adjoint rouvrent une prise.' } });
+		expect(await agir('rouvrir', locaux(base, chef), vsav, [['prise', id], ['motif', 'Radio']])).toMatchObject({ status: 400, data: { cible: 'rouvrir', motif: 'Radio', message: 'Cochez « Je confirme » pour rouvrir la prise.' } });
+		await expect(agir('rouvrir', locaux(base, chef), vsav, [['prise', id], ['motif', 'Radio'], ['confirmation', 'oui']])).rejects.toMatchObject({ status: 303, location: `/engins/${vsav}/prise?rouverte` });
+		const rouverte = await charger(moi, vsav);
+		expect(rouverte.prise).toMatchObject({ etat: 'en_cours', traces: { rouverte: { par: 'Chloe Test', motif: 'Radio' }, demande: null } });
+		expect((await base.select({ action: journal.action }).from(journal)).map((l) => l.action)).toEqual(expect.arrayContaining(['modifier_participants_prise', 'rouvrir_prise']));
+		// Rouverte : elle ne s'abandonne pas.
+		expect(await agir('abandonner', moi, vsav, [['prise', id]])).toMatchObject({ status: 400 });
 	});
 
 	it('un geste inconnu ou une photo trop lourde : refusés avec un message', async () => {

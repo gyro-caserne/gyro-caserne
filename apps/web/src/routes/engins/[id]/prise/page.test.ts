@@ -15,9 +15,11 @@ const data = (saisie: Record<string, unknown> = {}) => ({
 	engin: { id: 1, nom: 'FPT', type: 'FPT', typeId: 2, immatriculation: null, situation: 'centre', provenance: null, etat: 'disponible', partiLe: null },
 	releve: { debut: '2026-10-30T18:00', equipe: { id: 4, nom: 'Équipe 4', couleur: '#000000' } },
 	peutFaire: true,
-	prise: { id: 7, etat: 'en_cours', commenceePar: 'Thomas Agent', commenceeLe: '2026-10-30T18:05', modifieePar: 'Thomas Agent', modifieeLe: '2026-10-30T18:05', valideeLe: null, saisie: { zones: [], ecarts: {}, retrouves: [], participants: [1, 2, 9], ...saisie } },
+	prise: { id: 7, etat: 'en_cours', commenceePar: 'Thomas Agent', commenceeLe: '2026-10-30T18:05', modifieePar: 'Thomas Agent', modifieeLe: '2026-10-30T18:05', valideeLe: null, saisie: { zones: [], ecarts: {}, retrouves: [], participants: [1, 2, 9], ...saisie }, traces: { participants: null, rouverte: null, demande: null } },
 	zones,
 	ouvertes: [],
+	propres: [],
+	gestes: { participants: false, rouvrir: false, demander: false },
 	agents: [
 		{ id: 2, nom: 'Mila Clément', astreinte: true },
 		{ id: 3, nom: 'Adam Fournier', astreinte: true },
@@ -247,6 +249,79 @@ describe('/engins/[id]/prise', () => {
 		const page = html({ ...d, prise: { ...d.prise, etat: 'validee', valideeLe: '2026-10-30T19:00' } });
 		expect(page).not.toContain('[object Object]');
 		expect(page).toMatch(/class="pastille[^"]*"[^>]*>(<!---->)?Prise faite par l’équipe 4, ven\. 19 h/);
+	});
+
+	describe('une prise validée, jusqu’à la relève suivante', () => {
+		const validee = (gestes: Record<string, boolean>, traces: Record<string, unknown> = {}) => {
+			const d = data({ zones: [1, 2] });
+			return { ...d, gestes: { participants: false, rouvrir: false, demander: false, ...gestes }, prise: { ...d.prise, etat: 'validee', valideeLe: '2026-10-30T19:00', traces: { ...d.prise.traces, ...traces } } };
+		};
+
+		it('un participant : « Modifier » les participants sous la plaque, « Demander la réouverture » avec un motif ; pas de « Rouvrir »', () => {
+			adresse.url = new URL('http://x/engins/1/prise');
+			const page = html(validee({ participants: true, demander: true }));
+			expect(page).toMatch(/<div class="bande[^"]*">[\s\S]*?href="\?participants"[\s\S]*?Participants :<\/span> <strong>vous \+ 2<\/strong>[\s\S]*?Modifier/);
+			expect(page).toMatch(/<details class="plus[^"]*"[^>]*><summary[^>]*>Demander la réouverture<\/summary>[\s\S]*?action="\?\/demanderReouverture"[\s\S]*?name="motif"[\s\S]*?Envoyer la demande/);
+			expect(page).not.toContain('?/rouvrir');
+			expect(page).not.toContain('Commencée par');
+		});
+
+		it('un chef : « Rouvrir la prise » sous « Plus », en contour rouge, avec un motif et « Je confirme » ; pas de demande', () => {
+			adresse.url = new URL('http://x/engins/1/prise');
+			const page = html(validee({ participants: true, rouvrir: true }));
+			expect(page).toMatch(/<details class="plus[^"]*"[^>]*><summary[^>]*>Plus<\/summary>[\s\S]*?action="\?\/rouvrir"[\s\S]*?name="motif"[\s\S]*?name="confirmation" value="oui"[\s\S]*?Je confirme[\s\S]*?class="grave[^"]*"[^>]*>(<!---->)?Rouvrir la prise(<!---->)?<\/button>/);
+			expect(page).not.toContain('Demander la réouverture');
+			// Le motif tapé revient après un refus, avec son message.
+			expect(html(validee({ rouvrir: true }), { cible: 'rouvrir', motif: 'Radio', message: 'Cochez « Je confirme » pour rouvrir la prise.' })).toMatch(/<details class="plus[^"]*" open[\s\S]*?>Radio<\/textarea>[\s\S]*?role="alert">Cochez « Je confirme »/);
+		});
+
+		it('ni participant ni chef : les participants se lisent, aucun geste', () => {
+			adresse.url = new URL('http://x/engins/1/prise?participants');
+			const page = html(validee({}));
+			expect(page).toMatch(/<p class="participants[^"]*">[\s\S]*?vous \+ 2/);
+			expect(page).not.toContain('href="?participants"');
+			expect(page).not.toContain('<dialog');
+			expect(page).not.toContain('<details class="plus');
+		});
+
+		it('le panneau des participants enregistre sur la prise validée', () => {
+			adresse.url = new URL('http://x/engins/1/prise?participants');
+			const page = html(validee({ participants: true }));
+			expect(page).toMatch(/<dialog[\s\S]*?action="\?\/participants"[\s\S]*?value="2" checked/);
+			expect(page).not.toMatch(/<dialog[\s\S]*?name="quoi" value="participants"/);
+		});
+
+		it('la trace : participants modifiés, réouverture et demande, qui, quand, pourquoi', () => {
+			adresse.url = new URL('http://x/engins/1/prise');
+			const page = html(validee({}, { participants: { par: 'Mila Clément', le: '2026-10-30T20:00' }, rouverte: { par: 'Élodie Chef-de-Garde', le: '2026-10-30T19:30', motif: 'Radio oubliée' }, demande: { par: 'Adam Fournier', le: '2026-10-30T20:05', motif: 'Lances' } }));
+			expect(page).toContain('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30 : « Radio oubliée ».');
+			expect(page).toContain('Participants modifiés par Mila Clément, ven. 20 h.');
+			expect(page).toContain('Réouverture demandée par Adam Fournier, ven. 20 h 05 : « Lances ».');
+			expect(page).not.toContain('[object Object]');
+		});
+	});
+
+	describe('une prise rouverte', () => {
+		const rouverte = (propres: unknown[] = []) => {
+			const d = data({ zones: [1], ecarts: { '10': { genre: 'abime', manque: null, note: '', photo: null } } });
+			return { ...d, propres, prise: { ...d.prise, traces: { ...d.prise.traces, rouverte: { par: 'Élodie Chef-de-Garde', le: '2026-10-30T19:30', motif: 'Radio oubliée' } } } };
+		};
+
+		it('la trace en tête ; les écarts se modifient ; pas d’abandon', () => {
+			adresse.url = new URL('http://x/engins/1/prise?zone=1');
+			const page = html(rouverte([{ id: 4, ref: 10, suivie: false, suiviePar: null }]));
+			expect(avant('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30 : « Radio oubliée ».', 'Zones de l’engin', page)).toBe(true);
+			expect(page).toMatch(/<summary[^>]*>Modifier<span class="masque[^"]*"> : Radio : essai/);
+			expect(page).toContain('Retirer l’écart');
+			expect(page).not.toContain('Abandonner la prise');
+			expect(page).not.toContain('Déjà suivie');
+		});
+
+		it('un écart dont l’anomalie est déjà suivie : l’écran prévient qui la close', () => {
+			adresse.url = new URL('http://x/engins/1/prise?zone=1');
+			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: 'Rémi Fictif' }]))).toContain('Déjà suivie par Rémi Fictif : à clore par lui, même si l’écart est retiré.');
+			expect(html(rouverte([{ id: 4, ref: 10, suivie: true, suiviePar: null }]))).toContain('Déjà suivie : à clore depuis son suivi, même si l’écart est retiré.');
+		});
 	});
 
 	it('les photos d’écart, signalé ou noté pendant la prise, s’ouvrent en grand dans la visionneuse', () => {

@@ -4,7 +4,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { ElementFiche, VuePrise, ZoneFiche } from '@gyro-caserne/socle';
-	import { dateCourte, etatPrise, GENRES, heureCourte, texteEcart, texteEtape, texteReleve } from '#lib/engins/textes.ts';
+	import { dateCourte, etatPrise, GENRES, heureCourte, jourHeure, texteEcart, texteEtape, texteReleve } from '#lib/engins/textes.ts';
 	import { reduirePhoto } from '#lib/murs/reduire-photo.ts';
 	import { pluriel } from '#lib/pluriel.ts';
 	import Bouton from '#lib/ui/Bouton.svelte';
@@ -14,7 +14,7 @@
 	import Panneau from '#lib/planning/Panneau.svelte';
 	import Pastille from '#lib/ui/Pastille.svelte';
 
-	type Reponse = { cible?: string; zone?: number | null; zoneFaite?: number; succes?: string; message?: string } | null;
+	type Reponse = { cible?: string; zone?: number | null; zoneFaite?: number; succes?: string; message?: string; motif?: string } | null;
 	let { data, form }: { data: VuePrise & { moi?: number | null }; form: Reponse } = $props();
 
 	const e = $derived(data.engin);
@@ -25,7 +25,11 @@
 	const ecartsDe = (refs: ElementFiche[]) => refs.filter((x) => s?.ecarts[String(x.ref)]).length;
 	const vue = (ref: number) => s?.zones.includes(ref) ?? false;
 	const vues = $derived(data.zones.filter((z) => vue(z.ref)).length);
-	const nbEcarts = $derived(Object.keys(s?.ecarts ?? {}).length);
+	// Rouverte : ses écarts qui ont déjà leur anomalie n'en créent pas d'autre ; celles que personne ne suit suivent l'écart.
+	const propre = (ref: number) => data.propres.find((o) => o.ref === ref);
+	const rouverte = $derived(p?.traces.rouverte ?? null);
+	const nbEcarts = $derived(Object.keys(s?.ecarts ?? {}).filter((ref) => !propre(Number(ref))).length);
+	const nbAnnulees = $derived(data.propres.filter((o) => !o.suivie && o.ref !== null && !s?.ecarts[String(o.ref)]).length);
 	const nbRetrouves = $derived(s?.retrouves.length ?? 0);
 	const premiereAVoir = $derived(data.zones.find((z) => !vue(z.ref))?.ref);
 	const toutVu = $derived(vues === data.zones.length);
@@ -69,7 +73,10 @@
 		if (avecMoi) return autresCoches ? `vous + ${autresCoches}` : 'vous seul';
 		return autresCoches ? `${autresCoches} ${autresCoches > 1 ? 'agents' : 'agent'}` : 'personne';
 	});
-	const panneauParticipants = $derived(data.peutFaire && page.url.searchParams.has('participants'));
+	const faite = $derived(p?.etat === 'validee');
+	// Validée, les participants se modifient encore (un participant ou un chef) ; en cours, par qui fait la prise.
+	const modifieParticipants = $derived(faite ? data.gestes.participants : data.peutFaire);
+	const panneauParticipants = $derived(modifieParticipants && page.url.searchParams.has('participants'));
 	// Les autres agents : avec JavaScript, seuls les cochés et ceux que la recherche trouve ; sans, tous.
 	let cherche = $state('');
 	let avecJs = $state(false);
@@ -134,6 +141,8 @@
 	{#if pour(cible)?.message}<p class="echec" role="alert">{pour(cible)?.message}</p>{/if}
 {/snippet}
 
+{#snippet trace(quoi: string, t: { par: string; le: string; motif?: string })}{`${quoi} par ${t.par}, ${jourHeure(t.le)}${t.motif ? ` : « ${t.motif} »` : ''}.`}{/snippet}
+
 {#snippet marque()}
 	<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>
 {/snippet}
@@ -160,9 +169,9 @@
 				<p class="compteur"><span class="nombre">{vues}<span aria-hidden="true">{' / '}</span><span class="masque">{' sur '}</span>{data.zones.length}</span> {data.zones.length > 1 ? 'zones vues' : 'zone vue'}</p>
 			{/if}
 		</div>
-		{#if p && p.etat !== 'validee'}
+		{#if p}
 			<div class="bande">
-				{#if data.peutFaire}
+				{#if modifieParticipants}
 					<a class="participants" href="?participants" data-sveltekit-noscroll>
 						<span><span>Participants :</span> <strong>{resumeParticipants}</strong></span>
 						<span class="modifier">Modifier<span class="masque">{' '}les participants</span></span>
@@ -170,7 +179,10 @@
 				{:else}
 					<p class="participants"><span><span>Participants :</span> <strong>{resumeParticipants}</strong></span></p>
 				{/if}
-				<p class="doux">Commencée par <strong>{p.commenceePar}</strong> à {heureCourte(p.commenceeLe)}{#if p.modifieeLe.slice(0, 16) !== p.commenceeLe.slice(0, 16) || p.modifieePar !== p.commenceePar}, modifiée par <strong>{p.modifieePar}</strong> à {heureCourte(p.modifieeLe)}{/if}.</p>
+				{#if !faite}
+					{#if rouverte}<p class="doux">{@render trace('Rouverte', rouverte)}</p>{/if}
+					<p class="doux">Commencée par <strong>{p.commenceePar}</strong> à {heureCourte(p.commenceeLe)}{#if p.modifieeLe.slice(0, 16) !== p.commenceeLe.slice(0, 16) || p.modifieePar !== p.commenceePar}, modifiée par <strong>{p.modifieePar}</strong> à {heureCourte(p.modifieeLe)}{/if}.</p>
+				{/if}
 			</div>
 		{/if}
 	</section>
@@ -183,7 +195,46 @@
 			<h2 id="titre-fait">{validee ? 'Prise validée, merci.' : 'Prise faite'}</h2>
 			<p><Pastille ton={etat.ton}>{etat.texte}</Pastille></p>
 			<p>{pluriel(p.saisie.participants.length, 'participant')}, {pluriel(Object.keys(p.saisie.ecarts).length, 'écart')}, {pluriel(p.saisie.retrouves.length, 'élément retrouvé', 'éléments retrouvés')}</p>
+			{#if p.traces.rouverte || p.traces.participants || p.traces.demande}
+				<ul class="traces doux" role="list">
+					{#if p.traces.rouverte}<li>{@render trace('Rouverte', p.traces.rouverte)}</li>{/if}
+					{#if p.traces.participants}<li>{@render trace('Participants modifiés', p.traces.participants)}</li>{/if}
+					{#if p.traces.demande}<li>{@render trace('Réouverture demandée', p.traces.demande)}</li>{/if}
+				</ul>
+			{/if}
 			<a class="lien-secondaire" href="/engins/{e.id}">Voir l’engin et l’historique des prises</a>
+			{#if data.gestes.demander}
+				<details class="plus" open={pour('demander')?.message !== undefined || undefined}>
+					<summary>Demander la réouverture</summary>
+					<form method="POST" action="?/demanderReouverture" use:enhance class="formulaire">
+						<input type="hidden" name="prise" value={p.id} />
+						<p>Le chef de garde de l’équipe d’astreinte est prévenu ; lui seul rouvre la prise.</p>
+						<div class="champ">
+							<label for="motif-demande">Motif</label>
+							<textarea id="motif-demande" name="motif" maxlength="200" rows="2" required>{pour('demander')?.motif ?? ''}</textarea>
+						</div>
+						{@render message('demander')}
+						<div><Bouton type="submit">Envoyer la demande</Bouton></div>
+					</form>
+				</details>
+				{#if pour('demander')?.succes}<p class="ok">{@render marque()} Demande envoyée au chef de garde.</p>{/if}
+			{/if}
+			{#if data.gestes.rouvrir}
+				<details class="plus" open={pour('rouvrir')?.message !== undefined || undefined}>
+					<summary>Plus</summary>
+					<form method="POST" action="?/rouvrir" use:enhance class="formulaire">
+						<input type="hidden" name="prise" value={p.id} />
+						<p>La prise repasse en cours : les zones vues restent, les écarts se corrigent, puis elle se valide de nouveau.</p>
+						<div class="champ">
+							<label for="motif-rouvrir">Motif</label>
+							<textarea id="motif-rouvrir" name="motif" maxlength="200" rows="2" required>{pour('rouvrir')?.motif ?? ''}</textarea>
+						</div>
+						<label class="choix"><input type="checkbox" name="confirmation" value="oui" /> Je confirme</label>
+						{@render message('rouvrir')}
+						<div><Bouton type="submit" variante="grave">Rouvrir la prise</Bouton></div>
+					</form>
+				</details>
+			{/if}
 		</section>
 	{:else}
 		{#if p}
@@ -345,6 +396,10 @@
 										{/if}
 									</div>
 								{/if}
+								{#if propre(el.ref)?.suivie}
+									{@const o = propre(el.ref)!}
+									<p class="doux">{o.suiviePar ? `Déjà suivie par ${o.suiviePar} : à clore par lui` : 'Déjà suivie : à clore depuis son suivi'}, même si l’écart est retiré.</p>
+								{/if}
 								{@render message(`element:${el.ref}`)}
 							</li>
 						{/each}
@@ -377,7 +432,12 @@
 				<section class="panneau" id="valider" aria-labelledby="titre-valider">
 					<h2 id="titre-valider" tabindex="-1">Valider</h2>
 					<p>
-						{nbEcarts ? `${pluriel(nbEcarts, 'écart deviendra', 'écarts deviendront')} ${nbEcarts > 1 ? 'des anomalies suivies' : 'une anomalie suivie'}.` : 'Aucun écart.'}
+						{#if rouverte}
+							{nbEcarts ? `${pluriel(nbEcarts, 'nouvel écart deviendra', 'nouveaux écarts deviendront')} ${nbEcarts > 1 ? 'des anomalies suivies' : 'une anomalie suivie'}.` : 'Aucun nouvel écart.'}
+							{#if nbAnnulees}{pluriel(nbAnnulees, 'anomalie sans suivi sera annulée', 'anomalies sans suivi seront annulées')}, son écart retiré.{/if}
+						{:else}
+							{nbEcarts ? `${pluriel(nbEcarts, 'écart deviendra', 'écarts deviendront')} ${nbEcarts > 1 ? 'des anomalies suivies' : 'une anomalie suivie'}.` : 'Aucun écart.'}
+						{/if}
 						{#if nbRetrouves}{pluriel(nbRetrouves, 'signalement retrouvé sera clos', 'signalements retrouvés seront clos')}.{/if}
 						L’engin reste disponible : seuls le référent engins et les chefs décident d’une indisponibilité.
 					</p>
@@ -395,7 +455,7 @@
 			{/if}
 		{/if}
 
-		{#if p && data.peutFaire}
+		{#if p && data.peutFaire && !rouverte}
 			<details class="abandon repli" open={pour('abandonner')?.message !== undefined}>
 				<summary>Abandonner la prise…</summary>
 				<form method="POST" action="?/abandonner" use:enhance class="formulaire">
@@ -406,37 +466,38 @@
 				{@render message('abandonner')}
 			</details>
 		{/if}
+	{/if}
 
-		{#if p && panneauParticipants}
-			<Panneau titre="Participants" fermer={fermerParticipants}>
-				<form method="POST" action="?/geste" use:enhance={enregistrerParticipants} class="formulaire participants">
-					<input type="hidden" name="prise" value={p.id} />
-					<input type="hidden" name="quoi" value="participants" />
-					<input type="hidden" name="cible" value="participants" />
-					<p class="doux">La prise est au nom de tous ceux qui l’ont faite. Celui qui valide en fait partie.</p>
-					{#if astreinte.length}
-						<fieldset>
-							<legend>{data.releve.equipe ? data.releve.equipe.nom : 'Équipe d’astreinte'}</legend>
-							<div class="pastilles">
-								{#each astreinte as a (a.id)}<label class="pastille-choix"><input type="checkbox" name="participant" value={a.id} checked={coche(a.id)} /> {a.id === data.moi ? `${a.nom} (vous)` : a.nom}</label>{/each}
-							</div>
-						</fieldset>
-					{/if}
+	{#if p && panneauParticipants}
+		<Panneau titre="Participants" fermer={fermerParticipants}>
+			<!-- Validée, les participants s'enregistrent à part : le reste de la prise ne bouge pas. -->
+			<form method="POST" action={faite ? '?/participants' : '?/geste'} use:enhance={enregistrerParticipants} class="formulaire participants">
+				<input type="hidden" name="prise" value={p.id} />
+				{#if !faite}<input type="hidden" name="quoi" value="participants" />{/if}
+				<input type="hidden" name="cible" value="participants" />
+				<p class="doux">La prise est au nom de tous ceux qui l’ont faite. {faite ? 'Le changement est noté sur la prise.' : 'Celui qui valide en fait partie.'}</p>
+				{#if astreinte.length}
 					<fieldset>
-						<legend>{astreinte.length ? 'Un remplaçant, un renfort' : 'Agents du centre'}</legend>
-						<div class="champ">
-							<label for="cherche-agent">Chercher un agent <span class="doux">(nom ou prénom)</span></label>
-							<input id="cherche-agent" type="search" autocomplete="off" bind:value={cherche} />
-						</div>
+						<legend>{data.releve.equipe ? data.releve.equipe.nom : 'Équipe d’astreinte'}</legend>
 						<div class="pastilles">
-							{#each autres as a (a.id)}<label class="pastille-choix" hidden={!montre(a)}><input type="checkbox" name="participant" value={a.id} checked={coche(a.id)} onchange={() => (touches = [...touches, a.id])} /> {a.id === data.moi ? `${a.nom} (vous)` : a.nom}</label>{/each}
+							{#each astreinte as a (a.id)}<label class="pastille-choix"><input type="checkbox" name="participant" value={a.id} checked={coche(a.id)} /> {a.id === data.moi ? `${a.nom} (vous)` : a.nom}</label>{/each}
 						</div>
 					</fieldset>
-					{@render message('participants')}
-					<div><Bouton type="submit">Enregistrer les participants</Bouton></div>
-				</form>
-			</Panneau>
-		{/if}
+				{/if}
+				<fieldset>
+					<legend>{astreinte.length ? 'Un remplaçant, un renfort' : 'Agents du centre'}</legend>
+					<div class="champ">
+						<label for="cherche-agent">Chercher un agent <span class="doux">(nom ou prénom)</span></label>
+						<input id="cherche-agent" type="search" autocomplete="off" bind:value={cherche} />
+					</div>
+					<div class="pastilles">
+						{#each autres as a (a.id)}<label class="pastille-choix" hidden={!montre(a)}><input type="checkbox" name="participant" value={a.id} checked={coche(a.id)} onchange={() => (touches = [...touches, a.id])} /> {a.id === data.moi ? `${a.nom} (vous)` : a.nom}</label>{/each}
+					</div>
+				</fieldset>
+				{@render message('participants')}
+				<div><Bouton type="submit">Enregistrer les participants</Bouton></div>
+			</form>
+		</Panneau>
 	{/if}
 </div>
 
@@ -539,6 +600,12 @@
 		font-weight: 600;
 		text-decoration: underline;
 		text-underline-offset: 3px;
+	}
+	.traces {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-4);
+		font-size: var(--texte-14);
 	}
 	.bande .doux {
 		font-size: var(--texte-14);
