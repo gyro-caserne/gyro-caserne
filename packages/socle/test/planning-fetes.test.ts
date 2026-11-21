@@ -76,6 +76,8 @@ describe('les fêtes du centre, enregistrées', async () => {
 	const { astreinteDe } = await import('../src/planning/astreinte.ts');
 	const { enregistrerFete, noterFeteCentre, supprimerFete } = await import('../src/planning/fetes.ts');
 	const { disponible, lireContexte } = await import('../src/remplacements/contexte.ts');
+	const { demanderRemplacement } = await import('../src/remplacements/demandes.ts');
+	const { agendaDe, monLienAgenda } = await import('../src/planning/agenda.ts');
 	const schema = await import('../src/schema.ts');
 	const { baseDeTest } = await import('./base-de-test.ts');
 	const reglage = centreExemple.astreinte;
@@ -94,7 +96,7 @@ describe('les fêtes du centre, enregistrées', async () => {
 		const chef = await nouvelle('chef');
 		const [r] = await base.select().from(schema.responsabilite).where(eq(schema.responsabilite.systeme, 'chef_centre'));
 		await base.insert(schema.attribution).values({ personneId: chef, responsabiliteId: r!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
-		const agents = [await nouvelle('un', ids[0]), await nouvelle('deux', ids[1]), await nouvelle('trois', ids[2]), await nouvelle('quatre', ids[3])];
+		const agents = [await nouvelle('un', ids[0]), await nouvelle('deux', ids[1]), await nouvelle('trois', ids[2]), await nouvelle('quatre', ids[3]), await nouvelle('cinq', ids[0])];
 		const a = (id: number) => ({ type: 'personne' as const, id });
 		await reglerRoulement(base, a(chef), 2026, ids, '2026-01-01T10:00');
 		if (publier) await publierAnnee(base, a(chef), 2026, '2026-01-01T10:00');
@@ -160,8 +162,8 @@ describe('les fêtes du centre, enregistrées', async () => {
 		expect(avisRemplacement.map((x) => x.personneId).sort()).toEqual([un, quatre].sort());
 		// Les équipes 1 (libérée) et 3 (imposée) ; pas les autres, ni ceux du remplacement annulé (ils ont leur avis).
 		const avisEquipes = await base.select().from(schema.avisEte);
-		expect(avisEquipes.map((x) => x.personneId)).toEqual([agents[2]]);
-		expect(avisEquipes[0]!.texte).toBe('Sainte-Barbe, samedi 5 décembre de 18 h à 2 h. L’Équipe 3 est d’astreinte.');
+		expect(avisEquipes.map((x) => x.personneId).sort()).toEqual([agents[2]!, agents[4]!].sort());
+		expect(avisEquipes[0]!.texte).toBe('Sainte-Barbe, samedi 5 décembre de 18 h à 2 h. Équipe 3 d’astreinte.');
 	});
 
 	it('modifier puis supprimer : prévient, au journal ; une année en brouillon ne prévient personne', async () => {
@@ -171,11 +173,33 @@ describe('les fêtes du centre, enregistrées', async () => {
 		await supprimerFete(base, chef, id, AVANT, reglage);
 		expect(await base.select().from(schema.feteCentre)).toHaveLength(0);
 		const textes = (await base.select().from(schema.avisEte)).filter((x) => x.personneId === agents[1]).map((x) => x.texte);
-		expect(textes).toEqual(['Sainte-Barbe, samedi 5 décembre de 18 h à 2 h. L’Équipe 2 est d’astreinte.', 'Sainte-Barbe, samedi 5 décembre de 18 h à 2 h, annulée. L’astreinte suit le roulement.']);
+		expect(textes).toEqual(['Sainte-Barbe, samedi 5 décembre de 18 h à 2 h. Équipe 2 d’astreinte.', 'Sainte-Barbe, samedi 5 décembre de 18 h à 2 h, annulée. L’astreinte suit le roulement.']);
 		expect((await base.select().from(schema.journal)).map((j) => j.action).filter((x) => x.endsWith('_fete'))).toEqual(['ajouter_fete', 'modifier_fete', 'supprimer_fete']);
 		const brouillon = await jeu({ publier: false });
 		await enregistrerFete(brouillon.base, brouillon.chef, brouillon.fete, AVANT, reglage);
 		expect(await brouillon.base.select().from(schema.avisEte)).toHaveLength(0);
+	});
+
+	it('une fête à plus de douze semaines : l’équipe libérée est prévenue aussi', async () => {
+		const { base, chef, agents, fete } = await jeu();
+		await enregistrerFete(base, chef, fete, '2026-08-01T10:00', reglage);
+		// Équipe 1 (libérée) et équipe 3 (imposée).
+		expect((await base.select().from(schema.avisEte)).map((x) => x.personneId).sort()).toEqual([agents[0]!, agents[2]!, agents[4]!].sort());
+	});
+
+	it('pendant la fête : la demande d’un agent de l’équipe imposée va à son équipe ; supprimer la fête l’annule ; l’agenda nomme l’équipe', async () => {
+		const { base, chef, a, agents, ids, fete } = await jeu();
+		const { id } = (await enregistrerFete(base, chef, fete, AVANT, reglage)) as { id: number };
+		const demande = await demanderRemplacement(base, a(agents[2]!), { periodes: [{ debut: '2026-12-05T18:00', fin: '2026-12-06T02:00' }], cibleId: null }, AVANT, reglage);
+		const [d] = await base.select().from(schema.demandeRemplacement).where(eq(schema.demandeRemplacement.id, demande));
+		expect(d!.equipeId).toBe(ids[2]);
+		const lien = await monLienAgenda(base, a(agents[2]!), AVANT);
+		const ics = (await agendaDe(base, String(lien).split('/').at(-1)!.replace(/\.ics$/, ''), AVANT, reglage))!;
+		expect(ics).toContain('SUMMARY:Astreinte · Équipe 3');
+		expect(await supprimerFete(base, chef, id, AVANT, reglage)).toEqual({ inutiles: ['Nuit du samedi 5 décembre, trois Test cherche un remplaçant'] });
+		await supprimerFete(base, chef, id, AVANT, reglage, true);
+		const [apres] = await base.select().from(schema.demandeRemplacement).where(eq(schema.demandeRemplacement.id, demande));
+		expect(apres!.etat).toBe('annulee');
 	});
 
 	it('historique et tour : par nom, saisie des années passées, hors du tour signalé', async () => {

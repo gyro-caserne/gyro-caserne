@@ -94,7 +94,7 @@ export const actions: Actions = {
 	feteCentre: async ({ locals, request }) => {
 		const f = await request.formData();
 		const valeurs: Record<string, string> = { id: champ(f, 'id'), nom: champ(f, 'nom'), date: champ(f, 'date'), debut: champ(f, 'debut'), fin: champ(f, 'fin'), equipe: champ(f, 'equipe') };
-		const jourDeFin = valeurs.fin && valeurs.fin <= valeurs.debut && /^\d{4}-\d{2}-\d{2}$/.test(valeurs.date) ? ajouterJours(valeurs.date, 1) : valeurs.date;
+		const jourDeFin = valeurs.fin && valeurs.fin < valeurs.debut && /^\d{4}-\d{2}-\d{2}$/.test(valeurs.date) ? ajouterJours(valeurs.date, 1) : valeurs.date;
 		const donnees = { ...(valeurs.id ? { id: Number(valeurs.id) } : {}), nom: valeurs.nom, debut: `${valeurs.date}T${valeurs.debut}`, fin: `${jourDeFin}T${valeurs.fin}`, equipeId: Number(valeurs.equipe) };
 		let inutiles: string[] = [];
 		const reponse = await agir(locals, 'fete', 'Fête enregistrée.', async (m) => {

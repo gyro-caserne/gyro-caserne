@@ -134,7 +134,7 @@ export async function agendaDe(base: Base, fichier: string, maintenant: string, 
 
 	const annee = Number(aujourdhui.slice(0, 4));
 	const [[annees, changees, manoeuvres, , equipes, , conclues, lignesPlages, etes, lignesFetes], affectations] = await Promise.all([
-		base.batch([...lectures(base, `${annee - 1}-01-01`, `${annee + 1}-12-31`), requeteConclues(base, `${annee - 1}-01-01`, `${annee + 1}-12-31`, id), requetePlagesPubliees(base, `${annee - 1}-01-01`, `${annee + 1}-12-31`), requeteEtes(base), requeteFetes(base, `${annee - 1}-01-01`, `${annee + 1}-12-31`)]),
+		base.batch([...lectures(base, `${annee - 1}-01-01`, `${annee + 1}-12-31`), requeteConclues(base, `${annee - 1}-01-01`, `${annee + 1}-12-31`, id), requetePlagesPubliees(base, `${annee - 1}-01-01`, `${annee + 1}-12-31`), requeteEtes(base), requeteFetes(base, `${annee - 1}-01-01`, ajouterJours(`${annee + 1}-12-31`, 8))]),
 		base.select({ equipeId: affectationEquipe.equipeId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe).where(eq(affectationEquipe.personneId, id))
 	]);
 	const nom = (equipeId: number) => equipes.find((e) => e.id === equipeId)?.nom ?? 'Équipe';

@@ -1,4 +1,4 @@
-import { and, eq, gte, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
 import type { Base } from '../base.ts';
 import { ajouterJours, exigerDateHeure } from '../dates.ts';
 import type { Acteur } from '../droits.ts';
@@ -6,13 +6,13 @@ import { DonneeInvalide } from '../erreurs.ts';
 import { texte } from '../commun.ts';
 import { nomActeur } from '../actions/personnes.ts';
 import { ligneJournal } from '../journal.ts';
-import { anneePlanning, demandeRemplacement, equipe, feteCentre, gardeFeteCentre } from '../schema.ts';
+import { anneePlanning, demandeRemplacement, equipe, feteCentre, gardeFeteCentre, semaineChangee } from '../schema.ts';
 import { avis as avisEquipes } from './avis.ts';
 import { avis as avisRemplacement } from '../remplacements/avis.ts';
 import { dAstreinte, lireContexte, periodesDe, type Contexte } from '../remplacements/contexte.ts';
 import { requeteFetes } from './plages.ts';
 import { chevauche, dePlage, jourEnLettres, texteDemande } from '../remplacements/tranches.ts';
-import { equipeLe, exigerAnnee, exigerGestion, journalPlanning } from './annee.ts';
+import { equipeLe, exigerAnnee, exigerGestion, journalPlanning, semainesCalculees } from './annee.ts';
 
 // Au journal (suivi du centre), visant la fête : son nom et un lien vers l'étape Fêtes.
 const journalFete = (base: Base, acteur: Acteur, action: string, details: object, maintenant: string, cibleId: number | SQL) => ligneJournal(base, { acteur: nomActeur(acteur), action, cibleType: 'fete_centre', cibleId, details }, maintenant);
@@ -57,12 +57,18 @@ function inutilesDe(ctx: Contexte, touchees: Periode[], apres: FeteCentre[]) {
 // Les écritures et les avis d'un changement de fête dans une année publiée : les remplacements inutiles annulés (leurs personnes
 // prévenues), puis les agents des équipes touchées (imposée et libérée, avant comme après).
 async function effets(base: Base, acteur: Acteur, avant: FeteCentre | null, apres: FeteCentre | null, autres: FeteCentre[], maintenant: string, reglage: Reglage, confirme: boolean) {
-	const reference = (apres ?? avant)!;
-	const annee = Number(reference.debut.slice(0, 4));
-	const [ligne] = await base.select({ publieeLe: anneePlanning.publieeLe }).from(anneePlanning).where(eq(anneePlanning.annee, annee));
-	if (!ligne?.publieeLe) return { inutiles: [], ecritures: [] };
-	const ctx = await lireContexte(base, maintenant, reglage);
 	const touchees = [avant, apres].filter((f): f is FeteCentre => f !== null);
+	// Les semaines du roulement que les fêtes touchent : une fête de début janvier peut tomber dans la dernière semaine de l'année d'avant.
+	const annees = [...new Set(touchees.flatMap((f) => [Number(f.debut.slice(0, 4)), Number(ajouterJours(f.debut.slice(0, 10), -8).slice(0, 4))]))];
+	const [lignes, changees] = await base.batch([
+		base.select().from(anneePlanning).where(inArray(anneePlanning.annee, annees)),
+		base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${Math.min(...annees)}-01-01`), lte(semaineChangee.debut, `${Math.max(...annees)}-12-31`)))
+	]);
+	const publiees = lignes.filter((l) => l.publieeLe !== null);
+	const semaines = publiees.flatMap((l) => semainesCalculees(l.annee, l.ordre, changees, reglage)).filter((s) => s.periodes.some((p) => touchees.some((t) => chevauche(p, t))));
+	if (semaines.length === 0) return { inutiles: [], ecritures: [] };
+	const reference = (apres ?? avant)!;
+	const ctx = await lireContexte(base, maintenant, reglage);
 	const inutiles = inutilesDe(ctx, touchees, apres ? [...autres, apres] : autres);
 	const nom = (id: number | null) => {
 		const a = ctx.agents.find((x) => x.id === id);
@@ -70,8 +76,8 @@ async function effets(base: Base, acteur: Acteur, avant: FeteCentre | null, apre
 	};
 	const textes = inutiles.map((d) => `${majuscule(texteDemande(periodesDe(d.periodes)))}, ${d.remplacantId !== null && d.etat !== 'attente' ? `${nom(d.demandeurId)} remplacé par ${nom(d.remplacantId)}` : `${nom(d.demandeurId)} cherche un remplaçant`}`);
 	if (inutiles.length > 0 && !confirme) return { inutiles: textes, ecritures: [] };
-	const equipeNom = (id: number) => ctx.equipes.find((e) => e.id === id)?.nom ?? 'une autre équipe';
-	const phrase = apres ? `${quandFete(apres)}. L’${equipeNom(apres.equipeId)} est d’astreinte.` : `${quandFete(avant!)}, annulée. L’astreinte suit le roulement.`;
+	const equipeNom = (id: number) => ctx.equipes.find((e) => e.id === id)?.nom ?? 'Une autre équipe';
+	const phrase = apres ? `${quandFete(apres)}. ${equipeNom(apres.equipeId)} d’astreinte.` : `${quandFete(avant!)}, annulée. L’astreinte suit le roulement.`;
 	const moi = acteur.type === 'personne' ? acteur.id : 0;
 	const ecritures = inutiles.flatMap((d) => {
 		const prevenus = [...new Set([d.demandeurId, ...(d.remplacantId !== null && d.etat !== 'attente' ? [d.remplacantId] : []), ...(d.cibleId !== null && d.etat === 'attente' ? [d.cibleId] : [])])].filter((x) => x !== moi);
@@ -81,8 +87,7 @@ async function effets(base: Base, acteur: Acteur, avant: FeteCentre | null, apre
 		];
 	});
 	// Les équipes touchées : celles des fêtes, et celles des semaines dont elles prennent des heures.
-	const ids = new Set(touchees.map((f) => f.equipeId));
-	for (const s of ctx.semaines) if (s.periodes.some((p) => touchees.some((t) => chevauche(p, t)))) ids.add(s.equipeId);
+	const ids = new Set([...touchees.map((f) => f.equipeId), ...semaines.map((x) => x.equipeId)]);
 	const parRemplacement = new Set(inutiles.flatMap((d) => [d.demandeurId, d.remplacantId, d.cibleId]));
 	const jour = reference.debut.slice(0, 10);
 	const agents = ctx.agents.filter((a) => !parRemplacement.has(a.id) && ids.has(equipeLe(ctx.affectations.filter((x) => x.personneId === a.id), jour) ?? 0) && a.id !== moi).map((a) => a.id);

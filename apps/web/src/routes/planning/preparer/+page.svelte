@@ -392,7 +392,7 @@
 		{#if feteOuverte && data.supprimer}
 			<div class="touches" role="region" aria-label="Supprimer la fête">
 				<h3>Supprimer cette fête ?</h3>
-				<p>{feteOuverte.nom}, {quandFete(feteOuverte)}. L’astreinte reviendra au roulement et les deux équipes seront prévenues.</p>
+				<p>{feteOuverte.nom}, {quandFete(feteOuverte)}. L’astreinte reviendra au roulement{p.publiee ? ' et les équipes touchées seront prévenues' : ''}.</p>
 				<form method="POST" action={actionFete('supprimerFete')} class="en-ligne">
 					<input type="hidden" name="id" value={feteOuverte.id} />
 					<a class="lien-secondaire" href={ici({ fete: String(feteOuverte.id) })} data-sveltekit-reset="false">Garder la fête</a>
