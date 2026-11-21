@@ -130,7 +130,12 @@ test.describe('prise validée', () => {
 		await page.waitForLoadState('networkidle');
 		const complet = page.getByRole('button', { name: /^Tout est complet/ });
 		const valider = page.getByRole('button', { name: 'Valider la prise', exact: true });
-		while (await complet.count()) await complet.click().then(() => page.waitForLoadState('networkidle'));
+		// Une zone à la fois, jusqu'à ce que « Valider la prise » soit actif (le bouton « Tout est complet » reste affiché pour revoir une zone).
+		for (let i = 0; i < 30 && (await valider.getAttribute('aria-disabled')) === 'true'; i++) {
+			await complet.click();
+			await page.waitForLoadState('networkidle');
+		}
+		await expect(valider).not.toHaveAttribute('aria-disabled');
 		await valider.click();
 		await expect(page.getByRole('heading', { name: 'Prise validée, merci.' })).toBeVisible();
 
