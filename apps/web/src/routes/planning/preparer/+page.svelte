@@ -194,27 +194,6 @@
 						</li>
 					{/each}
 				</ul>
-				<h3>Fêtes du centre</h3>
-				<p class="doux">Pendant ces heures, l’équipe choisie tient l’astreinte à la place de celle du roulement.</p>
-				{@render retour('fete')}
-				{#if fetesCentre.length}
-					<ul role="list" class="fetes">
-						{#each fetesCentre as f (f.id)}
-							{@const e = equipe(f.equipeId)}
-							<li class="fete" style:--equipe={e.couleur}>
-								<p class="fete-titre"><strong>{f.nom}</strong> <span class="doux">({quandFete(f)})</span></p>
-								<p><PastilleEquipe nom={e.nom} couleur={e.couleur} /></p>
-								{#if f.attendues.length && !f.attendues.includes(f.equipeId)}
-									<p class="avertissement">Hors de son tour. Le tour revient à {noms(f.attendues)}.</p>
-								{/if}
-								{#if f.debut > data.maintenant}<a class="lien-secondaire" href={ici({ fete: String(f.id) })} data-sveltekit-reset="false">Modifier<span class="masque"> la fête {f.nom}</span></a>{/if}
-							</li>
-						{/each}
-					</ul>
-				{:else}
-					<p class="doux">Aucune fête du centre en {p.annee}.</p>
-				{/if}
-				<p><a class="bouton-lien" href={ici({ fete: 'nouvelle' })} data-sveltekit-reset="false">Ajouter une fête</a></p>
 				<h3>Historique du tour</h3>
 				{@render retour('fetes')}
 				{#if p.fetes.historique.length || p.fetesCentre.historique.length}
@@ -243,25 +222,49 @@
 						<Bouton type="submit" variante="secondaire">Noter</Bouton>
 					</form>
 				</details>
-				{@render retour('historique-fetes')}
-				<details class="repli">
-					<summary>Noter une fête du centre passée</summary>
-					<form method="POST" action={action('noterFeteCentre')} class="en-ligne">
-						<div class="champ">
-							<label for="fete-centre-annee">Année</label>
-							<input id="fete-centre-annee" name="annee" type="number" min="2020" max={p.annee} value={p.annee - 1} required />
-						</div>
-						<div class="champ">
-							<label for="fete-centre-nom">Fête</label>
-							<input id="fete-centre-nom" name="nom" maxlength="60" required list="noms-des-fetes" placeholder="Sainte-Barbe" />
-							<datalist id="noms-des-fetes">{#each nomsDesFetes as n (n)}<option value={n}></option>{/each}</datalist>
-						</div>
-						<Choix id="fete-centre-equipe" name="equipe" libelle="Équipe" options={[...p.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom })), { valeur: '', libelle: 'Effacer cette ligne' }]} valeur={String(p.equipes[0]?.id ?? '')} />
-						<Bouton type="submit" variante="secondaire">Noter</Bouton>
-					</form>
-				</details>
 			{/if}
-		{:else if data.etape === 'manoeuvres'}
+		{/if}
+		{#if data.etape === 'fetes'}
+			<h3>Fêtes du centre</h3>
+			<p class="doux">Pendant ces heures, l’équipe choisie tient l’astreinte à la place de celle du roulement.</p>
+			<div role="status">{#if concerne('fete') && form?.succes}<p class="succes">{form.succes}</p>{/if}</div>
+			{#if fetesCentre.length}
+				<ul role="list" class="fetes">
+					{#each fetesCentre as f (f.id)}
+						{@const e = equipe(f.equipeId)}
+						<li class="fete" style:--equipe={e.couleur}>
+							<p class="fete-titre"><strong>{f.nom}</strong> <span class="doux">({quandFete(f)})</span></p>
+							<p><PastilleEquipe nom={e.nom} couleur={e.couleur} /></p>
+							{#if f.attendues.length && !f.attendues.includes(f.equipeId)}
+								<p class="avertissement">Hors de son tour. Le tour revient à {noms(f.attendues)}.</p>
+							{/if}
+							{#if f.debut > data.maintenant}<a class="lien-secondaire" href={ici({ fete: String(f.id) })} data-sveltekit-reset="false">Modifier<span class="masque"> la fête {f.nom}</span></a>{/if}
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="doux">Aucune fête du centre en {p.annee}.</p>
+			{/if}
+			<p><a class="bouton-lien" href={ici({ fete: 'nouvelle' })} data-sveltekit-reset="false">Ajouter une fête</a></p>
+			{@render retour('historique-fetes')}
+			<details class="repli">
+				<summary>Noter une fête du centre passée</summary>
+				<form method="POST" action={action('noterFeteCentre')} class="en-ligne">
+					<div class="champ">
+						<label for="fete-centre-annee">Année</label>
+						<input id="fete-centre-annee" name="annee" type="number" min="2020" max={p.annee} value={p.annee - 1} required />
+					</div>
+					<div class="champ">
+						<label for="fete-centre-nom">Fête</label>
+						<input id="fete-centre-nom" name="nom" maxlength="60" required list="noms-des-fetes" placeholder="Sainte-Barbe" />
+						<datalist id="noms-des-fetes">{#each nomsDesFetes as n (n)}<option value={n}></option>{/each}</datalist>
+					</div>
+					<Choix id="fete-centre-equipe" name="equipe" libelle="Équipe" options={[...p.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom })), { valeur: '', libelle: 'Effacer cette ligne' }]} valeur={String(p.equipes[0]?.id ?? '')} />
+					<Bouton type="submit" variante="secondaire">Noter</Bouton>
+				</form>
+			</details>
+		{/if}
+		{#if data.etape === 'manoeuvres'}
 			<p class="doux">Chaque manœuvre est annoncée sur « Le centre » deux semaines avant, aux équipes convoquées.</p>
 			{#if p.manoeuvres.length}
 				<ListeRangees>
@@ -322,6 +325,8 @@
 				</div>
 				<Bouton type="submit" variante="secondaire">Ajouter</Bouton>
 			</form>
+		{:else if data.etape !== 'publier'}
+			<!-- Roulement et Fêtes : plus haut. -->
 		{:else if !p.semaines.length}
 			{@render sansRoulement()}
 		{:else}

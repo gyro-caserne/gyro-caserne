@@ -143,6 +143,11 @@ describe('Préparer l’année en cinq étapes', () => {
 
 	it('sans roulement, les étapes qui en dépendent le disent', () => {
 		expect(page({ etape: 'publier', preparation: preparation({ ordre: [], semaines: [] }) })).toContain('Réglez d’abord le roulement');
+		// Une fête du centre ne dépend pas du roulement.
+		const fetes = page({ etape: 'fetes', preparation: preparation({ ordre: [], semaines: [] }) });
+		expect(fetes).toContain('Réglez d’abord le roulement');
+		expect(fetes).toContain('Ajouter une fête');
+		expect(page({ etape: 'roulement' })).not.toContain('Réglez d’abord le roulement');
 	});
 
 	it('le message d’erreur va au bon formulaire', () => {
