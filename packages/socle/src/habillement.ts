@@ -192,8 +192,8 @@ export async function gesteHabillement(base: Base, acteur: Acteur, id: number, g
 		question: { titre: 'Question sur votre demande', texte: `${nom} : ${texte}` },
 		reponse: { titre: 'Réponse à votre question', texte: `${nom} : ${texte}` },
 		precision: { titre: 'Précision sur une demande', texte: `${nom} : ${texte}` },
-		stock: { titre: 'Demande traitée', texte: `Sortie du stock du centre : ${ex}${texte ? ` · ${texte}` : ''}` },
-		commande: { titre: 'Demande traitée', texte: `Commandée au SDIS : ${ex}${texte ? ` · ${texte}` : ''}` },
+		stock: { titre: 'Demande traitée', texte: `Sortie du stock du centre : ${ex}${texte ? `. ${texte}` : ''}` },
+		commande: { titre: 'Demande traitée', texte: `Commandée au SDIS : ${ex}${texte ? `. ${texte}` : ''}` },
 		refus: { titre: 'Demande refusée', texte: `${nom} : ${texte}` },
 		livraison: { titre: 'Tenue livrée', texte: `${texte} : ${ex}` },
 		annulation: { titre: 'Demande annulée', texte: `${nom} : ${ex}` }

@@ -45,8 +45,7 @@
 									<ul>
 										{#each m.changements as c (c.colonne)}
 											<li>
-												{c.colonne} : {c.avant || '(vide)'} <span aria-hidden="true">→</span><span class="cache">devient</span>
-												{c.apres || '(vide)'}
+												{c.colonne} passe de {c.avant || '(vide)'} à {c.apres || '(vide)'}
 											</li>
 										{/each}
 									</ul>

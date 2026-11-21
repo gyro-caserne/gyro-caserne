@@ -105,7 +105,7 @@
 </script>
 
 <svelte:head>
-	<title>Fichier du planning {data.annee} · Gyro Caserne</title>
+	<title>Fichier du planning {data.annee}, Gyro Caserne</title>
 </svelte:head>
 
 <div class="fichier">
@@ -139,7 +139,7 @@
 					<section>
 						<h3>{pluriel(apercu.semaines.length, 'semaine changée', 'semaines changées')}</h3>
 						<ul>
-							{#each apercu.semaines as s (s.debut)}<li>S{s.numero}, semaine du {jourLong(s.debut)} : {s.avant} <span aria-hidden="true">→</span><span class="cache">devient</span> {s.apres}</li>{/each}
+							{#each apercu.semaines as s (s.debut)}<li>S{s.numero}, semaine du {jourLong(s.debut)} , {s.avant} devient {s.apres}</li>{/each}
 						</ul>
 					</section>
 				{/if}
@@ -148,7 +148,7 @@
 						<section>
 							<h3>{pluriel(apercu.manoeuvres[cle].length, s, p)}</h3>
 							<ul>
-								{#each apercu.manoeuvres[cle] as m, i (i)}<li>{momentLong(m.debut)} · {m.theme}{'annoncee' in m && m.annoncee ? ' (déjà annoncée : marquée « Annulée », convoqués prévenus)' : ''}</li>{/each}
+								{#each apercu.manoeuvres[cle] as m, i (i)}<li>{m.theme}, {momentLong(m.debut)}{'annoncee' in m && m.annoncee ? ' (déjà annoncée, elle sera marquée Annulée et les convoqués prévenus)' : ''}</li>{/each}
 							</ul>
 						</section>
 					{/if}

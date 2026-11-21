@@ -23,12 +23,12 @@ export function etapeEteDe(url: URL, e: { ete: unknown; proposee: boolean }): Et
 	return !e.ete ? 'periode' : e.proposee ? 'repartition' : 'vacances';
 }
 
-// « Ven. 25 juin · nuit », « Sam. 26 juin · 24 h ».
+// « Ven. 25 juin, nuit », « Sam. 26 juin, 24 h ».
 export function libellePlage(p: { debut: string; fin: string }): string {
 	const jour = jourCourt().format(date(p.debut));
 	const duree = heures(p);
 	const quoi = duree === 24 ? '24 h' : p.debut.slice(11, 16) >= '17:00' && duree <= 14 ? 'nuit' : `${Number(p.debut.slice(11, 13))} h – ${Number(p.fin.slice(11, 13))} h`;
-	return `${jour.charAt(0).toUpperCase()}${jour.slice(1)} · ${quoi}`;
+	return `${jour.charAt(0).toUpperCase()}${jour.slice(1)}, ${quoi}`;
 }
 
 // « 2 agents », « 2 CE », « CA tout engins » (un seul).
@@ -50,10 +50,10 @@ export function texteIlManque(manque: Poste[]): string {
 	return `Il manque : ${manquants(manque).join(', ')}`;
 }
 
-// « Du ven. 25 juin au jeu. 2 sept. · vacances avant le 15 mai » ; `fin` : la relève qui suit la dernière semaine.
+// « Du ven. 25 juin au jeu. 2 sept., vacances à donner avant le 15 mai » ; `fin` : la relève qui suit la dernière semaine.
 export function phrasePeriode(debut: string, fin: string, dateLimite: string): string {
 	const veille = new Date(date(fin).getTime() - 864e5).toISOString();
-	return `Du ${jourCourt().format(date(debut))} au ${jourCourt().format(date(veille))} · vacances avant le ${jourMois().format(date(dateLimite)).replace(/^1 /, '1er ')}`;
+	return `Du ${jourCourt().format(date(debut))} au ${jourCourt().format(date(veille))}, vacances à donner avant le ${jourMois().format(date(dateLimite)).replace(/^1 /, '1er ')}`;
 }
 
 // « Proposé, 10 semaines, FPT armé partout, 4 agents en vacances, 3 sans réponse ».

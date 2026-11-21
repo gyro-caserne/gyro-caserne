@@ -70,7 +70,7 @@ function changements(fiche: Fiche, zones: ZoneFiche[]): ChangementsFiche {
 	const modifies = apres.flatMap((e) => {
 		const a = avant.find((x) => x.ref === e.ref);
 		if (!a || (a.libelle === e.libelle && a.quantite === e.quantite && a.zone === e.zone)) return [];
-		return [a.zone !== e.zone ? `${e.libelle} (passe en ${nomZone.get(e.zone)})` : a.libelle !== e.libelle ? `${a.libelle} → ${e.libelle}` : `${e.libelle} : ${a.quantite ?? 'sans quantité'} → ${e.quantite ?? 'sans quantité'}`];
+		return [a.zone !== e.zone ? `${e.libelle} (passe en ${nomZone.get(e.zone)})` : a.libelle !== e.libelle ? `${a.libelle} renommé en ${e.libelle}` : `${e.libelle}, ${e.quantite ?? 'sans quantité'} au lieu de ${a.quantite ?? 'sans quantité'}`];
 	});
 	const ajoutes = apres.filter((e) => !avant.some((a) => a.ref === e.ref)).map((e) => e.libelle);
 	const retires = avant.filter((e) => !apres.some((a) => a.ref === e.ref)).map((e) => e.libelle);
@@ -98,7 +98,7 @@ async function analyser(base: Base, acteur: Acteur, lu: FichierFichesLu, mainten
 		}
 		if (fiche) vues.add(fiche.typeId);
 		if (!fiche) {
-			erreur(1, `Type d’engin « ${feuille} » inconnu : créez-le d’abord dans l’appli (Fiches → Nouveau type)`);
+			erreur(1, `Type d’engin « ${feuille} » inconnu. Créez-le d’abord dans l’appli, depuis Fiches puis Nouveau type.`);
 			continue;
 		}
 		const lues = lu.entetes?.[feuille];

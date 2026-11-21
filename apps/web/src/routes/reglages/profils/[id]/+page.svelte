@@ -21,10 +21,10 @@
 </script>
 
 <svelte:head>
-	<title>{data.profil.nom} · Réglages · Gyro Caserne</title>
+	<title>{data.profil.nom}, Gyro Caserne</title>
 </svelte:head>
 
-<EnTetePage titre={data.profil.nom} phrase="Profil · {data.profil.typePersonne === 'agent' ? 'agents du centre' : 'personnes extérieures'}">
+<EnTetePage titre={data.profil.nom} phrase="Profil des {data.profil.typePersonne === 'agent' ? 'agents du centre' : 'personnes extérieures'}">
 	{#snippet tete()}<IconeRole icone="casque" taille={48} />{/snippet}
 </EnTetePage>
 

@@ -94,7 +94,7 @@
 </script>
 
 <svelte:head>
-	<title>Planning {p.annee} · Gyro Caserne</title>
+	<title>Planning {p.annee}, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">
@@ -177,7 +177,7 @@
 						{/if}
 						{#each demandes as d (d.v.id)}
 							<li>
-								<Rangee href="/remplacements/{d.v.id}" titre={titreDemande(d.v)} sous="{d.v.texte} · {d.sous}" alerte={d.alerte}>
+								<Rangee href="/remplacements/{d.v.id}" titre={titreDemande(d.v)} sous="{d.v.texte}, {d.sous}" alerte={d.alerte}>
 									{#snippet droite()}<Pastille ton={ETATS[d.v.etat].ton}>{ETATS[d.v.etat].libelle}</Pastille>{/snippet}
 								</Rangee>
 							</li>

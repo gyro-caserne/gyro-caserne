@@ -348,7 +348,7 @@ function avisNomination(base: Base, personneId: number, role: string, perimetre:
 					id: sql<number | null>`null`.as('id'),
 					personneId: personne.id,
 					titre: sql<string>`${titre}`.as('titre'),
-					texte: sql<string>`${perimetre} || ' · par ' || ${par}`.as('texte'),
+					texte: sql<string>`${perimetre} || ', par ' || ${par}`.as('texte'),
 					url: sql<string>`${url}`.as('url'),
 					creeLe: sql<string>`${maintenant}`.as('cree_le'),
 					lueLe: sql<string | null>`null`.as('lue_le')

@@ -37,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>Signaler un problème · Engins · Gyro Caserne</title>
+	<title>Signaler un problème, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

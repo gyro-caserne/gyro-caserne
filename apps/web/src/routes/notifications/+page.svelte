@@ -23,7 +23,7 @@
 		].filter((g) => g.lignes.length > 0)
 	);
 	const phrase = $derived(data.nonLues > 0 ? `${pluriel(data.nonLues, 'notification')} non ${data.nonLues > 1 ? 'lues' : 'lue'}.` : data.lignes.length > 0 ? 'Tout est lu.' : undefined);
-	const QUOI_RESERVATION = { acceptee: 'demande acceptée', refusee: 'demande refusée', annulee: 'réservation annulée' } as const;
+	const QUOI_RESERVATION = { acceptee: 'Demande acceptée', refusee: 'Demande refusée', annulee: 'Réservation annulée' } as const;
 	const moment = (l: LigneFil) => (l.creeLe.slice(0, 10) === data.aujourdhui ? heure(l.creeLe) : jourEtHeure(l.creeLe));
 
 	// Une ligne non lue passe par /notifications/ouvrir, qui la marque lue puis mène à sa page : sa page ne le fait pas toujours.
@@ -66,7 +66,7 @@
 </script>
 
 <svelte:head>
-	<title>Notifications · Gyro Caserne</title>
+	<title>Notifications, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">
@@ -108,7 +108,7 @@
 		<ul class="liste" role="list">
 			{#each data.signalements as s (s.id)}
 				<li class="signalement">
-					<p class="auteur"><strong>{nom(s.auteur)}</strong> <span class="doux">· {jourEtHeure(s.envoye_le)}</span></p>
+					<p class="auteur"><strong>{nom(s.auteur)}</strong><span class="doux">, {jourEtHeure(s.envoye_le)}</span></p>
 					<blockquote class:vide={!s.texte}>{s.texte || 'Sans texte'}</blockquote>
 					{#if s.photos.length > 0}
 						<div class="photos">
@@ -157,8 +157,8 @@
 						<a class="ligne" class:non-lue={!l.lue} href={lien(l, `/reservations/miennes#reservation-${l.reservationId}`)}>
 							<span class="pictogramme" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
 							<span class="corps">
-								<span class="quoi">{#if !l.lue}<span class="masque">{'Non lu, '}</span>{/if}{l.ressource} : {QUOI_RESERVATION[l.quoi]}</span>
-								<span class="extrait">{[l.periode, l.motif].filter(Boolean).join(' · ')}</span>
+								<span class="quoi">{#if !l.lue}<span class="masque">{'Non lu, '}</span>{/if}{QUOI_RESERVATION[l.quoi]} ({l.ressource})</span>
+								<span class="extrait">{[l.periode, l.motif].filter(Boolean).join(', ')}</span>
 								<span class="moment">{moment(l)}</span>
 							</span>
 							{#if !l.lue}<span class="point" aria-hidden="true"></span>{/if}

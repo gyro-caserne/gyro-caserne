@@ -22,7 +22,7 @@ async function geste(locals: App.Locals, request: Request, faire: (id: number, t
 }
 
 export const actions: Actions = {
-	accepter: ({ locals, request }) => geste(locals, request, (id) => accepter(locals.base, locals.acteur!, id, maintenantParis()), 'Demande acceptée : le demandeur est prévenu.'),
-	refuser: ({ locals, request }) => geste(locals, request, (id, motif) => refuser(locals.base, locals.acteur!, id, motif, maintenantParis()), 'Demande refusée : le demandeur est prévenu.'),
-	annuler: ({ locals, request }) => geste(locals, request, (id, mot) => annuler(locals.base, locals.acteur!, id, mot, maintenantParis()), 'Réservation annulée : le demandeur est prévenu.')
+	accepter: ({ locals, request }) => geste(locals, request, (id) => accepter(locals.base, locals.acteur!, id, maintenantParis()), 'Demande acceptée. Le demandeur est prévenu.'),
+	refuser: ({ locals, request }) => geste(locals, request, (id, motif) => refuser(locals.base, locals.acteur!, id, motif, maintenantParis()), 'Demande refusée. Le demandeur est prévenu.'),
+	annuler: ({ locals, request }) => geste(locals, request, (id, mot) => annuler(locals.base, locals.acteur!, id, mot, maintenantParis()), 'Réservation annulée. Le demandeur est prévenu.')
 };

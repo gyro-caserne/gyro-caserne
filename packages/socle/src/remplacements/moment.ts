@@ -44,14 +44,14 @@ export async function remplacementsDuMoment(base: Base, maintenant: string): Pro
 				.update(demandeRemplacement)
 				.set({ etat: 'expiree', trancheePar: 'planning', trancheeLe: maintenant })
 				.where(and(eq(demandeRemplacement.id, d.id), eq(demandeRemplacement.etat, d.etat))),
-			...avis(base, [d.demandeurId, ...(d.etat === 'a_valider' && d.remplacantId !== null ? [d.remplacantId, ...valideurs(chefs, d.equipeId, d.demandeurId, d.remplacantId)] : [])], d.id, 'expiree', `${texteDemande(periodesDe(d.periodes)) || 'Échange de manœuvre'} · le titulaire reste responsable`, `/remplacements/${d.id}`, maintenant, si)
+			...avis(base, [d.demandeurId, ...(d.etat === 'a_valider' && d.remplacantId !== null ? [d.remplacantId, ...valideurs(chefs, d.equipeId, d.demandeurId, d.remplacantId)] : [])], d.id, 'expiree', `${texteDemande(periodesDe(d.periodes)) || 'Échange de manœuvre'}, le titulaire reste responsable`, `/remplacements/${d.id}`, maintenant, si)
 		);
 	}
 	// Le chef de centre et l'adjoint l'apprennent aussi, en urgence (une seule fois, même s'ils valident pour l'équipe).
 	const duCentre = [...new Set(chefs.filter((c) => c.systeme === 'chef_centre' || c.systeme === 'chef_centre_adjoint').map((c) => c.personneId))];
 	for (const d of aRelancer) {
 		const texte = texteDemande(periodesDe(d.periodes));
-		const phrase = `${nom(d.demandeurId)} n’a pas encore de remplaçant demain · ${texte}`;
+		const phrase = `${nom(d.demandeurId)} n’a pas encore de remplaçant demain, ${texte}`;
 		const urgence = duCentre.filter((id) => id !== d.demandeurId);
 		ecritures.push(
 			base.update(demandeRemplacement).set({ relanceLe: maintenant }).where(and(eq(demandeRemplacement.id, d.id), isNull(demandeRemplacement.relanceLe))),

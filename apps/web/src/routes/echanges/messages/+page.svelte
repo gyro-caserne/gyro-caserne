@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>Messages · Gyro Caserne</title>
+	<title>Messages, Gyro Caserne</title>
 </svelte:head>
 
 <div class="messages">

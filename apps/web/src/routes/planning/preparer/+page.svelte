@@ -45,7 +45,7 @@
 </script>
 
 <svelte:head>
-	<title>Préparer {p.annee} · Planning · Gyro Caserne</title>
+	<title>Préparer {p.annee}, Gyro Caserne</title>
 </svelte:head>
 
 {#snippet retour(cible: string)}
@@ -214,7 +214,7 @@
 				<ListeRangees>
 					{#each p.manoeuvres as m (m.id)}
 						<li>
-							<Rangee href={ici({ manoeuvre: String(m.id) })} titre={m.theme} sous="{momentLong(m.debut)} · {m.convoques === 'tous' ? 'Tout le centre' : noms(m.convoques)}">
+							<Rangee href={ici({ manoeuvre: String(m.id) })} titre={m.theme} sous="{momentLong(m.debut)}, {m.convoques === 'tous' ? 'tout le centre' : noms(m.convoques)}">
 								{#snippet tete()}<TuileDate iso={m.debut} />{/snippet}
 								{#snippet droite()}
 									{#if m.annulee}<Pastille ton="danger">Annulée</Pastille>{:else if m.publiee}<Pastille ton="ok">Annoncée</Pastille>{/if}
@@ -351,7 +351,7 @@
 				<legend>Quelle équipe d’astreinte ?</legend>
 				{#each p.equipes as e (e.id)}
 					<button type="submit" name="semaine-{semaineOuverte.debut}" value={e.id} aria-pressed={e.id === semaineOuverte.equipeId} style:--equipe={e.couleur}
-						><span class="pastille" aria-hidden="true"></span>{e.nom}{#if e.id === semaineOuverte.equipeId}<span class="doux"> · actuelle</span>{/if}</button
+						><span class="pastille" aria-hidden="true"></span>{e.nom}{#if e.id === semaineOuverte.equipeId}<span class="doux"> (actuelle)</span>{/if}</button
 					>
 				{/each}
 			</fieldset>

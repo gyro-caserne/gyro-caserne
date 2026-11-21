@@ -104,7 +104,7 @@
 </script>
 
 <svelte:head>
-	<title>Fichier des fiches · Engins · Gyro Caserne</title>
+	<title>Fichier des fiches, Gyro Caserne</title>
 </svelte:head>
 
 <div class="fichier">
@@ -137,7 +137,7 @@
 			<div class="apercu">
 				<p class="resume">{changees.length ? pluriel(changees.length, 'fiche changée', 'fiches changées') : 'Aucun changement'}{apercu.erreurs.length ? `, ${pluriel(apercu.erreurs.length, 'erreur')}` : ''}</p>
 				{#each apercu.fiches as f (f.type)}
-					<Groupe titre="Fiche {f.type}" resume={resumerFiche(f) + (f.nouvelleVersion ? ` · deviendra la version ${f.version + 1}` : '')} niveauTitre={3}>
+					<Groupe titre="Fiche {f.type}" resume={resumerFiche(f) + (f.nouvelleVersion ? `, deviendra la version ${f.version + 1}` : '')} niveauTitre={3}>
 						<div class="details">
 							{#each [['Ajoutés', f.ajoutes], ['Retirés', f.retires], ['Modifiés', f.modifies]] as const as [titre, liste] (titre)}
 								{#if liste.length}

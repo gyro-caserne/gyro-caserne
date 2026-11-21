@@ -34,11 +34,11 @@
 		bouton?.focus();
 	}
 
-	const details = $derived(id ? [id.grade, id.equipe?.nom].filter(Boolean).join(' · ') : '');
+	const details = $derived(id ? [id.grade, id.equipe?.nom].filter(Boolean).join(', ') : '');
 </script>
 
 <svelte:head>
-	<title>Moi · Gyro Caserne</title>
+	<title>Moi, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

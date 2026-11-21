@@ -31,7 +31,7 @@
 			const n = niveaux[d.id];
 			return `${d.nom} : ${n === 'sur_mesure' ? 'Sur mesure' : d.niveaux[n]!.libelle}`;
 		});
-		return dits.join(' · ') || 'Rien de plus que les droits de base';
+		return dits.join(', ') || 'Rien de plus que les droits de base';
 	}
 
 	let ouvreArchives = $state(false);
@@ -73,7 +73,7 @@
 						courant={courant(`/reglages/comites/${c.id}`)}
 						icone={iconeDuComite(c)}
 						titre={c.nom}
-						sous="{pluriel(c.membresEnCours, 'membre')} · {c.rapporteurs.length > 0 ? `rapporteur : ${c.rapporteurs.join(', ')}` : 'pas de rapporteur'}"
+						sous="{pluriel(c.membresEnCours, 'membre')}, {c.rapporteurs.length > 0 ? `rapporteur : ${c.rapporteurs.join(', ')}` : 'pas de rapporteur'}"
 					/>
 				</li>
 			{/each}

@@ -40,7 +40,7 @@ async function jeu() {
 	const fiche = await lireFiche(j.base, j.types.VSAV);
 	const cabine = fiche.zones[0]!;
 	const gilets = cabine.elements.find((e) => e.libelle.startsWith('Gilets'))!;
-	const radio = cabine.elements.find((e) => e.libelle.startsWith('Radio'))!;
+	const radio = cabine.elements.find((e) => e.libelle === 'Essai radio')!;
 	const [bruno] = await j.base.select().from(personne).where(eq(personne.email, 'cdg@exemple.fr'));
 	return { ...j, vsav, fpt, fiche, cabine, gilets, radio, chloe: bruno!.id };
 }

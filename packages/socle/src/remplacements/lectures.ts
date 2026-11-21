@@ -239,7 +239,7 @@ export async function remplacementsAValider(base: Base, acteur: Acteur, maintena
 			equipeId: d.equipeId,
 			texte:
 				d.court === 1
-					? `Remplacement court, ${nom(d.demandeurId)}, ${texteDemande(periodesDe(d.periodes))} · il manque ${(JSON.parse(d.manque ?? '[]') as string[]).join(', ')} à ${nom(d.remplacantId)}`
+					? `Remplacement court, ${nom(d.demandeurId)}, ${texteDemande(periodesDe(d.periodes))}, il manque ${(JSON.parse(d.manque ?? '[]') as string[]).join(', ')} à ${nom(d.remplacantId)}`
 					: `Remplacement à valider, ${nom(d.demandeurId)}, ${texteDemande(periodesDe(d.periodes))}`
 		}));
 }

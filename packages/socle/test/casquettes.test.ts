@@ -91,7 +91,7 @@ describe('casquettesDe', () => {
 		await nommer(alice, role('Référent pharmacie'), { type: 'centre' });
 		await nommer(alice, role('Chef de garde'), { type: 'equipe', id: equipe1!.id });
 		expect(await casquettesDe(base, acteur(alice), aujourdhui)).toEqual([
-			{ id: `equipe:${equipe1!.id}`, nom: 'Chef de garde · Équipe 1', icone: 'casque', compte: 0 },
+			{ id: `equipe:${equipe1!.id}`, nom: 'Chef de garde (Équipe 1)', icone: 'casque', compte: 0 },
 			{ id: 'astreinte', nom: 'Mon astreinte', icone: 'casque', compte: 0 },
 			{ id: `role:${role('Référent pharmacie')}`, nom: 'Référent pharmacie', icone: 'croix', compte: 0 },
 			{ id: `comite:${idComite('Amicale')}`, nom: 'Amicale', icone: 'groupe', compte: 0 }

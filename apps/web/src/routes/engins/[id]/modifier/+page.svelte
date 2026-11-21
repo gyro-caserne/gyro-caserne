@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>Modifier {e.nom} · Engins · Gyro Caserne</title>
+	<title>Modifier {e.nom}, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

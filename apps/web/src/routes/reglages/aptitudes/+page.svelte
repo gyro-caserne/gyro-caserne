@@ -11,7 +11,7 @@
 </script>
 
 <svelte:head>
-	<title>Aptitudes · Réglages · Gyro Caserne</title>
+	<title>Aptitudes, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

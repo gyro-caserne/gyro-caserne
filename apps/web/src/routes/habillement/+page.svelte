@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>Habillement · Gyro Caserne</title>
+	<title>Habillement, Gyro Caserne</title>
 </svelte:head>
 
 {#snippet ligne(d: DemandeListee)}

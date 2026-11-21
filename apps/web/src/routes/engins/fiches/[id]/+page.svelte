@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>Fiche {f.type} · Engins · Gyro Caserne</title>
+	<title>Fiche {f.type}, Gyro Caserne</title>
 </svelte:head>
 
 {#snippet fleche(trace: string)}
@@ -53,7 +53,7 @@
 	<EnTetePage titre="Fiche {f.type}" phrase="Les modifications valent pour la prochaine prise." retour={{ href: '/engins/fiches', libelle: 'Fiches' }} />
 
 	<p class="version">
-		<strong>Version {f.version.numero}</strong>, du {dateCourte(f.version.creeLe)} ({f.version.auteur}) · {compteFiche(f.zones)}.
+		<strong>Version {f.version.numero}</strong>, du {dateCourte(f.version.creeLe)} ({f.version.auteur}). {compteFiche(f.zones)}.
 		{#if f.version.utilisee}Elle a déjà servi à une prise : la modifier crée la version {f.version.numero + 1}, l’historique garde celle-ci.{/if}
 	</p>
 

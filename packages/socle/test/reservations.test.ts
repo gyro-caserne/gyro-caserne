@@ -138,7 +138,7 @@ describe('l’e-mail d’une réservation à valider', () => {
 	it('à qui gère la ressource, pas au demandeur ; rien pour une réservation acceptée d’office', async () => {
 		const { base, alice, romain, bancs, vl } = await preparer();
 		const { id } = await reserver(base, alice, bancs, { debut: '2026-11-12', fin: '2026-11-12', quantite: 5 }, maintenant);
-		expect(await courrielsDeDemande(base, { genre: 'reservation', id }, aujourdhui)).toEqual([{ a: 'romain@exemple.fr', titre: 'Demande de réservation · Bancs', texte: expect.stringMatching(/^Alice Test, 5, /), url: '/reservations/a-valider' }]);
+		expect(await courrielsDeDemande(base, { genre: 'reservation', id }, aujourdhui)).toEqual([{ a: 'romain@exemple.fr', titre: 'Demande de réservation pour Bancs', texte: expect.stringMatching(/^Alice Test, 5, /), url: '/reservations/a-valider' }]);
 		const parRomain = await reserver(base, romain, bancs, { debut: '2026-11-15', fin: '2026-11-15', quantite: 1 }, maintenant);
 		expect(await courrielsDeDemande(base, { genre: 'reservation', id: parRomain.id }, aujourdhui)).toEqual([]);
 		const libre = await reserver(base, alice, vl, { debut: '2026-11-20T08:00', fin: '2026-11-20T10:00' }, maintenant);
@@ -369,7 +369,7 @@ describe('notifications des réservations', () => {
 	it('une demande de matériel sonne chez qui la gère, une fois, jamais chez le demandeur', async () => {
 		const { base, alice, romain, bancs, envois } = await avecTelephones();
 		await reserver(base, alice, bancs, { debut: '2026-11-12', fin: '2026-11-14', quantite: 4 }, maintenant);
-		expect(await envois()).toEqual([{ personneId: romain.id, titre: 'Demande de réservation · Bancs', texte: 'Alice Test, 4, du 12 au 14 nov.', url: '/reservations/a-valider', tag: 'reservations-a-valider' }]);
+		expect(await envois()).toEqual([{ personneId: romain.id, titre: 'Demande de réservation pour Bancs', texte: 'Alice Test, 4, du 12 au 14 nov.', url: '/reservations/a-valider', tag: 'reservations-a-valider' }]);
 	});
 
 	it('VL : acceptée d’office, rien ; en attente, le référent engins', async () => {
@@ -377,7 +377,7 @@ describe('notifications des réservations', () => {
 		await reserver(base, alice, vl, { debut: '2026-11-07T09:00', fin: '2026-11-07T12:00' }, maintenant);
 		expect(await envois()).toEqual([]);
 		await reserver(base, romain, vl, { debut: '2026-11-07T11:00', fin: '2026-11-07T13:30' }, maintenant);
-		expect(await envois()).toMatchObject([{ personneId: remi.id, titre: 'Demande de réservation · VL', texte: 'Romain Test, 7 nov., 11 h – 13 h 30' }]);
+		expect(await envois()).toMatchObject([{ personneId: remi.id, titre: 'Demande de réservation pour VL', texte: 'Romain Test, 7 nov., 11 h – 13 h 30' }]);
 	});
 
 	it('accord, refus et annulation par qui gère : un avis et un envoi au demandeur ; annulation par le demandeur : rien', async () => {
@@ -391,9 +391,9 @@ describe('notifications des réservations', () => {
 		await annuler(base, romain, a, 'Bancs cassés', maintenant);
 		await annuler(base, alice, c, null, maintenant);
 		expect(await envois()).toEqual([
-			{ personneId: alice.id, titre: 'Bancs : demande acceptée', texte: '12 nov.', url: '/reservations/miennes', tag: `reservation:${a}` },
-			{ personneId: alice.id, titre: 'Bancs : demande refusée', texte: '13 nov. · Déjà prêtés', url: '/reservations/miennes', tag: `reservation:${b}` },
-			{ personneId: alice.id, titre: 'Bancs : réservation annulée', texte: '12 nov. · Bancs cassés', url: '/reservations/miennes', tag: `reservation:${a}` }
+			{ personneId: alice.id, titre: 'Demande acceptée (Bancs)', texte: '12 nov.', url: '/reservations/miennes', tag: `reservation:${a}` },
+			{ personneId: alice.id, titre: 'Demande refusée (Bancs)', texte: '13 nov. (Déjà prêtés)', url: '/reservations/miennes', tag: `reservation:${b}` },
+			{ personneId: alice.id, titre: 'Réservation annulée (Bancs)', texte: '12 nov. (Bancs cassés)', url: '/reservations/miennes', tag: `reservation:${a}` }
 		]);
 		expect((await base.select().from(avisReservation)).map((x) => [x.personneId, x.reservationId, x.quoi])).toEqual([
 			[alice.id, a, 'acceptee'],
@@ -411,9 +411,9 @@ describe('notifications des réservations', () => {
 		await accepter(base, remi, v2, maintenant);
 		await retirerRessource(base, romain, bancs, maintenant);
 		expect((await envois()).map((e) => [e.personneId, e.titre, e.texte])).toEqual([
-			[romain.id, 'VL : demande acceptée', '7 nov., 10 h – 11 h'],
-			[alice.id, 'VL : réservation annulée', '7 nov., 9 h – 12 h · Créneau donné à une autre demande'],
-			[remi.id, 'Bancs : réservation annulée', '12 nov. · Ressource retirée']
+			[romain.id, 'Demande acceptée (VL)', '7 nov., 10 h – 11 h'],
+			[alice.id, 'Réservation annulée (VL)', '7 nov., 9 h – 12 h (Créneau donné à une autre demande)'],
+			[remi.id, 'Réservation annulée (Bancs)', '12 nov. (Ressource retirée)']
 		]);
 		expect((await base.select().from(avisReservation)).map((x) => x.reservationId)).toEqual([v2, v1, b]);
 	});
@@ -496,7 +496,7 @@ describe('après la revue', () => {
 		await accepter(course, romain, id, maintenant);
 		expect(await etat(base, id)).toMatchObject({ etat: 'refusee' });
 		expect((await base.select().from(avisReservation)).map((a) => a.quoi)).toEqual(['refusee']);
-		expect((await envois()).map((e) => e.titre)).toEqual(['Bancs : demande refusée']);
+		expect((await envois()).map((e) => e.titre)).toEqual(['Demande refusée (Bancs)']);
 	});
 
 	it('stock épuisé par une baisse : « il n’en reste plus » ; baisser sous ce qui est déjà accepté est refusé', async () => {

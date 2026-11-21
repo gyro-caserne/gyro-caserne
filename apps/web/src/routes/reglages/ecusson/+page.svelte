@@ -41,7 +41,7 @@
 </script>
 
 <svelte:head>
-	<title>Écusson du centre · Réglages · Gyro Caserne</title>
+	<title>Écusson du centre, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

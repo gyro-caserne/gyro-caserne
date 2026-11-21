@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Mes réservations · Gyro Caserne</title>
+	<title>Mes réservations, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

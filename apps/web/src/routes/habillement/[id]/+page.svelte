@@ -78,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>{extraitDemande(d.texte, 40)} · Habillement · Gyro Caserne</title>
+	<title>{extraitDemande(d.texte, 40)}, Gyro Caserne</title>
 </svelte:head>
 
 {#snippet erreur(quoi: string)}
@@ -137,13 +137,13 @@
 				<ol class="fil">
 					<li>
 						<strong>Demande</strong>
-						<span class="doux">{moment(d.creeLe)} · {d.demandeur}</span>
+						<span class="doux">{moment(d.creeLe)}, par {d.demandeur}</span>
 						<span class="texte">{d.texte}</span>
 					</li>
 					{#each d.fil as f, i (i)}
 						<li>
 							<strong>{TEXTES_FIL[f.quoi]}</strong>
-							<span class="doux">{moment(f.le)} · {f.par}</span>
+							<span class="doux">{moment(f.le)}, par {f.par}</span>
 							{#if f.texte}<span class="texte">{f.texte}</span>{/if}
 						</li>
 					{/each}

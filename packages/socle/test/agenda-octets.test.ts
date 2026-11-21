@@ -78,7 +78,7 @@ describe('Agenda : lignes pliées à 75 octets, identiques à l’ancien pliage'
 		`SUMMARY:${'a'.repeat(68)}`,
 		`SUMMARY:${'a'.repeat(300)}`,
 		`SUMMARY:Astreinte · Groupe A`,
-		`SUMMARY:Manœuvre : désincarcération et feux de forêt, avec la caserne voisine et le SDIS`,
+		`SUMMARY:Manœuvre désincarcération et feux de forêt, avec la caserne voisine et le SDIS`,
 		`LOCATION:${'é'.repeat(80)}`,
 		`DESCRIPTION:${'x'.repeat(65)}éé`,
 		`DESCRIPTION:${'x'.repeat(66)}é${'y'.repeat(100)}`,

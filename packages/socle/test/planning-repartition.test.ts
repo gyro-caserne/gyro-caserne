@@ -173,7 +173,7 @@ describe('été : proposer, ajuster, publier', () => {
 		const lien = await monLienAgenda(base, a(p.alice), '2027-06-20T10:00');
 		const ics = (await agendaDe(base, `${lien}.ics`.replace('.ics', ''), '2027-06-20T10:00', reglage))!;
 		expect(ics).toContain('UID:astreinte-2027-06-25-1@gyro-caserne');
-		expect(ics).toMatch(/DTSTART:20270628T160000Z\r\nDTEND:20270629T040000Z\r\nSUMMARY:Astreinte · Groupe B/);
+		expect(ics).toMatch(/DTSTART:20270628T160000Z\r\nDTEND:20270629T040000Z\r\nSUMMARY:Astreinte\\, Groupe B/);
 
 		const ctx = await lireContexte(base, '2027-06-20T10:00', reglage);
 		const nuitLundi = { debut: LUN, fin: '2027-06-29T06:00' };

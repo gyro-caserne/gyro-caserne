@@ -44,11 +44,11 @@ describe('urgence : un engin indisponible', () => {
 		await j.base.delete(envoiPush);
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'indisponible' }, QUAND, REGLAGE_ANOMALIES);
 		for (const chef of [j.claire, j.paul]) {
-			expect(await j.envois(chef)).toEqual([expect.objectContaining({ titre: 'VTU indisponible', texte: 'Treuil HS · décidé par Rémi Fictif', url: `/engins/${j.vtu}` })]);
+			expect(await j.envois(chef)).toEqual([expect.objectContaining({ titre: 'VTU indisponible', texte: 'Treuil HS, décidé par Rémi Fictif', url: `/engins/${j.vtu}` })]);
 			expect(await j.cloche(chef)).toEqual(['VTU indisponible']);
 		}
 		// Le déclarant garde son avis habituel.
-		expect((await j.envois(j.alice)).map((e) => e.titre)).toEqual(['VTU · Treuil HS']);
+		expect((await j.envois(j.alice)).map((e) => e.titre)).toEqual(['Treuil HS (VTU)']);
 	});
 
 	it('le chef qui rend l’engin indisponible n’est pas prévenu de son propre geste ; l’adjoint l’est', async () => {

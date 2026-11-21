@@ -10,7 +10,7 @@
 </script>
 
 <svelte:head>
-	<title>Nouveau comité · Réglages · Gyro Caserne</title>
+	<title>Nouveau comité, Gyro Caserne</title>
 </svelte:head>
 
 <EnTetePage titre="Nouveau comité" phrase="Un comité réunit des agents autour d’un thème (amicale, sport…). Ses membres et son rapporteur se nomment ensuite." />

@@ -151,19 +151,19 @@ export async function agendaDe(base: Base, fichier: string, maintenant: string, 
 			// En été publié, mes plages seulement (renfort compris).
 			const heures = heuresDe(s, equipeLe(affectations, s.debut), id, plages);
 			if (heures.length === 0) continue;
-			soustraire(heures, cedees).forEach((p, i) => evenements.push({ uid: `astreinte-${s.debut}-${i}`, debut: p.debut, fin: p.fin, titre: `Astreinte · ${groupeDeLaSemaine(etes, groupes, s) ?? nom(s.equipeId)}` }));
+			soustraire(heures, cedees).forEach((p, i) => evenements.push({ uid: `astreinte-${s.debut}-${i}`, debut: p.debut, fin: p.fin, titre: `Astreinte, ${groupeDeLaSemaine(etes, groupes, s) ?? nom(s.equipeId)}` }));
 		}
 		const f = fetes(a, semaines);
 		for (const [cle, libelle, date, equipeId] of [
 			['noel', 'Noël', `${a}-12-25`, f.noel],
 			['nouvel-an', 'Nouvel An', `${a}-12-31`, f.nouvelAn]
 		] as const) {
-			if (equipeId !== null && equipeLe(affectations, date) === equipeId) evenements.push({ uid: `fete-${cle}-${a}`, debut: date, fin: ajouterJours(date, 1), titre: `Garde de ${libelle} · ${nom(equipeId)}`, journee: true });
+			if (equipeId !== null && equipeLe(affectations, date) === equipeId) evenements.push({ uid: `fete-${cle}-${a}`, debut: date, fin: ajouterJours(date, 1), titre: `Garde de ${libelle}, ${nom(equipeId)}`, journee: true });
 		}
 	}
 	for (const m of manoeuvres.map(vueManoeuvre)) {
 		if (m.annulee || !publiees.has(Number(m.debut.slice(0, 4))) || !convoque(m.convocation, equipeLe(affectations, m.debut.slice(0, 10)), id)) continue;
-		evenements.push({ uid: `manoeuvre-${m.id}`, debut: m.debut, fin: m.fin, titre: `Manœuvre : ${m.theme}`, lieu: m.lieu, description: m.petitDejeuner ? 'Petit-déjeuner prévu.' : undefined });
+		evenements.push({ uid: `manoeuvre-${m.id}`, debut: m.debut, fin: m.fin, titre: `Manœuvre ${m.theme}`, lieu: m.lieu, description: m.petitDejeuner ? 'Petit-déjeuner prévu.' : undefined });
 	}
 
 	const stamp = versUtc(maintenant);

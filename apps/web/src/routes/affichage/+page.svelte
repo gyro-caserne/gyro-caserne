@@ -20,7 +20,7 @@
 </script>
 
 <svelte:head>
-	<title>Affichage · Gyro Caserne</title>
+	<title>Affichage, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

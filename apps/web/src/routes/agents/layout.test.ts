@@ -94,7 +94,7 @@ describe('/agents : vue de tous', () => {
 		expect(mise).not.toContain('href="/agents/');
 		expect(mise).not.toContain('class="detail');
 		expect(mise).not.toContain('Contenu de la page');
-		expect(tete(Layout, { data, children: enfants })).toContain('<title>Agents · Gyro Caserne</title>');
+		expect(tete(Layout, { data, children: enfants })).toContain('<title>Agents, Gyro Caserne</title>');
 		expect(html(Page, { data })).not.toContain('Choisissez un agent');
 	});
 

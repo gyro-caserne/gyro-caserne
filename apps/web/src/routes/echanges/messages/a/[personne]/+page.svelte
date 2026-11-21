@@ -20,7 +20,7 @@
 </script>
 
 <svelte:head>
-	<title>{vue.nom} · Messages · Gyro Caserne</title>
+	<title>{vue.nom}, Gyro Caserne</title>
 </svelte:head>
 
 {#key data.personne.id}

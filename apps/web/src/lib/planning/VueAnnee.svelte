@@ -43,7 +43,7 @@
 			<summary><h3>{m.nom}</h3><span class="resume">{resumeDuMois(donnees.annee, m.numero, m.semaines, donnees, mode)}</span></summary>
 			<div class="contenu">
 				{#if m.numero === 1 && avantPremiere.length}
-					<p class="avant">{avantPremiere.map((f) => `${f.nom}, ${jourLong(f.date)}`).join(' · ')}</p>
+					<p class="avant">{avantPremiere.map((f) => `${f.nom} le ${jourLong(f.date)}`).join(', ')}</p>
 				{/if}
 				{#if liste.length === 0}
 					<p class="avant">Aucune astreinte ce mois-ci.</p>

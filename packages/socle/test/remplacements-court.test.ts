@@ -121,7 +121,7 @@ describe('remplacement court : accepter', () => {
 		expect(await avisDe(n.elodie)).toEqual(['informe']);
 		const [urgence] = await envoisDe(n.elodie);
 		expect(urgence!.tag).toBe(`urgence:remplacement:${id}:informe`);
-		expect(urgence!.texte).toBe('Bruno Test remplace Alice Test lundi 9 novembre, de 20 h à 22 h · il lui manque CA1');
+		expect(urgence!.texte).toBe('Bruno Test remplace Alice Test lundi 9 novembre, de 20 h à 22 h, il lui manque CA1');
 	});
 
 	it('plus d’acceptation une fois la plage commencée', async () => {
@@ -156,7 +156,7 @@ describe('remplacement court : refuser après coup', () => {
 		expect(await avisDe(n.alice)).toEqual(['acceptee', 'refus_chef']);
 		expect(await avisDe(n.bruno)).toEqual(['recue', 'refus_chef']);
 		const [urgence] = (await envoisDe(n.alice)).filter((e) => e.tag.startsWith('urgence:'));
-		expect(urgence).toMatchObject({ tag: `urgence:remplacement:${id}:refus_chef`, texte: 'Bruno Test ne vous remplacera pas lundi 9 novembre, de 20 h à 22 h · vous restez d’astreinte' });
+		expect(urgence).toMatchObject({ tag: `urgence:remplacement:${id}:refus_chef`, texte: 'Bruno Test ne vous remplacera pas lundi 9 novembre, de 20 h à 22 h. Vous restez d’astreinte.' });
 	});
 
 	it('le chef ne refuse pas un remplaçant qui a les aptitudes ; personne d’autre ne refuse ; plus de refus une fois commencée', async () => {
@@ -308,7 +308,7 @@ describe('remplacement court : suites de la revue du coordinateur', () => {
 		await accepterDemande(base, bruno, avec, maintenant, reglage);
 		const sans = await demanderRemplacementCourt(base, alice, { debut: '2026-11-09T23:00', duree: 2 }, maintenant, reglage);
 		await accepterDemande(base, chloe, sans, maintenant, reglage);
-		expect(await remplacementsAValider(base, elodie, maintenant)).toEqual([{ id: avec, equipeId: expect.any(Number), texte: 'Remplacement court, Alice Test, lundi 9 novembre, de 20 h à 22 h · il manque CA1 à Bruno Test' }]);
+		expect(await remplacementsAValider(base, elodie, maintenant)).toEqual([{ id: avec, equipeId: expect.any(Number), texte: 'Remplacement court, Alice Test, lundi 9 novembre, de 20 h à 22 h, il manque CA1 à Bruno Test' }]);
 		expect(await nombreRemplacementsAValider(base, elodie, maintenant)).toBe(1);
 		expect((await enTeteDe(base, elodie, '2026-11-09', maintenant)).remplacementsAValider).toBe(1);
 		expect(await remplacementsAValider(base, david, maintenant)).toEqual([]);

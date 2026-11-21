@@ -16,10 +16,10 @@
 	type Titulaire = (typeof data.roles)[number]['titulaires'][number];
 	type Role = (typeof data.roles)[number];
 
-	const date = (jour: string | null) => (jour ? jour.split('-').reverse().join('/') : '—');
+	const date = (jour: string | null) => (jour ? jour.split('-').reverse().join('/') : 'date inconnue');
 	const periode = (t: Titulaire) => (t.fin ? `du ${date(t.debut)} au ${date(t.fin)}` : `depuis le ${date(t.debut)}`);
 	const nomDe = (t: Titulaire) => `${t.personne.prenom} ${t.personne.nom}`;
-	const intitule = (t: Titulaire) => (t.perimetre.nom ? `${nomDe(t)} — ${t.perimetre.nom}` : nomDe(t));
+	const intitule = (t: Titulaire) => (t.perimetre.nom ? `${nomDe(t)} (${t.perimetre.nom})` : nomDe(t));
 	const perimetreDe = (r: Role) => (r.portee === 'centre' ? 'Tout le centre' : r.perimetres.map((p) => p.nom).join(', '));
 	const concerne = (cible: string) => form?.cible === cible;
 
@@ -127,7 +127,7 @@
 </script>
 
 <svelte:head>
-	<title>Nominations · Gyro Caserne</title>
+	<title>Nominations, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

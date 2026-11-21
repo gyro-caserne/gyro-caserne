@@ -22,12 +22,12 @@
 </script>
 
 <svelte:head>
-	<title>Réserver · {r.nom} · Gyro Caserne</title>
+	<title>Réserver {r.nom}, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">
 	<EnTetePage
-		titre="Réserver · {r.nom}"
+		titre="Réserver {r.nom}"
 		phrase={creneau ? 'Choisissez le créneau. S’il est libre, la réservation est acceptée tout de suite.' : `Choisissez les jours et la quantité. ${r.gestionnaire.nom} accepte ou refuse votre demande.`}
 		retour={{ href: `/reservations/${r.id}`, libelle: r.nom }}
 	/>

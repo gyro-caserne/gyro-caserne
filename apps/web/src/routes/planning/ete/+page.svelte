@@ -52,7 +52,7 @@
 </script>
 
 <svelte:head>
-	<title>Été {e.annee} · Planning · Gyro Caserne</title>
+	<title>Été {e.annee}, Gyro Caserne</title>
 </svelte:head>
 
 {#snippet retour(cibles: string[])}
@@ -95,7 +95,7 @@
 				{#if !reglage.publiee}<a class="lien-bouton" href={ici({ panneau: 'periode' })} data-sveltekit-reset="false">Modifier<span class="masque">{' '}la période</span></a>{/if}
 			</div>
 			{#if !e.ete}
-				<p class="doux">Proposé d’après le roulement : de la dernière relève de juin à la dernière d’août. Ouvrez la saisie : les agents donnent leurs vacances dans « Moi → Mes vacances ».</p>
+				<p class="doux">Proposé d’après le roulement : de la dernière relève de juin à la dernière d’août. Ouvrez la saisie pour que les agents donnent leurs vacances, dans Moi puis Mes vacances.</p>
 				{@render formulairePeriode('Ouvrir la saisie des vacances', 'principal')}
 			{:else if reglage.publiee}
 				<p class="doux">L’été est publié : sa période ne change plus.</p>
@@ -110,10 +110,10 @@
 				<ul class="rangees" role="list">
 					<li>
 						<details class="repli">
-							<summary><span class="titre-rangee">Ont répondu<span class="doux">{' '}· avec des vacances</span></span><span class="compte">{avecVacances.length}</span></summary>
+							<summary><span class="titre-rangee">Ont répondu<span class="doux">{' '}avec des vacances</span></span><span class="compte">{avecVacances.length}</span></summary>
 							{#if avecVacances.length}
 								<ul class="noms" role="list">
-									{#each avecVacances as r (r.id)}<li><strong>{r.prenom} {r.nom}</strong> · {r.periodes.length ? r.periodes.map((p) => duAu(p.debut, p.fin)).join(', ') : 'aucune période'}</li>{/each}
+									{#each avecVacances as r (r.id)}<li><strong>{r.prenom} {r.nom}</strong>, {r.periodes.length ? r.periodes.map((p) => duAu(p.debut, p.fin)).join(', ') : 'aucune période'}</li>{/each}
 								</ul>
 							{:else}<p class="doux contenu">Personne pour l’instant.</p>{/if}
 						</details>
@@ -188,7 +188,7 @@
 										<li>
 											<a href={ici({ plage: p.debut })} class:non-arme={!p.arme} data-sveltekit-reset="false">
 												<span class="jour">{libellePlage(p)}</span>
-												<span class="etat">{p.arme ? `FPT armé · ${pluriel(p.presents.length, 'présent')}` : texteIlManque(p.manque)}</span>
+												<span class="etat">{p.arme ? `FPT armé, ${pluriel(p.presents.length, 'présent')}` : texteIlManque(p.manque)}</span>
 											</a>
 										</li>
 									{/each}
@@ -206,8 +206,8 @@
 			{:else if e.proposee}
 				<ul class="recap" role="list">
 					<li>{pluriel(e.semaines.length, 'semaine')}, {pluriel(e.semaines.reduce((n, s) => n + s.plages.length, 0), 'plage')}</li>
-					<li>{aRevoir === 0 ? 'FPT armé sur chaque plage' : `${pluriel(aRevoir, 'plage', 'plages')} où le FPT n’est pas armé`}{#if aRevoir}{' · '}<a href={vers('repartition')}>Revoir</a>{/if}</li>
-					{#if e.conflits.length}<li>{pluriel(e.conflits.length, 'remplacement à revoir', 'remplacements à revoir')} · <a href={vers('repartition')}>Revoir</a></li>{/if}
+					<li>{aRevoir === 0 ? 'FPT armé sur chaque plage' : `${pluriel(aRevoir, 'plage', 'plages')} où le FPT n’est pas armé`}{#if aRevoir}{'. '}<a href={vers('repartition')}>Revoir</a>{/if}</li>
+					{#if e.conflits.length}<li>{pluriel(e.conflits.length, 'remplacement à revoir', 'remplacements à revoir')}. <a href={vers('repartition')}>Revoir</a></li>{/if}
 					<li>{pluriel(sansReponse.length, 'agent sans réponse', 'agents sans réponse')} (comptés disponibles)</li>
 				</ul>
 				<p class="doux">À la publication, le planning, l’agenda et les remplacements suivent la répartition ; les renforts et les agents retirés sont prévenus.</p>
@@ -259,7 +259,7 @@
 			<li>
 				<span>
 					{x.prenom} {x.nom}
-					<span class="doux">· {equipe(x.equipeId).nom}{x.vacances ? ', en vacances' : ''}</span>
+					<span class="doux">({equipe(x.equipeId).nom}{x.vacances ? ', en vacances' : ''})</span>
 					{#if x.postes.length}<span class="doux postes">{x.postes.map((y) => LIBELLES_POSTE[y]).join(', ')}</span>{/if}
 				</span>
 				<form method="POST" action={action('ajuster', { plage: debut })} use:enhance={garder}>

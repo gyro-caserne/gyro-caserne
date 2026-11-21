@@ -39,7 +39,7 @@
 <div class="domaines pile">
 	{#each DOMAINES as d (d.id)}
 		{@const modifie = choix[d.id] !== depart[d.id]}
-		<Groupe titre={d.nom} resume={libelle(d, choix[d.id]) + (modifie ? ' · modifié' : '')} bind:ouvert={ouverts[d.id]}>
+		<Groupe titre={d.nom} resume={libelle(d, choix[d.id]) + (modifie ? ', modifié' : '')} bind:ouvert={ouverts[d.id]}>
 			<div class="domaine">
 				<SelecteurNiveaux name="niveau-{d.id}" legende={d.nom} niveaux={niveauxAffiches(d)} bind:valeur={choix[d.id]} surMesure={depart[d.id] === 'sur_mesure'} desactive={lectureSeule} />
 				{#if duModele && !lectureSeule && formRevenir && choix[d.id] !== duModele[d.id]}

@@ -307,16 +307,16 @@ async function nomDe(base: Base, id: number): Promise<string> {
 function demandeAuxGestionnaires(base: Base, demandeurId: number, r: Ressource, d: { demandeur: string; quantite: number; debut: string; fin: string }, si: SQL, aujourdhui: string, maintenant: string) {
 	const texte = [d.demandeur, ...(r.forme === 'jours' ? [String(d.quantite)] : []), periodeCourte(r.forme, d.debut, d.fin)].join(', ');
 	const qui = base.select({ id: personne.id }).from(personne).where(and(inArray(personne.id, gestionnairesDe(base, r.id, aujourdhui)), ne(personne.id, demandeurId)));
-	return mettreEnFile(base, qui, 'reservations', { titre: `Demande de réservation · ${r.nom}`, texte, url: '/reservations/a-valider', tag: 'reservations-a-valider' }, maintenant, si);
+	return mettreEnFile(base, qui, 'reservations', { titre: `Demande de réservation pour ${r.nom}`, texte, url: '/reservations/a-valider', tag: 'reservations-a-valider' }, maintenant, si);
 }
 
-const TITRES_AVIS = { acceptee: 'demande acceptée', refusee: 'demande refusée', annulee: 'réservation annulée' } as const;
+const TITRES_AVIS = { acceptee: 'Demande acceptée', refusee: 'Demande refusée', annulee: 'Réservation annulée' } as const;
 
 // Ce qu'apprend le demandeur d'une décision de qui gère : un avis dans sa cloche et un envoi au téléphone. Rien s'il a tranché lui-même,
 // ni si la décision n'a pas été écrite (un autre gestionnaire a tranché juste avant) : la réservation doit porter cette décision-ci.
 function prevenir(base: Base, acteur: Acteur, l: { id: number; personneId: number; ressourceNom: string; forme: FormeRessource; debut: string; fin: string }, quoi: keyof typeof TITRES_AVIS, motif: string | null, maintenant: string) {
 	if (l.personneId === moiDe(acteur)) return [];
-	const texte = [periodeCourte(l.forme, l.debut, l.fin), ...(motif ? [motif] : [])].join(' · ');
+	const texte = `${periodeCourte(l.forme, l.debut, l.fin)}${motif ? ` (${motif})` : ''}`;
 	const decidee = and(eq(reservation.id, l.id), eq(reservation.etat, quoi), eq(reservation.trancheePar, auteurDe(acteur)), eq(reservation.trancheeLe, maintenant));
 	return [
 		base.insert(avisReservation).select(
@@ -332,7 +332,7 @@ function prevenir(base: Base, acteur: Acteur, l: { id: number; personneId: numbe
 				.from(reservation)
 				.where(decidee)
 		),
-		mettreEnFile(base, [l.personneId], 'reservations', { titre: `${l.ressourceNom} : ${TITRES_AVIS[quoi]}`, texte, url: '/reservations/miennes', tag: `reservation:${l.id}` }, maintenant, sql`exists ${base.select({ un: sql`1` }).from(reservation).where(decidee)}`)
+		mettreEnFile(base, [l.personneId], 'reservations', { titre: `${TITRES_AVIS[quoi]} (${l.ressourceNom})`, texte, url: '/reservations/miennes', tag: `reservation:${l.id}` }, maintenant, sql`exists ${base.select({ un: sql`1` }).from(reservation).where(decidee)}`)
 	];
 }
 

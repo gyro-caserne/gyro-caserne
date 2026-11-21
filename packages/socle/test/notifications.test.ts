@@ -80,7 +80,7 @@ describe('notifierPublication', () => {
 		expect(await fil()).toEqual(tri(chef, chloe));
 		const envois = await file();
 		expect(envois.map((e) => e.a)).toEqual(['Chef', 'Chloe']);
-		expect(envois[0]).toMatchObject({ titre: `${e2.nom} · Bruno Test`, url: `/echanges/equipe:${e2.id}/${id}`, tag: `publication:${id}` });
+		expect(envois[0]).toMatchObject({ titre: `Publication de Bruno Test (${e2.nom})`, url: `/echanges/equipe:${e2.id}/${id}`, tag: `publication:${id}` });
 		expect(envois[0].texte).toHaveLength(100);
 		expect(envois[0].texte.startsWith('Manœuvre samedi')).toBe(true);
 		expect(envois[0].texte.endsWith('…')).toBe(true);
@@ -149,8 +149,8 @@ describe('notifierMessage', () => {
 		const m = await envoyer(base, base.photos, acteur(chloe), { conversation: groupe }, { texte: 'On fait un pot' }, maintenant);
 		await notifierMessage(base, m.message, maintenant);
 		expect((await file()).map((e) => [e.a, e.titre])).toEqual([
-			['Alice', 'Départ de Thomas · Chloe'],
-			['Bruno', 'Départ de Thomas · Chloe']
+			['Alice', 'Message de Chloe dans Départ de Thomas'],
+			['Bruno', 'Message de Chloe dans Départ de Thomas']
 		]);
 	});
 
@@ -390,7 +390,7 @@ describe('abonnements et file d’envoi', () => {
 		await notifierPublication(base, await publier(base, base.photos, acteur(chef), 'centre', { type: 'message', texte: 'Note' }, maintenant), maintenant);
 		const lot = await prendreEnvois(base, 2, heure('10:00'));
 		expect(lot.envois).toHaveLength(2);
-		expect(lot.envois[0]).toMatchObject({ endpoint: 'https://fcm.googleapis.com/fcm/send/Alice', p256dh: 'BCle', auth: 'secret', essais: 1, donnees: { titre: 'Le centre · Chef Test', tag: expect.any(String) } });
+		expect(lot.envois[0]).toMatchObject({ endpoint: 'https://fcm.googleapis.com/fcm/send/Alice', p256dh: 'BCle', auth: 'secret', essais: 1, donnees: { titre: 'Publication de Chef Test (Le centre)', tag: expect.any(String) } });
 		expect(await file()).toHaveLength(3);
 		const suivant = await prendreEnvois(base, 2, heure('10:00'));
 		expect(suivant.envois.map((e) => e.endpoint.split('/').pop())).toEqual(['Chloe']);
@@ -513,7 +513,7 @@ describe('abonnements et file d’envoi', () => {
 		const [, , un, deux] = await lignes(avisEte);
 		expect((await file()).map((e) => [e.texte, e.lue.id])).toEqual([['Un', un], ['Deux', deux]]);
 		await vider();
-		await base.batch(avisAnomalies(base, [alice], { titre: 'FPT · Phare', texte: 'Signalée', url: '/engins/anomalies/1' }, maintenant) as never);
+		await base.batch(avisAnomalies(base, [alice], { titre: 'Phare (FPT)', texte: 'Signalée', url: '/engins/anomalies/1' }, maintenant) as never);
 		expect((await file()).map((e) => e.lue)).toEqual([{ genre: 'anomalie', id: (await lignes(avisAnomalie))[0] }]);
 		// Une publication (sa page la marque lue) ou un message (sans ligne de cloche) : l'adresse directe.
 		await vider();

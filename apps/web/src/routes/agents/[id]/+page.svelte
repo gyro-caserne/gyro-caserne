@@ -24,10 +24,10 @@
 	const valeurs = $derived(generale?.valeurs ?? {});
 	const erreurs = $derived(generale?.erreurs ?? {});
 	const texte = (cle: string, actuel: string | null) => valeurs[cle] ?? actuel ?? '';
-	const date = (jour: string | null) => (jour ? jour.split('-').reverse().join('/') : '—');
+	const date = (jour: string | null) => (jour ? jour.split('-').reverse().join('/') : 'date inconnue');
 
 	const aujourdhuiIso = $derived(data.aujourdhui);
-	const intitule = (l: { responsabilite: { nom: string }; perimetre: { nom: string | null } }) => (l.perimetre.nom ? `${l.responsabilite.nom} — ${l.perimetre.nom}` : l.responsabilite.nom);
+	const intitule = (l: { responsabilite: { nom: string }; perimetre: { nom: string | null } }) => (l.perimetre.nom ? `${l.responsabilite.nom} (${l.perimetre.nom})` : l.responsabilite.nom);
 	const periode = (l: { debut: string; fin: string | null }) => (l.fin ? `du ${date(l.debut)} au ${date(l.fin)}` : `depuis le ${date(l.debut)}`);
 	const concerne = (cible: string) => form?.cible === cible;
 	// « Terminer » ou « Changer la date de fin » peuvent sortir le rôle de sa liste : le succès s'annonce dans la carte.
@@ -64,11 +64,11 @@
 
 	// Résumés des blocs fermés.
 	const enCours = $derived(data.attributions.enCours);
-	const sousTitre = $derived([fiche.grade?.libelle, fiche.equipe?.nom].filter(Boolean).join(' · '));
+	const sousTitre = $derived([fiche.grade?.libelle, fiche.equipe?.nom].filter(Boolean).join(', '));
 	const resumes = $derived({
-		identite: [fiche.effaceLe ? null : fiche.email, fiche.telephone].filter(Boolean).join(' · '),
-		parcours: [fiche.grade?.libelle ?? 'Aucun grade', fiche.entreeCentre && `au centre depuis ${fiche.entreeCentre.slice(0, 4)}`].filter(Boolean).join(' · '),
-		equipe: `${fiche.equipe?.nom ?? 'Aucune équipe'} · ${LIBELLES_STATUT[fiche.statut]}`,
+		identite: [fiche.effaceLe ? null : fiche.email, fiche.telephone].filter(Boolean).join(', '),
+		parcours: [fiche.grade?.libelle ?? 'Aucun grade', fiche.entreeCentre && `au centre depuis ${fiche.entreeCentre.slice(0, 4)}`].filter(Boolean).join(', '),
+		equipe: `${fiche.equipe?.nom ?? 'Aucune équipe'}, ${LIBELLES_STATUT[fiche.statut].toLocaleLowerCase('fr')}`,
 		aptitudes: data.aptitudes.length ? data.aptitudes.map((a) => (a.valide ? a.nom : `${a.nom} (expirée)`)).join(', ') : 'Aucune aptitude',
 		roles: [enCours.length ? enCours.map(intitule).join(', ') : 'Aucun rôle en cours', data.attributions.aVenir.length && `${data.attributions.aVenir.length} à venir`].filter(Boolean).join(', '),
 		depart: fiche.statut === 'parti' ? (fiche.partiLe ? `Parti le ${date(fiche.partiLe)}` : 'A quitté le centre') : (data.raison ?? 'Fin des rôles, données personnelles effacées')
@@ -101,7 +101,7 @@
 </script>
 
 <svelte:head>
-	<title>{fiche.prenom} {fiche.nom} · Agents · Gyro Caserne</title>
+	<title>{fiche.prenom} {fiche.nom}, Gyro Caserne</title>
 	<!-- Sans JavaScript, les blocs ne se replient pas : tout reste visible et les formulaires s'envoient. -->
 	<noscript><style>.groupe > [hidden] { display: block !important; } .groupe .chevron { display: none; }</style></noscript>
 </svelte:head>
@@ -128,7 +128,7 @@
 			<li>
 				<div>
 					<strong>{intitule(l)}</strong>
-					<span class="note">{periode(l)} · saisi par {l.saisiePar}</span>
+					<span class="note">{periode(l)}, saisi par {l.saisiePar}</span>
 					{#if concerne(cible) && form?.erreurs?.confirmation}
 						<p id="{cible}-erreur" class="echec" role="alert">{form.erreurs.confirmation}</p>
 					{:else if (concerne(cible) || concerne(`finir-${l.id}`)) && form?.message && !form.succes}
@@ -212,8 +212,8 @@
 				{#if data.raison}
 					<p class="raison">{data.raison}</p>
 					<dl>
-						<dt>E-mail</dt><dd>{fiche.effaceLe ? '—' : fiche.email}</dd>
-						<dt>Téléphone</dt><dd>{fiche.telephone ?? '—'}</dd>
+						<dt>E-mail</dt><dd>{fiche.effaceLe ? 'Effacé' : fiche.email}</dd>
+						<dt>Téléphone</dt><dd>{fiche.telephone ?? 'Non renseigné'}</dd>
 						<dt>Date de naissance</dt><dd>{date(fiche.naissance)}</dd>
 					</dl>
 				{:else}
@@ -227,8 +227,8 @@
 					</form>
 				{/if}
 				<dl>
-					<dt>Surnom</dt><dd>{fiche.surnom ?? '—'}</dd>
-					<dt>Contact d'urgence</dt><dd>{fiche.contactUrgence ?? '—'}</dd>
+					<dt>Surnom</dt><dd>{fiche.surnom ?? 'Aucun'}</dd>
+					<dt>Contact d'urgence</dt><dd>{fiche.contactUrgence ?? 'Non renseigné'}</dd>
 				</dl>
 				<p class="note">Le surnom et le contact d'urgence sont saisis par l'agent lui-même.</p>
 			</div>
@@ -239,9 +239,9 @@
 				{#if data.raison}
 					<p class="raison">{data.raison}</p>
 					<dl>
-						<dt>Grade</dt><dd>{fiche.grade?.libelle ?? '—'}</dd>
+						<dt>Grade</dt><dd>{fiche.grade?.libelle ?? 'Aucun'}</dd>
 						<dt>Date de nomination</dt><dd>{date(fiche.dateGrade)}</dd>
-						<dt>Profil</dt><dd>{fiche.profil?.nom ?? '—'}</dd>
+						<dt>Profil</dt><dd>{fiche.profil?.nom ?? 'Aucun'}</dd>
 						<dt>Entrée au centre</dt><dd>{date(fiche.entreeCentre)}</dd>
 						<dt>Engagement SPV</dt><dd>{date(fiche.engagementSpv)}</dd>
 					</dl>
@@ -326,7 +326,7 @@
 						<summary>Passées ({data.attributions.passees.length})</summary>
 						<ul class="roles">
 							{#each data.attributions.passees as l (l.id)}
-								<li><div><strong>{intitule(l)}</strong> <span class="note">{periode(l)} · saisi par {l.saisiePar}</span></div></li>
+								<li><div><strong>{intitule(l)}</strong> <span class="note">{periode(l)}, saisi par {l.saisiePar}</span></div></li>
 							{/each}
 						</ul>
 					</details>

@@ -30,7 +30,7 @@
 </script>
 
 <svelte:head>
-	<title>Remplacements · Gyro Caserne</title>
+	<title>Remplacements, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

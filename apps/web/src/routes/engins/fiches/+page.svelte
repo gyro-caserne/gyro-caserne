@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Fiches de prise de garde · Engins · Gyro Caserne</title>
+	<title>Fiches de prise de garde, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

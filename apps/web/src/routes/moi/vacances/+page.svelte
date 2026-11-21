@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-	<title>Mes vacances · Moi · Gyro Caserne</title>
+	<title>Mes vacances, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

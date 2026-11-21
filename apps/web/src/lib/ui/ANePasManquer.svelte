@@ -51,14 +51,14 @@
 	<ListeRangees titre="À ne pas manquer" ancre="a-ne-pas-manquer">
 		{#each a.remplacements ?? [] as d (d.id)}
 			<li>
-				<Rangee href="/remplacements/{d.id}" titre={d.titre} sous="{d.sous} · Accepter ou refuser" alerte>
+				<Rangee href="/remplacements/{d.id}" titre={d.titre} sous="{d.sous}, à accepter ou refuser" alerte>
 					{#snippet tete()}<TuileDate iso={d.debut} />{/snippet}
 				</Rangee>
 			</li>
 		{/each}
 		{#each r.evenements as e (e.id)}
 			<li>
-				<Rangee href={lien(e)} titre={e.titre} sous="{debut(e.debut)} · {e.nomMur}">
+				<Rangee href={lien(e)} titre={e.titre} sous="{debut(e.debut)}, {e.nomMur}">
 					{#snippet tete()}<TuileDate iso={e.debut} />{/snippet}
 					{#if e.enCours}<span class="demain"><Pastille ton="ok">En cours</Pastille></span>
 					{:else if e.demain}<span class="demain"><Pastille ton="alerte">Demain</Pastille></span>{/if}
@@ -83,7 +83,7 @@
 
 		{#each r.annonces as i (i.id)}
 			<li>
-				<Rangee href={lien(i)} titre={i.titre} sous="Annonce à prendre en compte · {i.nomMur}" icone="etoile" dessin={DESSINS.annonce}>
+				<Rangee href={lien(i)} titre={i.titre} sous="Annonce à prendre en compte, {i.nomMur}" icone="etoile" dessin={DESSINS.annonce}>
 					<form method="POST" action={action('prendreConnaissance')} use:enhance={garderFocus}>
 						<input type="hidden" name="id" value={i.id} />
 						<button type="submit" class="geste">Pris connaissance<span class="masque">{` : ${i.titre}`}</span></button>
@@ -94,11 +94,11 @@
 		{/each}
 
 		{#each r.sondages as i (i.id)}
-			<li><Rangee href={lien(i)} titre={i.titre} sous="Sondage ouvert · {i.nomMur}" icone="camion" dessin={DESSINS.sondage} /></li>
+			<li><Rangee href={lien(i)} titre={i.titre} sous="Sondage ouvert, {i.nomMur}" icone="camion" dessin={DESSINS.sondage} /></li>
 		{/each}
 
 		{#each r.epinglees as i (i.id)}
-			<li><Rangee href={lien(i)} titre={i.titre} sous="Épinglée · {i.nomMur}" icone="livre" dessin={DESSINS.epinglee} /></li>
+			<li><Rangee href={lien(i)} titre={i.titre} sous="Épinglée, {i.nomMur}" icone="livre" dessin={DESSINS.epinglee} /></li>
 		{/each}
 
 		{#each a.nouveautes as n (n.cle)}

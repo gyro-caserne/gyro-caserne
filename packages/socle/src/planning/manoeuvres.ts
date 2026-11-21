@@ -46,7 +46,7 @@ type Manoeuvre = typeof manoeuvre.$inferSelect;
 export function colonnesPublication(m: Pick<Manoeuvre, 'debut' | 'fin' | 'theme' | 'lieu' | 'convoques' | 'petitDejeuner'>, maintenant: string, choix: string[], ouverture?: string | null, cloture?: string | null) {
 	const sondage = m.petitDejeuner === 1;
 	return {
-		texte: `Manœuvre : ${m.theme}`,
+		texte: `Manœuvre ${m.theme}`,
 		debut: m.debut,
 		fin: finEvenement(m.debut, m.fin),
 		lieu: m.lieu,
@@ -97,11 +97,11 @@ export async function planningDuMatin(base: Base, maintenant: string, choix: str
 				base.update(manoeuvre).set({ publicationId: sqlDernierePublication(), annonceeLe: maintenant }).where(eq(manoeuvre.id, m.id)),
 				ligneJournal(base, { acteur: AUTEUR_PLANNING, action: 'annoncer_manoeuvre', cibleType: 'manoeuvre', cibleId: m.id }, maintenant)
 			]);
-			await notifierConvoques(base, lignes[0]!.id, maintenant, { titre: `Manœuvre : ${m.theme}`, texte: `${quand(m)} · ${m.lieu}.${pdj(m)}`, seulementSansReponse: false });
+			await notifierConvoques(base, lignes[0]!.id, maintenant, { titre: 'Manœuvre annoncée', texte: `${m.theme}, ${quand(m)}, ${m.lieu}.${pdj(m)}`, seulementSansReponse: false });
 			n++;
 		} else if (m.publicationId !== null && m.relanceLe === null && aujourdhui >= mercrediDeRelance(m.debut) && m.annonceeLe.slice(0, 10) < aujourdhui) {
 			await base.update(manoeuvre).set({ relanceLe: maintenant }).where(eq(manoeuvre.id, m.id));
-			await notifierConvoques(base, m.publicationId, maintenant, { titre: `Rappel : manœuvre ${m.theme}`, texte: `${quand(m)} · ${m.lieu}. Dites si vous serez présent.${pdj(m)}`, seulementSansReponse: true });
+			await notifierConvoques(base, m.publicationId, maintenant, { titre: 'Rappel de manœuvre', texte: `${m.theme}, ${quand(m)}, ${m.lieu}. Dites si vous serez présent.${pdj(m)}`, seulementSansReponse: true });
 			relances++;
 		}
 	}
@@ -117,6 +117,6 @@ export async function manoeuvreChangee(base: Base, id: number, maintenant: strin
 	const [[m], fiches] = await base.batch([base.select().from(manoeuvre).where(eq(manoeuvre.id, id)), base.select({ prenom: personne.prenom, nom: personne.nom }).from(personne).where(eq(personne.id, par.type === 'personne' ? par.id : 0))]);
 	if (!m || m.publicationId === null) return;
 	const qui = par.type === 'super' ? 'Super administrateur' : fiches[0] ? `${fiches[0].prenom} ${fiches[0].nom}` : 'Ancien agent';
-	const titre = `Manœuvre ${m.annuleeLe !== null ? 'annulée' : 'modifiée'} par ${qui} : ${m.theme}`;
-	await notifierConvoques(base, m.publicationId, maintenant, { titre, texte: `${quand(m)} · ${m.lieu}.`, seulementSansReponse: false });
+	const titre = `Manœuvre ${m.annuleeLe !== null ? 'annulée' : 'modifiée'} par ${qui}`;
+	await notifierConvoques(base, m.publicationId, maintenant, { titre, texte: `${m.theme}, ${quand(m)}, ${m.lieu}.`, seulementSansReponse: false });
 }

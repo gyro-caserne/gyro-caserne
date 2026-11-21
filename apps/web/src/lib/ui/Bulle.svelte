@@ -68,7 +68,7 @@
 
 {#snippet meta()}
 	<span class="meta"
-			>{#if m.modifie}modifié · {/if}<time datetime={m.cree_le}>{heure(m.cree_le)}</time>{#if m.coche}<span class="coche" class:lu={m.coche === 'lu'} aria-hidden="true"
+			>{#if m.modifie}modifié, {/if}<time datetime={m.cree_le}>{heure(m.cree_le)}</time>{#if m.coche}<span class="coche" class:lu={m.coche === 'lu'} aria-hidden="true"
 					>{m.coche === 'lu' ? '✓✓' : '✓'}</span
 				><span class="masque">, {m.coche === 'lu' ? 'lu' : 'envoyé'}</span>{/if}</span
 		>

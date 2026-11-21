@@ -55,7 +55,7 @@
 				</div>
 			{:else}
 				<div class="ligne haut">
-					<p class="equipe">{a.equipe.nom}{forme === 'releve' ? ' · relève' : ''}</p>
+					<p class="equipe">{a.equipe.nom}{forme === 'releve' ? ' à la relève' : ''}</p>
 					<p class="jusqua">jusqu’au {bornes.fin}</p>
 				</div>
 				<p class="grand">{#if forme === 'releve'}<span class="masque">{'Début de l’astreinte : '}</span>{/if}{forme === 'encours' ? 'En cours' : quandRelatif(a.debut, maintenant)}</p>

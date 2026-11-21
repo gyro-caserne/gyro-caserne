@@ -101,7 +101,7 @@ describe('l’été publié', () => {
 		expect(nomDe(await planningDe(base, a(p.alice), 2027, maintenant, reglage), ETE)).toBe('Groupe B');
 		const lien = await monLienAgenda(base, a(p.bruno), maintenant);
 		const ics = await agendaDe(base, lien, maintenant, reglage);
-		expect(ics).toContain('Astreinte · Groupe B');
-		expect(ics).toContain('Astreinte · Équipe 2');
+		expect(ics).toContain('Astreinte\\, Groupe B');
+		expect(ics).toContain('Astreinte\\, Équipe 2');
 	});
 });

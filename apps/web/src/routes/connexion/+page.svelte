@@ -31,7 +31,7 @@
 </script>
 
 <svelte:head>
-	<title>Connexion · Gyro Caserne</title>
+	<title>Connexion, Gyro Caserne</title>
 </svelte:head>
 
 <div class="page">

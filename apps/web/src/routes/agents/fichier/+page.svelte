@@ -134,7 +134,7 @@
 </script>
 
 <svelte:head>
-	<title>Fichier de l'effectif · Agents · Gyro Caserne</title>
+	<title>Fichier de l'effectif, Gyro Caserne</title>
 </svelte:head>
 
 <div class="fichier">

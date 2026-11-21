@@ -41,13 +41,14 @@ export function echangePropose(semaines: SemaineCalculee[], fete: Fete, attendue
 
 // Le récapitulatif avant de publier.
 export function recapitulatif(p: { semaines: SemaineCalculee[]; manoeuvres: { annulee: boolean }[]; vacances: unknown[]; fetes: { noel: number | null; nouvelAn: number | null }; equipes: EquipePlanning[] }): string[] {
-	const nom = (id: number | null) => (id === null ? 'personne' : (p.equipes.find((e) => e.id === id)?.nom ?? 'équipe archivée'));
+	const nom = (id: number) => p.equipes.find((e) => e.id === id)?.nom.toLocaleLowerCase('fr') ?? 'équipe archivée';
+	const fete = (f: string, id: number | null) => (id === null ? `${f} sans équipe` : `${f} pour ${nom(id)}`);
 	const changees = p.semaines.filter((s) => s.changee).length;
 	const manoeuvres = p.manoeuvres.filter((m) => !m.annulee).length;
 	return [
 		`${pluriel(p.semaines.length, 'semaine')}, ${changees ? pluriel(changees, 'changée') : 'aucune changée'}`,
 		manoeuvres ? pluriel(manoeuvres, 'manœuvre') : 'Aucune manœuvre',
-		`Noël : ${nom(p.fetes.noel)} · Nouvel An : ${nom(p.fetes.nouvelAn)}`,
+		`${fete('Noël', p.fetes.noel)}, ${fete('Nouvel An', p.fetes.nouvelAn)}`,
 		p.vacances.length ? pluriel(p.vacances.length, 'période de vacances', 'périodes de vacances') : 'Aucune vacances scolaires'
 	];
 }

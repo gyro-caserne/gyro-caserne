@@ -244,7 +244,7 @@ describe('le suivi', () => {
 		const j = await jeu();
 		const id = await demanderTenue(j.base, j.alice, 'Gants', QUAND);
 		await j.geste(j.ids.remi, id, { quoi: 'traiter', issue: 'stock', texte: 'Je les pose demain' });
-		expect((await j.avis(j.ids.alice)).at(-1)).toMatchObject({ titre: 'Demande traitée', texte: 'Sortie du stock du centre : Gants · Je les pose demain' });
+		expect((await j.avis(j.ids.alice)).at(-1)).toMatchObject({ titre: 'Demande traitée', texte: 'Sortie du stock du centre : Gants. Je les pose demain' });
 	});
 
 	it('sans référent, le chef agit ; la réponse de l’agent va à lui seul s’il l’a prise', async () => {

@@ -4,7 +4,7 @@ import { ecrireClasseurFiches, lireClasseurFiches, nomDuFichierFiches } from './
 const donnees = {
 	entetes: ['Réf.', 'Zone', 'Élément', 'Quantité'],
 	feuilles: [
-		{ nom: 'VSAV', lignes: [['1', 'Cabine', 'Radio : essai', ''], ['2', 'Cabine', 'Gilets haute visibilité', '3']] },
+		{ nom: 'VSAV', lignes: [['1', 'Cabine', 'Essai radio', ''], ['2', 'Cabine', 'Gilets haute visibilité', '3']] },
 		{ nom: 'VTU', lignes: [] }
 	]
 };
@@ -14,7 +14,7 @@ describe('classeur des fiches', () => {
 		const lu = await lireClasseurFiches(await ecrireClasseurFiches(donnees));
 		expect(lu.feuilles).toEqual({
 			VSAV: [
-				{ numero: 2, cellules: ['1', 'Cabine', 'Radio : essai', ''] },
+				{ numero: 2, cellules: ['1', 'Cabine', 'Essai radio', ''] },
 				{ numero: 3, cellules: ['2', 'Cabine', 'Gilets haute visibilité', '3'] }
 			],
 			VTU: []

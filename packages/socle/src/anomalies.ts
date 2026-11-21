@@ -144,7 +144,7 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 		AND (SELECT count(*) FROM ${anomalie} b WHERE b.engin_id = ${a.enginId} AND b.bloquante = 1 AND b.close_le IS NULL) = ${lu.bloquantes}`;
 	const fait = sql`(SELECT ${anomalieSuivi.jeton} FROM ${anomalieSuivi} WHERE ${anomalieSuivi.anomalieId} = ${id} ORDER BY ${anomalieSuivi.id} DESC LIMIT 1) = ${jeton}`;
 
-	const titre = `${lu.nomEngin} · ${a.libelle}`;
+	const titre = `${a.libelle} (${lu.nomEngin})`;
 	const lien = `/engins/anomalies/${id}`;
 	const avec = texte ? ` : ${texte}` : '';
 	const textes: Record<QuoiGeste, string> = {
@@ -176,7 +176,7 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 			.set({ etat: etatEngin ?? lu.etatEngin })
 			.where(and(eq(engin.id, a.enginId), etatEngin ? fait : sql`0`)),
 		...avisAnomalies(base, prevenus, { titre, texte: textes[geste.quoi], url: lien }, maintenant, fait),
-		...(urgence ? avisAnomalies(base, chefsDuCentre(base, aujourdhui, moi), { titre: `${lu.nomEngin} indisponible`, texte: `${a.libelle} · décidé par ${lu.nom}`, url: `/engins/${a.enginId}` }, maintenant, fait, 'urgences') : []),
+		...(urgence ? avisAnomalies(base, chefsDuCentre(base, aujourdhui, moi), { titre: `${lu.nomEngin} indisponible`, texte: `${a.libelle}, décidé par ${lu.nom}`, url: `/engins/${a.enginId}` }, maintenant, fait, 'urgences') : []),
 		...(action ? [ligneJournalSi(base, { acteur: `personne:${moi}`, action, cibleType: 'anomalie', cibleId: id }, maintenant, fait)] : []),
 		base.select({ ok: sql<number>`${fait}` }).from(anomalie).where(eq(anomalie.id, id))
 	]);
@@ -215,7 +215,7 @@ export async function signalerAnomalie(base: Base, basePhotos: BasePhotos, acteu
 				.returning({ id: anomalie.id }),
 			ligneJournal(base, { acteur: `personne:${moi}`, action: 'signaler_anomalie', cibleType: 'anomalie', cibleId: sql`last_insert_rowid()` }, maintenant)
 		]);
-		const avis = avisAnomalies(base, prevenus, { titre: `Anomalie signalée · ${e.nom}`, texte: `${libelle}, ${GENRES[s.genre]} (${nomDe(auteur)})`, url: `/engins/anomalies/${cree!.id}` }, maintenant);
+		const avis = avisAnomalies(base, prevenus, { titre: `Anomalie signalée sur le ${e.nom}`, texte: `${libelle}, ${GENRES[s.genre]} (${nomDe(auteur)})`, url: `/engins/anomalies/${cree!.id}` }, maintenant);
 		// La cloche après coup : un échec n'annule pas le signalement.
 		if (avis.length) await base.batch([avis[0]!, avis[1]!]).catch(() => {});
 		return cree!.id;
