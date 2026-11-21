@@ -13,14 +13,14 @@ describe('textes des engins', () => {
 		expect(sousLigne({ ...engin, nom: 'VSAV 1', type: 'VSAV', situation: 'centre', immatriculation: 'AA-101-SP' })).toBe('AA-101-SP');
 	});
 	it('sous-ligne : un nom qui commence comme le type sans être lui garde le type', () => {
-		expect(sousLigne({ ...engin, nom: 'VSAVX', type: 'VSAV', situation: 'centre', immatriculation: 'AA-101-SP' })).toBe('VSAV · AA-101-SP');
+		expect(sousLigne({ ...engin, nom: 'VSAVX', type: 'VSAV', situation: 'centre', immatriculation: 'AA-101-SP' })).toBe('VSAV, AA-101-SP');
 	});
 	it('sous-ligne : type, plaque, prêt', () => {
 		expect(sousLigne({ ...engin, nom: 'Ambulance' })).toBe('VSAV, AB-123-CD, prêté par CIS Exemple-Nord');
 		expect(sousLigne({ ...engin, nom: 'Ambulance', situation: 'centre', immatriculation: null })).toBe('VSAV');
 	});
 	it('compte zones et éléments', () => {
-		expect(compteFiche([{ elements: [1, 2] }, { elements: [3] }])).toBe('2 zones · 3 éléments');
+		expect(compteFiche([{ elements: [1, 2] }, { elements: [3] }])).toBe('2 zones, 3 éléments');
 		expect(dateCourte('2026-01-05T10:00')).toBe('5 janv. 2026');
 	});
 
@@ -39,7 +39,7 @@ describe('textes des engins', () => {
 		expect(jourCourt('2026-10-30T18:00')).toBe('ven. 30 oct.');
 		expect(texteReleve({ debut: '2026-10-30T18:00', equipe: { nom: 'Équipe 2' } })).toBe('Relève du ven. 30 oct., équipe 2');
 		expect(texteReleve({ debut: '2026-10-30T18:00', equipe: null })).toBe('Relève du ven. 30 oct.');
-		expect(texteEcart({ genre: 'manquant', manque: 1, note: 'sous le siège' }, 3)).toBe('Manquant : 1 sur 3 · sous le siège');
+		expect(texteEcart({ genre: 'manquant', manque: 1, note: 'sous le siège' }, 3)).toBe('Manquant (1 sur 3), sous le siège');
 		expect(texteEcart({ genre: 'abime', manque: null, note: null })).toBe('Abîmé');
 	});
 });
@@ -54,7 +54,7 @@ describe('anomalies', () => {
 
 	it('l’étape écrite, avec le motif d’attente ; close', () => {
 		expect(texteEtape({ etape: 'signalee', motif: null })).toBe('Signalée');
-		expect(texteEtape({ etape: 'en_attente', motif: 'garage' })).toBe('En attente · au garage');
+		expect(texteEtape({ etape: 'en_attente', motif: 'garage' })).toBe('En attente (au garage)');
 		expect(texteEtape({ etape: 'reparee', motif: null, closeLe: '2026-10-30T18:00' })).toBe('Close');
 	});
 });

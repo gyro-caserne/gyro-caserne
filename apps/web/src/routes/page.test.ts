@@ -82,7 +82,7 @@ describe('accueil, météo et vigilance', () => {
 	it('vert : une petite ligne à côté de la ligne météo, avec le département et le lien', () => {
 		const html = page({ ...base, meteo: { meteo: pluie.meteo, vigilance: { etat: 'ok', niveau: 1, lignes: [], lieu: 'Ille-et-Vilaine' } } });
 		expect(html).toMatch(/12 °C, averses[\s\S]*class="vigilance-discrete[^"]*"/);
-		expect(texte(html)).toContain('Vigilance verte · Ille-et-Vilaine');
+		expect(texte(html)).toContain('Vigilance verte, Ille-et-Vilaine');
 		expect(html).toMatch(lienVigilance);
 		expect(html).not.toContain('aria-label="Vigilance météo"');
 	});
@@ -90,7 +90,7 @@ describe('accueil, météo et vigilance', () => {
 	it('jaune : le mot et le phénomène écrits, avec un jeton ; la ligne reste discrète, même sans relevé météo', () => {
 		const html = page({ ...base, meteo: { meteo: null, vigilance: { etat: 'ok', niveau: 2, lignes: ['Vigilance jaune orages, aujourd’hui'], lieu: '35' } } });
 		expect(html).toMatch(/class="vigilance-discrete[^"]*niveau-2[\s\S]*class="jeton[^"]*" aria-hidden="true"[\s\S]*Vigilance jaune orages, aujourd’hui/);
-		expect(texte(html)).toContain('Vigilance jaune orages, aujourd’hui · 35');
+		expect(texte(html)).toContain('Vigilance jaune orages, aujourd’hui, 35');
 		expect(html).not.toContain('aria-label="Vigilance météo"');
 	});
 
@@ -105,7 +105,7 @@ describe('accueil', () => {
 	it('une demande de remplacement reçue : dans « À ne pas manquer », vers la demande', () => {
 		const html = page({ casquettes: [astreinte], choisie: 'astreinte', contenu: { type: 'astreinte' }, aNePasManquer: { ...vide, remplacements: [{ id: 4, titre: 'Alice Test cherche un remplaçant', sous: 'nuit du lundi 9 novembre', debut: '2026-11-09T18:00' }] } });
 		expect(html).toMatch(/href="\/remplacements\/4"[^>]*>[\s\S]*?Alice Test cherche un remplaçant/);
-		expect(html).toContain('nuit du lundi 9 novembre · Accepter ou refuser');
+		expect(html).toContain('nuit du lundi 9 novembre, à accepter ou refuser');
 		expect(html).not.toContain('Tout est à jour');
 	});
 
@@ -151,7 +151,7 @@ describe('accueil', () => {
 
 		it('le soir de la relève : « ce soir 18 h » en grand, « Faire la prise de garde » sur la plaque, « Voir ma semaine »', () => {
 			const html = accueil(carte(), '2026-11-20T16:30', true);
-			expect(texte(html)).toContain('Équipe 3 · relève jusqu’au ven. 27 nov. 6 h');
+			expect(texte(html)).toContain('Équipe 3 à la relève jusqu’au ven. 27 nov. 6 h');
 			expect(grand(html)).toBe('Début de l’astreinte : ce soir 18 h');
 			expect(html).toMatch(/<span class="masque[^"]*">Début de l’astreinte : <\/span>/);
 			expect(html).toMatch(/class="aplat[\s\S]*?<a class="prise[^"]*" href="\/engins\/prise">[\s\S]*?Faire la prise de garde/);
@@ -261,7 +261,7 @@ describe('accueil', () => {
 		});
 
 		it('un chef de garde : en tête, sans colonne vide à côté', () => {
-			const html = page({ casquettes: [{ id: 'equipe:1', nom: 'Chef de garde · Équipe 1', icone: 'casque', compte: 1 }, astreinte], choisie: 'equipe:1', aNePasManquer, contenu: { type: 'equipe', aDecider } });
+			const html = page({ casquettes: [{ id: 'equipe:1', nom: 'Chef de garde (Équipe 1)', icone: 'casque', compte: 1 }, astreinte], choisie: 'equipe:1', aNePasManquer, contenu: { type: 'equipe', aDecider } });
 			expect(html.indexOf('À décider')).toBeLessThan(html.indexOf('À ne pas manquer'));
 			expect(colonnes(html)).toHaveLength(1);
 			expect(html).toMatch(/class="colonnes[^"]*seule/);
@@ -297,14 +297,14 @@ describe('accueil', () => {
 	});
 
 	it('chef de garde : vide avec une phrase vraie', () => {
-		const html = page({ casquettes: [{ id: 'equipe:1', nom: 'Chef de garde · Équipe 1', icone: 'casque', compte: 0 }, astreinte], choisie: 'equipe:1', contenu: { type: 'equipe', aDecider: [] } });
+		const html = page({ casquettes: [{ id: 'equipe:1', nom: 'Chef de garde (Équipe 1)', icone: 'casque', compte: 0 }, astreinte], choisie: 'equipe:1', contenu: { type: 'equipe', aDecider: [] } });
 		expect(html).not.toContain('Bientôt');
 		expect(html).toContain('Aucun remplacement à valider.');
 	});
 
 	it('chef de garde : les remplacements à valider « À décider »', () => {
 		const aDecider = [{ texte: 'Remplacement à valider, Alice Test, nuit du lundi 9 novembre', lien: '/remplacements/3' }];
-		const html = page({ casquettes: [{ id: 'equipe:1', nom: 'Chef de garde · Équipe 1', icone: 'casque', compte: 1 }, astreinte], choisie: 'equipe:1', contenu: { type: 'equipe', aDecider } });
+		const html = page({ casquettes: [{ id: 'equipe:1', nom: 'Chef de garde (Équipe 1)', icone: 'casque', compte: 1 }, astreinte], choisie: 'equipe:1', contenu: { type: 'equipe', aDecider } });
 		expect(html).toMatch(/href="\/remplacements\/3"[^>]*>[\s\S]*?Remplacement à valider, Alice Test/);
 	});
 

@@ -44,8 +44,8 @@ async function dechiffrer(corps: Uint8Array, nav: Awaited<ReturnType<typeof navi
 describe('Web Push', () => {
 	it('chiffrer : lisible par le navigateur abonné (aes128gcm, enregistrement de 4096)', async () => {
 		const nav = await navigateur();
-		const corps = await chiffrer('{"titre":"Équipe 2 · Bruno"}', nav.p256dh, nav.authB64);
-		expect(await dechiffrer(corps, nav)).toEqual({ rs: 4096, longueur: 65, texte: '{"titre":"Équipe 2 · Bruno"}', fin: 2 });
+		const corps = await chiffrer('{"titre":"Message de Bruno dans Équipe 2"}', nav.p256dh, nav.authB64);
+		expect(await dechiffrer(corps, nav)).toEqual({ rs: 4096, longueur: 65, texte: '{"titre":"Message de Bruno dans Équipe 2"}', fin: 2 });
 	});
 
 	it('clesVapid : nulles sans secrets ; sinon la clé privée complète et le contact', async () => {

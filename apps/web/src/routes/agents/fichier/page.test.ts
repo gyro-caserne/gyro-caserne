@@ -54,8 +54,8 @@ describe('aperçu de l\'import', () => {
 		expect(page.indexOf('1 arrivée')).toBeLessThan(page.indexOf('1 modification'));
 		expect(page).toContain('Zoé Zorro');
 		expect(page).toContain('Ligne 4 : Bob Durand');
-		expect(page).toMatch(/Grade : Caporal → (devient )?Sergent/);
-		expect(page).toMatch(/Téléphone : \(vide\) → (devient )?06 12 34 56 78/);
+		expect(page).toMatch(/Grade passe de Caporal à Sergent/);
+		expect(page).toMatch(/Téléphone passe de \(vide\) à 06 12 34 56 78/);
 	});
 
 	it('accorde le nombre de départs', () => {

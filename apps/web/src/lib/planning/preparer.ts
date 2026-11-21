@@ -41,26 +41,31 @@ export function echangePropose(semaines: SemaineCalculee[], fete: Fete, attendue
 
 // Le récapitulatif avant de publier.
 export function recapitulatif(p: { semaines: SemaineCalculee[]; manoeuvres: { annulee: boolean }[]; vacances: unknown[]; fetes: { noel: number | null; nouvelAn: number | null }; equipes: EquipePlanning[] }): string[] {
-	const nom = (id: number) => p.equipes.find((e) => e.id === id)?.nom.toLocaleLowerCase('fr') ?? 'équipe archivée';
-	const fete = (f: string, id: number | null) => (id === null ? `${f} sans équipe` : `${f} pour ${nom(id)}`);
 	const changees = p.semaines.filter((s) => s.changee).length;
 	const manoeuvres = p.manoeuvres.filter((m) => !m.annulee).length;
 	return [
 		`${pluriel(p.semaines.length, 'semaine')}, ${changees ? pluriel(changees, 'changée') : 'aucune changée'}`,
 		manoeuvres ? pluriel(manoeuvres, 'manœuvre') : 'Aucune manœuvre',
-		`${fete('Noël', p.fetes.noel)}, ${fete('Nouvel An', p.fetes.nouvelAn)}`,
+		`${feteDe(p.equipes, 'Noël', p.fetes.noel)}, ${feteDe(p.equipes, 'Nouvel An', p.fetes.nouvelAn)}`,
 		p.vacances.length ? pluriel(p.vacances.length, 'période de vacances', 'périodes de vacances') : 'Aucune vacances scolaires'
 	];
 }
 
 const nomEquipe = (equipes: EquipePlanning[], id: number | null) => (id === null ? 'personne' : (equipes.find((e) => e.id === id)?.nom ?? 'Équipe archivée'));
 
-// « 52 semaines, Noël : Équipe 2, Nouvel An : Équipe 4, 11 manœuvres reprises, Équipe 3 incomplète »
+// « Noël pour l’équipe 2 », « Nouvel An sans équipe ».
+const feteDe = (equipes: EquipePlanning[], fete: string, id: number | null) => {
+	if (id === null) return `${fete} sans équipe`;
+	const nom = equipes.find((e) => e.id === id)?.nom;
+	return `${fete} pour ${!nom ? 'une équipe archivée' : /^Équipe /.test(nom) ? `l’équipe ${nom.slice(7)}` : nom}`;
+};
+
+// « 52 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 4, 11 manœuvres reprises, Équipe 3 incomplète »
 export function resumeProposition(p: Pick<PropositionAnnee, 'semaines' | 'fetes' | 'manoeuvres' | 'vacances' | 'equipes'>, equipes: EquipePlanning[]): string {
 	return [
 		pluriel(p.semaines, 'semaine'),
-		`Noël : ${nomEquipe(equipes, p.fetes.noel.equipeId)}`,
-		`Nouvel An : ${nomEquipe(equipes, p.fetes.nouvelAn.equipeId)}`,
+		feteDe(equipes, 'Noël', p.fetes.noel.equipeId),
+		feteDe(equipes, 'Nouvel An', p.fetes.nouvelAn.equipeId),
 		p.manoeuvres.length ? pluriel(p.manoeuvres.length, 'manœuvre reprise', 'manœuvres reprises') : 'Aucune manœuvre reprise',
 		...p.equipes.filter((e) => !e.arme).map((e) => `${e.nom} incomplète`),
 		...(p.vacances ? [] : ['Aucune période de vacances saisie'])

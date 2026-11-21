@@ -34,8 +34,8 @@ describe('page d’un rôle', () => {
 	it('en-tête : nom, portée, qui attribue, modèle et « Personnalisé »', () => {
 		const page = html({});
 		expect(page).toMatch(/<h1[^>]*>Référent engins<\/h1>/);
-		expect(page).toContain('Tout le centre · nommé par le chef de centre');
-		expect(page).toContain('Créé · modèle Référent matériel');
+		expect(page).toContain('Tout le centre, nommé par le chef de centre');
+		expect(page).toContain('Créé à partir du modèle Référent matériel');
 		expect(page).toMatch(/>(<!---->)?Personnalisé/);
 		expect(html({ role: role({ droits: [droit('TRAITER_ANOMALIE'), droit('GERER_FICHES')] }) })).not.toContain('Personnalisé');
 	});

@@ -84,7 +84,7 @@ describe('page Réglages', () => {
 
 	it('comités en cours avec membres et rapporteur, et les rôles de portée comité', () => {
 		const comitesHtml = groupe(html(Page, { data }), 'Comités');
-		expect(comitesHtml).toMatch(/href="\/reglages\/comites\/1"[\s\S]*4 membres · rapporteur : Alice Martin/);
+		expect(comitesHtml).toMatch(/href="\/reglages\/comites\/1"[\s\S]*4 membres, rapporteur : Alice Martin/);
 		expect(comitesHtml).toContain('pas de rapporteur');
 		expect(comitesHtml).toContain('Rapporteur de comité');
 		expect(comitesHtml).not.toContain('Sport');

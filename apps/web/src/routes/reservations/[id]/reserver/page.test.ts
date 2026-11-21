@@ -16,7 +16,7 @@ const champ = (attributs: string[]) => new RegExp(`<input${attributs.map((a) => 
 describe('page « Réserver »', () => {
 	it('matériel : du, au, quantité, un mot ; la disponibilité dite tout de suite', () => {
 		const page = html({});
-		expect(page).toMatch(/<h1[^>]*>Réserver · Bancs<\/h1>/);
+		expect(page).toMatch(/<h1[^>]*>Réserver Bancs<\/h1>/);
 		expect(page).toMatch(champ(['type="date"', 'name="debut"', 'value="2026-11-05"']));
 		expect(page).toMatch(champ(['type="date"', 'name="fin"', 'value="2026-11-05"']));
 		expect(page).toMatch(champ(['type="number"', 'name="quantite"', 'value="1"']));

@@ -53,7 +53,7 @@ describe('/nominations : cartes', () => {
 		const page = html({ data, form: null });
 		expect(carte(page, 'Référent engins')).toMatch(/<button[^>]*aria-label="Retirer Alice Martin"[^>]*>/);
 		expect(carte(page, 'Référent engins')).toMatch(/<button[^>]*name="retirer"[^>]*value="1"/);
-		expect(carte(page, 'Chef de garde')).toMatch(/<button[^>]*aria-label="Retirer Bruno Martin — Équipe 1"/);
+		expect(carte(page, 'Chef de garde')).toMatch(/<button[^>]*aria-label="Retirer Bruno Martin \(Équipe 1\)"/);
 		// Sans JavaScript, les boutons passent par le formulaire de l'adresse.
 		expect(page).toMatch(/<form[^>]*id="choix"[^>]*method="GET"|<form[^>]*method="GET"[^>]*id="choix"/);
 	});

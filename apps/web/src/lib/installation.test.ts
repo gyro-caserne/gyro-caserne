@@ -49,7 +49,7 @@ describe('choixEncart (l’accueil)', () => {
 	});
 });
 
-describe('choixPage (Moi → Installer l’appli)', () => {
+describe('choixPage (Moi, puis Installer l’appli)', () => {
 	it('toujours une réponse : installée, iPhone, bouton, ou le menu du navigateur ; « Plus tard » n’y compte pas', () => {
 		expect(choixPage({ installee: true, ios: true, invite: false })).toBe('installee');
 		expect(choixPage({ installee: false, ios: true, invite: false })).toBe('iphone');

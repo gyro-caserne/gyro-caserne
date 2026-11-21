@@ -85,14 +85,14 @@ describe('page d’un mur', () => {
 		});
 		expect(page).toContain('Événement');
 		expect(page).toMatch(/role="img"[^>]*aria-label="jeudi 5 novembre"/);
-		expect(page).toContain('19 h 30 · Caserne');
+		expect(page).toContain('19 h 30, Caserne');
 		expect(page).toContain('Équipe 2 (vous l’êtes)');
 		expect(page).toContain('Oui : 3 voix, 75 % (votre choix)');
 		expect(page).toContain('src="/echanges/photo/7"');
 		expect(page).toContain('alt="Photo 2 sur 2, publiée par Alice Martin"');
 		// Chaque photo s'ouvre en grand dans la visionneuse ; sans JavaScript, le lien mène à la photo.
 		expect(page).toMatch(/<a href="\/echanges\/photo\/7" data-visionneuse=""[^>]*><img src="\/echanges\/photo\/7"/);
-		expect(page).toContain('2 j’aime · 1 commentaire');
+		expect(page).toContain('2 j’aime, 1 commentaire');
 	});
 
 	it('une manœuvre annulée par le planning : « Annulée », plus de réponse ; signée « Planning » avec l’icône du calendrier, jamais d’initiales', () => {
@@ -112,8 +112,8 @@ describe('page d’un mur', () => {
 
 	it('un événement avec sa fin (une manœuvre) : « 7 h 45 à 12 h » ; sans fin, l’heure de début seule', () => {
 		const evenement = { debut: '2026-11-29T07:45', fin: '2026-11-29T12:00', lieu: 'Caserne', convoques: 'tous' as const, convoque: true, moment: 'avenir' as const, reponse: null, compte: { present: 0, absent: 0, incertain: 0 }, presents: [] };
-		expect(html({ publications: [pub({ type: 'evenement', evenement })] })).toContain('7 h 45 à 12 h · Caserne');
-		expect(html({ publications: [pub({ type: 'evenement', evenement: { ...evenement, fin: null } })] })).toContain('7 h 45 · Caserne');
+		expect(html({ publications: [pub({ type: 'evenement', evenement })] })).toContain('7 h 45 à 12 h, Caserne');
+		expect(html({ publications: [pub({ type: 'evenement', evenement: { ...evenement, fin: null } })] })).toContain('7 h 45, Caserne');
 	});
 
 	it('gestes selon les droits', () => {
@@ -200,7 +200,7 @@ describe('gestes sur une publication', () => {
 	it('« J’aime » : bouton à bascule avec le nombre ; en texte pour qui ne peut pas agir', () => {
 		const aime = agir(pub({ jaime: 3, jaimeParMoi: true }));
 		expect(aime).toContain('action="?/aimer"');
-		expect(aime).toMatch(/<button[^>]*aria-pressed="true"[^>]*>J’aime · <span[^>]*>3<\/span>/);
+		expect(aime).toMatch(/<button[^>]*aria-pressed="true"[^>]*>J’aime <span[^>]*>3<\/span>/);
 		expect(aime).toMatch(/name="oui" value="0"/);
 		expect(agir(pub({ jaime: 0 }))).toMatch(/<button[^>]*aria-pressed="false"[^>]*>J’aime/);
 		expect(html({ publications: [pub({ jaime: 2 })] })).not.toContain('?/aimer');
@@ -296,7 +296,7 @@ describe('cartes par type', () => {
 		expect(page).toContain('Annonce à lire et confirmer');
 		expect(page).toContain('12 sur 38 ont confirmé');
 		expect(page).toContain('>J’ai pris connaissance<');
-		expect(agir(pub({ type: 'annonce', epinglee: true, priseDeConnaissance: { le: null, faites: 1, attendues: 38 } }))).toContain('Épinglée · Annonce à lire et confirmer');
+		expect(agir(pub({ type: 'annonce', epinglee: true, priseDeConnaissance: { le: null, faites: 1, attendues: 38 } }))).toContain('Annonce épinglée, à lire et confirmer');
 		// Le verbe suit l'ensemble : « a » seulement quand une seule personne est attendue.
 		const lu = (faites: number, attendues: number) => agir(pub({ type: 'annonce', priseDeConnaissance: { le: null, faites, attendues } }));
 		expect(lu(0, 38)).toContain('0 sur 38 ont confirmé');
@@ -313,7 +313,7 @@ describe('cartes par type', () => {
 		const evenement = { debut: '2026-11-05T19:00', fin: null, lieu: 'Plateforme du centre', convoques: 'tous' as const, convoque: true, moment: 'avenir' as const, reponse: null, compte: { present: 14, absent: 3, incertain: 2 }, presents };
 		const page = agir(pub({ type: 'evenement', evenement }));
 		expect(page).toMatch(/role="img"[^>]*aria-label="jeudi 5 novembre"/);
-		expect(page).toContain('19 h · Plateforme du centre');
+		expect(page).toContain('19 h, Plateforme du centre');
 		expect(page).toContain('14 présents, 3 absents, 2 incertains');
 		expect(page).toContain('>TA<');
 		for (const mot of ['Présent', 'Absent', 'Incertain']) expect(page).toMatch(new RegExp(`aria-pressed="false"[^>]*>${mot}</button>`));
@@ -322,7 +322,7 @@ describe('cartes par type', () => {
 	it('bravo : « Applaudir » à la place de « J’aime » ; Gyro en victoire et confettis selon le niveau', () => {
 		const bravo = pub({ type: 'bravo', jaime: 12 });
 		const page = agir(bravo);
-		expect(page).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Applaudir · <span[^>]*>12<\/span>/);
+		expect(page).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Applaudir <span[^>]*>12<\/span>/);
 		expect(page).not.toContain('J’aime');
 		expect(page).toContain('Bravo !');
 		expect(page).toContain('class="gyro');

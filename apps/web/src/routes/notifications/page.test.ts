@@ -61,9 +61,9 @@ describe('page des notifications', () => {
 	});
 
 	it('une nomination : « Vous êtes nommé … », le périmètre, vers la fiche de l’agent', () => {
-		const page = html({ nonLues: 1, lignes: [{ id: 4, type: 'nomination', titre: 'Vous êtes nommé Chef de garde', texte: 'Équipe 2 · par Claire Martin', url: '/agents/7', creeLe: '2026-10-31T09:00', lue: false }] });
+		const page = html({ nonLues: 1, lignes: [{ id: 4, type: 'nomination', titre: 'Vous êtes nommé Chef de garde', texte: 'Équipe 2, par Claire Martin', url: '/agents/7', creeLe: '2026-10-31T09:00', lue: false }] });
 		expect(page).toContain(`href="${ouvre('nomination', 4, '/agents/7')}"`);
-		expect(page).toMatch(/Non lu, [\s\S]*?Vous êtes nommé Chef de garde[\s\S]*?Équipe 2 · par Claire Martin/);
+		expect(page).toMatch(/Non lu, [\s\S]*?Vous êtes nommé Chef de garde[\s\S]*?Équipe 2, par Claire Martin/);
 	});
 
 	it('non lue : le point, « Non lu, » écrit pour les lecteurs d’écran et le titre en gras ; pas de bande à gauche', () => {
@@ -75,18 +75,18 @@ describe('page des notifications', () => {
 	it('un avis de réservation : vers « Mes réservations », ce qui a été décidé, la période et le motif', () => {
 		const page = html({ nonLues: 1, lignes: [{ id: 5, type: 'reservation', reservationId: 9, quoi: 'refusee', ressource: 'Bancs', periode: 'du 12 au 13 nov.', motif: 'Déjà prêtés', creeLe: '2026-10-31T09:00', lue: false }] });
 		expect(page).toContain(`href="${ouvre('reservation', 5, '/reservations/miennes#reservation-9')}"`);
-		expect(page).toMatch(/<a[^>]*>[\s\S]*?Non lu, [\s\S]*?Bancs : demande refusée[\s\S]*?du 12 au 13 nov\. · Déjà prêtés[\s\S]*?<\/a>/);
+		expect(page).toMatch(/<a[^>]*>[\s\S]*?Non lu, [\s\S]*?Demande refusée \(Bancs\)[\s\S]*?du 12 au 13 nov\. \(Déjà prêtés\)[\s\S]*?<\/a>/);
 	});
 
 	it('un avis de remplacement : vers la demande, son titre et ses périodes ; les remplacements à valider en tête', () => {
-		const page = html({ nonLues: 1, remplacementsAValider: 1, lignes: [{ id: 3, type: 'remplacement', demandeId: 8, quoi: 'recue', titre: 'Demande de remplacement', texte: 'Alice Test · nuit du lundi 9 novembre', creeLe: '2026-10-31T09:00', lue: false }] });
+		const page = html({ nonLues: 1, remplacementsAValider: 1, lignes: [{ id: 3, type: 'remplacement', demandeId: 8, quoi: 'recue', titre: 'Demande de remplacement', texte: 'Alice Test, nuit du lundi 9 novembre', creeLe: '2026-10-31T09:00', lue: false }] });
 		expect(page).toContain(`href="${ouvre('remplacement', 3, '/remplacements/8')}"`);
-		expect(page).toMatch(/<a[^>]*>[\s\S]*?Non lu, [\s\S]*?Demande de remplacement[\s\S]*?Alice Test · nuit du lundi 9 novembre/);
+		expect(page).toMatch(/<a[^>]*>[\s\S]*?Non lu, [\s\S]*?Demande de remplacement[\s\S]*?Alice Test, nuit du lundi 9 novembre/);
 		expect(page).toMatch(/<a[^>]*href="\/remplacements\?onglet=a-valider"[^>]*>[\s\S]*?1 remplacement à valider/);
 	});
 
 	it('une demande reçue puis tranchée : son issue à côté du titre, par une pastille neutre, et lue', () => {
-		const page = html({ nonLues: 0, lignes: [{ id: 3, type: 'remplacement', demandeId: 8, quoi: 'recue', titre: 'Demande de remplacement', texte: 'Alice Test · nuit du lundi 9 novembre', issue: 'Annulée', creeLe: '2026-10-31T09:00', lue: true }] });
+		const page = html({ nonLues: 0, lignes: [{ id: 3, type: 'remplacement', demandeId: 8, quoi: 'recue', titre: 'Demande de remplacement', texte: 'Alice Test, nuit du lundi 9 novembre', issue: 'Annulée', creeLe: '2026-10-31T09:00', lue: true }] });
 		expect(page).toContain('href="/remplacements/8"');
 		expect(page).toMatch(/Demande de remplacement[\s\S]{0,120}<span class="pastille[^"]*"[^>]*neutre[^>]*>(<!---->)?Annulée/);
 		expect(page).not.toContain('Non lu, ');
@@ -99,9 +99,9 @@ describe('page des notifications', () => {
 	});
 
 	it('un avis d’anomalie : vers l’anomalie, son titre et son texte', () => {
-		const page = html({ nonLues: 1, lignes: [{ id: 5, type: 'anomalie', titre: 'VTU · Treuil HS', texte: 'Prise en charge par Rémi Fictif', url: '/engins/anomalies/3', creeLe: '2026-10-30T18:00', lue: false }] });
+		const page = html({ nonLues: 1, lignes: [{ id: 5, type: 'anomalie', titre: 'Treuil HS (VTU)', texte: 'Prise en charge par Rémi Fictif', url: '/engins/anomalies/3', creeLe: '2026-10-30T18:00', lue: false }] });
 		expect(page).toContain(`href="${ouvre('anomalie', 5, '/engins/anomalies/3')}"`);
-		expect(page).toMatch(/<a[^>]*>[\s\S]*?Non lu, [\s\S]*?VTU · Treuil HS[\s\S]*?Prise en charge par Rémi Fictif/);
+		expect(page).toMatch(/<a[^>]*>[\s\S]*?Non lu, [\s\S]*?Treuil HS \(VTU\)[\s\S]*?Prise en charge par Rémi Fictif/);
 	});
 
 	it('un avis d’habillement : vers la demande, avec la veste, son titre et son texte', () => {

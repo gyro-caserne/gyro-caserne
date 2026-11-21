@@ -67,8 +67,8 @@ test('la cloche baisse quand on ouvre la publication depuis la cloche', async ({
 	await expect.poll(nombre).toBe(avant - 1);
 });
 
-// Couper un mur (le haut-parleur de son en-tête), puis « Réactiver » dans Moi → Notifications.
-test('couper un mur, le retrouver dans Moi → Notifications, le réactiver', async ({ page }) => {
+// Couper un mur (le haut-parleur de son en-tête), puis « Réactiver » dans Mes notifications.
+test('couper un mur, le retrouver dans Mes notifications, le réactiver', async ({ page }) => {
 	await page.goto('/echanges/vie');
 	await page.waitForLoadState('networkidle');
 	const cloche = page.getByRole('button', { name: 'Couper les notifications de Vie du centre' });

@@ -46,7 +46,7 @@ describe('page fiche agent', () => {
 			const entete = page.slice(page.indexOf('<header'), page.indexOf('</header>'));
 			expect(entete).toMatch(/aria-hidden="true"[^>]*>AM</);
 			expect(entete).toMatch(/<h1[^>]*>Alice Martin<\/h1>/);
-			expect(entete).toMatch(/<svg[^>]*class="insigne[^"]*"[^>]*aria-hidden="true"[\s\S]*?Caporal-chef · Équipe 1/);
+			expect(entete).toMatch(/<svg[^>]*class="insigne[^"]*"[^>]*aria-hidden="true"[\s\S]*?Caporal-chef, Équipe 1/);
 			// Le visage à la couleur de l'équipe, sans bandeau.
 			expect(entete).not.toContain('bandeau');
 			expect(entete).toMatch(/background: #b3121f[^>]*>AM</);
@@ -82,7 +82,7 @@ describe('page fiche agent', () => {
 			for (const titre of BLOCS) expect(ouvert(page, titre)).toBe(false);
 			expect(bloc(page, 'Identité et contact')[0]).toContain('alice@exemple.fr');
 			expect(bloc(page, 'Parcours')[0]).toContain('Aucun grade');
-			expect(bloc(page, 'Équipe et statut')[0]).toContain('Aucune équipe · Opérationnel');
+			expect(bloc(page, 'Équipe et statut')[0]).toContain('Aucune équipe, opérationnel');
 			expect(bloc(page, 'Rôles')[0]).toContain('Aucun rôle en cours');
 			expect(bloc(page, 'Aptitudes')[0]).toContain('Aucune aptitude');
 			expect(bloc(page, 'Départ du centre')[0]).toContain('Fin des rôles, données personnelles effacées');
@@ -92,8 +92,8 @@ describe('page fiche agent', () => {
 			const complete = { ...fiche, telephone: '06 12 34 56 78', grade: { id: 2, libelle: 'Caporal-chef' }, entreeCentre: '2015-09-01' };
 			const attributions = { enCours: [{ id: 1, responsabilite: { id: 1, nom: 'Référent engins', icone: 'camion' }, perimetre: { type: 'centre', id: null, nom: null }, debut: '2026-01-01', fin: null, saisiePar: 'x', peutTerminer: true }], aVenir: [], passees: [] };
 			const page = html({ data: { ...data, fiche: complete, attributions }, form: null });
-			expect(bloc(page, 'Identité et contact')[0]).toContain('alice@exemple.fr · 06 12 34 56 78');
-			expect(bloc(page, 'Parcours')[0]).toContain('Caporal-chef · au centre depuis 2015');
+			expect(bloc(page, 'Identité et contact')[0]).toContain('alice@exemple.fr, 06 12 34 56 78');
+			expect(bloc(page, 'Parcours')[0]).toContain('Caporal-chef, au centre depuis 2015');
 			expect(bloc(page, 'Rôles')[0]).toContain('Référent engins');
 		});
 
@@ -281,7 +281,7 @@ describe('page fiche agent', () => {
 			const page = html({ data: { ...data, attributions, peutAttribuer: [] }, form: null });
 			for (const titre of ['En cours', 'À venir', 'Passées']) expect(page).toContain(titre);
 			expect(page).toContain('Référent engins');
-			expect(page).toContain('Chef de garde — Équipe 1');
+			expect(page).toContain('Chef de garde (Équipe 1)');
 			expect(page).toMatch(/<details(?![^>]*open)[^>]*>(<!--[^>]*-->)*\s*<summary[^>]*>Passées/);
 			expect(page.match(/action="\?\/terminer"/g)).toHaveLength(2);
 			expect(page.match(/name="attributionId"/g)).toHaveLength(4);
@@ -291,7 +291,7 @@ describe('page fiche agent', () => {
 			const deux = { enCours: [ligne(1, 'Référent engins', false), ligne(2, 'Chef de garde', false, { type: 'equipe', id: 1, nom: 'Équipe 1' }, 'fonction')], aVenir: [], passees: [] };
 			const roles = (page: string) => page.slice(page.indexOf('>En cours<'), page.indexOf('>Aptitudes<'));
 			const page = roles(html({ data: { ...data, attributions: deux }, form: null }));
-			expect(page).toMatch(/<h4[^>]*>Fonctions<\/h4>[\s\S]*?Chef de garde — Équipe 1[\s\S]*?<h4[^>]*>Missions<\/h4>[\s\S]*?Référent engins/);
+			expect(page).toMatch(/<h4[^>]*>Fonctions<\/h4>[\s\S]*?Chef de garde \(Équipe 1\)[\s\S]*?<h4[^>]*>Missions<\/h4>[\s\S]*?Référent engins/);
 			const missions = roles(html({ data: { ...data, attributions: { enCours: [ligne(1, 'Référent engins', false)], aVenir: [], passees: [] } }, form: null }));
 			expect(missions).toContain('Référent engins');
 			expect(missions).not.toContain('<h4');

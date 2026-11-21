@@ -158,7 +158,7 @@
 							<span class="pictogramme" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
 							<span class="corps">
 								<span class="quoi">{#if !l.lue}<span class="masque">{'Non lu, '}</span>{/if}{QUOI_RESERVATION[l.quoi]} ({l.ressource})</span>
-								<span class="extrait">{[l.periode, l.motif].filter(Boolean).join(', ')}</span>
+								<span class="extrait">{l.periode}{l.motif ? ` (${l.motif})` : ''}</span>
 								<span class="moment">{moment(l)}</span>
 							</span>
 							{#if !l.lue}<span class="point" aria-hidden="true"></span>{/if}

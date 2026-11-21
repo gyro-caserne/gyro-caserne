@@ -92,7 +92,7 @@ describe('Me faire remplacer : parcours guidé', () => {
 		expect(html).toContain('Vos périodes : <strong>la nuit du lundi 9 novembre (18 h – 6 h)</strong>');
 		expect(html).toContain('2 collègues disponibles prévenus');
 		expect(html).toMatch(/name="pour" value="tous" checked/);
-		expect(html).toContain('Équipe 3 · CA1');
+		expect(html).toContain('Équipe 3 (CA1)');
 		expect(html).toContain('Il lui manque CA1</strong> : votre chef de garde devra valider.');
 		expect(html).toContain('Chercher un collègue');
 		expect(html).toMatch(/href="\?semaine=2026-11-06&amp;p=[^"]*"[^>]*>Retour</);

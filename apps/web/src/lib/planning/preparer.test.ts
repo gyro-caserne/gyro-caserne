@@ -33,7 +33,7 @@ describe('préparer l’année', () => {
 
 	it('récapitule l’année', () => {
 		const r = recapitulatif({ semaines, manoeuvres: [{ annulee: false }, { annulee: true }], vacances: [{}], fetes: { noel: 4, nouvelAn: 1 }, equipes: [1, 2, 3, 4].map((id) => ({ id, nom: `Équipe ${id}`, couleur: '#000' })) });
-		expect(r).toEqual(['53 semaines, aucune changée', '1 manœuvre', 'Noël : Équipe 4 · Nouvel An : Équipe 1', '1 période de vacances']);
+		expect(r).toEqual(['53 semaines, aucune changée', '1 manœuvre', 'Noël pour l’équipe 4, Nouvel An pour l’équipe 1', '1 période de vacances']);
 	});
 
 	const proposition = (autres: Record<string, unknown> = {}) => ({
@@ -47,12 +47,12 @@ describe('préparer l’année', () => {
 	const equipes = [1, 2, 3, 4].map((id) => ({ id, nom: `Équipe ${id}`, couleur: '#000' }));
 
 	it('le résumé de la proposition, en une ligne', () => {
-		expect(resumeProposition(proposition() as never, equipes)).toBe('52 semaines, Noël : Équipe 2, Nouvel An : Équipe 4, 11 manœuvres reprises, Équipe 3 incomplète');
+		expect(resumeProposition(proposition() as never, equipes)).toBe('52 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 4, 11 manœuvres reprises, Équipe 3 incomplète');
 	});
 
 	it('le résumé rappelle les vacances à saisir ; aucune manœuvre, toutes les équipes armées', () => {
 		const r = resumeProposition(proposition({ vacances: 0, manoeuvres: [], equipes: [] }) as never, equipes);
-		expect(r).toBe('52 semaines, Noël : Équipe 2, Nouvel An : Équipe 4, Aucune manœuvre reprise, Aucune période de vacances saisie');
+		expect(r).toBe('52 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 4, Aucune manœuvre reprise, Aucune période de vacances saisie');
 	});
 
 	it('l’état d’une équipe, en toutes lettres', () => {

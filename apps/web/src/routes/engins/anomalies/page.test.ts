@@ -40,7 +40,7 @@ const vue = (plus: Record<string, unknown> = {}) => ({
 describe('/engins/anomalies', () => {
 	it('les ouvertes par engin, leur étape écrite, l’engin indisponible dit ; « Signaler » pour qui peut', () => {
 		const page = html(Liste, { ouvertes: [ligne(1, { bloquante: true, etape: 'en_attente', motif: 'garage' })], closes: [ligne(2, { closeLe: '2026-10-29T10:00' })], engins: [{ id: 1, nom: 'VTU' }], peutSignaler: true, enginId: null });
-		expect(page).toMatch(/<h2[^>]*>VTU[\s\S]*?href="\/engins\/anomalies\/1"[\s\S]*?Treuil HS[\s\S]*?Coffres, Abîmé, signalée le 30 oct\. 2026[\s\S]*?Engin indisponible[\s\S]*?En attente · au garage/);
+		expect(page).toMatch(/<h2[^>]*>VTU[\s\S]*?href="\/engins\/anomalies\/1"[\s\S]*?Treuil HS[\s\S]*?Coffres, Abîmé, signalée le 30 oct\. 2026[\s\S]*?Engin indisponible[\s\S]*?En attente \(au garage\)/);
 		expect(page).toMatch(/Closes récemment[\s\S]*?Close le 29 oct\. 2026/);
 		expect(page).toContain('href="/engins/anomalies/signaler"');
 		expect(html(Liste, { ouvertes: [], closes: [], engins: [], peutSignaler: false, enginId: null })).toContain('Aucune anomalie ouverte.');

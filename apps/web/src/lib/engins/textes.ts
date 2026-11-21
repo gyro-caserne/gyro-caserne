@@ -72,8 +72,8 @@ export function etatPrise(p: EtatPriseVu): { texte: string; ton: 'ok' | 'info' |
 
 export const GENRES = { manquant: 'Manquant', abime: 'Abîmé', a_remplacer: 'À remplacer' } as const;
 
-// « Manquant : 1 sur 3, sous le siège ».
+// « Manquant (1 sur 3), sous le siège ».
 export function texteEcart(e: { genre: keyof typeof GENRES; manque: number | null; note: string | null }, quantite: number | null = null): string {
-	const nombre = e.genre === 'manquant' && e.manque !== null ? ` : ${e.manque}${quantite ? ` sur ${quantite}` : ''}` : '';
+	const nombre = e.genre === 'manquant' && e.manque !== null ? ` (${e.manque}${quantite ? ` sur ${quantite}` : ''})` : '';
 	return [`${GENRES[e.genre]}${nombre}`, e.note].filter(Boolean).join(', ');
 }
