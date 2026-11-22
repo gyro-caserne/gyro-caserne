@@ -28,7 +28,15 @@ export const NOMS_ICONES: Record<IconeRole, string> = {
 	drapeau: 'Drapeau',
 	haltere: 'Haltère',
 	megaphone: 'Mégaphone',
-	euro: 'Euro'
+	euro: 'Euro',
+	retraites: 'Retraités',
+	pharmacie: 'Pharmacie',
+	sport: 'Sport',
+	informatique: 'Informatique',
+	formation: 'Formation',
+	cuisine: 'Cuisine',
+	outils: 'Boîte à outils',
+	medaille: 'Médaille'
 };
 
 export const PORTEES = [
