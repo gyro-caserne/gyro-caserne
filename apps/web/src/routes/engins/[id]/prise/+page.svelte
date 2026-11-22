@@ -143,7 +143,7 @@
 </script>
 
 <svelte:head>
-	<title>{e.nom}, prise de garde, Gyro Caserne</title>
+	<title>{e.nom}, prise de garde</title>
 </svelte:head>
 
 {#snippet message(cible: string)}

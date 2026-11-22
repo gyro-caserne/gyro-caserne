@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>{m ? m.theme : 'Nouvelle manœuvre'}, Gyro Caserne</title>
+	<title>{m ? m.theme : 'Nouvelle manœuvre'}</title>
 </svelte:head>
 
 <div class="page">

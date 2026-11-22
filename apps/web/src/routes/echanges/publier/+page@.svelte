@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>Nouvelle publication, Gyro Caserne</title>
+	<title>Nouvelle publication</title>
 </svelte:head>
 
 <div class="page">

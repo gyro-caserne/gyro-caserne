@@ -50,7 +50,7 @@
 </script>
 
 <svelte:head>
-	<title>Publication {deNom(nom(p.auteur))}, Gyro Caserne</title>
+	<title>Publication {deNom(nom(p.auteur))}</title>
 </svelte:head>
 
 <div class="vers-mur"><Retour href="/echanges/{data.mur.cle}" libelle={data.mur.nom} /></div>

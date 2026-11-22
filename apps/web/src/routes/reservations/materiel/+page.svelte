@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Gérer le matériel, Gyro Caserne</title>
+	<title>Gérer le matériel</title>
 </svelte:head>
 
 <div class="page">

@@ -104,7 +104,7 @@
 </script>
 
 <svelte:head>
-	<title>Fichier des fiches, Gyro Caserne</title>
+	<title>Fichier des fiches</title>
 </svelte:head>
 
 <div class="fichier">

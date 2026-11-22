@@ -43,7 +43,7 @@
 </script>
 
 <svelte:head>
-	<title>Armement des engins, Gyro Caserne</title>
+	<title>Armement des engins</title>
 </svelte:head>
 
 {#snippet retours()}

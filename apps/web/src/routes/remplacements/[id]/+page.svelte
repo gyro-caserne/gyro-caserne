@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.reduite ? 'Remplacement' : titreDemande(v)}, Gyro Caserne</title>
+	<title>{data.reduite ? 'Remplacement' : titreDemande(v)}</title>
 </svelte:head>
 
 {#if data.reduite}

@@ -6,7 +6,10 @@ import { ajouterJours } from '../dates.ts';
 
 export type Reglage = Centre['astreinte'];
 export type Periode = { debut: string; fin: string };
-export type SemaineCalculee = { debut: string; numero: number; equipeId: number; changee: boolean; periodes: Periode[] };
+// `imposees` : les heures d'astreinte de la semaine tenues par une autre équipe pendant une fête du centre (appliquerFetes).
+export type SemaineCalculee = { debut: string; numero: number; equipeId: number; changee: boolean; periodes: Periode[]; imposees?: Imposee[] };
+export type FeteCentre = { nom: string; debut: string; fin: string; equipeId: number };
+export type Imposee = Periode & { nom: string; equipeId: number };
 export type Fete = 'noel' | 'nouvel_an';
 
 const JOURS: JourSemaine[] = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
@@ -113,9 +116,34 @@ export function calculerAnnee(annee: number, reglage: Reglage, ordre: number[], 
 	});
 }
 
+// Les fêtes du centre : pendant leurs heures d'astreinte, l'équipe choisie remplace celle du roulement ; avant et après, rien ne change.
+// Sans fête (le cas courant), les semaines sont rendues telles quelles. Seules les semaines touchées sont copiées.
+export function appliquerFetes(semaines: SemaineCalculee[], fetesCentre: FeteCentre[]): SemaineCalculee[] {
+	if (fetesCentre.length === 0 || semaines.length === 0) return semaines;
+	return semaines.map((s) => {
+		const debut = s.periodes[0]?.debut;
+		const fin = s.periodes.at(-1)?.fin;
+		if (debut === undefined || fin === undefined) return s;
+		const imposees: Imposee[] = [];
+		for (const f of fetesCentre) {
+			if (f.equipeId === s.equipeId || f.fin <= debut || fin <= f.debut) continue;
+			for (const p of s.periodes) {
+				const d = p.debut > f.debut ? p.debut : f.debut;
+				const e = p.fin < f.fin ? p.fin : f.fin;
+				if (d < e) imposees.push({ debut: d, fin: e, nom: f.nom, equipeId: f.equipeId });
+			}
+		}
+		return imposees.length ? { ...s, imposees } : s;
+	});
+}
+
+// L'équipe qui tient la semaine à ce moment : celle d'une fête, sinon celle du roulement.
+export const equipeAuMoment = (s: SemaineCalculee, moment: string): number => s.imposees?.find((i) => i.debut <= moment && moment < i.fin)?.equipeId ?? s.equipeId;
+
 // L'équipe d'astreinte à ce moment-là, ou null (en journée, en semaine).
 export function equipeA(moment: string, semaines: SemaineCalculee[]): number | null {
-	return semaines.find((s) => s.periodes.some((p) => p.debut <= moment && moment < p.fin))?.equipeId ?? null;
+	const s = semaines.find((x) => x.periodes.some((p) => p.debut <= moment && moment < p.fin));
+	return s ? equipeAuMoment(s, moment) : null;
 }
 
 // La garde de Noël : le 25 décembre à midi ; celle du Nouvel An : le 31 décembre à 23 h.

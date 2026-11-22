@@ -101,7 +101,7 @@
 </script>
 
 <svelte:head>
-	<title>{fiche.prenom} {fiche.nom}, Gyro Caserne</title>
+	<title>{fiche.prenom} {fiche.nom}</title>
 	<!-- Sans JavaScript, les blocs ne se replient pas : tout reste visible et les formulaires s'envoient. -->
 	<noscript><style>.groupe > [hidden] { display: block !important; } .groupe .chevron { display: none; }</style></noscript>
 </svelte:head>

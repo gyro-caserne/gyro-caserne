@@ -37,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>Mes notifications, Gyro Caserne</title>
+	<title>Mes notifications</title>
 </svelte:head>
 
 <div class="page">

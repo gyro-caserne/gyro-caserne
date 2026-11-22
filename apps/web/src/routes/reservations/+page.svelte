@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Réservations, Gyro Caserne</title>
+	<title>Réservations</title>
 </svelte:head>
 
 <div class="page">

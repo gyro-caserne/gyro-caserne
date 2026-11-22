@@ -101,7 +101,7 @@
 
 <!-- Pour la gestion, le titre vient de la page affichée dans le volet. -->
 <svelte:head>
-	{#if !data.gestion}<title>Agents, Gyro Caserne</title>{/if}
+	{#if !data.gestion}<title>Agents</title>{/if}
 </svelte:head>
 
 <div class="page" class:a-cote={enfant}>

@@ -78,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>{a.libelle}, {e.nom}, Gyro Caserne</title>
+	<title>{a.libelle}, {e.nom}</title>
 </svelte:head>
 
 {#snippet message(quoi: string)}

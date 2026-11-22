@@ -149,6 +149,13 @@ describe('accueil', () => {
 			expect(accueil(carte({ equipe: { id: 1, nom: 'Équipe 1', couleur: '#f2c200' } }), '2026-11-01T10:00')).toContain('--sur-equipe: #1d2733; --sur-bouton: #ffffff;');
 		});
 
+		it('une fête du centre dans la semaine : dite sur la plaque, à venir comme en cours', () => {
+			const fetes = ['Sainte-Barbe, samedi 21 novembre, Équipe 4 de 18 h à 2 h'];
+			expect(texte(accueil(carte({ fetes }), '2026-11-01T10:00'))).toContain('Sainte-Barbe, samedi 21 novembre, Équipe 4 de 18 h à 2 h');
+			expect(texte(accueil(carte({ fetes, enCours: true }), '2026-11-21T10:00'))).toContain('Sainte-Barbe, samedi 21 novembre, Équipe 4 de 18 h à 2 h');
+			expect(texte(accueil(carte(), '2026-11-01T10:00'))).not.toContain('Sainte-Barbe');
+		});
+
 		it('le soir de la relève : « ce soir 18 h » en grand, « Faire la prise de garde » sur la plaque, « Voir ma semaine »', () => {
 			const html = accueil(carte(), '2026-11-20T16:30', true);
 			expect(texte(html)).toContain('Équipe 3 à la relève jusqu’au ven. 27 nov. 6 h');

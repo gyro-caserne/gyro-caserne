@@ -1,3 +1,4 @@
+import { equipeAuMoment } from '../planning/calendrier.ts';
 import { and, eq, gt, inArray, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import type { Base } from '../base.ts';
 import { exigerDateHeure, existeAParis } from '../dates.ts';
@@ -55,7 +56,11 @@ function exigerTranches(ctx: Contexte, id: number, periodes: Periode[]): Periode
 }
 
 // L'équipe d'astreinte de la première période : son chef valide.
-const equipeDe = (ctx: Contexte, id: number, p: Periode) => astreintesDe(ctx, id).find((s) => s.periodes.some((x) => x.debut <= p.debut && p.debut < x.fin))?.equipeId ?? null;
+// L'équipe de la période (pendant une fête du centre, l'équipe imposée) : ses chefs valident.
+const equipeDe = (ctx: Contexte, id: number, p: Periode) => {
+	const s = astreintesDe(ctx, id).find((x) => x.periodes.some((y) => y.debut <= p.debut && p.debut < y.fin));
+	return s ? equipeAuMoment(s, p.debut) : null;
+};
 
 async function exigerDemander(base: Base, acteur: Acteur, maintenant: string) {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');

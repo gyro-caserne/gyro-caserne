@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Fiches de prise de garde, Gyro Caserne</title>
+	<title>Fiches de prise de garde</title>
 </svelte:head>
 
 <div class="page">

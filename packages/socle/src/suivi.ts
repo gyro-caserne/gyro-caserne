@@ -29,6 +29,10 @@ const PAR_SUJET = {
 	ajouter_vacances: () => 'a ajouté des vacances scolaires',
 	retirer_vacances: () => 'a retiré des vacances scolaires',
 	noter_fete: () => 'a noté une garde de fête',
+	ajouter_fete: (c) => nomme(c, 'a ajouté la fête'),
+	modifier_fete: (c) => nomme(c, 'a modifié la fête'),
+	supprimer_fete: (c) => nomme(c, 'a supprimé la fête'),
+	noter_fete_centre: () => 'a noté une fête du centre passée',
 	importer_planning: () => 'a appliqué un fichier du planning',
 	regler_ete: () => 'a réglé le planning d’été',
 	proposer_ete: () => 'a proposé le planning d’été',
@@ -152,6 +156,7 @@ const cibleSql = sql<string | null>`case "journal"."cible_type"
 	when 'demande_habillement' then (select p.prenom || ' ' || p.nom from demande_habillement d join personne p on p.id = d.demandeur_id where d.id = "journal"."cible_id")
 	when 'equipe' then (select e.nom from equipe e where e.id = "journal"."cible_id")
 	when 'anomalie' then (select a.libelle || ' (' || e.nom || ')' from anomalie a join engin e on e.id = a.engin_id where a.id = "journal"."cible_id")
+	when 'fete_centre' then (select f.nom from fete_centre f where f.id = "journal"."cible_id")
 end`;
 const roleSql = sql<string | null>`case when "journal"."cible_type" = 'attribution' then (select r.nom from attribution a join responsabilite r on r.id = a.responsabilite_id where a.id = "journal"."cible_id") end`;
 const agentDeLAttributionSql = sql<number | null>`case when "journal"."cible_type" = 'attribution' then (select a.personne_id from attribution a where a.id = "journal"."cible_id") end`;
@@ -194,6 +199,8 @@ function lienDe(l: { action: string; cibleType: string; cibleId: number | null; 
 			return '/reglages';
 		case 'equipe':
 			return '/nominations';
+		case 'fete_centre':
+			return '/planning/preparer?etape=fetes';
 		default:
 			return null;
 	}

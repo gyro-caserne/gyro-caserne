@@ -127,7 +127,7 @@
 </script>
 
 <svelte:head>
-	<title>Nominations, Gyro Caserne</title>
+	<title>Nominations</title>
 </svelte:head>
 
 <div class="page">

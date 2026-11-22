@@ -4,11 +4,11 @@ import { ajouterJours, existeAParis } from '../dates.ts';
 import { DonneeInvalide } from '../erreurs.ts';
 import { STATUTS_AVEC_ACCES } from '../listes.ts';
 import { lecturesAgents } from '../murs.ts';
-import type { Periode, Reglage, SemaineCalculee } from '../planning/calendrier.ts';
+import { appliquerFetes, type FeteCentre, type Periode, type Reglage, type SemaineCalculee } from '../planning/calendrier.ts';
 import { equipeLe, semainesCalculees } from '../planning/annee.ts';
 import { validesLe } from '../aptitudes.ts';
 import { affectationEquipe, anneePlanning, aptitude, aptitudeAgent, attribution, demandeRemplacement, equipe, personne, responsabilite, semaineChangee, vacancesAgent } from '../schema.ts';
-import { enVacances, heuresDe, lirePlage, requetePlagesPubliees } from '../planning/plages.ts';
+import { enVacances, heuresDe, lirePlage, requeteFetes, requetePlagesPubliees } from '../planning/plages.ts';
 import { chevauche, tranchesDe } from './tranches.ts';
 
 // Ce qu'il faut savoir pour décider d'une demande, lu d'un seul bloc : les semaines publiées, les équipes de chacun,
@@ -22,7 +22,7 @@ export const periodesDe = (json: string | null): Periode[] => (json ? (JSON.pars
 
 export async function lireContexte(base: Base, maintenant: string, reglage: Reglage) {
 	const aujourdhui = maintenant.slice(0, 10);
-	const [annees, changees, affectations, demandes, agents, aptitudes, chefs, equipes, plages, vacances] = await base.batch([
+	const [annees, changees, affectations, demandes, agents, aptitudes, chefs, equipes, plages, vacances, fetes] = await base.batch([
 		base.select().from(anneePlanning),
 		base.select().from(semaineChangee),
 		base.select({ personneId: affectationEquipe.personneId, equipeId: affectationEquipe.equipeId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe),
@@ -41,7 +41,9 @@ export async function lireContexte(base: Base, maintenant: string, reglage: Regl
 		base.select({ id: equipe.id, nom: equipe.nom, couleur: equipe.couleur }).from(equipe),
 		// L'été publié et les vacances des agents.
 		requetePlagesPubliees(base, ajouterJours(aujourdhui, -8), '9999-12-31'),
-		base.select({ personneId: vacancesAgent.personneId, debut: vacancesAgent.debut, fin: vacancesAgent.fin }).from(vacancesAgent).where(gte(vacancesAgent.fin, ajouterJours(aujourdhui, -8)))
+		base.select({ personneId: vacancesAgent.personneId, debut: vacancesAgent.debut, fin: vacancesAgent.fin }).from(vacancesAgent).where(gte(vacancesAgent.fin, ajouterJours(aujourdhui, -8))),
+		// Les fêtes du centre de la fenêtre des remplacements (quelques lignes).
+		requeteFetes(base, ajouterJours(aujourdhui, -15), ajouterJours(aujourdhui, SEMAINES_PROPOSEES * 7 + 8))
 	]);
 	// Les semaines publiées utiles, calculées seulement si on s'en sert (l'échange de manœuvre ou la liste des demandes, non) :
 	// celles qui commencent dans la fenêtre des remplacements, de deux semaines avant aujourd'hui à la fin des douze semaines proposées.
@@ -55,8 +57,10 @@ export async function lireContexte(base: Base, maintenant: string, reglage: Regl
 	return {
 		maintenant: maintenant.slice(0, 16),
 		reglage,
+		// Les fêtes, appliquées au calcul des semaines (à changer avant le premier calcul pour voir l'effet d'une fête : fetes.ts).
+		fetes: fetes as FeteCentre[],
 		get semaines(): SemaineCalculee[] {
-			semaines ??= utiles.flatMap((a) => semainesCalculees(a.annee, a.ordre, changees, reglage, fenetre));
+			semaines ??= appliquerFetes(utiles.flatMap((a) => semainesCalculees(a.annee, a.ordre, changees, reglage, fenetre)), this.fetes);
 			return semaines;
 		},
 		affectations,

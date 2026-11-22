@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>À valider, Gyro Caserne</title>
+	<title>À valider</title>
 </svelte:head>
 
 {#snippet refuser(r: VueReservation)}

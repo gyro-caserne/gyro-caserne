@@ -31,7 +31,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.mur.nom}, Gyro Caserne</title>
+	<title>{data.mur.nom}</title>
 </svelte:head>
 
 <header class="bande" class:centre={data.mur.type === 'centre'} style:--bande-fond={teinte.fond} style:--bande-encre={teinte.encre}>

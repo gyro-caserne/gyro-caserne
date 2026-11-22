@@ -9,14 +9,15 @@ import { equipesConvoquees, type Convocation } from '../murs.ts';
 import { ligneJournal } from '../journal.ts';
 import { texte } from '../commun.ts';
 import { nomActeur } from '../actions/personnes.ts';
-import { affectationEquipe, anneePlanning, demandeRemplacement, equipe, gardeFete, personne, manoeuvre, publication, reponseEvenement, semaineChangee, vacancesScolaires, voteSondage } from '../schema.ts';
+import { affectationEquipe, anneePlanning, demandeRemplacement, equipe, gardeFete, gardeFeteCentre, personne, manoeuvre, publication, reponseEvenement, semaineChangee, vacancesScolaires, voteSondage } from '../schema.ts';
 import { MANOEUVRES_PAR_DEFAUT } from '@gyro-caserne/centre';
 import { colonnesPublication } from './manoeuvres.ts';
 import { avis } from './avis.ts';
 import { jourEnLettres, texteDemande } from '../remplacements/tranches.ts';
 import { groupeDeLaSemaine, nomsDeGroupes, requeteEtes } from './groupes.ts';
-import { heuresDe, lirePlage, requetePlagesPubliees } from './plages.ts';
-import { calculerAnnee, feries, fetes, semainesDe, tourDesFetes, type Fete, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
+import { heuresDe, lirePlage, requeteFetes, requetePlagesPubliees, textesFetes } from './plages.ts';
+import { fetesDeLAnnee } from './fetes.ts';
+import { appliquerFetes, calculerAnnee, equipeAuMoment, feries, fetes, semainesDe, tourDesFetes, type Fete, type FeteCentre, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
 
 export type Convoques = 'tous' | number[];
 // `fin` : le même jour que le début ; sans elle, la manœuvre dure 3 h.
@@ -106,7 +107,7 @@ export type Preparation = Awaited<ReturnType<typeof preparerAnnee>>;
 export async function preparerAnnee(base: Base, acteur: Acteur, annee: number, maintenant: string, reglage: Reglage) {
 	exigerAnnee(annee);
 	await exigerGestion(base, acteur, maintenant);
-	const [annees, changees, manoeuvres, vacances, equipes, saisies] = await base.batch(lectures(base, `${annee - 3}-01-01`, `${annee}-12-31`));
+	const [annees, changees, manoeuvres, vacances, equipes, saisies, lignesFetes, saisiesFetes] = await base.batch([...lectures(base, `${annee - 3}-01-01`, `${annee}-12-31`), requeteFetes(base, `${annee - 3}-01-01`, `${annee}-12-31`), base.select().from(gardeFeteCentre)]);
 	const ligne = annees.find((a) => a.annee === annee);
 	const semaines = semainesCalculees(annee, ligne?.ordre, changees, reglage);
 	const historique = historiqueDesFetes(annee, annees, changees, saisies, reglage);
@@ -121,6 +122,8 @@ export async function preparerAnnee(base: Base, acteur: Acteur, annee: number, m
 		vacances: vacances.filter((v) => v.fin >= `${annee}-01-01`) as Vacances[],
 		feries: feries(annee),
 		fetes: { ...fetes(annee, semaines), attendues: tourDesFetes(historique, actives.map((e) => e.id), annee), historique },
+		// Les fêtes du centre de l'année (équipe imposée) et leur historique.
+		fetesCentre: fetesDeLAnnee(annee, lignesFetes, saisiesFetes, actives.map((e) => e.id)),
 		equipes: equipes.map(({ id, nom, couleur }) => ({ id, nom, couleur }))
 	};
 }
@@ -352,8 +355,8 @@ export async function publierAnnee(base: Base, acteur: Acteur, annee: number, ma
 }
 
 // Semaines d'une année publiée, avec le roulement : lecture partagée par l'onglet Planning, l'agenda et la tâche de nuit.
-export function anneesPubliees(annees: (typeof anneePlanning.$inferSelect)[], changees: { debut: string; equipeId: number }[], reglage: Reglage): Map<number, SemaineCalculee[]> {
-	return new Map(annees.filter((a) => a.publieeLe !== null).map((a) => [a.annee, semainesCalculees(a.annee, a.ordre, changees, reglage)]));
+export function anneesPubliees(annees: (typeof anneePlanning.$inferSelect)[], changees: { debut: string; equipeId: number }[], reglage: Reglage, fetesCentre: FeteCentre[] = []): Map<number, SemaineCalculee[]> {
+	return new Map(annees.filter((a) => a.publieeLe !== null).map((a) => [a.annee, appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglage), fetesCentre)]));
 }
 
 // L'équipe de la personne à une date, d'après ses affectations.
@@ -383,7 +386,7 @@ export type PlanningAgent =
 			// Les remplacements conclus de l'année ; `moi` : je cède ma période, ou je prends celle d'un autre.
 			remplacements: { debut: string; fin: string; titulaire: string; remplacant: string; moi: 'cede' | 'prend' | null }[];
 			prochaine: {
-				astreinte: { debut: string; fin: string; equipeId: number; groupe: string | null; enCours: boolean; periodes: Periode[] } | null;
+				astreinte: { debut: string; fin: string; equipeId: number; groupe: string | null; enCours: boolean; periodes: Periode[]; fetes: string[] } | null;
 				// `reponse` : la mienne, si la manœuvre est déjà annoncée.
 				// `enCours` : commencée, pas finie ; on ne peut plus y répondre ni échanger sa place.
 				manoeuvre: (ManoeuvreVue & { reponse: ReponseEvenement | null; enCours: boolean }) | null;
@@ -401,8 +404,8 @@ export async function planningDe(base: Base, acteur: Acteur, annee: number, main
 	// Dès la mi-décembre de l'année d'avant : une semaine commencée fin décembre peut être encore en cours.
 	const debutLecture = `${Math.min(annee, Number(aujourdhui.slice(0, 4))) - 1}-12-18`;
 	const finLecture = `${Math.max(annee, Number(aujourdhui.slice(0, 4))) + 1}-12-31`;
-	const [[annees, changees, manoeuvres, vacances, equipes, , conclues, lignesPlages, etes], affectations, gerer] = await Promise.all([
-		base.batch([...lectures(base, debutLecture, finLecture), requeteConclues(base, ajouterJours(`${annee}-01-01`, -7), ajouterJours(`${annee}-12-31`, 8)), requetePlagesPubliees(base, debutLecture, finLecture), requeteEtes(base)]),
+	const [[annees, changees, manoeuvres, vacances, equipes, , conclues, lignesPlages, etes, lignesFetes], affectations, gerer] = await Promise.all([
+		base.batch([...lectures(base, debutLecture, finLecture), requeteConclues(base, ajouterJours(`${annee}-01-01`, -7), ajouterJours(`${annee}-12-31`, 8)), requetePlagesPubliees(base, debutLecture, finLecture), requeteEtes(base), requeteFetes(base, debutLecture, finLecture)]),
 		base.select({ equipeId: affectationEquipe.equipeId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe).where(eq(affectationEquipe.personneId, moi)),
 		peutGerer(base, acteur, aujourdhui)
 	]);
@@ -412,7 +415,7 @@ export async function planningDe(base: Base, acteur: Acteur, annee: number, main
 	const calculees = new Map<number, SemaineCalculee[]>();
 	const semainesDeLAnnee = (a: (typeof publiees)[number]) => {
 		let s = calculees.get(a.annee);
-		if (!s) calculees.set(a.annee, (s = semainesCalculees(a.annee, a.ordre, changees, reglage)));
+		if (!s) calculees.set(a.annee, (s = appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglage), lignesFetes)));
 		return s;
 	};
 	const ligneAnnee = publiees.find((a) => a.annee === annee);
@@ -478,7 +481,7 @@ export async function planningDe(base: Base, acteur: Acteur, annee: number, main
 			.map(({ debut, fin, titulaire, remplacant, titulaireId, remplacantId }) => ({ debut, fin, titulaire, remplacant, moi: titulaireId === moi ? ('cede' as const) : remplacantId === moi ? ('prend' as const) : null })),
 		prochaine: {
 			astreinte: prochaineSemaine
-				? { debut: prochaineSemaine.periodes[0]!.debut, fin: prochaineSemaine.periodes.at(-1)!.fin, equipeId: prochaineSemaine.equipeId, groupe: prochaineSemaine.groupe, enCours: prochaineSemaine.periodes[0]!.debut <= maintenant.slice(0, 16), periodes: prochaineSemaine.periodes }
+				? { debut: prochaineSemaine.periodes[0]!.debut, fin: prochaineSemaine.periodes.at(-1)!.fin, equipeId: equipeAuMoment(prochaineSemaine, prochaineSemaine.periodes[0]!.debut), groupe: equipeAuMoment(prochaineSemaine, prochaineSemaine.periodes[0]!.debut) === prochaineSemaine.equipeId ? prochaineSemaine.groupe : null, enCours: prochaineSemaine.periodes[0]!.debut <= maintenant.slice(0, 16), periodes: prochaineSemaine.periodes, fetes: textesFetes(prochaineSemaine, equipes) }
 				: null,
 			manoeuvre: prochaineManoeuvre ? { ...prochaineManoeuvre, reponse: reponse?.reponse ?? null, enCours: momentEvenement(prochaineManoeuvre.debut, maintenant, prochaineManoeuvre.fin) === 'enCours' } : null,
 			fete

@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>{e.nom}, Gyro Caserne</title>
+	<title>{e.nom}</title>
 </svelte:head>
 
 <div class="page">

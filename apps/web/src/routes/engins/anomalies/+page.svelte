@@ -32,7 +32,7 @@
 </script>
 
 <svelte:head>
-	<title>Anomalies{filtre ? ` ${filtre.nom}` : ''}, Gyro Caserne</title>
+	<title>Anomalies{filtre ? ` ${filtre.nom}` : ''}</title>
 </svelte:head>
 
 {#snippet ligne(a: AnomalieListee, close: boolean)}

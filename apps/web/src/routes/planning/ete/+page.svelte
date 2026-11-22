@@ -52,7 +52,7 @@
 </script>
 
 <svelte:head>
-	<title>Été {e.annee}, Gyro Caserne</title>
+	<title>Été {e.annee}</title>
 </svelte:head>
 
 {#snippet retour(cibles: string[])}

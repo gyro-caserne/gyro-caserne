@@ -1,3 +1,3 @@
 <svelte:head>
-	<title>Agents, Gyro Caserne</title>
+	<title>Agents</title>
 </svelte:head>

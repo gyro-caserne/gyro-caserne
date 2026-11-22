@@ -105,7 +105,7 @@
 </script>
 
 <svelte:head>
-	<title>Fichier du planning {data.annee}, Gyro Caserne</title>
+	<title>Fichier du planning {data.annee}</title>
 </svelte:head>
 
 <div class="fichier">

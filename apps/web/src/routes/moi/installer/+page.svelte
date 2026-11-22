@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-	<title>Installer l’appli, Gyro Caserne</title>
+	<title>Installer l’appli</title>
 </svelte:head>
 
 <div class="page">

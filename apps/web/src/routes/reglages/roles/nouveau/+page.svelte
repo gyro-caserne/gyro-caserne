@@ -25,7 +25,7 @@
 </script>
 
 <svelte:head>
-	<title>Nouveau rôle, Gyro Caserne</title>
+	<title>Nouveau rôle</title>
 </svelte:head>
 
 <EnTetePage titre="Nouveau rôle" />

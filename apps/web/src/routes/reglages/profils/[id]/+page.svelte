@@ -21,7 +21,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.profil.nom}, Gyro Caserne</title>
+	<title>{data.profil.nom}</title>
 </svelte:head>
 
 <EnTetePage titre={data.profil.nom} phrase="Profil des {data.profil.typePersonne === 'agent' ? 'agents du centre' : 'personnes extérieures'}">

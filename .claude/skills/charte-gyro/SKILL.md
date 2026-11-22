@@ -78,6 +78,7 @@ Règles validées par le porteur le 21/11/2026. Elles valent pour les écrans, l
 
 - Français simple, phrases courtes.
 - **Titre de page** : un nom, sans verbe ni ponctuation finale, majuscule au premier mot seulement (« Suivi du centre », « Me faire remplacer »).
+- **Titre d'onglet** (`<title>`) : la page seule, sans le nom de l'appli (« Accueil », « Julie Martin », « FPT, prise du ven. 3 nov. »).
 - **Titre de section ou de zone** : un nom simple qui dit où l'on est (« Dessus de cabine », « Tiroir rouge », « Mes demandes ») ; pas de numérotation, sauf une vraie suite d'étapes.
 - **Libellé d'une ligne** : le nom de la chose, au plus court (« Masques FFP2 », « Julie Martin ») ; la quantité va dans sa colonne ou sa pastille, sauf si elle fait partie du nom (« Bouteille d'O2 5 L »).
 - **Sous-ligne** : une phrase ou un groupe de mots, avec des virgules et des mots de liaison, jamais un séparateur graphique (« Remplacé par Marc, de 20 h à 22 h »).

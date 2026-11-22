@@ -67,7 +67,7 @@
 </script>
 
 <svelte:head>
-	<title>Accueil, Gyro Caserne</title>
+	<title>Accueil</title>
 </svelte:head>
 
 {#snippet gyroAccueil()}<GyroAccueil taille={72} {ambiance} />{/snippet}

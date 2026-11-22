@@ -4,12 +4,13 @@ import { ajouterJours, exigerDateHeure } from '../dates.ts';
 import type { Acteur } from '../droits.ts';
 import { affectationEquipe, anneePlanning, equipe, semaineChangee } from '../schema.ts';
 import { equipeLe, semainesCalculees, type EquipePlanning } from './annee.ts';
-import { semainesDe, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
+import { appliquerFetes, equipeAuMoment, semainesDe, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
 import { groupeDeLaSemaine, nomsDeGroupes, requeteEtes } from './groupes.ts';
-import { heuresDe, lirePlage, requetePlagesPubliees } from './plages.ts';
+import { heuresDe, lirePlage, requeteFetes, requetePlagesPubliees, textesFetes } from './plages.ts';
 import { courtsCedes, requeteCourtsCedes } from '../remplacements/effectifs.ts';
 
-export type Astreinte = { debut: string; fin: string; equipe: EquipePlanning; enCours: boolean; mienne: boolean; periodes: Periode[] };
+// `fetes` : les fêtes du centre de la semaine, avec l'équipe imposée (« Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h »).
+export type Astreinte = { debut: string; fin: string; equipe: EquipePlanning; enCours: boolean; mienne: boolean; periodes: Periode[]; fetes?: string[] };
 // À l'Accueil, en plus : mes plages courtes cédées du jour, pas encore finies (qui me remplace quelques heures).
 export type AstreinteAccueil = Astreinte & { courtsCedes: (Periode & { remplacant: string })[] };
 
@@ -22,14 +23,16 @@ export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string
 	const moi = acteur.type === 'personne' ? acteur.id : 0;
 	// La semaine en cours a pu commencer l'année d'avant.
 	// Dans le même batch : mes courts cédés, lus seulement pour aujourd'hui (pas d'aller-retour de plus).
-	const [annees, changees, equipes, affectations, lignesPlages, etes, lignesCourts] = await base.batch([
+	const [annees, changees, equipes, affectations, lignesPlages, etes, lignesCourts, fetes] = await base.batch([
 		base.select().from(anneePlanning).where(and(gte(anneePlanning.annee, annee - 1), lte(anneePlanning.annee, annee + 1))),
 		base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee - 1}-12-01`), lte(semaineChangee.debut, `${annee + 1}-12-31`))),
 		base.select({ id: equipe.id, nom: equipe.nom, couleur: equipe.couleur, active: equipe.active }).from(equipe).orderBy(asc(equipe.ordreRotation)),
 		base.select({ equipeId: affectationEquipe.equipeId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe).where(eq(affectationEquipe.personneId, moi)),
 		requetePlagesPubliees(base, `${annee - 1}-12-01`, `${annee + 1}-12-31`),
 		requeteEtes(base),
-		requeteCourtsCedes(base, moi, m.slice(0, 10), ajouterJours(m.slice(0, 10), -1))
+		requeteCourtsCedes(base, moi, m.slice(0, 10), ajouterJours(m.slice(0, 10), -1)),
+		// Les fêtes du centre de ces années : quelques lignes.
+		requeteFetes(base, `${annee - 1}-12-01`, `${annee + 1}-12-31`)
 	]);
 	const plages = lignesPlages.map(lirePlage);
 	const fin = (s: SemaineCalculee) => s.periodes.at(-1)!.fin;
@@ -45,7 +48,7 @@ export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string
 	let courante: SemaineCalculee | undefined;
 	let mienne: SemaineCalculee | undefined;
 	for (const a of publiees) {
-		const semaines = semainesCalculees(a.annee, a.ordre, changees, reglage);
+		const semaines = appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglage), fetes);
 		courante ??= semaines.find((s) => s.periodes[0]!.debut <= m && fin(s) > m);
 		if (peutAvoir)
 			for (const s of semaines) {
@@ -61,7 +64,10 @@ export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string
 	const aMoi = avecEquipe || mienne !== undefined;
 	const semaine = aMoi ? mienne : courante;
 	if (!semaine) return null;
-	const trouvee = equipes.find((x) => x.id === semaine.equipeId);
-	const e = trouvee ? { id: trouvee.id, nom: groupeDeLaSemaine(etes, nomsDeGroupes(equipes), semaine) ?? trouvee.nom, couleur: trouvee.couleur } : { id: semaine.equipeId, nom: 'Équipe archivée', couleur: '#8a949e' };
-	return { debut: semaine.periodes[0]!.debut, fin: fin(semaine), equipe: e, enCours: semaine.periodes[0]!.debut <= m, mienne: aMoi, periodes: semaine.periodes, courtsCedes: courtsCedes(lignesCourts, m) };
+	// Pendant une fête, l'équipe imposée ; mes heures d'une fête, mon équipe.
+	const id = equipeAuMoment(semaine, aMoi ? semaine.periodes[0]!.debut : m);
+	const trouvee = equipes.find((x) => x.id === id);
+	const groupe = id === semaine.equipeId ? groupeDeLaSemaine(etes, nomsDeGroupes(equipes), semaine) : null;
+	const e = trouvee ? { id: trouvee.id, nom: groupe ?? trouvee.nom, couleur: trouvee.couleur } : { id, nom: 'Équipe archivée', couleur: '#8a949e' };
+	return { debut: semaine.periodes[0]!.debut, fin: fin(semaine), equipe: e, enCours: semaine.periodes[0]!.debut <= m, mienne: aMoi, periodes: semaine.periodes, fetes: textesFetes(semaine, equipes), courtsCedes: courtsCedes(lignesCourts, m) };
 }

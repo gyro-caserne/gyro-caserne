@@ -78,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>{extraitDemande(d.texte, 40)}, Gyro Caserne</title>
+	<title>{extraitDemande(d.texte, 40)}</title>
 </svelte:head>
 
 {#snippet erreur(quoi: string)}

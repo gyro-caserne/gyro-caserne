@@ -19,7 +19,7 @@
 </script>
 
 <svelte:head>
-	<title>{p.engin.nom}, prise du {jourCourt(p.releve)}, Gyro Caserne</title>
+	<title>{p.engin.nom}, prise du {jourCourt(p.releve)}</title>
 </svelte:head>
 
 <div class="page">

@@ -66,7 +66,7 @@
 </script>
 
 <svelte:head>
-	<title>Notifications, Gyro Caserne</title>
+	<title>Notifications</title>
 </svelte:head>
 
 <div class="page">

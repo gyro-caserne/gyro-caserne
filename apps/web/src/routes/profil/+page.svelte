@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<title>Mon profil, Gyro Caserne</title>
+	<title>Mon profil</title>
 </svelte:head>
 
 <div class="page">

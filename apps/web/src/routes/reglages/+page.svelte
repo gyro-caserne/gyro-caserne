@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Réglages du centre, Gyro Caserne</title>
+	<title>Réglages du centre</title>
 </svelte:head>
 
 <div class="page">

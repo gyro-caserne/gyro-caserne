@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Prise de garde, Gyro Caserne</title>
+	<title>Prise de garde</title>
 </svelte:head>
 
 <div class="page">

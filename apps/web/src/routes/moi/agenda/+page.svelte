@@ -22,7 +22,7 @@
 </script>
 
 <svelte:head>
-	<title>Ajouter à mon agenda, Gyro Caserne</title>
+	<title>Ajouter à mon agenda</title>
 </svelte:head>
 
 <div class="page">

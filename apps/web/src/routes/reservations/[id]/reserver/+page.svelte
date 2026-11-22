@@ -22,7 +22,7 @@
 </script>
 
 <svelte:head>
-	<title>Réserver {r.nom}, Gyro Caserne</title>
+	<title>Réserver {r.nom}</title>
 </svelte:head>
 
 <div class="page">

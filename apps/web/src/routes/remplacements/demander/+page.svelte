@@ -75,7 +75,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.choix ? 'Me faire remplacer' : liste[index]?.titre}, Gyro Caserne</title>
+	<title>{data.choix ? 'Me faire remplacer' : liste[index]?.titre}</title>
 </svelte:head>
 
 {#snippet garder(sauf: string[])}

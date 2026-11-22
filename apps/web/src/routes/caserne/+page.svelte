@@ -27,7 +27,7 @@
 </script>
 
 <svelte:head>
-	<title>Caserne, Gyro Caserne</title>
+	<title>Caserne</title>
 </svelte:head>
 
 <div class="page">

@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Toutes les demandes, Gyro Caserne</title>
+	<title>Toutes les demandes</title>
 </svelte:head>
 
 {#snippet ligne(d: DemandeListee)}

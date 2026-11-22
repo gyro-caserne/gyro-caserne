@@ -61,7 +61,7 @@
 					: undefined
 	);
 
-	const donnees = $derived(p.publiee ? { annee: p.annee, feries: p.feries, vacances: p.vacances, manoeuvres: p.manoeuvres, remplacements: p.remplacements } : null);
+	const donnees = $derived(p.publiee ? { annee: p.annee, feries: p.feries, vacances: p.vacances, manoeuvres: p.manoeuvres, remplacements: p.remplacements, equipes: p.equipes } : null);
 	const indexSemaine = $derived(p.publiee ? p.semaines.findIndex((s) => s.debut === data.semaine) : -1);
 	const semaine = $derived(p.publiee && indexSemaine >= 0 ? p.semaines[indexSemaine]! : null);
 	const precedente = $derived(indexSemaine > 0 && p.publiee ? lien({ vue: 'semaine', semaine: p.semaines[indexSemaine - 1]!.debut }) : `?annee=${p.annee - 1}&vue=semaine&semaine=derniere`);
@@ -94,7 +94,7 @@
 </script>
 
 <svelte:head>
-	<title>Planning {p.annee}, Gyro Caserne</title>
+	<title>Planning {p.annee}</title>
 </svelte:head>
 
 <div class="page">

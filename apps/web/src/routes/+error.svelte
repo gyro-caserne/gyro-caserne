@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Page indisponible, Gyro Caserne</title>
+	<title>Page indisponible</title>
 </svelte:head>
 
 <div class="erreur" role="alert">

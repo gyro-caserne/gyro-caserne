@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>Fiche {f.type}, Gyro Caserne</title>
+	<title>Fiche {f.type}</title>
 </svelte:head>
 
 {#snippet fleche(trace: string)}

@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>Moi, Gyro Caserne</title>
+	<title>Moi</title>
 </svelte:head>
 
 <div class="page">

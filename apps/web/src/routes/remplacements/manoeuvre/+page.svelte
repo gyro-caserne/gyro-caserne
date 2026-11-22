@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>Échanger ma place à une manœuvre, Gyro Caserne</title>
+	<title>Échanger ma place à une manœuvre</title>
 </svelte:head>
 
 {#snippet garder()}

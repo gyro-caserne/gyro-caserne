@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>{c.nom}, Gyro Caserne</title>
+	<title>{c.nom}</title>
 </svelte:head>
 
 {#snippet retour(cible: string)}

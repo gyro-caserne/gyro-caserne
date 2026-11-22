@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head>
-	<title>Suivi du centre, Gyro Caserne</title>
+	<title>Suivi du centre</title>
 </svelte:head>
 
 <div class="page">

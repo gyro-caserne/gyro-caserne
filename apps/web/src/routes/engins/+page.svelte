@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>Engins, Gyro Caserne</title>
+	<title>Engins</title>
 </svelte:head>
 
 <div class="page">

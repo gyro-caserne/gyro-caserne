@@ -63,7 +63,7 @@
 </script>
 
 <svelte:head>
-	<title>{ajout ? `Ajouter des membres à ${ajout.nom}` : `${etape === 'nom' ? 'Nom et icône' : 'Membres'} du nouveau groupe`}, Gyro Caserne</title>
+	<title>{ajout ? `Ajouter des membres à ${ajout.nom}` : `${etape === 'nom' ? 'Nom et icône' : 'Membres'} du nouveau groupe`}</title>
 </svelte:head>
 
 <div class="page">

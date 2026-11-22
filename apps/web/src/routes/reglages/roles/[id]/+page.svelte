@@ -83,7 +83,7 @@
 </script>
 
 <svelte:head>
-	<title>{role.nom}, Gyro Caserne</title>
+	<title>{role.nom}</title>
 </svelte:head>
 
 {#snippet retour(cible: string)}
