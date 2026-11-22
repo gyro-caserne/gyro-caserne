@@ -231,15 +231,15 @@ describe('membres naturels et convoqués (règle partagée avec le suivi)', () =
 		expect(['centre', 'vie', 'equipe:1', 'equipe:2', 'comite:7', 'comite:8'].map((c) => estMembre(membre, c))).toEqual([true, true, true, false, true, false]);
 		const chefEquipe = appartenances([], [tenue('equipe', 2, 'chef_equipe')], aujourdhui);
 		expect(estMembre(chefEquipe, 'equipe:2')).toBe(true);
-		expect(estConvoque(chefEquipe, 'centre', [2], 5)).toBe(true);
-		expect(estConvoque(chefEquipe, 'centre', [1], 5)).toBe(false);
+		expect(estConvoque(chefEquipe, 'centre', [2], 5, 'personne:1')).toBe(true);
+		expect(estConvoque(chefEquipe, 'centre', [1], 5, 'personne:1')).toBe(false);
 		// Échange de manœuvre : retiré de son équipe, ou ajouté à une autre.
-		expect(estConvoque(chefEquipe, 'centre', { equipes: [2], ajoutes: [], retires: [5] }, 5)).toBe(false);
-		expect(estConvoque(chefEquipe, 'centre', { equipes: [1], ajoutes: [5], retires: [] }, 5)).toBe(true);
+		expect(estConvoque(chefEquipe, 'centre', { equipes: [2], ajoutes: [], retires: [5] }, 5, 'personne:1')).toBe(false);
+		expect(estConvoque(chefEquipe, 'centre', { equipes: [1], ajoutes: [5], retires: [] }, 5, 'personne:1')).toBe(true);
 		const chef = appartenances([], [tenue('centre', null, 'chef_centre')], aujourdhui);
 		expect(chef.tous).toBe(true);
 		expect(['centre', 'equipe:1', 'comite:7'].map((c) => estMembre(chef, c))).toEqual([true, false, false]);
-		expect(estConvoque(chef, 'comite:7', 'tous', 6)).toBe(false);
+		expect(estConvoque(chef, 'comite:7', 'tous', 6, 'personne:1')).toBe(false);
 		// Une tenue hors de la portée de sa responsabilité ne compte pas.
 		expect(estMembre(appartenances([], [{ ...tenue('comite', 7), portee: 'centre' }], aujourdhui), 'comite:7')).toBe(false);
 	});
@@ -401,10 +401,10 @@ describe('murs ouverts à un profil', () => {
 		const lecteur = appartenances([], [], aujourdhui, { vie: 'lecture', 'comite:7': 'lecture' });
 		const ecrivain = appartenances([], [], aujourdhui, { vie: 'ecriture', 'comite:7': 'ecriture' });
 		expect(['centre', 'vie', 'comite:7', 'comite:8', 'equipe:1'].map((c) => estMembre(lecteur, c))).toEqual([false, true, true, false, false]);
-		expect(estConvoque(lecteur, 'vie', 'tous', 9)).toBe(false);
-		expect(estConvoque(ecrivain, 'vie', 'tous', 9)).toBe(true);
-		expect(estConvoque(ecrivain, 'comite:7', [1], 9)).toBe(false);
-		expect(estConvoque(ecrivain, 'comite:7', { equipes: [1], ajoutes: [9], retires: [] }, 9)).toBe(false);
+		expect(estConvoque(lecteur, 'vie', 'tous', 9, 'personne:1')).toBe(false);
+		expect(estConvoque(ecrivain, 'vie', 'tous', 9, 'personne:1')).toBe(true);
+		expect(estConvoque(ecrivain, 'comite:7', [1], 9, 'personne:1')).toBe(false);
+		expect(estConvoque(ecrivain, 'comite:7', { equipes: [1], ajoutes: [9], retires: [] }, 9, 'personne:1')).toBe(false);
 		// Un rôle tenu ne compte pas pour un profil ouvert.
 		const avecRole = appartenances([{ equipeId: 1, debut: '2026-01-01', fin: null }], [{ type: 'centre', portee: 'centre', perimetreId: null, systeme: 'chef_centre', nomme: null }], aujourdhui, { vie: 'lecture' });
 		expect(avecRole.tous).toBe(false);

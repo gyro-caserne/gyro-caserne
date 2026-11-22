@@ -457,7 +457,7 @@ async function vuesDe(
 							fin: p.fin,
 							lieu: p.lieu ?? '',
 							convoques,
-							convoque: estConvoque(appartenances, cle, convocation, moi),
+							convoque: estConvoque(appartenances, cle, convocation, moi, p.auteur),
 							moment: momentEvenement(p.debut, maintenant, p.fin),
 							reponse: sesReponses.find((r) => r.deMoi === 1)?.reponse ?? null,
 							compte: Object.fromEntries(REPONSES_EVENEMENT.map((r) => [r, sesReponses.find((x) => x.reponse === r)?.n ?? 0])) as Record<ReponseEvenement, number>,

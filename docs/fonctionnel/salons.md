@@ -14,7 +14,7 @@ Diffuser l'information du centre et organiser les événements, avec **peu de mu
 | **Comité** (un par comité) | les membres du comité | les membres | le rapporteur |
 
 - Le chef de centre, l'adjoint et le super administrateur lisent et modèrent **tous** les murs.
-- Les droits se déduisent de l'appartenance du jour (équipe, comité, rôle) : rien à régler mur par mur. Ouvrir un mur à d'autres (un référent qui publie dans « Le centre », par exemple) viendra dans un prochain lot.
+- Les droits se déduisent de l'appartenance du jour (équipe, comité, rôle) : rien à régler mur par mur. Ouvrir un mur à d'autres agents (un référent qui publie dans « Le centre », par exemple) viendra dans un prochain lot. Les extérieurs, voir plus bas.
 - Les agents **partis** ou **suspendus** n'ont accès à aucun mur.
 - Les **extérieurs** (réserve citoyenne, retraités) n'ont que les murs que leur profil leur ouvre (Réglages, Profils, partie « Murs ouverts ») : Le centre, Vie du centre et des comités en cours, jamais une équipe. En **lecture**, ils voient les publications, en sont prévenus et confirment une annonce. En **écriture**, ils commentent, aiment, votent, répondent aux événements convoqués à tout le mur (ils comptent alors parmi les convoqués) et publient, sauf sur Le centre où un agent ne publie pas non plus. Ils ne modèrent jamais. Ils comptent parmi les membres du mur pour « qui a lu », et leur « À ne pas manquer » reprend ces murs. Voir [0042](../decisions/0042-murs-ouverts-a-un-profil.md).
 - Le mur d'une **équipe désactivée** passe en **lecture seule**.

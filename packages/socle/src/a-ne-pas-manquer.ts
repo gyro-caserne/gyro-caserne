@@ -61,13 +61,13 @@ export async function aNePasManquer(base: Base, acteur: Acteur, aujourdhui: stri
 			.where(and(surSesMurs, eq(publication.type, 'annonce'), eq(publication.priseDeConnaissance, 1), pasDeMoi, gte(publication.creeLe, ajouterJours(aujourdhui, -ANNONCES)), isNull(priseConnaissance.publicationId)))
 			.orderBy(desc(publication.creeLe), desc(publication.id)),
 		base
-			.select({ ...champs, debut: publication.debut, fin: publication.fin, convoques: publication.convoques, reponse: reponseEvenement.reponse })
+			.select({ ...champs, auteur: publication.auteur, debut: publication.debut, fin: publication.fin, convoques: publication.convoques, reponse: reponseEvenement.reponse })
 			.from(publication)
 			.leftJoin(reponseEvenement, and(eq(reponseEvenement.publicationId, publication.id), eq(reponseEvenement.personneId, moi)))
 			.where(and(surSesMurs, or(gt(publication.debut, debutMinimumEvenement(maintenant)), gt(publication.fin, m)), isNull(publication.annuleeLe)))
 			.orderBy(asc(publication.debut), asc(publication.id)),
 		base
-			.select({ ...champs, debut: publication.debut, convoques: publication.convoques })
+			.select({ ...champs, auteur: publication.auteur, debut: publication.debut, convoques: publication.convoques })
 			.from(publication)
 			.leftJoin(voteSondage, and(eq(voteSondage.publicationId, publication.id), eq(voteSondage.personneId, moi)))
 			.where(and(surSesMurs, sql`${publication.sondageQuestion} is not null`, ouvert, recent, isNull(voteSondage.publicationId), isNull(publication.annuleeLe)))
@@ -95,14 +95,14 @@ export async function aNePasManquer(base: Base, acteur: Acteur, aujourdhui: stri
 		annonces: annonces.map(item),
 		evenements: evenements
 			// La requête ramène aussi une manœuvre courte déjà finie (moins de 3 h) : écartée ici.
-			.filter((p) => estConvoque(appartenances, p.mur, JSON.parse(p.convoques ?? '"tous"'), moi) && momentEvenement(p.debut!, maintenant, p.fin) !== 'passe')
+			.filter((p) => estConvoque(appartenances, p.mur, JSON.parse(p.convoques ?? '"tous"'), moi, p.auteur) && momentEvenement(p.debut!, maintenant, p.fin) !== 'passe')
 			.map((p) => {
 				const enCours = momentEvenement(p.debut!, maintenant, p.fin) === 'enCours';
 				return { ...item(p), debut: p.debut!, demain: !enCours && p.debut!.slice(0, 10) === demain, enCours, reponse: p.reponse };
 			}),
 		// Le sondage d'un événement n'attend que ses convoqués.
 		// Pas de sondage là où l'on ne peut pas voter (mur ouvert en lecture seulement).
-		sondages: sondages.filter((p) => parCle.get(p.mur)?.peutReagir && (p.debut === null || estConvoque(appartenances, p.mur, JSON.parse(p.convoques ?? '"tous"'), moi))).map(item),
+		sondages: sondages.filter((p) => parCle.get(p.mur)?.peutReagir && (p.debut === null || estConvoque(appartenances, p.mur, JSON.parse(p.convoques ?? '"tous"'), moi, p.auteur))).map(item),
 		epinglees: epinglees.filter((p) => parCle.has(p.mur)).map(item),
 		remplacements: remplacements.map((r) => ({
 			id: r.id,

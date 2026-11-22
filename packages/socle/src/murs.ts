@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull, lte, ne, or } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { Base } from './base.ts';
 import { requeteTenues, tenuesValides } from './casquettes.ts';
 import { enCours } from './dates.ts';
@@ -79,11 +79,15 @@ export function estMembre(a: Appartenances, cle: string): boolean {
 // Lectures à placer dans un batch : les agents qui ont accès (ni partis, ni suspendus, ni extérieurs, comme mursDe),
 // toutes les affectations en cours et tous les rôles tenus ce jour-là. `avecOuverts` : aussi les personnes d'un profil extérieur
 // à qui des murs sont ouverts (pour les murs seulement : le planning et les remplacements n'en veulent pas).
+// Les murs ouverts du profil, sans les comités dissous ou inconnus, dans la même lecture (comme mursOuvertsDe).
+const sansComiteDissous = sql<string>`(select json_group_object(j.key, j.value) from json_each(case when json_valid("profil"."murs_ouverts") then "profil"."murs_ouverts" else '{}' end) j
+	where j.key not like 'comite:%' or exists (select 1 from comite c where 'comite:' || c.id = j.key and c.dissous_le is null))`.as('murs_ouverts_en_cours');
+
 export function lecturesAgents(base: Base, aujourdhui: string, avecOuverts = false) {
 	const agent = or(isNull(profil.typePersonne), ne(profil.typePersonne, 'exterieur'));
 	return [
 		base
-			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, statut: personne.statut, typePersonne: profil.typePersonne, mursOuverts: profil.mursOuverts })
+			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, statut: personne.statut, typePersonne: profil.typePersonne, mursOuverts: avecOuverts ? sansComiteDissous : profil.mursOuverts })
 			.from(personne)
 			.leftJoin(profil, eq(profil.id, personne.profilId))
 			.where(and(inArray(personne.statut, STATUTS_AVEC_ACCES), avecOuverts ? or(agent, ne(profil.mursOuverts, '{}')) : agent)),
@@ -126,10 +130,11 @@ export type Convocation = 'tous' | number[] | { equipes: number[]; ajoutes: numb
 export const equipesConvoquees = (c: Convocation): 'tous' | number[] => (c === 'tous' || Array.isArray(c) ? c : c.equipes);
 
 // Convoqué : membre du mur et, si des équipes sont convoquées, membre en cours ou chef de l'une d'elles, sauf retiré ; ou ajouté.
-// Une personne d'un profil extérieur : seulement si le mur lui est ouvert en écriture et que tout le mur est convoqué.
-export function estConvoque(a: Appartenances, cle: string, convoques: Convocation, personneId: number | null): boolean {
+// Une personne d'un profil extérieur : seulement si le mur lui est ouvert en écriture et que tout le mur est convoqué, et jamais à ce que
+// publie le planning (les manœuvres) : elle est hors du planning. `auteur` : l'auteur de la publication.
+export function estConvoque(a: Appartenances, cle: string, convoques: Convocation, personneId: number | null, auteur: string): boolean {
 	if (!estMembre(a, cle)) return false;
-	if (a.ouverts !== null) return a.ouverts.get(cle) === 'ecriture' && convoques === 'tous';
+	if (a.ouverts !== null) return a.ouverts.get(cle) === 'ecriture' && convoques === 'tous' && auteur !== 'planning';
 	if (convoques === 'tous') return true;
 	const exceptions = Array.isArray(convoques) ? null : convoques;
 	if (exceptions && personneId !== null && exceptions.retires.includes(personneId)) return false;

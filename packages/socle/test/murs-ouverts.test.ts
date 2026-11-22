@@ -8,7 +8,7 @@ import { lireMur, publier } from '../src/actions/publications.ts';
 import { RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
 import { notifierConvoques, notifierPublication } from '../src/notifications.ts';
-import { attribution, comite, notification, personne, profil, responsabilite } from '../src/schema.ts';
+import { attribution, comite, notification, personne, profil, publication, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
 const maintenant = '2026-10-28T14:30';
@@ -114,5 +114,26 @@ describe('murs ouverts : suivis et notifications', () => {
 		expect(vu.sondages.map((x) => x.id)).toEqual([sR]);
 		expect(vu.sondages.map((x) => x.id)).not.toContain(s);
 		expect(vu.evenements.map((x) => x.id)).toEqual([ev]);
+	});
+});
+
+describe('murs ouverts : comité dissous et manœuvres', () => {
+	it('un comité dissous ne compte plus : ni membre, ni prévenu', async () => {
+		const { base, chef, rose, cleA, fil } = await jeu();
+		const id = await publier(base, base.photos, acteur(chef), cleA, { type: 'annonce', texte: 'Note', priseDeConnaissance: true }, maintenant);
+		await base.update(comite).set({ dissousLe: '2026-10-01' }).where(eq(comite.id, Number(cleA.slice('comite:'.length))));
+		expect((await suiviPublication(base, acteur(chef), id, aujourdhui)).priseDeConnaissance!.manquante.map((p) => p.id)).not.toContain(rose);
+		await notifierPublication(base, id, maintenant);
+		expect(await fil()).not.toContain(rose);
+	});
+
+	it('une manœuvre du planning sur Le centre ne convoque jamais un profil extérieur, même en écriture', async () => {
+		const { base, chef, rene, fil } = await jeu();
+		const [m] = await base.insert(publication).values({ mur: 'centre', auteur: 'planning', type: 'evenement', texte: 'Manœuvre', debut: '2026-11-02T19:00', lieu: 'Caserne', convoques: '"tous"', creeLe: maintenant }).returning();
+		await notifierConvoques(base, m!.id, maintenant, { titre: 'Manœuvre annoncée', texte: 'Manœuvre', seulementSansReponse: false });
+		expect(await fil()).not.toContain(rene);
+		await expect(repondreEvenement(base, acteur(rene), m!.id, 'present', maintenant)).rejects.toBeInstanceOf(RefusDroit);
+		expect((await suiviPublication(base, acteur(chef), m!.id, aujourdhui)).evenement!.sans_reponse.map((p) => p.id)).not.toContain(rene);
+		expect((await aNePasManquer(base, acteur(rene), aujourdhui, maintenant)).evenements.map((e) => e.id)).not.toContain(m!.id);
 	});
 });

@@ -1013,7 +1013,7 @@ export async function membresPourGroupe(base: Base, acteur: Acteur, source: { eq
 	const pourEquipe = 'equipe' in source;
 	const id = pourEquipe ? exigerId(source.equipe, 'Équipe') : exigerId(source.comite, 'Comité');
 	const [acces, avecMessagerie, agents, affectations, tenues, lignes] = await base.batch([
-		lireAcces(base, moi, aujourdhui),
+		lireAccesDAgent(base, moi, aujourdhui),
 		base.select({ id: personne.id }).from(personne).where(messagerieDAgent(personne.id, aujourdhui)),
 		...lecturesAgents(base, aujourdhui),
 		pourEquipe

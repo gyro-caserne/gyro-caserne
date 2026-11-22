@@ -5,7 +5,7 @@ import type { Acteur } from '../src/droits.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
 import { lireMur, publier } from '../src/actions/publications.ts';
-import { ajouterMembres, annuaire, creerGroupe, envoyer, exigerMessagerie, lireConversation, nonLusTotal, pourVous } from '../src/messagerie.ts';
+import { ajouterMembres, annuaire, creerGroupe, envoyer, exigerMessagerie, lireConversation, membresPourGroupe, nonLusTotal, pourVous } from '../src/messagerie.ts';
 import { attribution, comite, personne, profil, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
@@ -103,6 +103,8 @@ describe('messagerie d’un profil ouvert', () => {
 		const groupe = await creerGroupe(base, acteur(chef), { nom: 'Comité', membres: [paul] }, maintenant);
 		await expect(ajouterMembres(base, acteur(chef), groupe, [rene], maintenant)).rejects.toThrow(DonneeInvalide);
 		expect(await pourVous(base, acteur(rene), aujourdhui)).toEqual({ groupes: false, chefs: [], equipes: [], comites: [] });
+		// Les membres d'une équipe ou d'un comité, pour un groupe : refusé.
+		await expect(membresPourGroupe(base, acteur(rene), { equipe: 1 }, aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
 	});
 
 	it('« Répondre en privé » sur un mur : proposé entre personnes liées seulement', async () => {

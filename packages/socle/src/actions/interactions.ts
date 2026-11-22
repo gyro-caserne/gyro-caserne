@@ -78,7 +78,7 @@ export async function repondreEvenement(base: Base, acteur: Acteur, id: number, 
 	if (ligne.debut === null) throw new DonneeInvalide('Pas un événement');
 	if (ligne.annuleeLe !== null) throw new DonneeInvalide('Cet événement est annulé');
 	if (ligne.debut.slice(0, 16) <= maintenant.slice(0, 16)) throw new DonneeInvalide('Cet événement est passé');
-	if (!estConvoque(appartenances, cle, JSON.parse(ligne.convoques ?? '"tous"'), moi)) throw refusMur(cle, 'lire', 'Vous n’êtes pas convoqué à cet événement');
+	if (!estConvoque(appartenances, cle, JSON.parse(ligne.convoques ?? '"tous"'), moi, ligne.auteur)) throw refusMur(cle, 'lire', 'Vous n’êtes pas convoqué à cet événement');
 	await base.insert(reponseEvenement).values({ publicationId: id, personneId: moi, reponse }).onConflictDoUpdate({ target: [reponseEvenement.publicationId, reponseEvenement.personneId], set: { reponse } });
 }
 
@@ -88,7 +88,7 @@ export async function voter(base: Base, acteur: Acteur, id: number, reponse: num
 	const { ligne, cle, appartenances, moi } = await pourAgir(base, acteur, id, exigerDateHeure(maintenant, 'Date'));
 	if (ligne.sondageReponses === null) throw new DonneeInvalide('Pas de sondage');
 	if (ligne.annuleeLe !== null) throw new DonneeInvalide('Cet événement est annulé');
-	if (ligne.debut !== null && !estConvoque(appartenances, cle, JSON.parse(ligne.convoques ?? '"tous"'), moi)) throw refusMur(cle, 'lire', 'Vous n’êtes pas convoqué à cet événement');
+	if (ligne.debut !== null && !estConvoque(appartenances, cle, JSON.parse(ligne.convoques ?? '"tous"'), moi, ligne.auteur)) throw refusMur(cle, 'lire', 'Vous n’êtes pas convoqué à cet événement');
 	const etat = etatSondage(ligne.sondageOuverture, ligne.sondageCloture, maintenant);
 	if (etat === 'avenir') throw new DonneeInvalide('Sondage pas encore ouvert');
 	if (etat === 'ferme') throw new DonneeInvalide('Sondage fermé');
@@ -145,7 +145,7 @@ export async function suiviPublication(base: Base, acteur: Acteur, id: number, a
 			present: parReponse('present'),
 			absent: parReponse('absent'),
 			incertain: parReponse('incertain'),
-			sans_reponse: parAgent.filter((x) => estConvoque(x.a, cle, convoques, x.id) && !reponses.some((r) => r.personneId === x.id)).map(seule).sort(parNom)
+			sans_reponse: parAgent.filter((x) => estConvoque(x.a, cle, convoques, x.id, ligne.auteur) && !reponses.some((r) => r.personneId === x.id)).map(seule).sort(parNom)
 		};
 	}
 	return suivi;

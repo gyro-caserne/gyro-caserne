@@ -75,7 +75,7 @@
 			<ul class="murs" role="list">
 				{#each murs as m (m.cle)}
 					<li>
-						<h3 class="mur" aria-hidden="true">{m.nom}</h3>
+						<p class="mur" aria-hidden="true">{m.nom}</p>
 						<SelecteurNiveaux name="mur-{m.cle}" legende={m.nom} niveaux={niveauxDuMur(m.cle)} valeur={niveauDe(m.cle)} />
 					</li>
 				{/each}
@@ -156,7 +156,7 @@
 	}
 	.mur {
 		margin: 0;
-		font-size: var(--texte-15);
+		font-weight: 700;
 	}
 	.murs > li + li {
 		border-top: 1px solid var(--trait-doux);
