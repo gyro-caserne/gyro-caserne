@@ -148,14 +148,17 @@ export async function mursDe(base: Base, acteur: Acteur, aujourdhui: string): Pr
 	return (await mursEtAppartenances(base, acteur, aujourdhui)).murs;
 }
 
-export async function mursEtAppartenances(base: Base, acteur: Acteur, aujourdhui: string): Promise<{ murs: Mur[]; appartenances: Appartenances }> {
+// Tous les comités, dissous compris : de quoi signer une publication faite au nom de l'un d'eux.
+export type ComiteLu = { id: number; nom: string; dissousLe: string | null; icone: string | null; theme: string };
+
+export async function mursEtAppartenances(base: Base, acteur: Acteur, aujourdhui: string): Promise<{ murs: Mur[]; appartenances: Appartenances; comites: ComiteLu[] }> {
 	const lesEquipes = base.select({ id: equipe.id, nom: equipe.nom, active: equipe.active }).from(equipe).orderBy(asc(equipe.ordreRotation));
-	const lesComites = base.select({ id: comite.id, nom: comite.nom, dissousLe: comite.dissousLe }).from(comite).orderBy(asc(comite.nom));
+	const lesComites = base.select({ id: comite.id, nom: comite.nom, dissousLe: comite.dissousLe, icone: comite.icone, theme: comite.theme }).from(comite).orderBy(asc(comite.nom));
 
 	// Chef de centre, adjoint et super administrateur : tous les murs.
 	let a = SANS_FICHE;
 	let equipes: { id: number; nom: string; active: number }[];
-	let comites: { id: number; nom: string; dissousLe: string | null }[];
+	let comites: ComiteLu[];
 
 	if (acteur.type === 'super') {
 		[equipes, comites] = await base.batch([lesEquipes, lesComites]);
@@ -170,8 +173,8 @@ export async function mursEtAppartenances(base: Base, acteur: Acteur, aujourdhui
 		]);
 		// Ni parti ni suspendu ; une personne d'un profil extérieur n'a que les murs que son profil lui ouvre.
 		const fiche = fiches[0];
-		if (!fiche || !(STATUTS_AVEC_ACCES as readonly string[]).includes(fiche.statut)) return { murs: [], appartenances: { ...SANS_FICHE, tous: false } };
-		if (fiche.typePersonne === 'exterieur') return mursOuvertsDe(appartenances([], [], aujourdhui, lireMursOuverts(fiche.mursOuverts)), c);
+		if (!fiche || !(STATUTS_AVEC_ACCES as readonly string[]).includes(fiche.statut)) return { murs: [], appartenances: { ...SANS_FICHE, tous: false }, comites: c };
+		if (fiche.typePersonne === 'exterieur') return { ...mursOuvertsDe(appartenances([], [], aujourdhui, lireMursOuverts(fiche.mursOuverts)), c), comites: c };
 		[equipes, comites] = [e, c];
 		a = appartenances(affectations, tenues, aujourdhui);
 	}
@@ -184,7 +187,7 @@ export async function mursEtAppartenances(base: Base, acteur: Acteur, aujourdhui
 	const murComite = comites
 		.filter((c) => tous || (membreComite.has(c.id) && c.dissousLe === null))
 		.map((c) => mur(`comite:${c.id}`, c.nom, 'comite', membreComite.has(c.id), tous || rapporteur.has(c.id), c.dissousLe !== null));
-	return { murs: [mur('centre', 'Le centre', 'centre', tous, tous), mur('vie', 'Vie du centre', 'vie', true, tous), ...ouvertsPuisFermes(murEquipe), ...ouvertsPuisFermes(murComite)], appartenances: a };
+	return { murs: [mur('centre', 'Le centre', 'centre', tous, tous), mur('vie', 'Vie du centre', 'vie', true, tous), ...ouvertsPuisFermes(murEquipe), ...ouvertsPuisFermes(murComite)], appartenances: a, comites };
 }
 
 // Les murs d'une personne d'un profil extérieur : Le centre et Vie du centre s'ils sont ouverts, puis les comités ouverts en cours.
@@ -210,15 +213,15 @@ export async function exigerMur(base: Base, acteur: Acteur, cle: string, aujourd
 	return (await accesMur(base, acteur, cle, aujourdhui, besoin)).mur;
 }
 
-// Comme exigerMur, avec les appartenances de l'acteur (pour savoir s'il est convoqué), sans requête de plus.
-export async function accesMur(base: Base, acteur: Acteur, cle: string, aujourdhui: string, besoin: 'lire' | 'publier' | 'moderer'): Promise<{ mur: Mur; appartenances: Appartenances }> {
+// Comme exigerMur, avec les appartenances de l'acteur (pour savoir s'il est convoqué) et les comités, sans requête de plus.
+export async function accesMur(base: Base, acteur: Acteur, cle: string, aujourdhui: string, besoin: 'lire' | 'publier' | 'moderer'): Promise<{ mur: Mur; appartenances: Appartenances; comites: ComiteLu[] }> {
 	const forme = /^(?:centre|vie|(equipe|comite):([1-9]\d*))$/.exec(cle);
 	if (!forme) throw new DonneeInvalide('Mur inconnu');
-	const { murs, appartenances } = await mursEtAppartenances(base, acteur, aujourdhui);
+	const { murs, appartenances, comites } = await mursEtAppartenances(base, acteur, aujourdhui);
 	const trouve = murs.find((m) => m.cle === cle);
 	const permis = trouve && (besoin === 'lire' || (besoin === 'publier' ? trouve.peutPublier : trouve.peutModerer));
 	if (!permis) throw refusMur(cle, besoin);
-	return { mur: trouve, appartenances };
+	return { mur: trouve, appartenances, comites };
 }
 
 export function refusMur(cle: string, besoin: 'lire' | 'publier' | 'moderer', raison = 'Mur non accessible'): RefusDroit {
