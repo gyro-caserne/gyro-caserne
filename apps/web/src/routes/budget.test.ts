@@ -541,6 +541,28 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 		expect(n2).toBeLessThanOrEqual(BUDGET);
 	});
 
+	it('/echanges/publier : au nom d’un comité, la page, la publication et Vie du centre rechargé', async () => {
+		const { base, locals, compter } = await centreDe300Publications();
+		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
+		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Rapporteur de comité'));
+		await base.insert(attribution).values({ personneId: locals.acteur.id, responsabiliteId: r!.id, perimetreType: 'comite', perimetreId: amicale!.id, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		const n = await compter(async () => {
+			await (racine as any)({ depends: () => {}, locals });
+			const data = await (pagePublier as any)({ locals, url: new URL('http://localhost/echanges/publier?mur=vie') });
+			expect(data.auNomDe).toEqual([{ id: amicale!.id, nom: 'Amicale' }]);
+		});
+		expect(n).toBeLessThanOrEqual(BUDGET);
+		const request = await requeteFormulaire([['mur', 'vie'], ['type', 'message'], ['texte', 'Repas'], ['auNomDe', String(amicale!.id)]]);
+		const n2 = await compter(async () => {
+			await expect((actionsPublier.publier as any)({ locals, params: {}, url: new URL('http://localhost/echanges/publier'), request })).rejects.toMatchObject({ status: 303 });
+			await (racine as any)({ depends: () => {}, locals });
+			await (echanges as any)({ locals, url: new URL('http://localhost/echanges/vie') });
+			const data = await (mur as any)({ locals, params: { mur: 'vie' }, url: new URL('http://localhost/echanges/vie') });
+			expect(data.publications[0].comite).toEqual({ nom: 'Amicale', icone: 'coeur' });
+		});
+		expect(n2).toBeLessThanOrEqual(BUDGET);
+	});
+
 	it('/echanges/[mur]/[id] : annonce suivie, 50 commentaires ; chaque geste puis le rechargement', async () => {
 		const { base, locals, compter } = await centreDe150();
 		const maintenant = maintenantParis();

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { clotureParDefaut, maintenantParis, septJoursPlusTard } from '#lib/aujourdhui.ts';
-import { photoPublication, publication } from '@gyro-caserne/socle';
+import { attribution, comite, photoPublication, publication, responsabilite } from '@gyro-caserne/socle';
 import { jpeg, locaux, preparer, requeteFormulaire } from '../de-test.ts';
 import { actions, load } from './+page.server';
 
@@ -224,5 +224,43 @@ describe('taille des envois', () => {
 		const photos = Array.from({ length: 4 }, (_, i): [string, File] => ['photos', jpeg(200 * 1024, `p${i}.jpg`)]);
 		const r = await reussir(locaux(base, alice), [['mur', 'vie'], ['type', 'message'], ['texte', 'x'.repeat(4000)], ['question', 'q'.repeat(200)], ['reponse', 'r'.repeat(100)], ['reponse', 'r'.repeat(100)], ...champsDates(), ...photos]);
 		expect(r.status).toBe(303);
+	});
+});
+
+describe('publier au nom d’un comité', () => {
+	// Alice, rapporteur de l'Amicale ; Bruno, simple agent.
+	async function avecRapporteur() {
+		const j = await preparer();
+		const [amicale] = await j.base.select().from(comite).where(eq(comite.nom, 'Amicale'));
+		const [r] = await j.base.select().from(responsabilite).where(eq(responsabilite.nom, 'Rapporteur de comité'));
+		await j.base.insert(attribution).values({ personneId: j.alice.id, responsabiliteId: r!.id, perimetreType: 'comite', perimetreId: amicale!.id, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		return { ...j, amicale: amicale! };
+	}
+
+	it('la page propose le comité au rapporteur en fonction seulement', async () => {
+		const { base, alice, bruno, chef, amicale } = await avecRapporteur();
+		expect((await charger(locaux(base, alice))).auNomDe).toEqual([{ id: amicale.id, nom: 'Amicale' }]);
+		expect((await charger(locaux(base, bruno))).auNomDe).toEqual([]);
+		expect((await charger(locaux(base, chef))).auNomDe).toEqual([]);
+		await base.update(comite).set({ dissousLe: '2026-10-01' }).where(eq(comite.id, amicale.id));
+		expect((await charger(locaux(base, alice))).auNomDe).toEqual([]);
+	});
+
+	it('« Moi » ou le comité ; refus sur un autre mur et pour qui n’est pas rapporteur, sur le choix', async () => {
+		const { base, alice, bruno, e1, amicale } = await avecRapporteur();
+		await reussir(locaux(base, alice), [['mur', 'vie'], ['type', 'message'], ['texte', 'Repas de Sainte-Barbe'], ['auNomDe', String(amicale.id)]]);
+		await reussir(locaux(base, alice), [['mur', 'vie'], ['type', 'message'], ['texte', 'De moi'], ['auNomDe', '']]);
+		expect((await base.select().from(publication).orderBy(publication.id)).map((p) => [p.texte, p.comiteId])).toEqual([
+			['Repas de Sainte-Barbe', amicale.id],
+			['De moi', null]
+		]);
+		expect(await agir(locaux(base, alice), [['mur', `equipe:${e1.id}`], ['type', 'message'], ['texte', 'x'], ['auNomDe', String(amicale.id)]])).toMatchObject({
+			status: 400,
+			data: { erreurs: { auNomDe: 'On ne publie au nom d’un comité que dans Vie du centre.' }, valeurs: { auNomDe: String(amicale.id) } }
+		});
+		expect(await agir(locaux(base, bruno), [['mur', 'vie'], ['type', 'message'], ['texte', 'x'], ['auNomDe', String(amicale.id)]])).toMatchObject({
+			status: 403,
+			data: { message: 'Seul le rapporteur du comité publie en son nom.', erreurs: { auNomDe: 'Seul le rapporteur du comité publie en son nom.' } }
+		});
 	});
 });

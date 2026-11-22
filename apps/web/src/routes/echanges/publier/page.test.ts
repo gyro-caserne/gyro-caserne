@@ -112,3 +112,21 @@ describe('page Publier', () => {
 		expect(page).not.toContain('<form');
 	});
 });
+
+describe('publier en tant que', () => {
+	it('absent sans comité ; sinon « Moi » coché et chaque comité, avec la mention sans JavaScript', () => {
+		expect(html()).not.toContain('Publier en tant que');
+		const page = html({ auNomDe: [{ id: 4, nom: 'Amicale' }] });
+		expect(page).toContain('Publier en tant que');
+		expect(radio(page, 'auNomDe', '')).toContain('checked');
+		expect(radio(page, 'auNomDe', '4')).not.toContain('checked');
+		expect(page).toContain('Amicale');
+		expect(page).toContain('Dans Vie du centre seulement.');
+	});
+
+	it('le choix refusé revient coché, avec son message', () => {
+		const page = html({ auNomDe: [{ id: 4, nom: 'Amicale' }] }, { cible: 'publier', erreurs: { auNomDe: 'Seul le rapporteur du comité publie en son nom.' }, valeurs: { mur: 'vie', auNomDe: '4' } });
+		expect(radio(page, 'auNomDe', '4')).toContain('checked');
+		expect(page).toContain('Seul le rapporteur du comité publie en son nom.');
+	});
+});

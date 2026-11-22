@@ -7,6 +7,7 @@ const publication: PublicationVue = {
 	id: 7,
 	cle: 'centre',
 	auteur: { prenom: 'Chef', nom: 'Martin', couleur: null, role: 'Chef de centre', ecrireA: null },
+	comite: null,
 	type: 'annonce',
 	texte: 'Note de service',
 	creeLe: '2026-10-28T14:05:00',

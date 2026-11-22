@@ -50,7 +50,8 @@
 	const date = (iso: string, options: Intl.DateTimeFormatOptions) => formatDeDate({ ...options, timeZone: 'UTC' }).format(new Date(`${iso.slice(0, 16)}:00Z`));
 	const quand = (iso: string) => `${date(iso, { day: 'numeric', month: 'long' })}, ${heure(iso)}`;
 	const nom = (a: { prenom: string; nom: string }) => `${a.prenom} ${a.nom}`.trim();
-	const auteur = $derived(nom(p.auteur));
+	// Au nom d'un comité : le comité signe, la personne est dite dessous (« par Julie Martin »).
+	const auteur = $derived(p.comite?.nom ?? nom(p.auteur));
 	const convoques = $derived(
 		!p.evenement || p.evenement.convoques === 'tous' ? 'tout le mur' : p.evenement.convoques.map((id) => equipes.find((e) => e.id === id)?.nom ?? 'équipe archivée').join(', ')
 	);
@@ -75,7 +76,7 @@
 </script>
 
 {#snippet signature()}
-	<span class="doux">{p.auteur.role ? `${p.auteur.role}, ` : ''}<time datetime={p.creeLe}>{quandBref(p.creeLe)}</time>{p.modifieeLe && !p.modifieePar ? ', modifiée' : ''}</span>
+	<span class="doux">{p.comite ? `par ${nom(p.auteur)}, ` : p.auteur.role ? `${p.auteur.role}, ` : ''}<time datetime={p.creeLe}>{quandBref(p.creeLe)}</time>{p.modifieeLe && !p.modifieePar ? ', modifiée' : ''}</span>
 {/snippet}
 
 <article id="publication-{p.id}" class="publication {p.type}" class:a-confirmer={prise} aria-labelledby="auteur-{p.id}" tabindex="-1" bind:this={carte}>
@@ -105,9 +106,9 @@
 			</div>
 		{:else}
 			<p class="entete">
-				{#if p.auteur.appli}
-					<!-- L'appli signe de son icône, jamais d'initiales. -->
-					<span class="icone-appli" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path d={ICONES_ROLES.calendrier} fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
+				{#if p.auteur.appli || p.comite}
+					<!-- L'appli et un comité signent de leur icône, jamais d'initiales. -->
+					<span class="icone-appli" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path d={ICONES_ROLES[p.comite?.icone ?? 'calendrier']} fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
 				{:else}
 					<Visage prenom={p.auteur.prenom} nom={p.auteur.nom} couleur={p.auteur.couleur} />
 				{/if}
@@ -219,7 +220,7 @@
 				<summary>Plus<span class="masque"> : gestes sur la publication</span></summary>
 			<div class="gestes">
 				{#if !seule && p.droits.supprimer && (p.priseDeConnaissance || p.evenement)}<a class="pilule" href="{lien}#suivi">Voir le suivi</a>{/if}
-				{#if prive}<a class="pilule" href={prive} aria-label="Répondre en privé à {auteur}">Répondre en privé</a>{/if}
+				{#if prive}<a class="pilule" href={prive} aria-label="Répondre en privé à {nom(p.auteur)}">Répondre en privé</a>{/if}
 				{#if p.droits.fermer}
 					<form method="POST" action="?/fermerCommentaires" use:enhance={garderFocus}>
 						<input type="hidden" name="id" value={p.id} />

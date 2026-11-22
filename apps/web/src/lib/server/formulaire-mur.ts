@@ -17,7 +17,7 @@ export function erreurLecture(erreur: unknown): never {
 }
 
 // Saisie à réafficher après un refus (les photos ne reviennent pas : il faut les choisir à nouveau).
-export type Valeurs = { mur?: string; type?: string; texte?: string; priseDeConnaissance?: boolean; debut?: string; lieu?: string; equipes?: string[]; question?: string; reponses?: string[]; ouverture?: string; cloture?: string };
+export type Valeurs = { mur?: string; auNomDe?: string; type?: string; texte?: string; priseDeConnaissance?: boolean; debut?: string; lieu?: string; equipes?: string[]; question?: string; reponses?: string[]; ouverture?: string; cloture?: string };
 // `id` : ce qui vient d'être créé (publication, commentaire), pour y mettre le focus.
 export type Reponse = { cible: string; succes?: string; id?: number; message?: string; erreurs?: Record<string, string>; valeurs?: Valeurs };
 
@@ -40,6 +40,7 @@ export const avecJavaScript = (request: Request) => request.headers.get('x-svelt
 export async function lirePublication(f: FormData, js = false): Promise<{ donnees?: DonneesPublication; valeurs: Valeurs; erreurs?: Record<string, string> }> {
 	const valeurs: Valeurs = {
 		mur: texte(f, 'mur'),
+		auNomDe: texte(f, 'auNomDe'),
 		type: texte(f, 'type'),
 		texte: texte(f, 'texte'),
 		priseDeConnaissance: f.get('priseDeConnaissance') === 'oui',
@@ -62,6 +63,8 @@ export async function lirePublication(f: FormData, js = false): Promise<{ donnee
 	if (valeurs.question!.trim() || reponses.length > 0) donnees.sondage = { question: valeurs.question!, reponses, ouverture: valeurs.ouverture!, cloture: valeurs.cloture! };
 	// Les champs d'un événement ne comptent que pour un événement (la case de prise de connaissance, que pour une annonce) ; aucune équipe cochée : tout le mur.
 	if (type === 'evenement') donnees.evenement = { debut: valeurs.debut!, lieu: valeurs.lieu!, convoques: valeurs.equipes!.length > 0 ? valeurs.equipes!.map(Number) : 'tous' };
+	// « Moi » : la valeur vide.
+	if (valeurs.auNomDe) donnees.comiteId = Number(valeurs.auNomDe);
 	if (fichiers.length > 0) donnees.photos = await Promise.all(fichiers.map(async (p) => ({ type: p.type, donnees: new Uint8Array(await p.arrayBuffer()) })));
 	return { donnees, valeurs };
 }
@@ -80,6 +83,8 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Réponse trop longue': { champ: 'sondage', texte: 'Une réponse ne peut pas dépasser 100 caractères.' },
 	'De 2 à 6 réponses': { champ: 'sondage', texte: 'Proposez de 2 à 6 réponses.' },
 	'Mur inconnu': { champ: 'mur', texte: 'Choisissez où publier.' },
+	'Comité inconnu': { champ: 'auNomDe', texte: 'Choisissez au nom de qui publier.' },
+	'Publication au nom d’un comité réservée à Vie du centre': { champ: 'auNomDe', texte: 'On ne publie au nom d’un comité que dans Vie du centre.' },
 	'Ouverture invalide': { champ: 'ouverture', texte: 'Indiquez une date et une heure d’ouverture valides.' },
 	'Clôture invalide': { champ: 'cloture', texte: 'Indiquez une date et une heure de clôture valides.' },
 	'Dates du sondage manquantes': { champ: 'cloture', texte: 'Indiquez les dates d’ouverture et de clôture du sondage.' },
@@ -107,7 +112,7 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 };
 
 // Refus du socle dont la raison est à dire telle quelle.
-const RAISONS = ['Vous n’êtes pas convoqué à cet événement'];
+const RAISONS = ['Vous n’êtes pas convoqué à cet événement', 'Seul le rapporteur du comité publie en son nom'];
 
 // Traduit un refus du socle en réponse du formulaire visé ; toute autre erreur remonte.
 export function echecMur(erreur: unknown, cible: string, valeurs?: Valeurs) {
@@ -119,8 +124,9 @@ export function echecMur(erreur: unknown, cible: string, valeurs?: Valeurs) {
 				: erreur.droit === 'MODERER_SALON'
 					? 'Seuls les modérateurs du mur demandent une prise de connaissance.'
 					: 'Vous ne pouvez pas publier sur ce mur.';
-		// Sur « Publier », le refus de la prise de connaissance s'affiche aussi sur sa case.
-		const erreurs = cible === 'publier' && erreur.droit === 'MODERER_SALON' ? { priseDeConnaissance: message } : undefined;
+		// Sur « Publier », le refus de la prise de connaissance s'affiche aussi sur sa case, celui du comité sur son choix.
+		const champ = erreur.message === 'Seul le rapporteur du comité publie en son nom' ? 'auNomDe' : 'priseDeConnaissance';
+		const erreurs = cible === 'publier' && erreur.droit === 'MODERER_SALON' ? { [champ]: message } : undefined;
 		return fail<Reponse>(403, { cible, message, erreurs, valeurs });
 	}
 	if (erreur instanceof DonneeInvalide) {
