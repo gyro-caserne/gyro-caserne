@@ -18,6 +18,7 @@
 		equipes = [],
 		retour,
 		agir = false,
+		confirmer = agir,
 		lectureSeule = false,
 		seule = false,
 		animer = false,
@@ -28,6 +29,8 @@
 		retour?: { succes?: string; message?: string };
 		// `agir` : la personne peut aimer, répondre, voter (elle a une fiche et le mur n'est pas en lecture seule).
 		agir?: boolean;
+		// `confirmer` : elle peut dire qu'elle a pris connaissance, même là où elle ne fait que lire (profil extérieur).
+		confirmer?: boolean;
 		lectureSeule?: boolean;
 		// Sur la page de la publication : ses commentaires y sont en entier, la modération reste sur le mur.
 		seule?: boolean;
@@ -161,7 +164,7 @@
 			{/if}
 			{#if prise.le}
 				<p class="fait">Vous avez pris connaissance le {quand(prise.le)}.</p>
-			{:else if agir && !auteurDeLAnnonce}
+			{:else if confirmer && !auteurDeLAnnonce}
 				<form method="POST" action="?/prendreConnaissance" use:enhance={garderFocus}>
 					<input type="hidden" name="id" value={p.id} />
 					<button type="submit" class="confirmer">J’ai pris connaissance</button>

@@ -19,17 +19,18 @@ export type Suivi = {
 };
 
 // Une publication où l'acteur peut agir : il la lit, son mur n'est pas en lecture seule, et il a une fiche (pas le super administrateur).
-async function pourAgir(base: Base, acteur: Acteur, id: number, aujourdhui: string) {
+// `reagir` : commenter, aimer, voter ou répondre, refusé à qui n'a ce mur qu'en lecture (profil extérieur).
+async function pourAgir(base: Base, acteur: Acteur, id: number, aujourdhui: string, reagir = true) {
 	if (acteur.type !== 'personne') throw new DonneeInvalide('Réservé aux personnes ayant une fiche');
 	const c = await cible(base, acteur, id, aujourdhui);
-	if (c.mur.lectureSeule) throw refusMur(c.cle, 'publier');
+	if (c.mur.lectureSeule || (reagir && !c.mur.peutReagir)) throw refusMur(c.cle, 'publier');
 	return { ...c, moi: acteur.id };
 }
 
-// Tout lecteur, sauf sur un mur en lecture seule ou si les commentaires sont fermés.
+// Tout lecteur qui peut réagir, sauf sur un mur en lecture seule ou si les commentaires sont fermés.
 export async function commenter(base: Base, acteur: Acteur, idPublication: number, contenu: string, maintenant: string): Promise<number> {
 	const { ligne, mur, cle } = await cible(base, acteur, idPublication, exigerDateHeure(maintenant, 'Date'));
-	if (mur.lectureSeule) throw refusMur(cle, 'publier');
+	if (!mur.peutReagir) throw refusMur(cle, 'publier');
 	if (ligne.commentairesFermes === 1) throw new DonneeInvalide('Commentaires fermés');
 	const corps = texte(contenu, 'Commentaire', 2000);
 	const [nouveau] = await base.insert(commentaire).values({ publicationId: idPublication, auteur: nomActeur(acteur), texte: corps, creeLe: maintenant }).returning({ id: commentaire.id });
@@ -98,7 +99,7 @@ export async function voter(base: Base, acteur: Acteur, id: number, reponse: num
 
 // Une fois : la date retenue est la première.
 export async function prendreConnaissance(base: Base, acteur: Acteur, id: number, maintenant: string): Promise<void> {
-	const { ligne, moi } = await pourAgir(base, acteur, id, exigerDateHeure(maintenant, 'Date'));
+	const { ligne, moi } = await pourAgir(base, acteur, id, exigerDateHeure(maintenant, 'Date'), false);
 	if (ligne.priseDeConnaissance !== 1) throw new DonneeInvalide('Aucune prise de connaissance demandée');
 	await base.insert(priseConnaissance).values({ publicationId: id, personneId: moi, le: maintenant }).onConflictDoNothing();
 }
@@ -113,7 +114,7 @@ export async function suiviPublication(base: Base, acteur: Acteur, id: number, a
 	const convoques: Convocation | null = ligne.debut === null ? null : JSON.parse(ligne.convoques ?? '"tous"');
 
 	const [agents, affectations, tenues, prises, reponses] = await base.batch([
-		...lecturesAgents(base, aujourdhui),
+		...lecturesAgents(base, aujourdhui, true),
 		base
 			.select({ personneId: priseConnaissance.personneId, prenom: personne.prenom, nom: personne.nom })
 			.from(priseConnaissance)

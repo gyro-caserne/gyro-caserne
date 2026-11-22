@@ -319,7 +319,7 @@ async function vuesDe(
 	const moi = acteur.type === 'personne' ? acteur.id : 0;
 	const aujourdhui = options.maintenant.slice(0, 10);
 	const lectures = [
-		...lecturesAgents(base, aujourdhui),
+		...lecturesAgents(base, aujourdhui, true),
 		base.select({ id: equipe.id, couleur: equipe.couleur }).from(equipe),
 		base
 			.select({ publicationId: jaime.publicationId, n: count(), deMoi: sql<number>`max(${jaime.personneId} = ${moi})` })

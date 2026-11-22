@@ -132,7 +132,7 @@ export async function notifierPublication(base: Base, id: number, maintenant: st
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const [lignes, agents, affectations, tenues, equipes, comites, auteurs] = await base.batch([
 		base.select({ mur: publication.mur, auteur: publication.auteur, texte: publication.texte }).from(publication).where(eq(publication.id, id)),
-		...lecturesAgents(base, aujourdhui),
+		...lecturesAgents(base, aujourdhui, true),
 		...nomsDesMurs(base),
 		base
 			.select({ prenom: personne.prenom, nom: personne.nom })
@@ -156,7 +156,7 @@ export async function notifierConvoques(base: Base, id: number, maintenant: stri
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const [lignes, agents, affectations, tenues, reponses] = await base.batch([
 		base.select({ mur: publication.mur, convoques: publication.convoques }).from(publication).where(eq(publication.id, id)),
-		...lecturesAgents(base, aujourdhui),
+		...lecturesAgents(base, aujourdhui, true),
 		base.select({ personneId: reponseEvenement.personneId }).from(reponseEvenement).where(eq(reponseEvenement.publicationId, id))
 	]);
 	const p = lignes[0];
@@ -179,7 +179,7 @@ export async function notifierCommentaire(base: Base, id: number, maintenant: st
 			.from(commentaire)
 			.innerJoin(publication, eq(publication.id, commentaire.publicationId))
 			.where(eq(commentaire.id, id)),
-		...lecturesAgents(base, aujourdhui),
+		...lecturesAgents(base, aujourdhui, true),
 		base
 			.select({ prenom: personne.prenom, nom: personne.nom })
 			.from(personne)

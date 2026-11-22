@@ -26,7 +26,7 @@ const pub = (p: Partial<PublicationVue> = {}): PublicationVue => ({
 	droits: { modifier: false, supprimer: false, epingler: false, fermer: false },
 	...p
 });
-const mur = { cle: 'vie', nom: 'Vie du centre', type: 'vie', peutPublier: true, peutModerer: false, lectureSeule: false };
+const mur = { cle: 'vie', nom: 'Vie du centre', type: 'vie', peutPublier: true, peutReagir: true, peutModerer: false, lectureSeule: false };
 const equipes = [
 	{ id: 1, nom: 'Équipe 1', active: 1 },
 	{ id: 2, nom: 'Équipe 2', active: 1 },

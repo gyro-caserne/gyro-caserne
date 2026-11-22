@@ -13,7 +13,9 @@
 	const p = $derived(data.publication);
 	const nom = (a: { prenom: string; nom: string }) => `${a.prenom} ${a.nom}`.trim();
 	const quand = (iso: string) => `${formatDeDate({ day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${iso.slice(0, 16)}:00Z`))}, ${heure(iso)}`;
-	const agir = $derived(data.estPersonne === true && !data.mur.lectureSeule);
+	// Un profil extérieur qui n'a ce mur qu'en lecture ne réagit pas, mais confirme une annonce.
+	const confirmer = $derived(data.estPersonne === true && !data.mur.lectureSeule);
+	const agir = $derived(confirmer && data.mur.peutReagir);
 	// Une seule zone annoncée par page, pour toutes les réponses des formulaires.
 	const annonceSucces = $derived(form?.succes ?? '');
 	const annonceEchec = $derived(form && !form.succes ? (form.message ?? '') : '');
@@ -59,7 +61,7 @@
 <div class="annonce" role="status">{annonceSucces}</div>
 <div class="annonce" role="alert">{annonceEchec}</div>
 
-<Publication {p} equipes={data.equipes} {retour} {agir} lectureSeule={data.mur.lectureSeule} messagerie={data.messagerie} seule animer />
+<Publication {p} equipes={data.equipes} {retour} {agir} {confirmer} lectureSeule={!data.mur.peutReagir} messagerie={data.messagerie} seule animer />
 
 <section aria-labelledby="titre-commentaires" class="bloc">
 	<h2 id="titre-commentaires" tabindex="-1" bind:this={titre}>Commentaires ({data.commentaires.length})</h2>
@@ -85,6 +87,8 @@
 
 	{#if data.mur.lectureSeule}
 		<p class="doux">Ce mur est en lecture seule. On n’y commente plus.</p>
+	{:else if !data.mur.peutReagir}
+		<p class="doux">Vous lisez ce mur sans y commenter.</p>
 	{:else if p.commentairesFermes}
 		<p class="doux">Les commentaires sont fermés.</p>
 	{:else}

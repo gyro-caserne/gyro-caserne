@@ -101,7 +101,8 @@ export async function aNePasManquer(base: Base, acteur: Acteur, aujourdhui: stri
 				return { ...item(p), debut: p.debut!, demain: !enCours && p.debut!.slice(0, 10) === demain, enCours, reponse: p.reponse };
 			}),
 		// Le sondage d'un événement n'attend que ses convoqués.
-		sondages: sondages.filter((p) => p.debut === null || estConvoque(appartenances, p.mur, JSON.parse(p.convoques ?? '"tous"'), moi)).map(item),
+		// Pas de sondage là où l'on ne peut pas voter (mur ouvert en lecture seulement).
+		sondages: sondages.filter((p) => parCle.get(p.mur)?.peutReagir && (p.debut === null || estConvoque(appartenances, p.mur, JSON.parse(p.convoques ?? '"tous"'), moi))).map(item),
 		epinglees: epinglees.filter((p) => parCle.has(p.mur)).map(item),
 		remplacements: remplacements.map((r) => ({
 			id: r.id,
