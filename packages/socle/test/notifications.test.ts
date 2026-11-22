@@ -31,7 +31,7 @@ import {
 	prendreEnvois,
 	toutMarquerLu
 } from '../src/notifications.ts';
-import { abonnementPush, affectationEquipe, attribution, avisAnomalie, avisEte, coupure, demandeRemplacement, envoiPush, equipe, journal, notification, personne, profil, reservation, responsabilite, ressource, signalementMessage } from '../src/schema.ts';
+import { abonnementPush, affectationEquipe, attribution, avisAnomalie, comite, avisEte, coupure, demandeRemplacement, envoiPush, equipe, journal, notification, personne, profil, reservation, responsabilite, ressource, signalementMessage } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
 const maintenant = '2026-10-31T10:00';
@@ -93,6 +93,20 @@ describe('notifierPublication', () => {
 		await vider();
 		await notifierPublication(base, await publier(base, base.photos, superAdmin, 'centre', { type: 'message', texte: 'Note' }, maintenant), maintenant);
 		expect(await fil()).toEqual(tri(chef, alice, bruno, chloe));
+	});
+
+	it('au nom d’un comité : « Amicale a publié dans Vie du centre », au téléphone et dans la cloche', async () => {
+		const { base, alice, bruno, file } = await jeu();
+		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
+		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Rapporteur de comité'));
+		await base.insert(attribution).values({ personneId: alice, responsabiliteId: r!.id, perimetreType: 'comite', perimetreId: amicale!.id, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		const id = await publier(base, base.photos, acteur(alice), 'vie', { type: 'message', texte: 'Repas de Sainte-Barbe', comiteId: amicale!.id }, maintenant);
+		const avant = base.requetes;
+		await notifierPublication(base, id, maintenant);
+		expect(base.requetes - avant).toBe(2);
+		expect((await file()).find((e) => e.a === 'Bruno')).toMatchObject({ titre: 'Amicale a publié dans Vie du centre', texte: 'Repas de Sainte-Barbe' });
+		const { lignes } = await filDeNotifications(base, acteur(bruno), maintenant);
+		expect(lignes[0]).toMatchObject({ type: 'publication', nomMur: 'Vie du centre', auteur: { prenom: 'Alice', nom: 'Test' }, comite: { nom: 'Amicale', icone: 'coeur' } });
 	});
 
 	it('150 agents : 2 appels à la base, 100 paramètres au plus', async () => {
