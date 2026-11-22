@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNotNull, lte } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, lte } from 'drizzle-orm';
 import type { Base } from '../base.ts';
 import { dePlage, jourEnLettres, reunir, soustraire } from '../remplacements/tranches.ts';
 import { ajouterJours } from '../dates.ts';
@@ -22,11 +22,11 @@ export function requetePlagesPubliees(base: Base, du: string, au: string) {
 // Les fêtes qui touchent ces jours (une fête dure 24 h au plus : elle commence au plus tard la veille). Quelques lignes, à placer
 // dans le batch qui lit déjà l'astreinte.
 export function requeteFetes(base: Base, du: string, au: string) {
+	// Sans liste de colonnes ni tri : la requête la plus simple à construire, elle est lue à chaque page qui montre l'astreinte.
 	return base
-		.select({ id: feteCentre.id, nom: feteCentre.nom, debut: feteCentre.debut, fin: feteCentre.fin, equipeId: feteCentre.equipeId })
+		.select()
 		.from(feteCentre)
-		.where(and(gte(feteCentre.debut, ajouterJours(du.slice(0, 10), -1)), lte(feteCentre.debut, `${au.slice(0, 10)}T23:59`)))
-		.orderBy(asc(feteCentre.debut));
+		.where(and(gte(feteCentre.debut, ajouterJours(du.slice(0, 10), -1)), lte(feteCentre.debut, `${au.slice(0, 10)}T23:59`)));
 }
 
 export const dansLaSemaine = (s: SemaineCalculee, p: Periode) => s.periodes.some((x) => x.debut <= p.debut && p.fin <= x.fin);

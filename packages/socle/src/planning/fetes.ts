@@ -172,10 +172,11 @@ export function fetesDeLAnnee(annee: number, lues: FeteLue[], saisies: { annee: 
 	historique.sort((x, y) => y.annee - x.annee || x.nom.localeCompare(y.nom, 'fr'));
 	const fetes = lues
 		.filter((f) => f.debut.startsWith(`${annee}-`))
+		.sort((x, y) => x.debut.localeCompare(y.debut))
 		.map((f) => {
 			const derniere = (id: number) => Math.max(-Infinity, ...historique.filter((h) => h.annee < annee && h.equipeId === id && memeNom(h.nom, f.nom)).map((h) => h.annee));
 			const plusAncienne = Math.min(...equipes.map(derniere));
-			return { ...f, attendues: equipes.filter((id) => derniere(id) === plusAncienne) };
+			return { id: f.id, nom: f.nom, debut: f.debut, fin: f.fin, equipeId: f.equipeId, attendues: equipes.filter((id) => derniere(id) === plusAncienne) };
 		});
 	return { fetes, historique };
 }
