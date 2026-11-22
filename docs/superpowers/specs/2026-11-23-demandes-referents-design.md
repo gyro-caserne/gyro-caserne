@@ -1,6 +1,6 @@
 # Demandes aux référents (C1) : design
 
-Sujet C du lot « comités », en deux temps choisis par le porteur le 23/11/2026 :
+Sujet C du lot « comités », en deux temps choisis par le porteur le 23/11/2026 ; design validé par lui le même jour :
 - **C1**, ce document : un système commun de demandes, pour les référents qui en reçoivent (pharmacie et matériel d'abord). L'habillement n'y entre pas encore.
 - **C2**, lot court ensuite : les demandes d'habillement passent dans le système commun, puis l'ancien code est retiré. La migration est essayée sur une copie de la base de production.
 
