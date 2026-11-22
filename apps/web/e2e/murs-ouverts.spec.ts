@@ -19,17 +19,19 @@ test.describe('murs ouverts à un profil', () => {
 			INSERT INTO personne (email, prenom, nom, profil_id) SELECT '${EMAIL}', 'René', 'Ancien', (SELECT id FROM profil WHERE nom = 'Retraité e2e') WHERE NOT EXISTS (SELECT 1 FROM personne WHERE email = '${EMAIL}');`);
 	});
 
-	test('il voit le mur de son comité, y publie, et ne voit pas Le centre', async ({ page }) => {
+	test('il voit le mur de son comité, y publie, et ne voit pas Le centre', async ({ page }, info) => {
+		// Un texte propre à chaque passage : la base est partagée entre téléphone et ordinateur.
+		const texte = `Bonjour les anciens (${info.project.name}, ${info.retry})`;
 		await connecter(page, EMAIL);
 		await page.goto('/echanges');
 		await expect(page.getByRole('link', { name: /Retraités e2e/ })).toBeVisible();
 		await expect(page.locator('a[href="/echanges/centre"]')).toHaveCount(0);
 		await page.getByRole('link', { name: /Retraités e2e/ }).first().click();
 		await page.getByRole('link', { name: /^Publier dans / }).click();
-		await page.getByLabel('Votre message', { exact: true }).fill('Bonjour les anciens');
+		await page.getByLabel('Votre message', { exact: true }).fill(texte);
 		await page.getByRole('button', { name: /^Publier/ }).click();
 		await page.waitForURL(/\/echanges\/comite:\d+#publication-\d+$/);
-		await expect(page.getByText('Bonjour les anciens')).toBeVisible();
+		await expect(page.getByText(texte)).toBeVisible();
 		expect((await page.goto('/echanges/centre'))?.status()).toBe(403);
 	});
 });
