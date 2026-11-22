@@ -6,7 +6,7 @@ L'été, beaucoup d'agents partent en vacances. Les chefs gardaient autant que p
 
 ## Les étapes
 
-L'écran de l'été (chef, Planning → Préparer l'année → « Été ») commence par un **résumé** (« Proposé, 10 semaines, FPT armé partout, 4 agents en vacances, 3 sans réponse ») et suit quatre étapes, avec une barre de progression : **Période → Vacances → Répartition → Publier**. Le bouton « Publier l'été » est à la dernière étape, en bas de l'écran ; avant, « Publier › » y conduit.
+L'écran de l'été (chef, Planning → Préparer l'année → « Été ») commence par un **résumé** (« Proposé, 10 semaines, FPT armé partout, 4 agents en vacances, 3 sans réponse ») et suit quatre étapes, avec une barre de progression : **Période → Vacances → Répartition → Publier**. Le bouton « Publier l'été » est à la dernière étape, en bas de l'écran ; avant, « Étape suivante (Publier) » y conduit.
 
 1. **Période** : une phrase (« Du ven. 25 juin au jeu. 2 sept., vacances à donner avant le 15 mai ») ; « Modifier » ouvre un panneau. Par défaut, de la dernière relève de juin à la dernière d'août, en semaines d'astreinte entières, et le 15 mai. « Ouvrir la saisie des vacances » ouvre l'été.
 2. **Vacances** : les agents donnent leurs vacances dans Moi → « Mes vacances » (des périodes du… au…, ou « Je suis disponible tout l'été »). Rappel un mois puis une semaine avant la date limite, seulement à ceux qui n'ont rien saisi. Le chef voit trois rangées avec leur compte, qu'on déplie pour les noms : **Ont répondu** (avec des vacances), **Sans réponse**, **Disponibles tout l'été**. « Relancer les 3 sans-réponse » envoie tout de suite un rappel à eux seuls, une fois par jour au plus (le rappel automatique du jour compte). Sans réponse, un agent compte comme disponible.

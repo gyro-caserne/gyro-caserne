@@ -222,11 +222,11 @@
 	</section>
 
 	<nav class="suite" aria-label="Étape précédente ou suivante">
-		{#if rang > 0}<a href={vers(ETAPES_ETE[rang - 1]!.id)}>‹ {ETAPES_ETE[rang - 1]!.libelle}</a>{:else}<span></span>{/if}
-		{#if rang < ETAPES_ETE.length - 1}<a href={vers(ETAPES_ETE[rang + 1]!.id)}>{ETAPES_ETE[rang + 1]!.libelle} ›</a>{/if}
+		{#if rang > 0}<a href={vers(ETAPES_ETE[rang - 1]!.id)}>Étape précédente ({ETAPES_ETE[rang - 1]!.libelle})</a>{:else}<span></span>{/if}
+		{#if rang < ETAPES_ETE.length - 1}<a href={vers(ETAPES_ETE[rang + 1]!.id)}>Étape suivante ({ETAPES_ETE[rang + 1]!.libelle})</a>{/if}
 	</nav>
 
-	<!-- Le bouton de publication vit à la dernière étape ; avant, « Publier › » y conduit. -->
+	<!-- Le bouton de publication vit à la dernière étape ; avant, « Étape suivante (Publier) » y conduit. -->
 	{#if data.etape === 'publier' && e.proposee && !e.ete?.publiee}
 		<BarreActions message={aRevoir ? `${pluriel(aRevoir, 'plage', 'plages')} sans FPT armé. Vous pouvez publier quand même.` : ''}>
 			<form method="POST" action={action('publier')}><Bouton type="submit">Publier l’été {e.annee}</Bouton></form>

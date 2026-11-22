@@ -61,7 +61,7 @@ test.describe('chef : préparer l’année', () => {
 		await expect(page.getByRole('dialog', { name: 'Recalculer la proposition ?' })).toBeVisible();
 		await page.getByRole('link', { name: 'Annuler' }).click();
 		await expect(page.getByRole('dialog')).toHaveCount(0);
-		await page.getByRole('navigation', { name: 'Étape précédente ou suivante' }).getByRole('link', { name: /^Publier/ }).click();
+		await page.getByRole('navigation', { name: 'Étape précédente ou suivante' }).getByRole('link', { name: 'Étape suivante (Publier)' }).click();
 		await expect(page.getByRole('button', { name: `Publier l’été ${annee}` })).toBeVisible();
 		await sansViolation(page);
 	});
