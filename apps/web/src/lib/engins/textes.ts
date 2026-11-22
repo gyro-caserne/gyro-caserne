@@ -6,11 +6,11 @@ import { pluriel } from '#lib/pluriel.ts';
 export const ETATS = { disponible: { texte: 'Disponible', ton: 'ok' }, avertissement: { texte: 'Avertissement', ton: 'alerte' }, indisponible: { texte: 'Indisponible', ton: 'danger' } } as const;
 export const etatAffiche = (etat: EnginVu['etat'], ouvertes: number): keyof typeof ETATS => (etat === 'indisponible' ? 'indisponible' : ouvertes > 0 ? 'avertissement' : 'disponible');
 
-// Où en est une anomalie, avec les libellés du centre : « En attente · au garage », « Close ».
+// Où en est une anomalie, avec les libellés du centre : « En attente (au garage) », « Close ».
 export function texteEtape(a: { etape: EtapeAnomalie; motif: MotifAttente | null; closeLe?: string | null }): string {
 	if (a.closeLe) return 'Close';
 	const etape = libelleEtape(a.etape, centre.anomalies);
-	return a.etape === 'en_attente' && a.motif ? `${etape} · ${LIBELLES_MOTIF[a.motif].toLocaleLowerCase('fr')}` : etape;
+	return a.etape === 'en_attente' && a.motif ? `${etape} (${LIBELLES_MOTIF[a.motif].toLocaleLowerCase('fr')})` : etape;
 }
 export const tonEtape = (a: { etape: EtapeAnomalie; closeLe?: string | null }): 'ok' | 'info' | 'alerte' => (a.closeLe ? 'ok' : a.etape === 'signalee' ? 'alerte' : 'info');
 
@@ -24,8 +24,7 @@ export function situationDe(e: Pick<EnginVu, 'situation' | 'provenance' | 'parti
 export function sousLigne(e: EnginVu): string {
 	// « VSAV 1 » dit déjà son type.
 	const infos = [e.nom.split(' ')[0] === e.type ? null : e.type, e.immatriculation, e.situation === 'prete' ? `prêté par ${e.provenance}` : null].filter(Boolean);
-	// Deux infos courtes : un point ; trois : des virgules.
-	return infos.join(infos.length > 2 ? ', ' : ' · ');
+	return infos.join(', ');
 }
 
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -35,7 +34,7 @@ export function dateCourte(iso: string): string {
 	return a && m && j ? `${j} ${MOIS[m - 1]} ${a}` : '';
 }
 
-export const compteFiche = (zones: { elements: unknown[] }[]) => `${pluriel(zones.length, 'zone')} · ${pluriel(zones.reduce((n, z) => n + z.elements.length, 0), 'élément')}`;
+export const compteFiche = (zones: { elements: unknown[] }[]) => `${pluriel(zones.length, 'zone')}, ${pluriel(zones.reduce((n, z) => n + z.elements.length, 0), 'élément')}`;
 
 // « 2 ajoutés, 1 retiré, rangement changé » ; « Aucun changement ».
 export function resumerFiche(c: { ajoutes: string[]; retires: string[]; modifies: string[]; ordre: boolean }): string {
@@ -73,8 +72,8 @@ export function etatPrise(p: EtatPriseVu): { texte: string; ton: 'ok' | 'info' |
 
 export const GENRES = { manquant: 'Manquant', abime: 'Abîmé', a_remplacer: 'À remplacer' } as const;
 
-// « Manquant : 1 sur 3 · sous le siège ».
+// « Manquant (1 sur 3), sous le siège ».
 export function texteEcart(e: { genre: keyof typeof GENRES; manque: number | null; note: string | null }, quantite: number | null = null): string {
-	const nombre = e.genre === 'manquant' && e.manque !== null ? ` : ${e.manque}${quantite ? ` sur ${quantite}` : ''}` : '';
-	return [`${GENRES[e.genre]}${nombre}`, e.note].filter(Boolean).join(' · ');
+	const nombre = e.genre === 'manquant' && e.manque !== null ? ` (${e.manque}${quantite ? ` sur ${quantite}` : ''})` : '';
+	return [`${GENRES[e.genre]}${nombre}`, e.note].filter(Boolean).join(', ');
 }

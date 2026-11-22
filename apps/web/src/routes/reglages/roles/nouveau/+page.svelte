@@ -25,7 +25,7 @@
 </script>
 
 <svelte:head>
-	<title>Nouveau rôle · Réglages · Gyro Caserne</title>
+	<title>Nouveau rôle</title>
 </svelte:head>
 
 <EnTetePage titre="Nouveau rôle" />
@@ -58,7 +58,8 @@
 		{/each}
 	</ul>
 {:else}
-	<p class="intro">Modèle : {choisi.nom}. {donne(choisi)}. <a href="/reglages/roles/nouveau">Changer de modèle</a></p>
+	<p class="intro">Modèle {choisi.nom}. {donne(choisi)}.</p>
+	<div><a class="lien-secondaire" href="/reglages/roles/nouveau">Changer de modèle</a></div>
 	<div role="alert">
 		{#if form?.message || form?.erreurs}<p class="echec">{form?.message ?? 'Le formulaire contient des erreurs.'}</p>{/if}
 	</div>

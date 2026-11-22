@@ -16,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>Nouveau message · Échanges · Gyro Caserne</title>
+	<title>Nouveau message</title>
 </svelte:head>
 
 <div class="page">

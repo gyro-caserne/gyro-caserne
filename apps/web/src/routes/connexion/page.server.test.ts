@@ -72,7 +72,7 @@ describe('connexion : taper le code', () => {
 		await expect(essai(agir, `${code.slice(0, 3)} ${code.slice(3)}`)).rejects.toMatchObject({ status: 303 });
 	});
 
-	const REFUS = /^Ce code ne marche pas : il est faux, a expiré \(5 minutes\) ou a déjà eu 3 essais\./;
+	const REFUS = /^Ce code ne marche pas. Il est faux, a expiré \(5 minutes\) ou a déjà eu 3 essais\./;
 
 	it('un code faux : un message clair, l’écran du code reste ouvert', async () => {
 		const { cookies, agir, dernierCode } = await jeu();

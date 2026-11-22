@@ -29,7 +29,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const faite = { mienne: mienne !== null, sienne: sienne !== null, verifier: false };
 	const etapeDemandee = ordre.find((e) => e === q.get('etape')) ?? ordre[0];
 	const manquante = ordre.slice(0, ordre.indexOf(etapeDemandee as never)).find((e) => !faite[e]);
-	const message = introuvable ? 'Cette manœuvre ne s’échange pas (elle convoque tout le centre, ou elle est passée) : choisissez-en une autre.' : manquante && q.has('etape') ? (manquante === 'mienne' ? 'Choisissez votre manœuvre.' : 'Choisissez la manœuvre d’un collègue.') : null;
+	const message = introuvable ? 'Cette manœuvre ne s’échange pas (elle convoque tout le centre, ou elle est passée). Choisissez-en une autre.' : manquante && q.has('etape') ? (manquante === 'mienne' ? 'Choisissez votre manœuvre.' : 'Choisissez la manœuvre d’un collègue.') : null;
 	return { miennes: lu.miennes, collegues, mienne, sienne, court, etape: manquante ?? etapeDemandee, message };
 };
 

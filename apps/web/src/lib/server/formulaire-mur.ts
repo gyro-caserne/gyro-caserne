@@ -53,7 +53,7 @@ export async function lirePublication(f: FormData, js = false): Promise<{ donnee
 	};
 	const fichiers = f.getAll('photos').filter((v): v is File => typeof v !== 'string' && v.size > 0);
 	if (fichiers.some((p) => p.size > TAILLE_PHOTO_MAX))
-		return { valeurs, erreurs: { photos: `Photo trop lourde : 200 Ko au plus.${js ? '' : ' Sans JavaScript, les photos ne sont pas réduites : réduisez-les avant de les envoyer.'}` } };
+		return { valeurs, erreurs: { photos: `Photo trop lourde, 200 Ko au plus.${js ? '' : ' Sans JavaScript, les photos ne sont pas réduites. Réduisez-les avant de les envoyer.'}` } };
 
 	// Le socle refuse un type inconnu.
 	const type = valeurs.type as DonneesPublication['type'];
@@ -74,7 +74,7 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Prise de connaissance réservée aux annonces': { champ: 'type', texte: 'La prise de connaissance ne se demande que pour une annonce.' },
 	'4 photos au plus': { champ: 'photos', texte: '4 photos au plus.' },
 	'Photo JPEG ou WebP seulement': { champ: 'photos', texte: 'Les photos doivent être en JPEG ou WebP.' },
-	'Photo trop lourde (200 Ko au plus)': { champ: 'photos', texte: 'Photo trop lourde : 200 Ko au plus.' },
+	'Photo trop lourde (200 Ko au plus)': { champ: 'photos', texte: 'Photo trop lourde, 200 Ko au plus.' },
 	'Question vide': { champ: 'sondage', texte: 'Indiquez la question du sondage.' },
 	'Question trop longue': { champ: 'sondage', texte: 'La question ne peut pas dépasser 200 caractères.' },
 	'Réponse trop longue': { champ: 'sondage', texte: 'Une réponse ne peut pas dépasser 100 caractères.' },
@@ -84,7 +84,7 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Clôture invalide': { champ: 'cloture', texte: 'Indiquez une date et une heure de clôture valides.' },
 	'Dates du sondage manquantes': { champ: 'cloture', texte: 'Indiquez les dates d’ouverture et de clôture du sondage.' },
 	'Clôture avant l’ouverture': { champ: 'cloture', texte: 'Le sondage doit se clore après son ouverture.' },
-	'Clôture déjà passée': { champ: 'cloture', texte: 'Cette date de clôture est déjà passée : choisissez-en une à venir.' },
+	'Clôture déjà passée': { champ: 'cloture', texte: 'Cette date de clôture est déjà passée. Choisissez-en une à venir.' },
 	'Clôture dans plus d’un an': { champ: 'cloture', texte: 'Le sondage ne peut pas durer plus d’un an.' },
 	'Clôture après le début de l’événement': { champ: 'cloture', texte: 'Le sondage doit se clore au plus tard au début de l’événement.' },
 	'Date et lieu de l’événement manquants': { champ: 'debut', texte: 'Indiquez la date et l’heure.' },
@@ -102,8 +102,8 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Réponse inconnue': { texte: 'Choisissez une réponse.' },
 	'Sondage pas encore ouvert': { texte: 'Ce sondage n’est pas encore ouvert.' },
 	'Sondage fermé': { texte: 'Ce sondage est fermé.' },
-	'Cet événement est passé': { texte: 'Cet événement est passé : vous ne pouvez plus répondre.' },
-	'Réservé aux personnes ayant une fiche': { texte: 'Le super administrateur n’a pas de fiche : ce geste est réservé aux agents.' }
+	'Cet événement est passé': { texte: 'Cet événement est passé. Vous ne pouvez plus répondre.' },
+	'Réservé aux personnes ayant une fiche': { texte: 'Le super administrateur n’a pas de fiche. Ce geste est réservé aux agents.' }
 };
 
 // Refus du socle dont la raison est à dire telle quelle.

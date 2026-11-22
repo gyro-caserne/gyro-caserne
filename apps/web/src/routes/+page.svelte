@@ -67,7 +67,7 @@
 </script>
 
 <svelte:head>
-	<title>Accueil · Gyro Caserne</title>
+	<title>Accueil</title>
 </svelte:head>
 
 {#snippet gyroAccueil()}<GyroAccueil taille={72} {ambiance} />{/snippet}
@@ -80,7 +80,7 @@
 		<p class="vigilance-discrete" class:niveau-1={discrete.etat === 'ok' && discrete.niveau === 1} class:niveau-2={discrete.etat === 'ok' && discrete.niveau === 2}>
 			<span class="jeton" aria-hidden="true"></span>
 			<a href="https://vigilance.meteofrance.fr/" rel="external"
-				>{#if discrete.etat === 'indisponible'}Vigilance indisponible, voir Météo-France{:else}{discrete.niveau === 1 ? 'Vigilance verte' : discrete.lignes.join(' ; ')}{#if discrete.lieu}<span class="source">{` · ${discrete.lieu}`}</span>{/if}{/if}</a
+				>{#if discrete.etat === 'indisponible'}Vigilance indisponible, voir Météo-France{:else}{discrete.niveau === 1 ? 'Vigilance verte' : discrete.lignes.join(' ; ')}{#if discrete.lieu}<span class="source">{`, ${discrete.lieu}`}</span>{/if}{/if}</a
 			>
 		</p>
 	{/if}

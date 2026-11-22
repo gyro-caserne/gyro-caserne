@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>Quelques heures · Me faire remplacer · Gyro Caserne</title>
+	<title>Me faire remplacer quelques heures</title>
 </svelte:head>
 
 <div class="page">

@@ -7,6 +7,6 @@ Ouvert au chef de centre et à son adjoint (droit « Gérer le planning »).
 3. **Vacances** : dépliez « Ont répondu », « Sans réponse » ou « Disponibles tout l'été » pour voir les noms. « Relancer les … sans-réponse » leur envoie un rappel tout de suite (une fois par jour au plus).
 4. **Répartition** : « Proposer la répartition ». Les semaines à revoir viennent en tête ; dépliez-en une et touchez une plage. S'il y a des remplacements à revoir, touchez leur nombre pour les lire.
 5. Dans le panneau : qui tient quel poste, ce qui manque ; « Retirer » ou « Ajouter » un agent (ceux qui comblent le manque d'abord).
-6. « Publier › », relisez le récapitulatif, puis « Publier l'été 2027 », en bas de l'écran. Le planning de chacun suit ; les renforts sont prévenus. Après, chaque changement vaut tout de suite et prévient l'agent touché.
+6. « Étape suivante (Publier) », relisez le récapitulatif, puis « Publier l'été 2027 », en bas de l'écran. Le planning de chacun suit ; les renforts sont prévenus. Après, chaque changement vaut tout de suite et prévient l'agent touché.
 
 Le réglage des équipages se fait dans Réglages → « Armement des engins » : « Modifier » sur un engin, puis − et +.

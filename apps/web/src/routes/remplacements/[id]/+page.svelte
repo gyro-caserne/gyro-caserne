@@ -15,7 +15,7 @@
 		[
 			{ titre: 'Sans validation', phrase: 'Ont vos aptitudes contrôlées.', agents: data.disponibles.filter((a) => a.aptitudes) },
 			v.court
-				? { titre: 'Le chef de garde sera prévenu', phrase: 'Il leur manque une de vos aptitudes contrôlées : il pourra refuser.', agents: data.disponibles.filter((a) => !a.aptitudes) }
+				? { titre: 'Le chef de garde sera prévenu', phrase: 'Il leur manque une de vos aptitudes contrôlées. Il pourra refuser.', agents: data.disponibles.filter((a) => !a.aptitudes) }
 				: { titre: 'À faire valider par le chef', phrase: 'Il leur manque une de vos aptitudes contrôlées.', agents: data.disponibles.filter((a) => !a.aptitudes) }
 		].filter((g) => g.agents.length > 0)
 	);
@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.reduite ? 'Remplacement' : titreDemande(v)} · Remplacements · Gyro Caserne</title>
+	<title>{data.reduite ? 'Remplacement' : titreDemande(v)}</title>
 </svelte:head>
 
 {#if data.reduite}

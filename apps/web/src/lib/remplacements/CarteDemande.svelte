@@ -85,7 +85,7 @@
 						<input type="hidden" name="id" value={v.id} />
 						<input type="hidden" name="confirmation" value="oui" />
 						<p>{v.moi === 'demandeur' ? 'Vous restez d’astreinte' : `${qui} reste d’astreinte`} {v.texte}. {v.remplacant?.prenom ?? 'Le remplaçant'} est prévenu ; la demande ne repart pas.</p>
-						<button type="submit" class="bouton danger">Je confirme : refuser ce remplaçant</button>
+						<button type="submit" class="bouton danger">Oui, refuser ce remplaçant</button>
 					</form>
 				</details>
 			{/if}

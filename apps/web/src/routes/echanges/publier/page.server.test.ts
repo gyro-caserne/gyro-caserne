@@ -121,12 +121,12 @@ describe('publier', () => {
 		const { base, alice } = await preparer();
 		const corps: [string, string | File][] = [['mur', 'vie'], ['type', 'message'], ['texte', 'x'], ['photos', jpeg(200 * 1024 + 1)]];
 		const sans = await envoyer(locaux(base, alice), await requeteFormulaire(corps));
-		expect(sans.data.erreurs.photos).toBe('Photo trop lourde : 200 Ko au plus. Sans JavaScript, les photos ne sont pas réduites : réduisez-les avant de les envoyer.');
+		expect(sans.data.erreurs.photos).toBe('Photo trop lourde, 200 Ko au plus. Sans JavaScript, les photos ne sont pas réduites. Réduisez-les avant de les envoyer.');
 		const avec = await envoyer(locaux(base, alice), await requeteFormulaire(corps, { 'x-sveltekit-action': 'true' }));
-		expect(avec.data.erreurs.photos).toBe('Photo trop lourde : 200 Ko au plus.');
+		expect(avec.data.erreurs.photos).toBe('Photo trop lourde, 200 Ko au plus.');
 		const lourd = (enTetes: Record<string, string>) => new Request('http://x', { method: 'POST', body: 'x', headers: { ...enTetes, 'content-type': 'multipart/form-data; boundary=a', 'content-length': String(2 * 1024 * 1024) } });
 		expect((await envoyer(locaux(base, alice), lourd({}))).data.message).toContain('Sans JavaScript');
-		expect((await envoyer(locaux(base, alice), lourd({ 'x-sveltekit-action': 'true' }))).data.message).toBe('Envoi trop lourd : 4 photos de 200 Ko au plus.');
+		expect((await envoyer(locaux(base, alice), lourd({ 'x-sveltekit-action': 'true' }))).data.message).toBe('Envoi trop lourd, 4 photos de 200 Ko au plus.');
 	});
 
 	it('refus affichés sur le formulaire, saisie et mur gardés', async () => {
@@ -178,7 +178,7 @@ describe('publier', () => {
 			[[['ouverture', 'demain'], ['cloture', septJoursPlusTard(m)]], 'ouverture', 'Indiquez une date et une heure d’ouverture valides.'],
 			[[['ouverture', m], ['cloture', '2026-11-01T25:00']], 'cloture', 'Indiquez une date et une heure de clôture valides.'],
 			[[['ouverture', m], ['cloture', m]], 'cloture', 'Le sondage doit se clore après son ouverture.'],
-			[[['ouverture', '2020-01-01T10:00'], ['cloture', '2020-01-02T10:00']], 'cloture', 'Cette date de clôture est déjà passée : choisissez-en une à venir.'],
+			[[['ouverture', '2020-01-01T10:00'], ['cloture', '2020-01-02T10:00']], 'cloture', 'Cette date de clôture est déjà passée. Choisissez-en une à venir.'],
 			[[['ouverture', m], ['cloture', `${Number(m.slice(0, 4)) + 2}${m.slice(4)}`]], 'cloture', 'Le sondage ne peut pas durer plus d’un an.'],
 			[[['ouverture', m], ['cloture', septJoursPlusTard(demain())]], 'cloture', 'Le sondage doit se clore au plus tard au début de l’événement.', [['type', 'evenement'], ['debut', demain()], ['lieu', 'Ici']]]
 		];

@@ -89,8 +89,8 @@ describe('page d’une demande', () => {
 		expect(html).toContain('Remplacement court');
 		expect(html).toMatch(/<details class="plus[^"]*"><summary class="bouton secondaire[^"]*">Refuser ce remplaçant/);
 		expect(html).toContain('Vous restez d’astreinte lundi 9 novembre, de 20 h à 22 h. Bruno est prévenu ; la demande ne repart pas.');
-		expect(html).toMatch(/name="confirmation" value="oui"[\s\S]*?class="bouton danger[^"]*">Je confirme : refuser ce remplaçant/);
-		expect(html).toContain('Il manque CA1 au remplaçant : le chef de garde peut refuser jusqu’au début.');
+		expect(html).toMatch(/name="confirmation" value="oui"[\s\S]*?class="bouton danger[^"]*">Oui, refuser ce remplaçant/);
+		expect(html).toContain('Il manque CA1 au remplaçant. Le chef de garde peut refuser jusqu’au début.');
 		expect(html).not.toContain('Validée par le chef');
 		// Refusé : la frise dit par qui, une seule fois.
 		const refuse = page({ demande: demande({ ...court, etat: 'annulee', remplacant: bruno, motif: 'Refusé par le demandeur', gestes: { ...gestes, annuler: false } }) });

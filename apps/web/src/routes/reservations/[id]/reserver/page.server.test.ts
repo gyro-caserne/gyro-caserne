@@ -48,7 +48,7 @@ describe('/reservations/[id]/reserver', () => {
 	it('un refus du socle est redit, les valeurs gardées', async () => {
 		const { base, alice, bancs } = await preparer();
 		const r = await envoyer(locaux(base, alice), bancs, [['debut', dans(2)], ['fin', dans(2)], ['quantite', '13'], ['mot', 'Fête']]);
-		expect(r).toMatchObject({ status: 400, data: { message: expect.stringMatching(/^Bancs : il en reste 12 le .+\.$/), valeurs: { debut: dans(2), quantite: '13', mot: 'Fête' } } });
+		expect(r).toMatchObject({ status: 400, data: { message: expect.stringMatching(/^Bancs, il en reste 12 le .+\.$/), valeurs: { debut: dans(2), quantite: '13', mot: 'Fête' } } });
 		expect(r.data.message).not.toMatch(/\.\.$/);
 	});
 });

@@ -77,7 +77,7 @@ describe('liste des murs', () => {
 
 	it('une tuile sans publication le dit', () => {
 		etat.page.params = {};
-		expect(texte(html())).toContain('Vie du centre · tout le monde Rien de publié pour l’instant');
+		expect(texte(html())).toContain('Vie du centre (tout le monde) Rien de publié pour l’instant');
 	});
 
 	it('Aujourd’hui : anniversaire avec « Souhaiter », et l’événement sans réponse', () => {
@@ -88,7 +88,7 @@ describe('liste des murs', () => {
 		expect(page).toMatch(/<form method="POST" action="\/echanges\?\/souhaiter"[^>]*>\s*<input type="hidden" name="id" value="12"\/?>\s*<input type="hidden" name="retour" value="\/echanges"\/?>[\s\S]*?<button type="submit" class="secondaire[^"]*"[^>]*>[\s\S]*?Souhaiter<span class="masque">[^<]*à Thomas Aubry<\/span>/);
 		expect(page).not.toContain('/echanges/publier?mur=vie');
 		expect(page).toContain('href="/echanges/centre/7"');
-		expect(texte(page)).toContain('vous n’avez pas répondu');
+		expect(texte(page)).toContain('Vous n’avez pas répondu');
 	});
 
 	it('sans rien aujourd’hui, ni groupe, ni supervision : pas de section vide', () => {
@@ -105,7 +105,7 @@ describe('liste des murs', () => {
 		const supervision = [{ ...sections.supervision[0], nouveautes: 4 }];
 		const page = texte(html({ sections: { ...sections, supervision } }, 'sobre'));
 		expect(page).toContain('5 nouveautés depuis votre dernière visite.');
-		expect(page).toContain('Supervision · 4 nouveautés');
+		expect(html({ sections: { ...sections, supervision } }, 'sobre')).toMatch(/Supervision (<!--[^>]*-->)*<span class="compte[^"]*"><span aria-hidden="true">4<\/span><span class="masque[^"]*">4 nouveautés<\/span>/);
 		expect(texte(html({}, 'sobre'))).toContain('Supervision (1)');
 		const seule = { ...sections, centre: { ...sections.centre, nouveautes: 0 }, groupes: [], supervision };
 		expect(texte(html({ sections: seule }, 'sobre'))).toContain('Rien de neuf depuis votre dernière visite.');
@@ -203,7 +203,7 @@ describe('liste des murs', () => {
 		expect(texte(colonne)).toContain('Jeu. 5 nov., 19 h Manœuvre désincarcération');
 		expect(texte(colonne)).toContain('Sam. 28 nov., 12 h 30 Repas de Sainte-Barbe (Amicale)');
 		// L'événement sans réponse est déjà dans « À venir » : pas en double.
-		expect(texte(colonne)).not.toContain('vous n’avez pas répondu');
+		expect(texte(colonne)).not.toContain('Vous n’avez pas répondu');
 	});
 
 	it('À venir : un événement commencé dit « En cours » en toutes lettres', () => {

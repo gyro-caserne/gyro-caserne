@@ -217,7 +217,7 @@ export async function epingler(base: Base, acteur: Acteur, id: number, oui: bool
 	// Au-delà de dix, une épinglée ne serait plus affichée : on refuse plutôt que de la cacher.
 	if (oui && ligne.epinglee === 0) {
 		const [{ n }] = (await base.select({ n: count() }).from(publication).where(and(eq(publication.mur, cle), eq(publication.epinglee, 1)))) as [{ n: number }];
-		if (n >= EPINGLEES_MAX) throw new DonneeInvalide('Dix publications sont déjà épinglées : désépinglez-en une d’abord');
+		if (n >= EPINGLEES_MAX) throw new DonneeInvalide('Dix publications sont déjà épinglées. Désépinglez-en une d’abord');
 	}
 	await base.batch([base.update(publication).set({ epinglee: oui ? 1 : 0 }).where(eq(publication.id, id)), journalPublication(base, acteur, oui ? 'epingler' : 'desepingler', id, maintenant)]);
 }

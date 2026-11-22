@@ -8,7 +8,7 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn(), invalidateAll: vi.fn() }));
 const { default: Page } = await import('./+page.svelte');
 
 const zones = [
-	{ ref: 1, nom: 'Cabine', elements: [{ ref: 10, libelle: 'Radio : essai', quantite: null }] },
+	{ ref: 1, nom: 'Cabine', elements: [{ ref: 10, libelle: 'Essai radio', quantite: null }] },
 	{ ref: 2, nom: 'Coffres', elements: [{ ref: 20, libelle: 'Lances', quantite: 2 }] }
 ];
 const data = (saisie: Record<string, unknown> = {}) => ({
@@ -35,7 +35,7 @@ const html = (d: unknown, form: unknown = null) => render(Page as any, { props: 
 const tete = (d: unknown) => render(Page as any, { props: { data: d, form: null } }).head;
 
 const zonesLongues = [
-	{ ref: 1, nom: 'Cabine', elements: [{ ref: 10, libelle: 'Radio : essai', quantite: null }] },
+	{ ref: 1, nom: 'Cabine', elements: [{ ref: 10, libelle: 'Essai radio', quantite: null }] },
 	...Array.from({ length: 6 }, (_, i) => ({ ref: i + 2, nom: `Coffre arrière droit numéro ${i + 2} sous le marchepied`, elements: [] }))
 ];
 const lecture = (autres: Record<string, unknown> = {}) => ({ ...data(), prise: null, ...autres });
@@ -48,9 +48,9 @@ describe('/engins/[id]/prise', () => {
 		expect(page).toMatch(/<nav[^>]*aria-label="Zones de l’engin"/);
 		expect(page).toMatch(/href="\?zone=1#titre-zone"[^>]*aria-current="true"[\s\S]*?Cabine[\s\S]*?1 à voir/);
 		expect(page).toMatch(/href="\?zone=2#titre-zone"[\s\S]*?Coffres[\s\S]*?1 à voir/);
-		expect(page).toContain('Radio : essai');
+		expect(page).toContain('Essai radio');
 		expect(page).not.toContain('Lances');
-		expect(avant('Radio : essai', 'Tout est complet', page)).toBe(true);
+		expect(avant('Essai radio', 'Tout est complet', page)).toBe(true);
 	});
 
 	it('une ligne : le lien « Écart » nommé pour les lecteurs d’écran, la quantité attendue visible', () => {
@@ -74,15 +74,15 @@ describe('/engins/[id]/prise', () => {
 		const page = html(data({ zones: [1] }), { cible: 'zone:1', zone: null, zoneFaite: 1, succes: 'Zone complète.' });
 		expect(page).toMatch(/href="\?zone=2#titre-zone"[^>]*aria-current="true"/);
 		expect(page).toContain('Lances');
-		expect(page).not.toContain('Radio : essai');
-		expect(page).toMatch(/name="zone" value="1"[\s\S]*?Cabine : tout est complet[\s\S]*?name="vue" value="0"[\s\S]*?Annuler/);
+		expect(page).not.toContain('Essai radio');
+		expect(page).toMatch(/name="zone" value="1"[\s\S]*?Cabine, tout est complet[\s\S]*?name="vue" value="0"[\s\S]*?Annuler/);
 		expect(page).toMatch(/href="\?zone=1#titre-zone"[^>]*class="vue[\s\S]*?Tout est complet/);
 	});
 
 	it('une zone déjà complète se revoit : « Complet », et le geste s’annule', () => {
 		adresse.url = new URL('http://x/engins/1/prise?zone=1');
 		const page = html(data({ zones: [1] }));
-		expect(page).toMatch(/Radio : essai[\s\S]*?Tout est complet<\/p>[\s\S]*?Revoir la zone/);
+		expect(page).toMatch(/Essai radio[\s\S]*?Tout est complet<\/p>[\s\S]*?Revoir la zone/);
 	});
 
 	it('un refus ou un écart : on reste sur la zone touchée', () => {
@@ -115,7 +115,7 @@ describe('/engins/[id]/prise', () => {
 	it('avant de commencer : les zones se lisent, le premier geste part sans prise ; plus de bouton « Commencer »', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
 		const page = html(lecture());
-		expect(page).toContain('Radio : essai');
+		expect(page).toContain('Essai radio');
 		expect(page).toMatch(/name="prise" value=""/);
 		expect(page).toContain('Tout est complet');
 		expect(page).toContain('Le premier geste commence la prise');
@@ -133,12 +133,12 @@ describe('/engins/[id]/prise', () => {
 	});
 
 	it('lecture seule, brouillon ou non : les zones et les écarts se lisent, aucun geste', () => {
-		const ouverte = { id: 3, ref: 10, zone: 'Cabine', libelle: 'Radio : essai', genre: 'abime', manque: null, note: null, photo: null, signaleeLe: '2026-10-23T18:30', signaleePar: 'Mila Clément', etape: 'signalee', motif: null, bloquante: false };
+		const ouverte = { id: 3, ref: 10, zone: 'Cabine', libelle: 'Essai radio', genre: 'abime', manque: null, note: null, photo: null, signaleeLe: '2026-10-23T18:30', signaleePar: 'Mila Clément', etape: 'signalee', motif: null, bloquante: false };
 		for (const url of ['http://x/engins/1/prise', 'http://x/engins/1/prise?participants']) {
 			adresse.url = new URL(url);
 			for (const d of [lecture({ peutFaire: false, ouvertes: [ouverte] }), { ...data({ zones: [1, 2], ecarts: { '10': { genre: 'abime', manque: null, note: '', photo: null } } }), peutFaire: false, ouvertes: [ouverte] }]) {
 				const page = html(d);
-				expect(page).toContain('Radio : essai');
+				expect(page).toContain('Essai radio');
 				expect(page).not.toContain('<form');
 				expect(page).not.toContain('<summary');
 				expect(page).not.toMatch(/<button[^>]*>Tout est complet/);
@@ -150,7 +150,7 @@ describe('/engins/[id]/prise', () => {
 	});
 
 	const commune = { genre: 'abime', manque: null, note: null, photo: null, signaleeLe: '2026-10-23T18:30', signaleePar: 'Mila Clément', etape: 'signalee', motif: null, bloquante: false };
-	const surRadio = { ...commune, id: 3, ref: 10, zone: 'Cabine', libelle: 'Radio : essai' };
+	const surRadio = { ...commune, id: 3, ref: 10, zone: 'Cabine', libelle: 'Essai radio' };
 	const horsFiche = { ...commune, id: 4, ref: null, zone: 'Autre', libelle: 'Phare avant' };
 
 	it('avant de commencer : le compte des signalements de la fiche, ceux hors de la fiche listés, le sélecteur le dit', () => {
@@ -167,7 +167,7 @@ describe('/engins/[id]/prise', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
 		const page = html(lecture({ ouvertes: [horsFiche] }));
 		expect(page).not.toContain('à voir dans');
-		expect(html(lecture({ ouvertes: [{ ...horsFiche, zone: '' }] }))).not.toMatch(/Phare avant[^<]*<span class="doux[^"]*">·/);
+		expect(html(lecture({ ouvertes: [{ ...horsFiche, zone: '' }] }))).not.toMatch(/Phare avant[^<]*<span class="doux[^"]*">,/);
 		expect(page).not.toContain('Aucun écart ouvert');
 	});
 
@@ -183,15 +183,27 @@ describe('/engins/[id]/prise', () => {
 	it('« Annuler » vient après le titre de la zone, où se pose le focus', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
 		const page = html(data({ zones: [1] }), { cible: 'zone:1', zone: null, zoneFaite: 1, succes: 'Zone complète.' });
-		expect(page).toMatch(/id="titre-zone"[\s\S]*?Cabine : tout est complet[\s\S]*?Annuler[\s\S]*?Lances/);
+		expect(page).toMatch(/id="titre-zone"[\s\S]*?Cabine, tout est complet[\s\S]*?Annuler[\s\S]*?Lances/);
 	});
 
 	it('les participants : une rangée en tête (« vous + 2 »), rappelés à la validation ; pas de liste à plat', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
 		const page = html(data());
 		expect(page).toMatch(/href="\?participants"[\s\S]*?Participants :<\/span> <strong>vous \+ 2<\/strong>/);
-		expect(html(data({ zones: [1, 2] }))).toMatch(/La prise sera au nom de : <strong>Mila Clément, vous, Élodie Chef-de-Garde<\/strong>/);
+		expect(html(data({ zones: [1, 2] }))).toMatch(/<p[^>]*>La prise sera à votre nom et à celui de Mila Clément et d’Élodie Chef-de-Garde\.<\/p>/);
 		expect(page).not.toContain('name="participant"');
+	});
+
+	it('le bloc Valider : des phrases, puis « Modifier les participants » en bouton secondaire sur sa ligne, et « Abandonner la prise » sans points de suspension', () => {
+		adresse.url = new URL('http://x/engins/1/prise');
+		const pret = html(data({ zones: [1, 2] }));
+		const bloc = pret.slice(pret.indexOf('id="valider"'), pret.indexOf('action="?/valider"'));
+		expect(bloc).toContain('L’engin reste disponible. Seuls le référent engins et les chefs décident d’une indisponibilité.');
+		expect(bloc).toMatch(/<\/p> <div[^>]*><a class="lien-secondaire[^"]*" href="\?participants"[^>]*>Modifier les participants<\/a><\/div>/);
+		expect(bloc).not.toMatch(/:\s*(<[^>]+>)*\s*vous/);
+		expect(html(data({ zones: [1, 2], participants: [1] }))).toMatch(/<p[^>]*>La prise sera à votre nom\.<\/p>/);
+		expect(html(data({ zones: [1, 2], participants: [2, 9] }))).toMatch(/<p[^>]*>La prise sera au nom de Mila Clément et d’Élodie Chef-de-Garde\.<\/p>/);
+		expect(pret).toMatch(/<summary[^>]*>Abandonner la prise<\/summary>/);
 	});
 
 	it('le panneau : l’équipe d’astreinte d’abord, une recherche, les cochés en pastilles ; sans JavaScript, tous les agents', () => {
@@ -315,7 +327,7 @@ describe('/engins/[id]/prise', () => {
 			adresse.url = new URL('http://x/engins/1/prise?zone=1');
 			const page = html(rouverte([{ id: 4, ref: 10, suivie: false, suiviePar: null }]));
 			expect(avant('Rouverte par Élodie Chef-de-Garde, ven. 19 h 30. Motif : Radio oubliée.', 'Zones de l’engin', page)).toBe(true);
-			expect(page).toMatch(/<summary[^>]*>Modifier<span class="masque[^"]*"> : Radio : essai/);
+			expect(page).toMatch(/<summary[^>]*>Modifier<span class="masque[^"]*"> : Essai radio/);
 			expect(page).toContain('Retirer l’écart');
 			expect(page).not.toContain('Abandonner la prise');
 			expect(page).not.toContain('Déjà suivie');
@@ -354,7 +366,7 @@ describe('/engins/[id]/prise', () => {
 
 	it('le titre de l’onglet, sans point médian', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
-		expect(tete(data())).toContain('<title>Prise de garde du FPT, Gyro Caserne</title>');
+		expect(tete(data())).toContain('<title>FPT, prise de garde</title>');
 	});
 
 	it('les photos d’écart, signalé ou noté pendant la prise, s’ouvrent en grand dans la visionneuse', () => {

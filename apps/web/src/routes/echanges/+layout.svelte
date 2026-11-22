@@ -72,7 +72,7 @@
 			<span class="corps">
 				<span class="ligne">
 					<strong class="nom">{t.nom}</strong>
-					{#if sorte(t) && !actif}<span class="sorte">· {sorte(t)}</span>{/if}
+					{#if sorte(t) && !actif}<span class="sorte">({sorte(t)})</span>{/if}
 					{#if t.lectureSeule}<Pastille ton="neutre">Lecture seule</Pastille>{/if}
 				</span>
 				{#if !actif}<span class="apercu" class:vide={!t.derniere}>{apercu(t)}</span>{/if}
@@ -124,7 +124,7 @@
 									>
 									<span class="quoi">
 										<strong>{e.titre}</strong>
-										<span class="doux">{date(e.debut, { weekday: 'long', day: 'numeric', month: 'long' })}, {heure(e.debut)} · vous n’avez pas répondu</span>
+										<span class="doux">{date(e.debut, { weekday: 'long', day: 'numeric', month: 'long' })}, {heure(e.debut)}. Vous n’avez pas répondu.</span>
 									</span>
 								</a>
 							{/if}
@@ -154,7 +154,7 @@
 										{/if}
 										{#if c.derniere}
 											<span class="extrait"><strong>{c.derniere.auteur}</strong> : {c.derniere.texte}</span>
-											<span class="doux">{quand(c.derniere.creeLe)} · visible par tous les agents</span>
+											<span class="doux">{quand(c.derniere.creeLe)}, visible par tous les agents</span>
 										{:else}
 											<span class="doux">Rien de publié pour l’instant</span>
 										{/if}
@@ -186,7 +186,7 @@
 					{#if s.supervision.length > 0}
 						<details class="repli" open={ouvrir.supervision}>
 							<summary
-								>Supervision {#if totalSupervision > 0}· {pluriel(totalSupervision, 'nouveauté')}{:else}<span class="doux">({s.supervision.length})</span>{/if}</summary
+								>Supervision {#if totalSupervision > 0}<span class="compte"><span aria-hidden="true">{totalSupervision}</span><span class="masque">{pluriel(totalSupervision, 'nouveauté')}</span></span>{:else}<span class="doux">({s.supervision.length})</span>{/if}</summary
 							>
 							<ul>
 								{#each s.supervision as t (t.cle)}{@render tuile(t)}{/each}

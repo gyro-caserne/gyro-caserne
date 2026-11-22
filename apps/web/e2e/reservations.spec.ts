@@ -50,7 +50,7 @@ test('demander des bancs ; le super administrateur l’accepte depuis « À vali
 	const jour = jourAVenir(info);
 	const mot = `Fête ${Date.now().toString(36)}`;
 	await page.goto(`/reservations/2/reserver?jour=${jour}`);
-	await expect(page.getByRole('heading', { level: 1, name: 'Réserver · Bancs' })).toBeVisible();
+	await expect(page.getByRole('heading', { level: 1, name: 'Réserver Bancs' })).toBeVisible();
 	await page.getByLabel('Quantité').fill('99');
 	await expect(page.getByRole('status')).toContainText('Pas assez');
 	await page.getByLabel('Quantité').fill('2');
@@ -72,7 +72,7 @@ test('demander des bancs ; le super administrateur l’accepte depuis « À vali
 	await gestion.context().close();
 
 	await page.goto('/notifications');
-	await expect(page.getByRole('link', { name: /Bancs : demande acceptée/ }).first()).toBeVisible();
+	await expect(page.getByRole('link', { name: /Demande acceptée \(Bancs\)/ }).first()).toBeVisible();
 	await page.goto('/reservations/miennes');
 	await expect(page.locator('article', { hasText: mot })).toContainText('Acceptée');
 });

@@ -95,7 +95,7 @@ describe('nouveau groupe : créer', () => {
 		const { base, alice, bruno } = await preparer();
 		const cas: [[string, string][], string, string][] = [
 			[[['nom', '  '], ['membres', String(bruno.id)]], 'nom', 'Donnez un nom au groupe.'],
-			[[['nom', 'x'.repeat(61)], ['membres', String(bruno.id)]], 'nom', 'Nom trop long : 60 caractères au plus.'],
+			[[['nom', 'x'.repeat(61)], ['membres', String(bruno.id)]], 'nom', 'Nom trop long, 60 caractères au plus.'],
 			[[['nom', 'Garde'], ['icone', 'dragon'], ['membres', String(bruno.id)]], 'icone', 'Choisissez une icône de la liste.'],
 			[[['nom', 'Garde']], 'membres', 'Choisissez au moins une personne.'],
 			[[['nom', 'Garde'], ...Array.from({ length: 60 }, (_, i): [string, string] => ['membres', String(1000 + i)])], 'membres', '60 membres au plus, vous compris.']

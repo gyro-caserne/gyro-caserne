@@ -108,7 +108,7 @@ describe('Bulle', () => {
 	});
 
 	it('« modifié », « Message supprimé » et « Message retiré par la modération »', () => {
-		expect(texte(html(message({ modifie: true })))).toContain('modifié · 18 h 01');
+		expect(texte(html(message({ modifie: true })))).toContain('modifié, 18 h 01');
 		const supprime = html(message({ supprime: 'auteur', texte: '' }));
 		expect(texte(supprime)).toContain('Message supprimé');
 		expect(supprime).toMatch(/class="bulle[^"]* supprime/);

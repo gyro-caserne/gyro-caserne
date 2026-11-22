@@ -3,7 +3,7 @@ import type { Operation } from '@gyro-caserne/socle';
 // Le serveur n'a pas répondu : l'opération a pu être appliquée ou non.
 export class ConnexionPerdue extends Error {
 	constructor() {
-		super('Connexion perdue : cette opération a peut-être été appliquée. Réexportez pour vérifier.');
+		super('Connexion perdue. Cette opération a peut-être été appliquée. Réexportez pour vérifier.');
 		this.name = 'ConnexionPerdue';
 	}
 }

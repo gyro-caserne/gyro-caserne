@@ -78,6 +78,7 @@ Règles validées par le porteur le 21/11/2026. Elles valent pour les écrans, l
 
 - Français simple, phrases courtes.
 - **Titre de page** : un nom, sans verbe ni ponctuation finale, majuscule au premier mot seulement (« Suivi du centre », « Me faire remplacer »).
+- **Titre d'onglet** (`<title>`) : la page seule, sans le nom de l'appli (« Accueil », « Julie Martin », « FPT, prise du ven. 3 nov. »).
 - **Titre de section ou de zone** : un nom simple qui dit où l'on est (« Dessus de cabine », « Tiroir rouge », « Mes demandes ») ; pas de numérotation, sauf une vraie suite d'étapes.
 - **Libellé d'une ligne** : le nom de la chose, au plus court (« Masques FFP2 », « Julie Martin ») ; la quantité va dans sa colonne ou sa pastille, sauf si elle fait partie du nom (« Bouteille d'O2 5 L »).
 - **Sous-ligne** : une phrase ou un groupe de mots, avec des virgules et des mots de liaison, jamais un séparateur graphique (« Remplacé par Marc, de 20 h à 22 h »).
@@ -86,7 +87,11 @@ Règles validées par le porteur le 21/11/2026. Elles valent pour les écrans, l
 - **Notification** : le titre dit le fait, le texte le détail, en phrases (« Manœuvre modifiée par Claire Martin », puis « Feux de forêt, samedi 6 décembre à 8 h »).
 - **Écran vide, erreur** : ce qui se passe, puis quoi faire, sans excuse (« Aucune demande en cours. Pour en créer une, appuyez sur Me faire remplacer. »).
 - **Précisions** entre parenthèses (« Sac PS, pochette rouge (pansement) »).
-- **Interdits partout** : point médian « · » comme séparateur, tiret cadratin « — » en incise, barre « | » ou flèche « → » comme séparateur, emoji, majuscules espacées, deux-points suivis d'une révélation (« Résultat : … »), guillemets autour d'un mot inventé. Une garde automatique fait échouer la CI sur ces caractères.
+- **Interdits partout** : point médian « · » comme séparateur, tiret cadratin « — » en incise, barre « | » ou flèche « → » comme séparateur, emoji, majuscules espacées, deux-points suivis d'une révélation (« Résultat : … »), guillemets autour d'un mot inventé. Une garde automatique (`apps/web/src/textes.test.ts`) fait échouer la CI sur ces séparateurs, sur « … » dans un bouton ou un lien, sur un lien collé derrière une phrase, et sur « de : » et « : vous ».
+- **Deux-points entre deux idées** d'une même phrase : deux phrases (« L’engin reste disponible. Seuls le référent engins et les chefs décident d’une indisponibilité. », pas « disponible : seuls… »). La garde ne le voit pas : ces deux-points se relisent à la main.
+- **Deux-points devant une info courte ou un nom** : une phrase accordée (« La prise sera à votre nom. », « La prise sera au nom de Julie Martin et de Marc Petit. », jamais « au nom de : vous »). Les étiquettes de formulaire et les paires libellé et valeur d'une liste ne sont pas concernées.
+- **Points de suspension** dans un bouton ou un lien : jamais, même s'il ouvre une confirmation (« Abandonner la prise », pas « Abandonner la prise… »).
+- **Une action n'est jamais un lien collé derrière une phrase** : un bouton secondaire, sur sa propre ligne (`Bouton` secondaire, ou `.lien-secondaire` dans un `<div>` quand l'action ouvre une adresse ou un panneau). Un lien de navigation qui fait partie de la phrase reste dans la phrase.
 - Dates et heures par les fonctions communes, jamais à la main : `heure`, `jourEtHeure`, `deNom` (`lib/murs/quand.ts`), `jourLong`, `momentLong`, `duAu` (`lib/planning/dates.ts`), `dateCourte`, `jourCourt` (`lib/engins/textes.ts`) ; les nombres par `pluriel` (`lib/pluriel.ts`). Heures en « 19 h », « 16 h 04 ».
 - « Appuyer », pas « toucher », sur un écran qui sert aussi à l'ordinateur.
 - Un mot dit une fois : pas de description qui répète le titre, pas d'état dit deux fois (pastille et texte).

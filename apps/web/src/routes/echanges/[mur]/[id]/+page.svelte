@@ -50,7 +50,7 @@
 </script>
 
 <svelte:head>
-	<title>Publication {deNom(nom(p.auteur))} · {data.mur.nom} · Gyro Caserne</title>
+	<title>Publication {deNom(nom(p.auteur))}</title>
 </svelte:head>
 
 <div class="vers-mur"><Retour href="/echanges/{data.mur.cle}" libelle={data.mur.nom} /></div>
@@ -67,7 +67,7 @@
 		<ul class="commentaires">
 			{#each data.commentaires as c (c.id)}
 				<li id="commentaire-{c.id}" tabindex="-1">
-					<p><span class="auteur">{nom(c.auteur)}</span> <span class="doux">· le {quand(c.creeLe)}</span></p>
+					<p><span class="auteur">{nom(c.auteur)}</span><span class="doux">, le {quand(c.creeLe)}</span></p>
 					<p class="texte">{c.texte}</p>
 					{#if c.supprimable}
 						<form method="POST" action="?/supprimerCommentaire" use:enhance={surSuppression}>
@@ -84,7 +84,7 @@
 	{/if}
 
 	{#if data.mur.lectureSeule}
-		<p class="doux">Ce mur est en lecture seule : on n’y commente plus.</p>
+		<p class="doux">Ce mur est en lecture seule. On n’y commente plus.</p>
 	{:else if p.commentairesFermes}
 		<p class="doux">Les commentaires sont fermés.</p>
 	{:else}

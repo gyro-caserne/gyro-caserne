@@ -30,7 +30,7 @@
 </script>
 
 <svelte:head>
-	<title>{r.nom} · Réservations · Gyro Caserne</title>
+	<title>{r.nom}</title>
 </svelte:head>
 
 {#snippet etat(x: VueReservation)}{@const e = etatAffiche(x, data.aujourdhui)}<Pastille ton={e.ton}>{e.libelle}</Pastille>{/snippet}

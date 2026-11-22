@@ -18,11 +18,11 @@
 </script>
 
 <svelte:head>
-	<title>{e.nom} · Engins · Gyro Caserne</title>
+	<title>{e.nom}</title>
 </svelte:head>
 
 <div class="page">
-	<EnTetePage titre={e.nom} phrase={[e.type, e.immatriculation].filter(Boolean).join(' · ')} retour={{ href: '/engins', libelle: 'Engins' }} />
+	<EnTetePage titre={e.nom} phrase={[e.type, e.immatriculation].filter(Boolean).join(', ')} retour={{ href: '/engins', libelle: 'Engins' }} />
 
 	{#if e.situation !== 'parti' && (affiche !== 'disponible')}
 		<section class="bandeau {affiche === 'indisponible' ? 'danger' : 'alerte'}" aria-labelledby="titre-bandeau">
@@ -32,13 +32,14 @@
 					{#each ouvertes as o (o.id)}
 						<li>
 							<a href="/engins/anomalies/{o.id}"><strong>{o.libelle}</strong></a>
-							<span>· {texteEcart(o)}{o.bloquante ? ' · rend l’engin indisponible' : ''}</span>
+							<span>{texteEcart(o)}{o.bloquante ? ', rend l’engin indisponible' : ''}</span>
 							<Pastille ton={tonEtape(o)}>{texteEtape(o)}</Pastille>
 						</li>
 					{/each}
 				</ul>
 			{:else}
-				<p>Ses anomalies sont closes : la remise en service attend la décision du référent engins ou d’un chef.{#if data.aRemettre}{' '}<a href="/engins/anomalies/{data.aRemettre}">Voir l’anomalie et remettre en service</a>{/if}</p>
+				<p>Ses anomalies sont closes. La remise en service attend la décision du référent engins ou d’un chef.</p>
+				{#if data.aRemettre}<div><a class="lien-secondaire" href="/engins/anomalies/{data.aRemettre}">Voir l’anomalie et remettre en service</a></div>{/if}
 			{/if}
 		</section>
 	{/if}
@@ -78,7 +79,7 @@
 			<ListeRangees titre="Dernières prises">
 				{#each data.historique as h (h.id)}
 					<li>
-						<Rangee href="/engins/{e.id}/prises/{h.id}" titre="Relève du {jourCourt(h.releve)}" sous="Par {h.equipe ? parEquipe(h.equipe) : h.par}, {jourHeure(h.valideeLe)} · {h.signalees ? pluriel(h.signalees, 'écart') : 'complète'}{h.retrouvees ? ` · ${pluriel(h.retrouvees, 'retrouvé')}` : ''}" />
+						<Rangee href="/engins/{e.id}/prises/{h.id}" titre="Relève du {jourCourt(h.releve)}" sous="Par {h.equipe ? parEquipe(h.equipe) : h.par}, {jourHeure(h.valideeLe)}. {h.signalees ? pluriel(h.signalees, 'écart') : 'Complète'}{h.retrouvees ? `, ${pluriel(h.retrouvees, 'retrouvé')}` : ''}." />
 					</li>
 				{/each}
 			</ListeRangees>
@@ -87,7 +88,7 @@
 		<section class="fiche" aria-labelledby="titre-fiche">
 			<div class="tete">
 				<h2 id="titre-fiche">Fiche {data.fiche.type}</h2>
-				<p class="doux">{compteFiche(data.fiche.zones)} · version {data.fiche.version.numero}, du {dateCourte(data.fiche.version.creeLe)} ({data.fiche.version.auteur})</p>
+				<p class="doux">{compteFiche(data.fiche.zones)}. Version {data.fiche.version.numero} du {dateCourte(data.fiche.version.creeLe)} ({data.fiche.version.auteur}).</p>
 			</div>
 			{#if data.fiche.zones.length === 0}
 				<p class="doux">Cette fiche est encore vide.{data.gere ? ' Ajoutez ses zones et ses éléments depuis « Modifier la fiche ».' : ''}</p>

@@ -13,7 +13,7 @@ describe('page des réservations', () => {
 		const page = html({ mesAVenir: 2 });
 		expect(page).toMatch(/<h1[^>]*>Réservations<\/h1>/);
 		expect(page).toMatch(/href="\/caserne"[^>]*>[\s\S]*?Caserne/);
-		expect(page).toMatch(/href="\/reservations\/miennes"[\s\S]*?Mes réservations[\s\S]*?2 à venir[\s\S]*?href="\/reservations\/1"[\s\S]*?VL[\s\S]*?Par créneau, acceptée d’office si libre[\s\S]*?href="\/reservations\/2"[\s\S]*?Bancs[\s\S]*?12 en stock · validé par Amicale/);
+		expect(page).toMatch(/href="\/reservations\/miennes"[\s\S]*?Mes réservations[\s\S]*?2 à venir[\s\S]*?href="\/reservations\/1"[\s\S]*?VL[\s\S]*?Par créneau, acceptée d’office si libre[\s\S]*?href="\/reservations\/2"[\s\S]*?Bancs[\s\S]*?12 en stock, validé par Amicale/);
 		expect(page).not.toContain('/reservations/a-valider');
 		expect(page).not.toContain('/reservations/materiel');
 	});

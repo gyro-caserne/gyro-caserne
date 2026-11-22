@@ -12,7 +12,7 @@ function renvoiDans(envoyeLe: number): number {
 }
 
 // Code faux, expiré ou trop d'essais : un seul message. Les distinguer dirait qu'un code existe, donc que l'adresse est autorisée.
-const CODE_REFUSE = 'Ce code ne marche pas : il est faux, a expiré (5 minutes) ou a déjà eu 3 essais. Vérifiez les 6 chiffres du dernier courriel, ou renvoyez-le.';
+const CODE_REFUSE = 'Ce code ne marche pas. Il est faux, a expiré (5 minutes) ou a déjà eu 3 essais. Vérifiez les 6 chiffres du dernier courriel, ou renvoyez-le.';
 const REFUS_DE_BETTER_AUTH = ['INVALID_OTP', 'OTP_EXPIRED', 'TOO_MANY_ATTEMPTS'];
 
 export const actions: Actions = {

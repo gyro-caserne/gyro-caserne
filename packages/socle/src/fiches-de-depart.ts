@@ -12,8 +12,8 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 				nom: 'Cabine',
 				elements: [
 					['Niveau de carburant (au moins 3/4)', null],
-					['Radio : essai', null],
-					['Terminal / GPS', null],
+					['Essai radio', null],
+					['Terminal et GPS', null],
 					['Gyrophares et deux-tons', null],
 					['Gilets haute visibilité', 3],
 					['Lampes portatives chargées', 2],
@@ -29,13 +29,13 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 					['Plan dur et immobilisateur de tête', null],
 					['Colliers cervicaux (jeu)', null],
 					['Attelles (lot)', null],
-					['Aspirateur de mucosités : essai', null],
-					['Bouteille d’oxygène fixe : pression', null],
+					['Essai de l’aspirateur de mucosités', null],
+					['Pression de la bouteille d’oxygène fixe', null],
 					['Couvertures', 4],
 					['Draps à usage unique', null],
 					['Gants (boîtes)', 3],
 					['Désinfectant et lingettes', null],
-					['DSA : voyant vert, électrodes adulte et enfant', null]
+					['DSA (voyant vert, électrodes adulte et enfant)', null]
 				]
 			},
 			{
@@ -55,7 +55,7 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 			{
 				nom: 'Sac d’oxygénothérapie',
 				elements: [
-					['Bouteille d’oxygène portable : pression', null],
+					['Pression de la bouteille d’oxygène portable', null],
 					['Insufflateurs adulte, enfant et nourrisson', null],
 					['Masques haute concentration', null],
 					['Canules oropharyngées (jeu)', null]
@@ -70,7 +70,7 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 				nom: 'Cabine',
 				elements: [
 					['Niveau de carburant (au moins 3/4)', null],
-					['Radio : essai', null],
+					['Essai radio', null],
 					['Gyrophares et deux-tons', null],
 					['Lampes portatives chargées', 4],
 					['Caméra thermique chargée', null]
@@ -79,7 +79,7 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 			{
 				nom: 'Appareils respiratoires',
 				elements: [
-					['ARI : pression et fonctionnement', 4],
+					['ARI (pression et fonctionnement)', 4],
 					['Masques ARI', 4],
 					['Bouteilles de réserve', 4],
 					['Balises de détresse', 4]
@@ -89,8 +89,8 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 				nom: 'Hydraulique',
 				elements: [
 					['Citerne pleine', null],
-					['Émulseur : niveau', null],
-					['Pompe : essai', null],
+					['Niveau d’émulseur', null],
+					['Essai de la pompe', null],
 					['Tuyaux 45 mm', 6],
 					['Tuyaux 70 mm', 4],
 					['Lances', 2],
@@ -107,7 +107,7 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 					['Lot de balisage (cônes)', null],
 					['Extincteurs eau, CO2, poudre', 3],
 					['Outils de forcement (lot)', null],
-					['Tronçonneuse : plein et essai', null]
+					['Tronçonneuse (plein et essai)', null]
 				]
 			}
 		]
@@ -119,7 +119,7 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 				nom: 'Cabine',
 				elements: [
 					['Niveau de carburant (au moins 3/4)', null],
-					['Radio : essai', null],
+					['Essai radio', null],
 					['Gyrophares et deux-tons', null],
 					['Gilets haute visibilité', 3]
 				]
@@ -127,7 +127,7 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 			{
 				nom: 'Épuisement',
 				elements: [
-					['Motopompe : plein et essai', null],
+					['Motopompe (plein et essai)', null],
 					['Électropompe', null],
 					['Aspirateur à eau', null],
 					['Raclettes et seaux', null]
@@ -137,9 +137,9 @@ export const FICHES_PAR_DEFAUT: FicheDeDepart[] = [
 				nom: 'Coffres',
 				elements: [
 					['Bâches (lot)', null],
-					['Groupe électrogène : plein et essai', null],
+					['Groupe électrogène (plein et essai)', null],
 					['Projecteurs d’éclairage', 2],
-					['Tronçonneuse : plein et essai', null],
+					['Tronçonneuse (plein et essai)', null],
 					['Lot de balisage', null],
 					['Cordes et sangles', null],
 					['Caisse à outils', null]

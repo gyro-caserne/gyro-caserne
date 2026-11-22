@@ -45,13 +45,13 @@ export async function courrielsDeDemande(base: Base, d: DemandeACourriel, aujour
 		if (!r) return [];
 		const demandeur = r.nomDemandeur ?? `${r.prenom ?? ''} ${r.nomPersonne ?? ''}`.trim();
 		const texte = [demandeur, ...(r.forme === 'jours' ? [String(r.quantite)] : []), periodeCourte(r.forme, r.debut, r.fin)].join(', ');
-		return gestionnaires.filter((g) => g.id !== r.personneId).map((g) => ({ a: g.a, titre: `Demande de réservation · ${r.nom}`, texte, url: '/reservations/a-valider' }));
+		return gestionnaires.filter((g) => g.id !== r.personneId).map((g) => ({ a: g.a, titre: `Demande de réservation pour ${r.nom}`, texte, url: '/reservations/a-valider' }));
 	}
 	const t = d.genre === 'habillement' ? avisHabillement : avisAnomalie;
 	const quelles =
 		d.genre === 'habillement' ? and(eq(avisHabillement.url, `/habillement/${d.id}`), eq(avisHabillement.titre, 'Nouvelle demande d’habillement'))
-		: d.genre === 'anomalie' ? and(eq(avisAnomalie.url, `/engins/anomalies/${d.id}`), like(avisAnomalie.titre, 'Anomalie signalée · %'))
-		: and(eq(avisAnomalie.url, `/engins/anomalies?engin=${d.enginId}`), eq(avisAnomalie.creeLe, d.quand), like(avisAnomalie.titre, 'Prise de garde du %'));
+		: d.genre === 'anomalie' ? and(eq(avisAnomalie.url, `/engins/anomalies/${d.id}`), like(avisAnomalie.titre, 'Anomalie signalée sur %'))
+		: and(eq(avisAnomalie.url, `/engins/anomalies?engin=${d.enginId}`), eq(avisAnomalie.creeLe, d.quand), like(avisAnomalie.titre, '%, prise de garde'));
 	return base
 		.select({ a: personne.email, titre: t.titre, texte: t.texte, url: t.url })
 		.from(t)

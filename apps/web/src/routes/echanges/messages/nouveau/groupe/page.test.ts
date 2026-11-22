@@ -17,7 +17,7 @@ describe('nouveau groupe : les membres', () => {
 		const page = html();
 		expect(page).toMatch(/<a[^>]*href="\/echanges\/messages\/nouveau"[^>]*>Annuler<\/a>/);
 		expect(page).toMatch(/<h1[^>]*>Nouveau groupe<\/h1>/);
-		expect(texte(page)).toContain('Étape 1 sur 2 : les membres');
+		expect(texte(page)).toContain('Étape 1 sur 2. Les membres');
 	});
 
 	it('une case par agent, avec son nom et son rôle ou son équipe ; les membres préremplis sont cochés', () => {
@@ -59,7 +59,7 @@ describe('nouveau groupe : le nom et l’icône', () => {
 
 	it('l’étape 2 : le nom prérempli, l’icône choisie, les membres envoyés avec « Créer »', () => {
 		const page = html(etapeNom);
-		expect(texte(page)).toContain('Étape 2 sur 2 : nom et icône');
+		expect(texte(page)).toContain('Étape 2 sur 2. Nom et icône');
 		const form = page.match(/<form[^>]*method="POST"[\s\S]*?<\/form>/)![0];
 		expect(form).toMatch(/action="\?\/creer"/);
 		expect(form).toMatch(/<input[^>]*name="nom"[^>]*value="Équipe 1"/);
@@ -92,7 +92,7 @@ describe('nouveau groupe : le nom et l’icône', () => {
 		// Le lien qui permet de corriger porte l'erreur, et c'est lui qui prend le focus.
 		expect(page).toMatch(/<a[^>]*class="modifier[^"]*"[^>]*aria-describedby="rappel-erreur"|<a[^>]*aria-describedby="rappel-erreur"[^>]*class="modifier[^"]*"/);
 		expect([...page.matchAll(/<input[^>]*type="hidden"[^>]*name="membres"[^>]*value="(\d+)"/g)].map((m) => m[1])).toEqual(['6']);
-		expect(page).toMatch(/role="alert"[^>]*>Le groupe n’a pas été créé : corrigez les erreurs\./);
+		expect(page).toMatch(/role="alert"[^>]*>Le groupe n’a pas été créé. Corrigez les erreurs\./);
 	});
 });
 

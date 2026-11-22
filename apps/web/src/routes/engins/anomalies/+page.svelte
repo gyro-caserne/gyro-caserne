@@ -26,18 +26,18 @@
 	// Deux infos courtes : un point ; trois : des virgules.
 	const sous = (a: AnomalieListee) => {
 		const infos = [a.zone, texteEcart({ genre: a.genre, manque: a.manque, note: null }), `signalée le ${dateCourte(a.signaleeLe)}`].filter(Boolean);
-		return infos.join(infos.length > 2 ? ', ' : ' · ');
+		return infos.join(', ');
 	};
 	const signaler = $derived(data.enginId ? `/engins/anomalies/signaler?engin=${data.enginId}` : '/engins/anomalies/signaler');
 </script>
 
 <svelte:head>
-	<title>Anomalies{filtre ? ` · ${filtre.nom}` : ''} · Engins · Gyro Caserne</title>
+	<title>Anomalies{filtre ? ` ${filtre.nom}` : ''}</title>
 </svelte:head>
 
 {#snippet ligne(a: AnomalieListee, close: boolean)}
 	<li>
-		<Rangee href="/engins/anomalies/{a.id}" titre={close ? `${a.engin} · ${a.libelle}` : a.libelle} sous={close ? `Close le ${dateCourte(a.closeLe ?? '')}` : sous(a)} discret={close}>
+		<Rangee href="/engins/anomalies/{a.id}" titre={close ? `${a.libelle} (${a.engin})` : a.libelle} sous={close ? `Close le ${dateCourte(a.closeLe ?? '')}` : sous(a)} discret={close}>
 			{#snippet droite()}
 				<span class="pastilles">
 					{#if a.bloquante && !close}<Pastille ton="danger">Engin indisponible</Pastille>{/if}

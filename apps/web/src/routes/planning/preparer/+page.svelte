@@ -56,7 +56,7 @@
 </script>
 
 <svelte:head>
-	<title>Préparer {p.annee} · Planning · Gyro Caserne</title>
+	<title>Préparer {p.annee}</title>
 </svelte:head>
 
 {#snippet retour(cible: string)}
@@ -67,7 +67,8 @@
 {/snippet}
 
 {#snippet sansRoulement()}
-	<p class="encadre">Réglez d’abord le roulement : cette étape en dépend. <a href={vers('roulement')}>Aller au roulement</a></p>
+	<p class="encadre">Réglez d’abord le roulement. Cette étape en dépend.</p>
+	<div><a class="lien-secondaire" href={vers('roulement')}>Aller au roulement</a></div>
 {/snippet}
 
 {#snippet statut()}
@@ -75,7 +76,7 @@
 {/snippet}
 
 <div class="page">
-	<EnTetePage titre="Préparer {p.annee}" phrase={p.publiee ? `Publiée le ${jourLong(p.publiee)} : chaque modification est visible tout de suite.` : 'Cinq étapes, chacune enregistrée seule. Les agents ne voient rien avant la publication.'} retour={{ href: `/planning?annee=${p.annee}`, libelle: 'Planning' }} secondaire={statut} />
+	<EnTetePage titre="Préparer {p.annee}" phrase={p.publiee ? `Publiée le ${jourLong(p.publiee)}. Chaque modification est visible tout de suite.` : 'Cinq étapes, chacune enregistrée seule. Les agents ne voient rien avant la publication.'} retour={{ href: `/planning?annee=${p.annee}`, libelle: 'Planning' }} secondaire={statut} />
 
 	<nav class="annees segments" aria-label="Année à préparer">
 		{#each data.annees as a (a)}<a href="?annee={a}&etape={data.etape}" aria-current={a === p.annee ? 'page' : undefined}>{a}</a>{/each}
@@ -113,10 +114,10 @@
 		{@render retour('proposition')}
 
 		{#if data.etape === 'roulement'}
-			<p class="doux">L’ordre des équipes, semaine après semaine. La première semaine commence le {jourLong(data.apercu[0]?.debut ?? `${p.annee}-01-01`)}.{p.ordre.length ? '' : ' Ordre proposé d’après la référence du centre : validez-le ou changez-le.'}</p>
+			<p class="doux">L’ordre des équipes, semaine après semaine. La première semaine commence le {jourLong(data.apercu[0]?.debut ?? `${p.annee}-01-01`)}.{p.ordre.length ? '' : ' Ordre proposé d’après la référence du centre. Validez-le ou changez-le.'}</p>
 			{@render retour('roulement')}
 			{#if p.publiee}
-				<p class="encadre">Année publiée : le roulement ne change plus. Pour changer l’équipe d’une semaine, passez par « <a href={vers('publier')}>Vérifier et publier</a> ».</p>
+				<p class="encadre">Année publiée. Le roulement ne change plus. Pour changer l’équipe d’une semaine, passez par « <a href={vers('publier')}>Vérifier et publier</a> ».</p>
 				<ol role="list" class="ordre">
 					{#each ordre as id, i (id)}
 						{@const e = equipe(id)}
@@ -170,7 +171,7 @@
 							<p class="fete-titre"><strong>{FETES[f]} {p.annee}</strong> <span class="doux">({MOMENTS[f]})</span></p>
 							<p><PastilleEquipe nom={e.nom} couleur={e.couleur} /></p>
 							{#if horsTour(f)}
-								<p class="avertissement">Hors de son tour : c’est à {noms(attendues(f))} de tenir {f === 'noel' ? 'Noël' : 'le Nouvel An'}.</p>
+								<p class="avertissement">Hors de son tour. C’est à {noms(attendues(f))} de tenir {f === 'noel' ? 'Noël' : 'le Nouvel An'}.</p>
 								{#if data.proposer !== f}<a class="lien-secondaire" href="{ici({ proposer: f })}#proposition-{f}">Proposer un échange de semaines</a>{/if}
 							{:else if attendues(f).length}
 								<p class="doux">Dans son tour.</p>
@@ -187,7 +188,7 @@
 											<a class="lien-secondaire" href={ici()} data-sveltekit-reset="false">Non merci</a>
 										</form>
 									{:else}
-										<p>Aucune semaine à échanger : changez l’équipe d’une semaine à l’étape « Vérifier et publier ».</p>
+										<p>Aucune semaine à échanger. Changez l’équipe d’une semaine à l’étape « Vérifier et publier ».</p>
 									{/if}
 								</div>
 							{/if}
@@ -272,7 +273,7 @@
 				<ListeRangees>
 					{#each p.manoeuvres as m (m.id)}
 						<li>
-							<Rangee href={ici({ manoeuvre: String(m.id) })} titre={m.theme} sous="{momentLong(m.debut)} · {m.convoques === 'tous' ? 'Tout le centre' : noms(m.convoques)}">
+							<Rangee href={ici({ manoeuvre: String(m.id) })} titre={m.theme} sous="{momentLong(m.debut)}, {m.convoques === 'tous' ? 'tout le centre' : noms(m.convoques)}">
 								{#snippet tete()}<TuileDate iso={m.debut} />{/snippet}
 								{#snippet droite()}
 									{#if m.annulee}<Pastille ton="danger">Annulée</Pastille>{:else if m.publiee}<Pastille ton="ok">Annoncée</Pastille>{/if}
@@ -370,8 +371,8 @@
 	</section>
 
 	<nav class="suite" aria-label="Étape précédente ou suivante">
-		{#if rang > 0}<a href={vers(ETAPES[rang - 1]!.id)}>‹ {ETAPES[rang - 1]!.libelle}</a>{:else}<span></span>{/if}
-		{#if rang < ETAPES.length - 1}<a href={vers(ETAPES[rang + 1]!.id)}>{ETAPES[rang + 1]!.libelle} ›</a>{/if}
+		{#if rang > 0}<a href={vers(ETAPES[rang - 1]!.id)}>Étape précédente ({ETAPES[rang - 1]!.libelle})</a>{:else}<span></span>{/if}
+		{#if rang < ETAPES.length - 1}<a href={vers(ETAPES[rang + 1]!.id)}>Étape suivante ({ETAPES[rang + 1]!.libelle})</a>{/if}
 	</nav>
 </div>
 
@@ -438,7 +439,7 @@
 		{@const touche = data.semaineTouche}
 		<p class="doux">Du {jourLong(semaineOuverte.debut)} au {jourLong(finDeSemaine(semaineOuverte.debut))}. Aujourd’hui : {actuelle.nom}.</p>
 		{#if touche?.commencee}
-			<p class="encadre">Semaine commencée : son équipe ne change plus.</p>
+			<p class="encadre">Semaine commencée. Son équipe ne change plus.</p>
 		{:else}
 			{#if touche}
 				{#if touche.remplacements.length}
@@ -456,7 +457,7 @@
 				<legend>Quelle équipe d’astreinte ?</legend>
 				{#each p.equipes as e (e.id)}
 					<button type="submit" name="semaine-{semaineOuverte.debut}" value={e.id} aria-pressed={e.id === semaineOuverte.equipeId} style:--equipe={e.couleur}
-						><span class="pastille" aria-hidden="true"></span>{e.nom}{#if e.id === semaineOuverte.equipeId}<span class="doux"> · actuelle</span>{/if}</button
+						><span class="pastille" aria-hidden="true"></span>{e.nom}{#if e.id === semaineOuverte.equipeId}<span class="doux"> (actuelle)</span>{/if}</button
 					>
 				{/each}
 			</fieldset>

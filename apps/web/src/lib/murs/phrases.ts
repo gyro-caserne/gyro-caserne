@@ -11,7 +11,7 @@ function groupe(type: 'equipe' | 'comite', nom: string): string {
 // Qui voit un mur ; `audience` compte ses membres naturels.
 export function phraseAudience(type: Mur['type'], nom: string, audience: number): string {
 	if (type === 'centre' || type === 'vie') return `Visible par tous les agents du centre (${audience})`;
-	if (audience === 0) return 'Aucun membre pour l’instant : visible par le chef et l’adjoint';
+	if (audience === 0) return 'Aucun membre pour l’instant. Visible par le chef et l’adjoint';
 	const membres = audience === 1 ? 'le membre' : `les ${audience} membres`;
 	return `Visible par ${membres} ${groupe(type, nom)}, le chef et l’adjoint`;
 }

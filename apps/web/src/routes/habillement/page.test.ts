@@ -100,7 +100,7 @@ describe('/habillement/[id]', () => {
 	});
 
 	it('un refus du serveur est lu (alerte), le panneau rouvert', () => {
-		const page = demande('', vue({ etape: 'prise', sienne: false, gestes: ['question', 'traiter'] }), { quoi: 'traiter', message: 'Expliquez le refus en un mot : l’agent le lira.' });
+		const page = demande('', vue({ etape: 'prise', sienne: false, gestes: ['question', 'traiter'] }), { quoi: 'traiter', message: 'Expliquez le refus en un mot. L’agent le lira.' });
 		expect(page).toMatch(/<dialog[\s\S]*?role="alert"|<dialog[\s\S]*?Expliquez le refus/);
 	});
 });

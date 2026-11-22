@@ -91,7 +91,7 @@ describe('casquettesDe', () => {
 		await nommer(alice, role('Référent pharmacie'), { type: 'centre' });
 		await nommer(alice, role('Chef de garde'), { type: 'equipe', id: equipe1!.id });
 		expect(await casquettesDe(base, acteur(alice), aujourdhui)).toEqual([
-			{ id: `equipe:${equipe1!.id}`, nom: 'Chef de garde · Équipe 1', icone: 'casque', compte: 0 },
+			{ id: `equipe:${equipe1!.id}`, nom: 'Chef de garde (Équipe 1)', icone: 'casque', compte: 0 },
 			{ id: 'astreinte', nom: 'Mon astreinte', icone: 'casque', compte: 0 },
 			{ id: `role:${role('Référent pharmacie')}`, nom: 'Référent pharmacie', icone: 'croix', compte: 0 },
 			{ id: `comite:${idComite('Amicale')}`, nom: 'Amicale', icone: 'groupe', compte: 0 }
@@ -170,7 +170,7 @@ describe('aDecider', () => {
 			{ texte: 'Équipe 2 sans chef de garde', lien: '/nominations' },
 			{ texte: 'Équipe 3 sans chef de garde', lien: '/nominations' },
 			{ texte: 'Équipe 4 sans chef de garde', lien: '/nominations' },
-			{ texte: 'Référent technique : aucun titulaire', lien: '/nominations' },
+			{ texte: 'Référent technique sans titulaire', lien: '/nominations' },
 			{ texte: '2 fiches à compléter (grade ou date d’entrée manquants)', lien: '/agents?filtre=a-completer' }
 		]);
 	});
@@ -180,15 +180,15 @@ describe('aDecider', () => {
 		await base.insert(responsabilite).values({ nom: 'Adjoint de garde', nature: 'fonction', typePerimetre: 'equipe' });
 		await base.insert(responsabilite).values({ nom: 'Référent sport d’équipe', nature: 'mission', typePerimetre: 'equipe' });
 		const textes = (await aDecider(base, superAdmin, '2026-09-25')).map((e) => e.texte);
-		expect(textes).toContain('Adjoint de garde : aucun titulaire');
-		expect(textes).not.toContain('Référent sport d’équipe : aucun titulaire');
+		expect(textes).toContain('Adjoint de garde sans titulaire');
+		expect(textes).not.toContain('Référent sport d’équipe sans titulaire');
 	});
 
 	it('une fonction archivée n’est pas listée', async () => {
 		const { base, role } = await jeu();
 		await base.update(responsabilite).set({ archiveeLe: '2026-06-01' }).where(eq(responsabilite.id, role('Référent technique')));
 		const textes = (await aDecider(base, superAdmin, '2026-09-25')).map((e) => e.texte);
-		expect(textes).not.toContain('Référent technique : aucun titulaire');
+		expect(textes).not.toContain('Référent technique sans titulaire');
 	});
 
 	it('une équipe inactive n’est pas listée', async () => {

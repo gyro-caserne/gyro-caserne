@@ -52,7 +52,7 @@ describe('/engins/anomalies', () => {
 		const vue = (await ouvrir(locaux(base, chef), id)).anomalie;
 		expect(vue).toMatchObject({ gestes: ['remettre'], engin: { etat: 'indisponible' } });
 		expect(await agir(locaux(base, chef), id, [['quoi', 'remettre']])).toMatchObject({ succes: 'L’engin est remis en service.' });
-		expect(await agir(locaux(base, chef), id, [['quoi', 'remettre']])).toMatchObject({ status: 400, data: { message: 'Ce geste n’est plus possible : la page a été rechargée.' } });
+		expect(await agir(locaux(base, chef), id, [['quoi', 'remettre']])).toMatchObject({ status: 400, data: { message: 'Ce geste n’est plus possible. La page a été rechargée.' } });
 		await expect(ouvrir(locaux(base, chef), 999)).rejects.toMatchObject({ status: 404 });
 	});
 });

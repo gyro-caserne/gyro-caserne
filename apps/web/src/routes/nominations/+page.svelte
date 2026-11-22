@@ -16,10 +16,10 @@
 	type Titulaire = (typeof data.roles)[number]['titulaires'][number];
 	type Role = (typeof data.roles)[number];
 
-	const date = (jour: string | null) => (jour ? jour.split('-').reverse().join('/') : '—');
+	const date = (jour: string | null) => (jour ? jour.split('-').reverse().join('/') : 'date inconnue');
 	const periode = (t: Titulaire) => (t.fin ? `du ${date(t.debut)} au ${date(t.fin)}` : `depuis le ${date(t.debut)}`);
 	const nomDe = (t: Titulaire) => `${t.personne.prenom} ${t.personne.nom}`;
-	const intitule = (t: Titulaire) => (t.perimetre.nom ? `${nomDe(t)} — ${t.perimetre.nom}` : nomDe(t));
+	const intitule = (t: Titulaire) => (t.perimetre.nom ? `${nomDe(t)} (${t.perimetre.nom})` : nomDe(t));
 	const perimetreDe = (r: Role) => (r.portee === 'centre' ? 'Tout le centre' : r.perimetres.map((p) => p.nom).join(', '));
 	const concerne = (cible: string) => form?.cible === cible;
 
@@ -127,7 +127,7 @@
 </script>
 
 <svelte:head>
-	<title>Nominations · Gyro Caserne</title>
+	<title>Nominations</title>
 </svelte:head>
 
 <div class="page">
@@ -247,7 +247,7 @@
 								<summary>Changer les dates</summary>
 								<div class="dates">
 									<Champ id="debut-{id}" name="debut" type="date" libelle="Début" requis valeur={saisie(cible, 'debut', data.aujourdhui)} erreur={erreurs.debut} />
-									<Champ id="fin-{id}" name="fin" type="date" libelle="Fin" aide="Facultative : sans date, le rôle dure jusqu'à ce qu'on le termine." valeur={saisie(cible, 'fin', '')} erreur={erreurs.fin} />
+									<Champ id="fin-{id}" name="fin" type="date" libelle="Fin" aide="Facultative. Sans date, le rôle dure jusqu'à ce qu'on le termine." valeur={saisie(cible, 'fin', '')} erreur={erreurs.fin} />
 								</div>
 							</details>
 							<div class="boutons">

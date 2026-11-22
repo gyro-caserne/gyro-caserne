@@ -44,7 +44,7 @@ describe('signalement direct', () => {
 		const [a] = await j.base.select().from(anomalie).where(eq(anomalie.id, id));
 		expect(a).toMatchObject({ etape: 'signalee', libelle: 'Treuil HS', zone: '', ref: null, genre: 'abime', note: 'ne se déroule plus', bloquante: 0, closeLe: null });
 		expect(await j.etatEngin(j.vtu)).toBe('disponible');
-		expect(await j.avis(j.referent)).toMatchObject([{ titre: 'Anomalie signalée · VTU', texte: 'Treuil HS, abîmé (Alice Fictif)', url: `/engins/anomalies/${id}` }]);
+		expect(await j.avis(j.referent)).toMatchObject([{ titre: 'Anomalie signalée sur l’engin VTU', texte: 'Treuil HS, abîmé (Alice Fictif)', url: `/engins/anomalies/${id}` }]);
 		expect(await j.avis(j.alice)).toEqual([]);
 		// Sans planning publié, l'équipe d'astreinte n'est pas connue : son chef de garde n'est pas prévenu.
 		expect(await j.avis(j.chefDeGarde)).toEqual([]);
@@ -74,7 +74,7 @@ describe('signalement direct', () => {
 	it('l’e-mail : une anomalie signalée, à ceux qui la reçoivent ; une prise de garde, ses nouvelles anomalies', async () => {
 		const j = await jeu();
 		const id = await j.signaler();
-		expect(await courrielsDeDemande(j.base, { genre: 'anomalie', id })).toEqual([{ a: 'ref@exemple.fr', titre: 'Anomalie signalée · VTU', texte: 'Treuil HS, abîmé (Alice Fictif)', url: `/engins/anomalies/${id}` }]);
+		expect(await courrielsDeDemande(j.base, { genre: 'anomalie', id })).toEqual([{ a: 'ref@exemple.fr', titre: 'Anomalie signalée sur l’engin VTU', texte: 'Treuil HS, abîmé (Alice Fictif)', url: `/engins/anomalies/${id}` }]);
 		// Un geste du suivi n'en envoie pas.
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'prendre' }, PLUS_TARD, REGLAGE_ANOMALIES);
 		expect(await courrielsDeDemande(j.base, { genre: 'anomalie', id })).toHaveLength(1);
@@ -347,7 +347,7 @@ describe('la liste et « À décider »', () => {
 		expect(accueil.contenu).toMatchObject({ aDecider: [{ texte: '1 anomalie signalée à prendre en charge : VTU', lien: '/engins/anomalies' }] });
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'indisponible' }, QUAND, REGLAGE_ANOMALIES);
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'reparee', texte: '' }, QUAND, REGLAGE_ANOMALIES);
-		expect((await anomaliesADecider(j.base, QUAND, reglage, [])).items).toEqual([{ texte: 'VTU indisponible, anomalie close : remettre en service ?', lien: `/engins/anomalies/${id}` }]);
+		expect((await anomaliesADecider(j.base, QUAND, reglage, [])).items).toEqual([{ texte: 'VTU indisponible, anomalie close. Remettre en service ?', lien: `/engins/anomalies/${id}` }]);
 		// L'agent n'a rien à décider.
 		expect((await accueilDe(j.base, j.alice, null, '2026-10-30', QUAND, reglage)).casquettes.every((c) => c.compte === 0)).toBe(true);
 	});
@@ -357,7 +357,7 @@ describe('la prise de garde', () => {
 	it('valider : les nouvelles anomalies à ceux qui traitent ; un élément retrouvé, au déclarant', async () => {
 		const j = await jeu();
 		const fiche = await lireFiche(j.base, j.types.VSAV);
-		const radio = fiche.zones[0]!.elements.find((e) => e.libelle.startsWith('Radio'))!;
+		const radio = fiche.zones[0]!.elements.find((e) => e.libelle === 'Essai radio')!;
 		const toutVoir = async (id: number, quand: string) => {
 			for (const z of fiche.zones) await gestePrise(j.base, j.base.photos, j.alice, id, { quoi: 'zone', zone: z.ref, vue: true }, quand, reglage);
 		};
@@ -365,7 +365,7 @@ describe('la prise de garde', () => {
 		await gestePrise(j.base, j.base.photos, j.chefDeGarde, p1, { quoi: 'ecart', element: radio.ref, genre: 'abime', manque: null, note: '' }, QUAND, reglage);
 		await toutVoir(p1, QUAND);
 		await validerPrise(j.base, j.chefDeGarde, p1, QUAND, reglage);
-		expect(await j.avis(j.referent)).toMatchObject([{ titre: 'Prise de garde du VSAV 1', texte: '1 anomalie signalée par Chloé Fictif : Radio : essai', url: `/engins/anomalies?engin=${j.vsav}` }]);
+		expect(await j.avis(j.referent)).toMatchObject([{ titre: 'VSAV 1, prise de garde', texte: '1 anomalie signalée par Chloé Fictif : Essai radio', url: `/engins/anomalies?engin=${j.vsav}` }]);
 		const [a] = await j.base.select().from(anomalie).where(eq(anomalie.enginId, j.vsav));
 		// La relève suivante la retrouve.
 		const suivante = '2026-11-06T18:10';
@@ -387,7 +387,7 @@ describe('la prise de garde', () => {
 		expect((await j.avis(j.chefDeGarde)).length).toBe(avant);
 		// La cloche les montre.
 		const fil = await filDeNotifications(j.base, j.chefDeGarde, '2026-11-13T18:20');
-		expect(fil.lignes).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'anomalie', titre: 'VSAV 1, Radio : essai', lue: false })]));
+		expect(fil.lignes).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'anomalie', titre: 'VSAV 1, Essai radio', lue: false })]));
 		expect(fil.nonLues).toBeGreaterThan(0);
 	});
 });

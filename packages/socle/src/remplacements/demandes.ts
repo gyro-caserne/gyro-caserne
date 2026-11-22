@@ -84,7 +84,7 @@ export async function demanderRemplacement(base: Base, acteur: Acteur, d: { peri
 		if (!disponible(ctx, d.cibleId, periodes)) throw new DonneeInvalide('Collègue indisponible sur ces périodes');
 		destinataires = [d.cibleId];
 	} else destinataires = disponibles(ctx, moi, periodes).map((a) => a.id);
-	const texte = `${nomDe(ctx, moi)} · ${texteDemande(periodes)}`;
+	const texte = `${nomDe(ctx, moi)}, ${texteDemande(periodes)}`;
 	const [lignes] = await base.batch([
 		base
 			.insert(demandeRemplacement)
@@ -119,7 +119,7 @@ export async function demanderRemplacementCourt(base: Base, acteur: Acteur, d: {
 			.returning({ id: demandeRemplacement.id }),
 		ecrireDestinataires(base, derniere, destinataires),
 		journalDemande(base, moi, 'demander_remplacement_court', derniere, { duree: d.duree, destinataires: destinataires.length }, maintenant),
-		...avis(base, destinataires, derniere, 'recue', `${nomDe(ctx, moi)} · ${texteDemande([plage])}`, URL_POUR_MOI, maintenant)
+		...avis(base, destinataires, derniere, 'recue', `${nomDe(ctx, moi)}, ${texteDemande([plage])}`, URL_POUR_MOI, maintenant)
 	]);
 	return lignes[0]!.id;
 }
@@ -286,7 +286,7 @@ async function accepterManoeuvre(base: Base, d: LigneDemande, moi: number, ctx: 
 	]);
 	const [apres] = await base.select({ etat: demandeRemplacement.etat, remplacantId: demandeRemplacement.remplacantId }).from(demandeRemplacement).where(eq(demandeRemplacement.id, d.id));
 	if (apres?.etat !== 'attente' && apres?.remplacantId !== moi) throw dejaTraitee();
-	if (apres?.etat !== 'conclue') throw new DonneeInvalide('Échange impossible : une convocation a changé, réessayez');
+	if (apres?.etat !== 'conclue') throw new DonneeInvalide('Échange impossible, une convocation a changé. Réessayez');
 	return 'conclue';
 }
 
@@ -330,7 +330,7 @@ export async function accepterDemande(base: Base, acteur: Acteur, id: number, ma
 		const periodesCible = periodesDe(d.periodesCible);
 		const siennes = mesTranches(ctx, moi).flatMap((s) => s.tranches);
 		const encoreSiennes = periodesCible.every((p) => siennes.some((t) => t.debut === p.debut && t.fin === p.fin && !t.prise));
-		if (!encoreSiennes || !disponible(ctx, moi, periodes, id) || !disponible(ctx, d.demandeurId, periodesCible, id)) throw new DonneeInvalide('Échange impossible : l’un de vous n’est plus libre');
+		if (!encoreSiennes || !disponible(ctx, moi, periodes, id) || !disponible(ctx, d.demandeurId, periodesCible, id)) throw new DonneeInvalide('Échange impossible, l’un de vous n’est plus libre');
 		manquantes = [...new Set([...manque(ctx, d.demandeurId, moi, date), ...manque(ctx, moi, d.demandeurId, periodesCible[0]!.debut.slice(0, 10))])];
 	} else {
 		if (d.genre !== 'remplacement') throw new DonneeInvalide('Demande inconnue');
@@ -342,15 +342,15 @@ export async function accepterDemande(base: Base, acteur: Acteur, id: number, ma
 	const etat = manquantes.length > 0 ? 'a_valider' : 'conclue';
 	// Deux acceptations à la même minute : seul celui qui l'a eue est annoncé.
 	const si = sql`${decidee(id, etat, maintenant)} and exists (select 1 from ${demandeRemplacement} where ${demandeRemplacement.id} = ${id} and ${demandeRemplacement.remplacantId} = ${moi})`;
-	const texte = `${nomDe(ctx, moi)} · ${texteDe(ctx, d)}`;
+	const texte = `${nomDe(ctx, moi)}, ${texteDe(ctx, d)}`;
 	await base.batch([
 		base
 			.update(demandeRemplacement)
 			.set({ etat, remplacantId: moi, manque: manquantes.length > 0 ? JSON.stringify(manquantes) : null, accepteeLe: maintenant, trancheePar: `personne:${moi}`, trancheeLe: maintenant })
 			.where(and(eq(demandeRemplacement.id, id), eq(demandeRemplacement.etat, 'attente'))),
 		journalDemande(base, moi, 'accepter_remplacement', id, { etat, manque: manquantes }, maintenant),
-		...avis(base, [d.demandeurId], id, 'acceptee', etat === 'a_valider' ? `${texte} · à valider par le chef de garde` : texte, url(id), maintenant, si),
-		...avis(base, chefs, id, etat === 'a_valider' ? 'a_valider' : 'informe', etat === 'a_valider' ? `${texte} · manque : ${manquantes.join(', ')}` : `${texte} · remplace ${nomDe(ctx, d.demandeurId)}`, url(id), maintenant, si)
+		...avis(base, [d.demandeurId], id, 'acceptee', etat === 'a_valider' ? `${texte}, à valider par le chef de garde` : texte, url(id), maintenant, si),
+		...avis(base, chefs, id, etat === 'a_valider' ? 'a_valider' : 'informe', etat === 'a_valider' ? `${texte}, il manque ${manquantes.join(', ')}` : `${nomDe(ctx, moi)} remplace ${nomDe(ctx, d.demandeurId)}, ${texteDe(ctx, d)}`, url(id), maintenant, si)
 	]);
 	const [apres] = await base.select({ remplacantId: demandeRemplacement.remplacantId }).from(demandeRemplacement).where(eq(demandeRemplacement.id, id));
 	if (apres?.remplacantId !== moi) throw new DonneeInvalide('Déjà prise par un collègue');
@@ -360,7 +360,7 @@ export async function accepterDemande(base: Base, acteur: Acteur, id: number, ma
 // Un remplacement court est conclu dès l'acceptation. Une aptitude contrôlée manque : le chef de garde le sait en urgence, et peut refuser avant le début.
 async function accepterCourt(base: Base, d: LigneDemande, moi: number, ctx: Contexte, manquantes: string[], chefs: number[], maintenant: string): Promise<'conclue'> {
 	const si = sql`${decidee(d.id, 'conclue', maintenant)} and exists (select 1 from ${demandeRemplacement} where ${demandeRemplacement.id} = ${d.id} and ${demandeRemplacement.remplacantId} = ${moi})`;
-	const texte = `${nomDe(ctx, moi)} · ${texteDe(ctx, d)}`;
+	const texte = `${nomDe(ctx, moi)}, ${texteDe(ctx, d)}`;
 	const auChef = `${nomDe(ctx, moi)} remplace ${nomDe(ctx, d.demandeurId)} ${texteDe(ctx, d)}`;
 	await base.batch([
 		base
@@ -370,7 +370,7 @@ async function accepterCourt(base: Base, d: LigneDemande, moi: number, ctx: Cont
 		journalDemande(base, moi, 'accepter_remplacement', d.id, { etat: 'conclue', manque: manquantes }, maintenant),
 		...avis(base, [d.demandeurId], d.id, 'acceptee', texte, url(d.id), maintenant, si),
 		...(manquantes.length > 0
-			? avis(base, chefs, d.id, 'informe', `${auChef} · il lui manque ${manquantes.join(', ')}`, url(d.id), maintenant, si, 'urgences')
+			? avis(base, chefs, d.id, 'informe', `${auChef}, il lui manque ${manquantes.join(', ')}`, url(d.id), maintenant, si, 'urgences')
 			: avis(base, chefs, d.id, 'informe', auChef, url(d.id), maintenant, si))
 	]);
 	const [apres] = await base.select({ remplacantId: demandeRemplacement.remplacantId }).from(demandeRemplacement).where(eq(demandeRemplacement.id, d.id));
@@ -400,7 +400,7 @@ export async function refuserDemande(base: Base, acteur: Acteur, id: number, mai
 			.where(and(eq(demandeRemplacement.id, id), eq(demandeRemplacement.etat, 'attente'))),
 		ecarter,
 		journalDemande(base, moi, 'refuser_remplacement', id, {}, maintenant),
-		...avis(base, [d.demandeurId], id, 'refusee', `${nomDe(ctx, moi)} · ${texteDe(ctx, d)}`, url(id), maintenant, decidee(id, 'refusee', maintenant))
+		...avis(base, [d.demandeurId], id, 'refusee', `${nomDe(ctx, moi)}, ${texteDe(ctx, d)}`, url(id), maintenant, decidee(id, 'refusee', maintenant))
 	]);
 }
 
@@ -425,7 +425,7 @@ export async function ouvrirATous(base: Base, acteur: Acteur, id: number, mainte
 			.where(and(eq(demandeRemplacement.id, id), inArray(demandeRemplacement.etat, ['attente', 'refusee']))),
 		ecrireDestinataires(base, id, nouveaux, ouverteATous),
 		journalDemande(base, moi, 'ouvrir_remplacement', id, { destinataires: nouveaux.length }, maintenant),
-		...avis(base, nouveaux, id, 'recue', `${nomDe(ctx, moi)} · ${texteDe(ctx, d)}`, URL_POUR_MOI, maintenant, ouverteATous)
+		...avis(base, nouveaux, id, 'recue', `${nomDe(ctx, moi)}, ${texteDe(ctx, d)}`, URL_POUR_MOI, maintenant, ouverteATous)
 	]);
 }
 
@@ -445,7 +445,7 @@ function rouvrir(base: Base, ctx: Contexte, d: LigneDemande, destinataires: { pe
 			.update(destinataireRemplacement)
 			.set({ refuseLe: maintenant })
 			.where(and(eq(destinataireRemplacement.demandeId, d.id), eq(destinataireRemplacement.personneId, d.remplacantId ?? 0))),
-		...avis(base, encore, d.id, 'recue', `${nomDe(ctx, d.demandeurId)} · ${texteDe(ctx, d)} · de nouveau sans remplaçant`, URL_POUR_MOI, maintenant, rouverte(d, maintenant))
+		...avis(base, encore, d.id, 'recue', `${nomDe(ctx, d.demandeurId)} est de nouveau sans remplaçant, ${texteDe(ctx, d)}`, URL_POUR_MOI, maintenant, rouverte(d, maintenant))
 	] as const;
 }
 
@@ -459,13 +459,13 @@ export async function desister(base: Base, acteur: Acteur, id: number, maintenan
 	if (d.remplacantId !== moi || !['a_valider', 'conclue'].includes(d.etat)) throw new RefusDroit('DEMANDER_REMPLACEMENT', { type: 'centre' }, 'Vous ne remplacez pas sur cette demande');
 	if (d.genre === 'manoeuvre') throw new DonneeInvalide('Un échange de manœuvre ne se défait pas');
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
-	const texte = `${nomDe(ctx, moi)} · ${texteDe(ctx, d)} · vous redevenez responsable`;
+	const texte = `${nomDe(ctx, moi)}, ${texteDe(ctx, d)}. Vous redevenez responsable.`;
 	await base.batch([
 		...rouvrir(base, ctx, d, destinataires, moi, 'Désistement', maintenant),
 		journalDemande(base, moi, 'desister_remplacement', id, {}, maintenant),
 		// Un court commence dans peu de temps : le titulaire le sait en urgence.
 		...avis(base, [d.demandeurId], id, 'desistement', texte, url(id), maintenant, rouverte(d, maintenant), d.court === 1 ? 'urgences' : 'remplacements'),
-		...avis(base, valideurs(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId), id, 'desistement', `${nomDe(ctx, moi)} ne remplace plus ${nomDe(ctx, d.demandeurId)} · ${texteDe(ctx, d)}`, url(id), maintenant, rouverte(d, maintenant))
+		...avis(base, valideurs(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId), id, 'desistement', `${nomDe(ctx, moi)} ne remplace plus ${nomDe(ctx, d.demandeurId)}, ${texteDe(ctx, d)}`, url(id), maintenant, rouverte(d, maintenant))
 	]);
 }
 
@@ -481,7 +481,7 @@ export async function valider(base: Base, acteur: Acteur, id: number, maintenant
 	if (d.etat !== 'a_valider') throw dejaTraitee();
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
 	const si = decidee(id, 'conclue', maintenant);
-	const texte = `${nomDe(ctx, d.remplacantId)} remplace ${nomDe(ctx, d.demandeurId)} · ${texteDe(ctx, d)}`;
+	const texte = `${nomDe(ctx, d.remplacantId)} remplace ${nomDe(ctx, d.demandeurId)}, ${texteDe(ctx, d)}`;
 	await base.batch([
 		base
 			.update(demandeRemplacement)
@@ -526,7 +526,7 @@ export async function refuserApresCoup(base: Base, acteur: Acteur, id: number, m
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
 	const quoi = parLeDemandeur ? 'refusee' : 'refus_chef';
 	const si = decidee(id, 'annulee', maintenant);
-	const auRemplacant = `${parLeDemandeur ? nomDe(ctx, moi) : 'Le chef de garde'} refuse votre remplacement · ${texteDe(ctx, d)}`;
+	const auRemplacant = `${parLeDemandeur ? nomDe(ctx, moi) : 'Le chef de garde'} refuse votre remplacement, ${texteDe(ctx, d)}`;
 	await base.batch([
 		base
 			.update(demandeRemplacement)
@@ -534,9 +534,9 @@ export async function refuserApresCoup(base: Base, acteur: Acteur, id: number, m
 			.where(and(eq(demandeRemplacement.id, id), eq(demandeRemplacement.etat, 'conclue'))),
 		journalDemande(base, moi, 'refuser_apres_coup', id, { parLeDemandeur }, maintenant),
 		...avis(base, [d.remplacantId], id, quoi, auRemplacant, url(id), maintenant, si, 'urgences'),
-		...(parLeDemandeur ? [] : avis(base, [d.demandeurId], id, quoi, `${nomDe(ctx, d.remplacantId)} ne vous remplacera pas ${texteDe(ctx, d)} · vous restez d’astreinte`, url(id), maintenant, si, 'urgences')),
+		...(parLeDemandeur ? [] : avis(base, [d.demandeurId], id, quoi, `${nomDe(ctx, d.remplacantId)} ne vous remplacera pas ${texteDe(ctx, d)}. Vous restez d’astreinte.`, url(id), maintenant, si, 'urgences')),
 		// Les chefs qui l'avaient appris : en urgence s'ils l'avaient su en urgence (une aptitude manquait).
-		...avis(base, valideurs(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId).filter((x) => x !== moi), id, quoi, `${nomDe(ctx, d.remplacantId)} ne remplace plus ${nomDe(ctx, d.demandeurId)} ${texteDe(ctx, d)} · refusé par ${parLeDemandeur ? 'le demandeur' : 'le chef de garde'}`, url(id), maintenant, si, d.manque !== null ? 'urgences' : 'remplacements')
+		...avis(base, valideurs(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId).filter((x) => x !== moi), id, quoi, `${nomDe(ctx, d.remplacantId)} ne remplace plus ${nomDe(ctx, d.demandeurId)} ${texteDe(ctx, d)}, refusé par ${parLeDemandeur ? 'le demandeur' : 'le chef de garde'}`, url(id), maintenant, si, d.manque !== null ? 'urgences' : 'remplacements')
 	]);
 }
 
@@ -547,12 +547,12 @@ export async function annulerDemande(base: Base, acteur: Acteur, id: number, mai
 	const { d, ctx } = await lireDemande(base, id, maintenant, reglage);
 	const parLeDemandeur = d.demandeurId === moi && ['attente', 'refusee'].includes(d.etat);
 	if (!parLeDemandeur) {
-		if (d.demandeurId === moi && ['a_valider', 'conclue'].includes(d.etat)) throw new DonneeInvalide('Déjà acceptée : demandez au remplaçant de se désister');
+		if (d.demandeurId === moi && ['a_valider', 'conclue'].includes(d.etat)) throw new DonneeInvalide('Déjà acceptée. Demandez au remplaçant de se désister');
 		exigerValideur(ctx, d, moi);
 	}
 	if (!['attente', 'refusee', 'a_valider', 'conclue'].includes(d.etat)) throw dejaTraitee();
 	if (d.genre === 'manoeuvre' && d.etat === 'conclue') throw new DonneeInvalide('Un échange de manœuvre conclu ne s’annule pas');
-	if (d.court === 1 && d.etat === 'conclue') throw new DonneeInvalide('Un remplacement court conclu ne s’annule pas : refusez le remplaçant');
+	if (d.court === 1 && d.etat === 'conclue') throw new DonneeInvalide('Un remplacement court conclu ne s’annule pas. Refusez le remplaçant');
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
 	const prevenus = [...new Set([...(parLeDemandeur ? [] : [d.demandeurId]), ...(d.remplacantId !== null && ['a_valider', 'conclue'].includes(d.etat) ? [d.remplacantId] : []), ...(d.cibleId !== null && d.etat === 'attente' ? [d.cibleId] : [])])].filter((x) => x !== moi);
 	await base.batch([
@@ -561,7 +561,7 @@ export async function annulerDemande(base: Base, acteur: Acteur, id: number, mai
 			.set({ etat: 'annulee', trancheePar: `personne:${moi}`, trancheeLe: maintenant })
 			.where(and(eq(demandeRemplacement.id, id), eq(demandeRemplacement.etat, d.etat))),
 		journalDemande(base, moi, 'annuler_remplacement', id, { parLeDemandeur }, maintenant),
-		...avis(base, prevenus, id, 'annulee', `${parLeDemandeur ? nomDe(ctx, moi) : 'Le chef'} a annulé · ${texteDe(ctx, d)}`, url(id), maintenant, decidee(id, 'annulee', maintenant))
+		...avis(base, prevenus, id, 'annulee', `${parLeDemandeur ? nomDe(ctx, moi) : 'Le chef'} a annulé la demande, ${texteDe(ctx, d)}`, url(id), maintenant, decidee(id, 'annulee', maintenant))
 	]);
 }
 

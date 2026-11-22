@@ -69,7 +69,7 @@ test.describe.serial('remplacement court', () => {
 		await connecter(chloe, 'chloe.durand@exemple.fr');
 		await chloe.goto('/remplacements');
 		await chloe.getByRole('article').filter({ hasText: `de ${plage[1]} à ${plage[2]}` }).getByRole('button', { name: /^Accepter/ }).click();
-		await expect(chloe.getByRole('status')).toContainText('c’est conclu');
+		await expect(chloe.getByRole('status')).toContainText('C’est conclu');
 		await chloe.goto('/planning?vue=semaine');
 		await expect(chloe.getByText(new RegExp(`je remplace Alice Martin, .*de ${plage[1]} à ${plage[2]}`)).first()).toBeAttached();
 		await autre.close();
@@ -78,7 +78,7 @@ test.describe.serial('remplacement court', () => {
 		await page.reload();
 		await expect(page.getByRole('heading', { level: 2, name: 'Remplacé par Chloé Durand' })).toBeVisible();
 		await page.locator('summary', { hasText: 'Refuser ce remplaçant' }).click();
-		await expect(page.getByRole('button', { name: 'Je confirme : refuser ce remplaçant' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Oui, refuser ce remplaçant' })).toBeVisible();
 		await sansViolation(page);
 	});
 });

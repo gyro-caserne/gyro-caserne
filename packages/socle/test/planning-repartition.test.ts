@@ -64,8 +64,8 @@ describe('la proposition (calcul)', () => {
 		]);
 		// Sans CA2 parmi les candidats : la plage du mardi reste impossible, mais l'agent manquant est comblé.
 		expect(r.impossibles).toEqual([{ debut: '2027-06-29T18:00', fin: '2027-06-30T06:00', manque: ['ca2'] }]);
-		expect(texteManque(r.impossibles[0]!, ['ca2'])).toBe('Nuit du mardi 29 juin : pas de CA tout engins disponible');
-		expect(texteManque(r.impossibles[0]!, ['ca2', 'agent', 'agent'])).toBe('Nuit du mardi 29 juin : manque CA tout engins, 2 agents');
+		expect(texteManque(r.impossibles[0]!, ['ca2'])).toBe('Nuit du mardi 29 juin, pas de CA tout engins disponible');
+		expect(texteManque(r.impossibles[0]!, ['ca2', 'agent', 'agent'])).toBe('Nuit du mardi 29 juin, il manque CA tout engins, 2 agents');
 	});
 });
 
@@ -139,8 +139,8 @@ describe('été : proposer, ajuster, publier', () => {
 	it('une plage impossible est signalée', async () => {
 		const { base, chef, p, a } = await jeu();
 		await ajouterMesVacances(base, a(p.alice), 2027, { debut: '2027-06-28', fin: '2027-06-28' }, maintenant);
-		expect(await proposerEte(base, chef, 2027, maintenant, reglage)).toEqual({ impossibles: ['Nuit du lundi 28 juin : pas de CA tout engins disponible'] });
-		expect((await eteAPreparer(base, chef, 2027, maintenant, reglage)).impossibles).toEqual(['Nuit du lundi 28 juin : pas de CA tout engins disponible']);
+		expect(await proposerEte(base, chef, 2027, maintenant, reglage)).toEqual({ impossibles: ['Nuit du lundi 28 juin, pas de CA tout engins disponible'] });
+		expect((await eteAPreparer(base, chef, 2027, maintenant, reglage)).impossibles).toEqual(['Nuit du lundi 28 juin, pas de CA tout engins disponible']);
 	});
 
 	it('publier : les renforts sont prévenus ; le planning, l’Accueil, l’agenda et les remplacements suivent', async () => {
@@ -152,8 +152,8 @@ describe('été : proposer, ajuster, publier', () => {
 		await publierEte(base, chef, 2027, maintenant, reglage);
 		await expect(proposerEte(base, chef, 2027, maintenant, reglage)).rejects.toThrow('Été déjà publié');
 		const avis = await base.select().from(avisEte);
-		expect(avis.find((x) => x.personneId === p.alice)!.texte).toBe('Planning d’été : vous êtes en renfort du Groupe B la semaine du vendredi 25 juin.');
-		expect(avis.find((x) => x.personneId === p.fred)!.texte).toBe('Planning d’été : vous n’êtes pas d’astreinte sur une partie de la semaine du vendredi 25 juin.');
+		expect(avis.find((x) => x.personneId === p.alice)!.texte).toBe('Dans le planning d’été, vous êtes en renfort du Groupe B la semaine du vendredi 25 juin.');
+		expect(avis.find((x) => x.personneId === p.fred)!.texte).toBe('Dans le planning d’été, vous n’êtes pas d’astreinte sur une partie de la semaine du vendredi 25 juin.');
 		expect(avis.some((x) => x.personneId === p.gina)).toBe(false);
 
 		// Planning : Alice tient trois nuits de la semaine de l'Équipe 2 ; Gina, en vacances, n'y est pas.
@@ -173,7 +173,7 @@ describe('été : proposer, ajuster, publier', () => {
 		const lien = await monLienAgenda(base, a(p.alice), '2027-06-20T10:00');
 		const ics = (await agendaDe(base, `${lien}.ics`.replace('.ics', ''), '2027-06-20T10:00', reglage))!;
 		expect(ics).toContain('UID:astreinte-2027-06-25-1@gyro-caserne');
-		expect(ics).toMatch(/DTSTART:20270628T160000Z\r\nDTEND:20270629T040000Z\r\nSUMMARY:Astreinte · Groupe B/);
+		expect(ics).toMatch(/DTSTART:20270628T160000Z\r\nDTEND:20270629T040000Z\r\nSUMMARY:Astreinte\\, Groupe B/);
 
 		const ctx = await lireContexte(base, '2027-06-20T10:00', reglage);
 		const nuitLundi = { debut: LUN, fin: '2027-06-29T06:00' };
@@ -196,7 +196,7 @@ describe('été : proposer, ajuster, publier', () => {
 		expect(vue.conflits).toEqual(['nuit du mardi 29 juin : Fred Test est remplacé par Hugo Test, mais n’est plus d’astreinte']);
 		await base.delete(avisEte);
 		await ajouterMesVacances(base, a(p.eva), 2027, { debut: '2027-06-30', fin: '2027-06-30' }, maintenant);
-		expect((await base.select().from(avisEte).where(eq(avisEte.personneId, chefId))).map((x) => [x.quoi, x.texte, x.url])).toEqual([['vacances_changees', 'Eva Test a changé ses vacances : à revoir.', '/planning/ete?annee=2027']]);
+		expect((await base.select().from(avisEte).where(eq(avisEte.personneId, chefId))).map((x) => [x.quoi, x.texte, x.url])).toEqual([['vacances_changees', 'Eva Test a changé ses vacances. La répartition est à revoir.', '/planning/ete?annee=2027']]);
 	});
 
 	it('l’onglet Été du fichier : une colonne par plage, « X » si présent ; relu, il ajoute et retire', async () => {
@@ -220,8 +220,8 @@ describe('été : proposer, ajuster, publier', () => {
 		// Un agent parti depuis l'export : sa ligne est ignorée ; un N° qui n'en est pas un est une erreur.
 		const fautif = { feuilles: { Été: [{ numero: 2, cellules: ['999', 'X', '', 'X'] }, { numero: 3, cellules: ['Alice', 'X', '', 'X'] }] }, entetes: { Été: ['N°', 'Agent', 'Équipe', '24/06 nuit'] } };
 		expect((await apercuPlanning(base, chef, 2027, fautif, maintenant, reglage)).erreurs).toEqual([
-			{ feuille: 'Été', ligne: 1, message: 'Colonne « 24/06 nuit » : pas une plage de l’été' },
-			{ feuille: 'Été', ligne: 3, message: 'N° « Alice » : agent inconnu' }
+			{ feuille: 'Été', ligne: 1, message: 'La colonne « 24/06 nuit » n’est pas une plage de l’été' },
+			{ feuille: 'Été', ligne: 3, message: 'Agent inconnu (N° « Alice »)' }
 		]);
 	});
 

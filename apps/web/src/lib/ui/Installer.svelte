@@ -64,13 +64,13 @@
 					<li>{@render geste(PARTAGER)}<span>Touchez <strong>Partager</strong> dans la barre du navigateur.</span></li>
 					<li>{@render geste(AJOUTER)}<span>Choisissez <strong>Sur l’écran d’accueil</strong>, puis <strong>Ajouter</strong>.</span></li>
 				</ol>
-				{#if mode === 'page'}<p class="doux">Ouvrez ensuite Gyro Caserne depuis son icône, puis activez les notifications dans Moi → Notifications.</p>{/if}
+				{#if mode === 'page'}<p class="doux">Ouvrez ensuite Gyro Caserne depuis son icône, puis activez les notifications dans Moi, puis Notifications.</p>{/if}
 			{:else if choix === 'bouton'}
 				<h2 id={id}>Installez Gyro Caserne</h2>
 				<p>Elle s’ouvre d’un geste depuis l’écran d’accueil, en plein écran, avec le nombre de notifications sur son icône.</p>
 			{:else if choix === 'installee'}
 				<h2 id={id}>L’appli est installée</h2>
-				<p>Gyro Caserne est sur cet appareil : ouvrez-la depuis son icône.</p>
+				<p>Gyro Caserne est sur cet appareil. Ouvrez-la depuis son icône.</p>
 			{:else}
 				<h2 id={id}>Installer depuis le navigateur</h2>
 				<p>Dans le menu du navigateur, choisissez <strong>Installer l’appli</strong> ou <strong>Ajouter à l’écran d’accueil</strong>.</p>

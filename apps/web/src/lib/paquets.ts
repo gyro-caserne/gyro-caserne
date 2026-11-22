@@ -10,7 +10,7 @@ export const DOMAINES: Domaine[] = [
 		id: 'planning',
 		nom: 'Planning et gardes',
 		niveaux: [
-			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent : il voit le planning et demande un remplacement.' },
+			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent, il voit le planning et demande un remplacement.' },
 			{ libelle: 'Valider les remplacements', droits: ['VALIDER_REMPLACEMENT'], phrase: 'Valide aussi les remplacements.' },
 			{ libelle: 'Gérer le planning', droits: ['VALIDER_REMPLACEMENT', 'GERER_PLANNING'], phrase: 'Valide les remplacements et gère le planning.' }
 		]
@@ -19,7 +19,7 @@ export const DOMAINES: Domaine[] = [
 		id: 'engins',
 		nom: 'Engins et anomalies',
 		niveaux: [
-			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent : il signale une anomalie et la prend en charge.' },
+			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent, il signale une anomalie et la prend en charge.' },
 			{ libelle: 'Gérer', droits: ['TRAITER_ANOMALIE', 'GERER_FICHES'], phrase: 'Traite les anomalies et tient les fiches de prise de garde.' }
 		]
 	},
@@ -27,7 +27,7 @@ export const DOMAINES: Domaine[] = [
 		id: 'stock',
 		nom: 'Stock et pharmacie',
 		niveaux: [
-			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent : il signale un besoin de stock.' },
+			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent, il signale un besoin de stock.' },
 			{ libelle: 'Gérer', droits: ['GERER_STOCK'], phrase: 'Tient le stock et la pharmacie.' }
 		]
 	},
@@ -35,7 +35,7 @@ export const DOMAINES: Domaine[] = [
 		id: 'habillement',
 		nom: 'Habillement',
 		niveaux: [
-			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent : il demande une tenue.' },
+			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent, il demande une tenue.' },
 			{ libelle: 'Gérer', droits: ['GERER_HABILLEMENT'], phrase: 'Traite les demandes de tenue.' }
 		]
 	},
@@ -52,7 +52,7 @@ export const DOMAINES: Domaine[] = [
 		id: 'messagerie',
 		nom: 'Messagerie',
 		niveaux: [
-			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent : il utilise la messagerie.' },
+			{ libelle: 'Rien de plus', droits: [], phrase: 'Comme tout agent, il utilise la messagerie.' },
 			{ libelle: 'Modérer', droits: ['MODERER_MESSAGERIE'], phrase: 'Modère aussi la messagerie.' }
 		]
 	}

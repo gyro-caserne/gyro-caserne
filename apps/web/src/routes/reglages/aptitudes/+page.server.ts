@@ -33,6 +33,6 @@ export const actions: Actions = {
 		} catch (erreur) {
 			return echec(erreur, `aptitude:${id}`);
 		}
-		return { cible: 'nouvelle', succes: 'Aptitude retirée : elle n’est plus proposée.' };
+		return { cible: 'nouvelle', succes: 'Aptitude retirée. Elle n’est plus proposée.' };
 	}
 };

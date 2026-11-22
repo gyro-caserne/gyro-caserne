@@ -19,7 +19,7 @@
 </script>
 
 <svelte:head>
-	<title>Comités et référents · Gyro Caserne</title>
+	<title>Comités et référents</title>
 </svelte:head>
 
 <!-- « Écrire » ouvre la conversation à deux, comme « Message » sur la fiche d'un agent. -->

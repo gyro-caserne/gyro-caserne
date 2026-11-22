@@ -92,8 +92,8 @@ describe('Me faire remplacer : parcours guidé', () => {
 		expect(html).toContain('Vos périodes : <strong>la nuit du lundi 9 novembre (18 h – 6 h)</strong>');
 		expect(html).toContain('2 collègues disponibles prévenus');
 		expect(html).toMatch(/name="pour" value="tous" checked/);
-		expect(html).toContain('Équipe 3 · CA1');
-		expect(html).toContain('Il lui manque CA1</strong> : votre chef de garde devra valider.');
+		expect(html).toContain('Équipe 3 (CA1)');
+		expect(html).toContain('Il lui manque CA1.</strong> Votre chef de garde devra valider.');
 		expect(html).toContain('Chercher un collègue');
 		expect(html).toMatch(/href="\?semaine=2026-11-06&amp;p=[^"]*"[^>]*>Retour</);
 	});
@@ -111,7 +111,7 @@ describe('Me faire remplacer : parcours guidé', () => {
 		const html = page({ etape: 'verifier', semaine, choisies: [nuit], candidats: [bruno], pour: bruno });
 		expect(html).toContain('Vous demandez à Bruno Martin de vous remplacer la nuit du lundi 9 novembre (18 h – 6 h).');
 		expect(html).toContain('Bruno doit accepter.');
-		expect(html).toContain('Il lui manque CA1 : votre chef de garde devra valider.');
+		expect(html).toContain('Il lui manque CA1. Votre chef de garde devra valider.');
 		expect(html).toContain('name="pour" value="2"');
 	});
 
@@ -119,7 +119,7 @@ describe('Me faire remplacer : parcours guidé', () => {
 		const siennes = [{ debut: '2026-11-14T06:00', fin: '2026-11-15T06:00' }];
 		const html = page({ mode: 'echange', etape: 'verifier', semaine, choisies: [nuit], avec: chloe, echangeables: [chloe], choisiesAvec: siennes });
 		expect(html).toContain('Étape 4 sur 4');
-		expect(html).toContain('Vous proposez à Chloé Petit d’échanger : vous lui donnez la nuit du lundi 9 novembre (18 h – 6 h), Chloé vous donne la garde de 24 h du samedi 14 novembre.');
+		expect(html).toContain('Vous proposez à Chloé Petit d’échanger. Vous lui donnez la nuit du lundi 9 novembre (18 h – 6 h), et Chloé vous donne la garde de 24 h du samedi 14 novembre.');
 		expect(html).toMatch(/name="periodeCible" value="2026-11-14T06:00\|2026-11-15T06:00"/);
 		expect(html).toContain('Proposer l’échange');
 		expect(html).toMatch(/<h1[^>]*>Échanger avec un collègue<\/h1>/);
@@ -140,7 +140,7 @@ describe('Me faire remplacer : parcours guidé', () => {
 
 	it('ouverte à tous sans aucun collègue libre : le dit franchement, pas d’envoi', () => {
 		const html = page({ etape: 'verifier', semaine, choisies: [nuit], candidats: [], pour: 'tous' });
-		expect(html).toContain('personne ne recevrait la demande');
+		expect(html).toContain('Personne ne recevrait la demande');
 		expect(html).toContain('Prévenez directement votre chef de garde.');
 		expect(html).not.toContain('Envoyer la demande');
 	});
@@ -148,7 +148,7 @@ describe('Me faire remplacer : parcours guidé', () => {
 	it('échange : l’aptitude qui me manque pour ses périodes est dite aussi', () => {
 		const siennes = [{ debut: '2026-11-14T06:00', fin: '2026-11-15T06:00' }];
 		const html = page({ mode: 'echange', etape: 'verifier', semaine, choisies: [nuit], avec: { ...chloe, manque: [] }, echangeables: [chloe], choisiesAvec: siennes, manqueMoi: ['CA1'] });
-		expect(html).toContain('Il vous manque CA1 pour ses périodes : votre chef de garde devra valider.');
+		expect(html).toContain('Il vous manque CA1 pour ses périodes. Votre chef de garde devra valider.');
 	});
 
 	it('le nom lu de chaque jour est le texte montré', () => {

@@ -176,7 +176,7 @@ export async function changerSemaines(base: Base, acteur: Acteur, annee: number,
 // Une semaine commencée (ou passée) ne change plus d'équipe.
 export function exigerAVenir(s: SemaineCalculee, maintenant: string) {
 	const debut = s.periodes[0]?.debut ?? s.debut;
-	if (debut <= maintenant.slice(0, 16)) throw new DonneeInvalide(`Semaine du ${jourEnLettres(s.debut)} commencée : son équipe ne change plus`);
+	if (debut <= maintenant.slice(0, 16)) throw new DonneeInvalide(`Semaine du ${jourEnLettres(s.debut)} commencée. Son équipe ne change plus`);
 }
 
 const ETATS_EN_JEU = ['attente', 'a_valider', 'conclue'] as const;

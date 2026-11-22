@@ -12,12 +12,12 @@
 	// La veille du jour de relève qui suit la dernière semaine : le dernier jour de l'été.
 	const dernierJour = (fin: string) => new Date(Date.parse(`${fin}T00:00:00Z`) - 864e5).toISOString().slice(0, 10);
 	const etat = $derived(
-		!v?.reponse ? 'Vous n’avez encore rien donné.' : v.reponse.toutEte ? 'Vous êtes disponible tout l’été.' : v.periodes.length ? `Vous avez donné ${pluriel(v.periodes.length, 'période', 'périodes')} de vacances.` : 'Vous n’avez plus de vacances données : ajoutez-en, ou dites que vous êtes disponible tout l’été.'
+		!v?.reponse ? 'Vous n’avez encore rien donné.' : v.reponse.toutEte ? 'Vous êtes disponible tout l’été.' : v.periodes.length ? `Vous avez donné ${pluriel(v.periodes.length, 'période', 'périodes')} de vacances.` : 'Vous n’avez plus de vacances données. Ajoutez-en, ou dites que vous êtes disponible tout l’été.'
 	);
 </script>
 
 <svelte:head>
-	<title>Mes vacances · Moi · Gyro Caserne</title>
+	<title>Mes vacances</title>
 </svelte:head>
 
 <div class="page">
@@ -26,7 +26,7 @@
 	{#if !v}
 		<p class="encadre">Réservé aux agents ayant une fiche.</p>
 	{:else if !e}
-		<p class="encadre">La saisie des vacances d’été n’est pas encore ouverte : le chef vous préviendra.</p>
+		<p class="encadre">La saisie des vacances d’été n’est pas encore ouverte. Le chef vous préviendra.</p>
 	{:else}
 		<div class="retours">
 			<div role="status">{#if form?.succes}<p class="succes">{form.succes}</p>{/if}</div>
@@ -36,7 +36,7 @@
 		<section class="carte" aria-labelledby="titre-reponse">
 			<h2 id="titre-reponse">Ma réponse</h2>
 			<p class="etat"><strong>{etat}</strong></p>
-			{#if e.publiee}<p class="doux">Le planning d’été est publié : un changement prévient le chef, qui revoit la répartition.</p>{/if}
+			{#if e.publiee}<p class="doux">Le planning d’été est publié. Un changement prévient le chef, qui revoit la répartition.</p>{/if}
 			{#if !v.reponse?.toutEte}
 				<form method="POST" action="?/toutLete" use:enhance>
 					<input type="hidden" name="annee" value={e.annee} />

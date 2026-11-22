@@ -48,7 +48,7 @@ export async function reglerEte(base: Base, acteur: Acteur, annee: number, d: { 
 	if (releves.indexOf(d.fin) - releves.indexOf(d.debut) >= SEMAINES_MAX) throw new DonneeInvalide(`Été trop long : ${SEMAINES_MAX} semaines au plus`);
 	exigerDate(d.dateLimite);
 	const [existant] = await base.select().from(ete).where(eq(ete.annee, annee));
-	if (existant?.publieeLe && (existant.debut !== d.debut || existant.fin !== d.fin)) throw new DonneeInvalide('Été publié : la période ne change plus');
+	if (existant?.publieeLe && (existant.debut !== d.debut || existant.fin !== d.fin)) throw new DonneeInvalide('Été publié, la période ne change plus');
 	const valeurs = { debut: d.debut, fin: d.fin, dateLimite: d.dateLimite };
 	// Une nouvelle date limite relance les rappels.
 	const rappels = existant && existant.dateLimite !== d.dateLimite ? { rappelMoisLe: null, rappelSemaineLe: null } : {};
@@ -96,7 +96,7 @@ async function prevenirSiPublie(base: Base, e: EteVue, moi: number, maintenant: 
 	if (!e.publiee) return [];
 	const [chefs, [p]] = await base.batch([requeteChefs(base, maintenant.slice(0, 10)), base.select({ prenom: personne.prenom, nom: personne.nom }).from(personne).where(eq(personne.id, moi))]);
 	const ids = [...new Set(chefs.filter((c) => c.systeme === 'chef_centre' || c.systeme === 'chef_centre_adjoint').map((c) => c.personneId))].filter((id) => id !== moi);
-	return avis(base, ids, 'vacances_changees', `${p?.prenom ?? ''} ${p?.nom ?? ''} a changé ses vacances : à revoir.`.trim(), `/planning/ete?annee=${e.annee}`, maintenant);
+	return avis(base, ids, 'vacances_changees', `${p?.prenom ?? ''} ${p?.nom ?? ''} a changé ses vacances. La répartition est à revoir.`.trim(), `/planning/ete?annee=${e.annee}`, maintenant);
 }
 
 const repondu = (base: Base, annee: number, moi: number, toutEte: 0 | 1, maintenant: string) =>
@@ -189,7 +189,7 @@ export async function rappelsEte(base: Base, maintenant: string): Promise<number
 			.map((a) => a.id);
 		ecritures.push(
 			base.update(ete).set(semaine ? { rappelSemaineLe: maintenant, rappelMoisLe: e.rappelMoisLe ?? maintenant } : { rappelMoisLe: maintenant }).where(eq(ete.annee, e.annee)),
-			...avis(base, sansReponse, 'rappel', `Donnez vos vacances d’été avant le ${dateFichier(e.dateLimite)} : vos dates, ou « disponible tout l’été ».`, '/moi/vacances', maintenant)
+			...avis(base, sansReponse, 'rappel', `Donnez vos vacances d’été avant le ${dateFichier(e.dateLimite)}, ou dites que vous êtes disponible tout l’été.`, '/moi/vacances', maintenant)
 		);
 		n++;
 	}
@@ -224,7 +224,7 @@ export async function relancerEte(base: Base, acteur: Acteur, annee: number, mai
 	const seuleRelance = sql`(select count(*) from ${journal} where ${journal.action} = 'relancer_ete' and ${journal.quand} >= ${aujourdhui} and json_extract(${journal.details}, '$.annee') = ${annee}) = 1`;
 	await base.batch([
 		ligneJournal(base, { acteur: nomActeur(acteur), action: 'relancer_ete', cibleType: 'planning', cibleId: null, details: { annee, agents: ids.length } }, maintenant),
-		...avis(base, ids, 'rappel', `Donnez vos vacances d’été avant le ${dateFichier(e.dateLimite)} : vos dates, ou « disponible tout l’été ».`, '/moi/vacances', maintenant, seuleRelance)
+		...avis(base, ids, 'rappel', `Donnez vos vacances d’été avant le ${dateFichier(e.dateLimite)}, ou dites que vous êtes disponible tout l’été.`, '/moi/vacances', maintenant, seuleRelance)
 	]);
 	return ids.length;
 }

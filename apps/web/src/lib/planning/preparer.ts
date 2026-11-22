@@ -41,34 +41,40 @@ export function echangePropose(semaines: SemaineCalculee[], fete: Fete, attendue
 
 // Le récapitulatif avant de publier.
 export function recapitulatif(p: { semaines: SemaineCalculee[]; manoeuvres: { annulee: boolean }[]; vacances: unknown[]; fetes: { noel: number | null; nouvelAn: number | null }; equipes: EquipePlanning[] }): string[] {
-	const nom = (id: number | null) => (id === null ? 'personne' : (p.equipes.find((e) => e.id === id)?.nom ?? 'équipe archivée'));
 	const changees = p.semaines.filter((s) => s.changee).length;
 	const manoeuvres = p.manoeuvres.filter((m) => !m.annulee).length;
 	return [
 		`${pluriel(p.semaines.length, 'semaine')}, ${changees ? pluriel(changees, 'changée') : 'aucune changée'}`,
 		manoeuvres ? pluriel(manoeuvres, 'manœuvre') : 'Aucune manœuvre',
-		`Noël : ${nom(p.fetes.noel)} · Nouvel An : ${nom(p.fetes.nouvelAn)}`,
+		`${feteDe(p.equipes, 'Noël', p.fetes.noel)}, ${feteDe(p.equipes, 'Nouvel An', p.fetes.nouvelAn)}`,
 		p.vacances.length ? pluriel(p.vacances.length, 'période de vacances', 'périodes de vacances') : 'Aucune vacances scolaires'
 	];
 }
 
 const nomEquipe = (equipes: EquipePlanning[], id: number | null) => (id === null ? 'personne' : (equipes.find((e) => e.id === id)?.nom ?? 'Équipe archivée'));
 
-// « 52 semaines, Noël : Équipe 2, Nouvel An : Équipe 4, 11 manœuvres reprises, Équipe 3 incomplète »
+// « Noël pour l’équipe 2 », « Nouvel An sans équipe ».
+const feteDe = (equipes: EquipePlanning[], fete: string, id: number | null) => {
+	if (id === null) return `${fete} sans équipe`;
+	const nom = equipes.find((e) => e.id === id)?.nom;
+	return `${fete} pour ${!nom ? 'une équipe archivée' : /^Équipe /.test(nom) ? `l’équipe ${nom.slice(7)}` : nom}`;
+};
+
+// « 52 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 4, 11 manœuvres reprises, Équipe 3 incomplète »
 export function resumeProposition(p: Pick<PropositionAnnee, 'semaines' | 'fetes' | 'manoeuvres' | 'vacances' | 'equipes'>, equipes: EquipePlanning[]): string {
 	return [
 		pluriel(p.semaines, 'semaine'),
-		`Noël : ${nomEquipe(equipes, p.fetes.noel.equipeId)}`,
-		`Nouvel An : ${nomEquipe(equipes, p.fetes.nouvelAn.equipeId)}`,
+		feteDe(equipes, 'Noël', p.fetes.noel.equipeId),
+		feteDe(equipes, 'Nouvel An', p.fetes.nouvelAn.equipeId),
 		p.manoeuvres.length ? pluriel(p.manoeuvres.length, 'manœuvre reprise', 'manœuvres reprises') : 'Aucune manœuvre reprise',
 		...p.equipes.filter((e) => !e.arme).map((e) => `${e.nom} incomplète`),
 		...(p.vacances ? [] : ['Aucune période de vacances saisie'])
 	].join(', ');
 }
 
-// « Équipe 3 : 6 agents, il manque 1 CE »
+// « Équipe 3 a 6 agents. Il manque 1 CE », « Équipe 1 a 7 agents et peut armer le FPT seule »
 export function etatEquipe(e: Pick<PropositionAnnee['equipes'][number], 'nom' | 'effectif' | 'arme' | 'manque'>): string {
-	return `${e.nom} : ${pluriel(e.effectif, 'agent')}, ${e.arme ? 'peut armer le FPT seule' : `il manque ${manquants(e.manque).join(', ')}`}`;
+	return `${e.nom} a ${pluriel(e.effectif, 'agent')}${e.arme ? ' et peut armer le FPT seule' : `. Il manque ${manquants(e.manque).join(', ')}`}`;
 }
 
 // Le tour des deux fêtes n'a pas pu être respecté : le dire, avec le compromis gardé. Null sinon.
@@ -79,7 +85,7 @@ export function texteCompromis(f: PropositionAnnee['fetes'], equipes: EquipePlan
 	const nA = noms(f.nouvelAn.attendues);
 	const tenue = (id: number | null) => nomEquipe(equipes, id);
 	const debut = 'Impossible de respecter le tour des deux fêtes';
-	if (f.memeSemaine) return `${debut} : elles tombent dans la même semaine, et c’est à ${nN} de tenir Noël, à ${nA} de tenir le Nouvel An. Compromis : ${tenue(f.noel.equipeId)} tient les deux.`;
+	if (f.memeSemaine) return `${debut}. Elles tombent dans la même semaine, et c’est à ${nN} de tenir Noël, à ${nA} de tenir le Nouvel An. En compromis, ${tenue(f.noel.equipeId)} tient les deux.`;
 	const qui = nN === nA ? `c’est à ${nN} de tenir Noël et le Nouvel An, et une équipe ne tient pas les deux` : `c’est à ${nN} de tenir Noël, à ${nA} de tenir le Nouvel An`;
-	return `${debut} : ${qui}. Compromis : Noël pour ${tenue(f.noel.equipeId)}, Nouvel An pour ${tenue(f.nouvelAn.equipeId)}.`;
+	return `${debut}. ${qui.charAt(0).toUpperCase()}${qui.slice(1)}. En compromis, Noël pour ${tenue(f.noel.equipeId)}, Nouvel An pour ${tenue(f.nouvelAn.equipeId)}.`;
 }

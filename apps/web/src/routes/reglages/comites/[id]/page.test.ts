@@ -9,7 +9,7 @@ const html = (c: Record<string, unknown>, form: unknown = null) => render(Page a
 describe('page d’un comité', () => {
 	it('en-tête avec membres et rapporteur ; renommer, et dissoudre avec avertissement et « Je confirme »', () => {
 		const page = html({});
-		expect(page).toContain('3 membres · rapporteur : Alice Martin');
+		expect(page).toContain('3 membres, rapporteur : Alice Martin');
 		expect(page).toMatch(/action="\?\/modifier"[\s\S]*id="comite-nom"/);
 		expect(page).toContain('Les 3 personnes qui tiennent un rôle dans ce comité le perdent aujourd’hui, avec ses droits ; les nominations à venir sont annulées.');
 		expect(page).toMatch(/action="\?\/dissoudre"[\s\S]*name="confirmation" value="oui"/);

@@ -46,7 +46,7 @@ describe('réglages : écusson du centre', () => {
 		const l = locaux(base, referent);
 		expect(await envoyer('deposer', l, [])).toMatchObject({ status: 400, data: { erreurs: { image: 'Choisissez une image.' } } });
 		expect(await envoyer('deposer', l, [['image', png()]])).toMatchObject({ status: 400, data: { erreurs: { image: 'Image JPEG ou WebP seulement.' } } });
-		expect(await envoyer('deposer', l, [['image', webp(200 * 1024 + 1)]])).toMatchObject({ status: 400, data: { erreurs: { image: 'Image trop lourde : 200 Ko au plus.' } } });
+		expect(await envoyer('deposer', l, [['image', webp(200 * 1024 + 1)]])).toMatchObject({ status: 400, data: { erreurs: { image: 'Image trop lourde, 200 Ko au plus.' } } });
 		expect(await ecussonDuCentre(base)).toBeNull();
 	});
 });

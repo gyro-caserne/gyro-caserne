@@ -195,7 +195,7 @@ describe('les fêtes du centre, enregistrées', async () => {
 		expect(d!.equipeId).toBe(ids[2]);
 		const lien = await monLienAgenda(base, a(agents[2]!), AVANT);
 		const ics = (await agendaDe(base, String(lien).split('/').at(-1)!.replace(/\.ics$/, ''), AVANT, reglage))!;
-		expect(ics).toContain('SUMMARY:Astreinte · Équipe 3');
+		expect(ics).toContain('SUMMARY:Astreinte\\, Équipe 3');
 		expect(await supprimerFete(base, chef, id, AVANT, reglage)).toEqual({ inutiles: ['Nuit du samedi 5 décembre, trois Test cherche un remplaçant'] });
 		await supprimerFete(base, chef, id, AVANT, reglage, true);
 		const [apres] = await base.select().from(schema.demandeRemplacement).where(eq(schema.demandeRemplacement.id, demande));

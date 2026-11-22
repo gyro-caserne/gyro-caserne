@@ -30,5 +30,5 @@ export const alertesFetes = (a: ApercuPlanning) => a.fetes.filter((f) => f.horsT
 // Après l'import : une année en brouillon reste invisible des agents jusqu'à sa publication.
 export const apresImport = (publiee: boolean) =>
 	publiee
-		? 'Année publiée : les agents voient déjà les changements ; les convoqués des manœuvres annoncées sont prévenus.'
-		: 'Année en brouillon : les agents ne voient rien avant la publication, à l’étape « Vérifier et publier ».';
+		? 'Année publiée. Les agents voient déjà les changements ; les convoqués des manœuvres annoncées sont prévenus.'
+		: 'Année en brouillon. Les agents ne voient rien avant la publication, à l’étape « Vérifier et publier ».';

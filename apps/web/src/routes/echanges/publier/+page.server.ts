@@ -39,7 +39,7 @@ export const actions: Actions = {
 	publier: async ({ locals, request }) => {
 		const acteur = exigerActeur(locals);
 		const js = avecJavaScript(request);
-		if (envoiTropLourd(request)) return fail<Reponse>(413, { cible: 'publier', message: `Envoi trop lourd : 4 photos de 200 Ko au plus.${js ? '' : ' Sans JavaScript, réduisez vos photos avant de les envoyer.'}` });
+		if (envoiTropLourd(request)) return fail<Reponse>(413, { cible: 'publier', message: `Envoi trop lourd, 4 photos de 200 Ko au plus.${js ? '' : ' Sans JavaScript, réduisez vos photos avant de les envoyer.'}` });
 		const { donnees, valeurs, erreurs } = await lirePublication(await request.formData(), js);
 		if (!donnees) return fail<Reponse>(400, { cible: 'publier', erreurs, valeurs });
 		let id: number;

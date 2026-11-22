@@ -155,7 +155,7 @@ describe('demande ouverte', () => {
 		const { base, alice, chloe, n, demande, avisDe, destinataires } = await jeu();
 		const id = await demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: null }, maintenant, reglage);
 		await accepterDemande(base, chloe, id, maintenant, reglage);
-		await expect(annulerDemande(base, alice, id, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Déjà acceptée : demandez au remplaçant de se désister'));
+		await expect(annulerDemande(base, alice, id, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Déjà acceptée. Demandez au remplaçant de se désister'));
 		await desister(base, chloe, id, maintenant, reglage);
 		expect(await demande(id)).toMatchObject({ etat: 'attente', remplacantId: null, motif: 'Désistement' });
 		expect(await avisDe(n.alice)).toEqual(['acceptee', 'desistement']);
@@ -189,7 +189,7 @@ describe('demande ciblée', () => {
 		await base.insert(abonnementPush).values({ personneId: n.bruno, endpoint: 'https://fcm.googleapis.com/x', p256dh: 'a', auth: 'b', appareil: 'Tél', creeLe: maintenant });
 		await demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: n.bruno }, maintenant, reglage);
 		const [envoi] = await base.select().from(envoiPush);
-		expect(JSON.parse(envoi!.donnees)).toMatchObject({ titre: 'Demande de remplacement', texte: 'Alice Test · nuit du lundi 9 novembre', url: '/remplacements?onglet=pour-moi' });
+		expect(JSON.parse(envoi!.donnees)).toMatchObject({ titre: 'Demande de remplacement', texte: 'Alice Test, nuit du lundi 9 novembre', url: '/remplacements?onglet=pour-moi' });
 	});
 });
 
@@ -371,7 +371,7 @@ describe('cloche, accueil, tâche planifiée, départ', () => {
 		const id = await demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: null }, maintenant, reglage);
 		const fil = await filDeNotifications(base, bruno, maintenant);
 		expect(fil.nonLues).toBe(1);
-		expect(fil.lignes[0]).toMatchObject({ type: 'remplacement', demandeId: id, quoi: 'recue', titre: 'Demande de remplacement', texte: 'Alice Test · nuit du lundi 9 novembre', lue: false });
+		expect(fil.lignes[0]).toMatchObject({ type: 'remplacement', demandeId: id, quoi: 'recue', titre: 'Demande de remplacement', texte: 'Alice Test, nuit du lundi 9 novembre', lue: false });
 		expect((await aNePasManquer(base, bruno, '2026-11-01', maintenant)).remplacements).toEqual([{ id, titre: 'Alice Test cherche un remplaçant', sous: 'nuit du lundi 9 novembre', debut: nuitLundi9.debut }]);
 		await accepterDemande(base, bruno, id, maintenant, reglage);
 		expect((await aNePasManquer(base, bruno, '2026-11-01', maintenant)).remplacements).toEqual([]);
@@ -455,7 +455,7 @@ describe('retours de revue', () => {
 		const echange = await proposerEchange(base, alice, { periodes: [nuitLundi9], cibleId: n.bruno, periodesCible: [nuitLundi16] }, maintenant, reglage);
 		const cession = await demanderRemplacement(base, bruno, { periodes: [nuitLundi16], cibleId: n.chloe }, maintenant, reglage);
 		await accepterDemande(base, chloe, cession, maintenant, reglage);
-		await expect(accepterDemande(base, bruno, echange, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Échange impossible : l’un de vous n’est plus libre'));
+		await expect(accepterDemande(base, bruno, echange, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Échange impossible, l’un de vous n’est plus libre'));
 	});
 
 	it('un chef ne valide pas le remplacement qu’il tient lui-même', async () => {

@@ -29,7 +29,7 @@ describe('Ajouter à mon agenda', () => {
 	it('en bas : la mise à jour de l’agenda, ne pas le partager, « Changer le lien »', () => {
 		const html = page(avec(null));
 		expect(html).toContain('L’agenda peut mettre quelques heures à se mettre à jour ; l’appli est toujours à jour.');
-		expect(html).toContain('ne le partagez pas');
+		expect(html).toContain('Ne le partagez pas');
 		expect(html.indexOf('Changer le lien')).toBeGreaterThan(html.indexOf('Outlook'));
 	});
 

@@ -267,7 +267,7 @@ describe('modifierResponsabilite', () => {
 	it('ne retire jamais un droit verrouillé, même pour le super administrateur', async () => {
 		const { base, resp, droitsDe } = await jeu();
 		const chefEquipe = await resp('Chef de garde');
-		await expect(modifierResponsabilite(base, superAdmin, chefEquipe.id, { droits: ['VALIDER_REMPLACEMENT'] }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Droit verrouillé : impossible de le retirer'));
+		await expect(modifierResponsabilite(base, superAdmin, chefEquipe.id, { droits: ['VALIDER_REMPLACEMENT'] }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Droit verrouillé, impossible de le retirer'));
 		expect(await droitsDe(chefEquipe.id)).toEqual(['GERER_FICHES', 'TRAITER_ANOMALIE', 'VALIDER_REMPLACEMENT', 'VOIR_MOTIFS_ABSENCE']);
 		await modifierResponsabilite(base, superAdmin, chefEquipe.id, { droits: ['VALIDER_REMPLACEMENT', 'VOIR_MOTIFS_ABSENCE', 'TRAITER_ANOMALIE', 'GERER_FICHES', 'GERER_PLANNING'] }, aujourdhui);
 		const lignes = await base.select().from(responsabiliteDroit).where(eq(responsabiliteDroit.responsabiliteId, chefEquipe.id));
@@ -278,7 +278,7 @@ describe('modifierResponsabilite', () => {
 		const { base, resp, donner } = await jeu();
 		const engins = await resp('Référent engins');
 		await donner('e1@exemple.fr', 'Référent engins', { type: 'centre' }, '2027-01-01');
-		const refus = new DonneeInvalide('Portée verrouillée : la responsabilité est tenue');
+		const refus = new DonneeInvalide('Portée verrouillée, la responsabilité est tenue');
 		await expect(modifierResponsabilite(base, superAdmin, engins.id, { portee: 'equipe' }, aujourdhui)).rejects.toThrow(refus);
 		const pharmacie = await resp('Référent pharmacie');
 		await donner('p1@exemple.fr', 'Référent pharmacie', { type: 'centre' });

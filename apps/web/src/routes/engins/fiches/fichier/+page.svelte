@@ -26,9 +26,9 @@
 
 	async function demander<T>(url: string, init?: RequestInit): Promise<T> {
 		const reponse = await fetch(url, init).catch(() => {
-			throw new Error('Connexion perdue : réessayez.');
+			throw new Error('Connexion perdue. Réessayez.');
 		});
-		if (reponse.redirected) throw new Error("Vous n'êtes plus connecté : rechargez la page.");
+		if (reponse.redirected) throw new Error("Vous n'êtes plus connecté. Rechargez la page.");
 		const corps = (await reponse.json().catch(() => null)) as { message?: string } | null;
 		if (!reponse.ok || corps === null) throw new Error(corps?.message ?? 'Réponse inattendue du serveur');
 		return corps as T;
@@ -104,7 +104,7 @@
 </script>
 
 <svelte:head>
-	<title>Fichier des fiches · Engins · Gyro Caserne</title>
+	<title>Fichier des fiches</title>
 </svelte:head>
 
 <div class="fichier">
@@ -113,7 +113,7 @@
 	<ol class="etapes" role="list">
 		<li>
 			<Carte titre="1. Exporter les fiches">
-				<p class="note">Partez toujours de l’export : la colonne « Réf. » garde le lien de chaque élément avec son historique. Une ligne sans « Réf. » est un nouvel élément ; une ligne effacée retire l’élément. Une feuille absente laisse sa fiche telle quelle.</p>
+				<p class="note">Partez toujours de l’export. La colonne « Réf. » garde le lien de chaque élément avec son historique. Une ligne sans « Réf. » est un nouvel élément ; une ligne effacée retire l’élément. Une feuille absente laisse sa fiche telle quelle.</p>
 				<div class="actions"><Bouton variante="secondaire" desactive={occupe} onclick={exporter}>Exporter les fiches</Bouton></div>
 			</Carte>
 		</li>
@@ -137,7 +137,7 @@
 			<div class="apercu">
 				<p class="resume">{changees.length ? pluriel(changees.length, 'fiche changée', 'fiches changées') : 'Aucun changement'}{apercu.erreurs.length ? `, ${pluriel(apercu.erreurs.length, 'erreur')}` : ''}</p>
 				{#each apercu.fiches as f (f.type)}
-					<Groupe titre="Fiche {f.type}" resume={resumerFiche(f) + (f.nouvelleVersion ? ` · deviendra la version ${f.version + 1}` : '')} niveauTitre={3}>
+					<Groupe titre="Fiche {f.type}" resume={resumerFiche(f) + (f.nouvelleVersion ? `, deviendra la version ${f.version + 1}` : '')} niveauTitre={3}>
 						<div class="details">
 							{#each [['Ajoutés', f.ajoutes], ['Retirés', f.retires], ['Modifiés', f.modifies]] as const as [titre, liste] (titre)}
 								{#if liste.length}
@@ -155,7 +155,7 @@
 				{#if apercu.erreurs.length}
 					<section>
 						<h4>{pluriel(apercu.erreurs.length, 'erreur', 'erreurs')}</h4>
-						<p class="note">Corrigez le fichier, puis importez-le de nouveau : rien n’est appliqué tant qu’il reste une erreur.</p>
+						<p class="note">Corrigez le fichier, puis importez-le de nouveau. Rien n’est appliqué tant qu’il reste une erreur.</p>
 						<ul class="erreurs">
 							{#each apercu.erreurs as e, i (i)}<li>{e.feuille}, ligne {e.ligne} : {e.message}</li>{/each}
 						</ul>

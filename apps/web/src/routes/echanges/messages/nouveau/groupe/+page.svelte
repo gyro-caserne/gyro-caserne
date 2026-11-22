@@ -59,11 +59,11 @@
 			}
 		};
 	};
-	const annonce = $derived(form ? (ajout ? 'Personne n’a été ajouté : corrigez les erreurs.' : 'Le groupe n’a pas été créé : corrigez les erreurs.') : '');
+	const annonce = $derived(form ? (ajout ? 'Personne n’a été ajouté. Corrigez les erreurs.' : 'Le groupe n’a pas été créé. Corrigez les erreurs.') : '');
 </script>
 
 <svelte:head>
-	<title>{ajout ? `Ajouter des membres · ${ajout.nom}` : `${etape === 'nom' ? 'Nom et icône' : 'Membres'} · Nouveau groupe`} · Gyro Caserne</title>
+	<title>{ajout ? `Ajouter des membres à ${ajout.nom}` : `${etape === 'nom' ? 'Nom et icône' : 'Membres'} du nouveau groupe`}</title>
 </svelte:head>
 
 <div class="page">
@@ -71,7 +71,7 @@
 		<a class="annuler" href={ajout ? `/echanges/messages/${ajout.id}/infos` : '/echanges/messages/nouveau'}>Annuler</a>
 		<h1>{ajout ? 'Ajouter des membres' : 'Nouveau groupe'}</h1>
 	</header>
-	<p class="etape">{ajout ? `Au groupe « ${ajout.nom} »` : etape === 'nom' ? 'Étape 2 sur 2 : nom et icône' : 'Étape 1 sur 2 : les membres'}</p>
+	<p class="etape">{ajout ? `Au groupe « ${ajout.nom} »` : etape === 'nom' ? 'Étape 2 sur 2. Nom et icône' : 'Étape 1 sur 2. Les membres'}</p>
 	<div class="masque" role="alert">{annonce}</div>
 
 	{#if etape === 'membres'}

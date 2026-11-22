@@ -349,7 +349,7 @@ describe('attribuer : l’agent nommé est prévenu', () => {
 		await base.insert(abonnementPush).values({ personneId: simpleId, endpoint: 'https://fcm.googleapis.com/simple', p256dh: 'a', auth: 'b', creeLe: midi });
 		const id = await attribuer(base, chef, { personneId: simpleId, responsabiliteId: r('Chef de garde'), perimetre: { type: 'equipe', id: equipes[1]!.id }, debut: aujourdhui }, aujourdhui, { maintenant: midi });
 		const avis = await base.select().from(avisNomination).where(eq(avisNomination.personneId, simpleId));
-		expect(avis).toMatchObject([{ titre: 'Vous êtes nommé Chef de garde', texte: `${equipes[1]!.nom} · par Chef Test`, url: `/agents/${simpleId}`, creeLe: midi, lueLe: null }]);
+		expect(avis).toMatchObject([{ titre: 'Vous êtes nommé Chef de garde', texte: `${equipes[1]!.nom}, par Chef Test`, url: `/agents/${simpleId}`, creeLe: midi, lueLe: null }]);
 		const [envoi] = await base.select().from(envoiPush);
 		expect(JSON.parse(envoi!.donnees)).toMatchObject({ titre: 'Vous êtes nommé Chef de garde', url: `/agents/${simpleId}` });
 		expect((await filDeNotifications(base, { type: 'personne', id: simpleId }, midi)).lignes[0]).toMatchObject({ type: 'nomination', titre: 'Vous êtes nommé Chef de garde' });

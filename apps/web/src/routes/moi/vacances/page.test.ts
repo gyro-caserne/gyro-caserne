@@ -23,6 +23,6 @@ describe('Mes vacances', () => {
 		const html = page({ ete: { ...ete, publiee: true }, reponse: { toutEte: false, modifieeLe: '2027-03-01T10:00' }, periodes: [{ id: 1, debut: '2027-07-10', fin: '2027-07-20' }] });
 		expect(html).toContain('Vous avez donné 1 période de vacances.');
 		expect(html.replace(/<!--[^>]*-->/g, "")).toMatch(/Retirer<span class="masque[^"]*"> la période 10 – 20 juil\./);
-		expect(html).toContain('un changement prévient le chef');
+		expect(html).toContain('Un changement prévient le chef');
 	});
 });

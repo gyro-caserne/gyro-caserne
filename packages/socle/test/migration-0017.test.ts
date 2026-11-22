@@ -35,11 +35,29 @@ function fichesLues(sqlite: DatabaseSync) {
 	}));
 }
 
+// Les libellés renommés depuis (charte des textes, 21/11/2026) : la migration garde les anciens, les bases déjà remplies aussi.
+const RENOMMES: Record<string, string> = {
+	'Radio : essai': 'Essai radio',
+	'Terminal / GPS': 'Terminal et GPS',
+	'Aspirateur de mucosités : essai': 'Essai de l’aspirateur de mucosités',
+	'Bouteille d’oxygène fixe : pression': 'Pression de la bouteille d’oxygène fixe',
+	'DSA : voyant vert, électrodes adulte et enfant': 'DSA (voyant vert, électrodes adulte et enfant)',
+	'Bouteille d’oxygène portable : pression': 'Pression de la bouteille d’oxygène portable',
+	'ARI : pression et fonctionnement': 'ARI (pression et fonctionnement)',
+	'Émulseur : niveau': 'Niveau d’émulseur',
+	'Pompe : essai': 'Essai de la pompe',
+	'Tronçonneuse : plein et essai': 'Tronçonneuse (plein et essai)',
+	'Motopompe : plein et essai': 'Motopompe (plein et essai)',
+	'Groupe électrogène : plein et essai': 'Groupe électrogène (plein et essai)'
+};
+const renommees = (fiches: ReturnType<typeof fichesLues>) =>
+	fiches.map((f) => ({ ...f, zones: f.zones.map((z) => ({ ...z, elements: z.elements.map(([l, q]) => [RENOMMES[l as string] ?? l, q]) })) }));
+
 describe('migration 0017', () => {
-	it('base déjà remplie : les fiches de départ, identiques à celles du jeu de départ, en version 1', () => {
+	it('base déjà remplie : les fiches de départ, identiques à celles du jeu de départ (aux libellés renommés près), en version 1', () => {
 		const sqlite = remplie();
 		appliquer(sqlite, fichier);
-		expect(fichesLues(sqlite)).toEqual(FICHES_PAR_DEFAUT);
+		expect(renommees(fichesLues(sqlite))).toEqual(FICHES_PAR_DEFAUT);
 		expect(lignes(sqlite, 'SELECT numero, utilisee FROM fiche_version')).toEqual([1, 2, 3].map(() => ({ numero: 1, utilisee: 0 })));
 		expect(lignes(sqlite, 'SELECT count(DISTINCT ref) AS n, count(*) AS total FROM fiche_element')).toEqual([{ n: 72, total: 72 }]);
 	});

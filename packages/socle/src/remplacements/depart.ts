@@ -20,10 +20,10 @@ export async function remplacementsAuDepart(base: Base, personneId: number, main
 	const texte = (d: (typeof touchees)[number]) => texteDemande(periodesDe(d.periodes)) || 'Échange de manœuvre';
 	const prevenir = touchees.flatMap((d) =>
 		d.demandeurId === personneId
-			? avis(base, [...(d.remplacantId !== null && ['a_valider', 'conclue'].includes(d.etat) ? [d.remplacantId] : []), ...(d.cibleId !== null && d.etat === 'attente' ? [d.cibleId] : [])], d.id, 'annulee', `Départ du demandeur · ${texte(d)}`, `/remplacements/${d.id}`, maintenant)
+			? avis(base, [...(d.remplacantId !== null && ['a_valider', 'conclue'].includes(d.etat) ? [d.remplacantId] : []), ...(d.cibleId !== null && d.etat === 'attente' ? [d.cibleId] : [])], d.id, 'annulee', `Départ du demandeur, ${texte(d)}`, `/remplacements/${d.id}`, maintenant)
 			: d.genre === 'manoeuvre'
 				? []
-				: avis(base, [d.demandeurId], d.id, 'desistement', `Départ de votre remplaçant · ${texte(d)} · vous redevenez responsable`, `/remplacements/${d.id}`, maintenant)
+				: avis(base, [d.demandeurId], d.id, 'desistement', `Départ de votre remplaçant, ${texte(d)}. Vous redevenez responsable.`, `/remplacements/${d.id}`, maintenant)
 	);
 	return [
 		base

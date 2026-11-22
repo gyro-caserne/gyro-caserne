@@ -78,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>{extraitDemande(d.texte, 40)} · Habillement · Gyro Caserne</title>
+	<title>{extraitDemande(d.texte, 40)}</title>
 </svelte:head>
 
 {#snippet erreur(quoi: string)}
@@ -121,13 +121,13 @@
 								<Bouton type="submit" desactive={envoi}>{peut('prendre') ? 'Je la prends en compte' : 'Je la reprends'}</Bouton>
 							</form>
 						{/if}
-						{#each REFERENT.filter(peut) as cle (cle)}<a class="lien-secondaire" href={adresse(cle)} data-sveltekit-noscroll data-sveltekit-reset="false">{TITRES[cle]}…</a>{/each}
+						{#each REFERENT.filter(peut) as cle (cle)}<a class="lien-secondaire" href={adresse(cle)} data-sveltekit-noscroll data-sveltekit-reset="false">{TITRES[cle]}</a>{/each}
 					</div>
 					{@render erreur('prendre')}
 					{@render erreur('reprendre')}
 				{/if}
 				{#if peut('annuler')}
-					<div><a class="lien-secondaire" href={adresse('annuler')} data-sveltekit-noscroll data-sveltekit-reset="false">Annuler ma demande…</a></div>
+					<div><a class="lien-secondaire" href={adresse('annuler')} data-sveltekit-noscroll data-sveltekit-reset="false">Annuler ma demande</a></div>
 				{/if}
 			</div>
 		</Carte>
@@ -137,13 +137,13 @@
 				<ol class="fil">
 					<li>
 						<strong>Demande</strong>
-						<span class="doux">{moment(d.creeLe)} · {d.demandeur}</span>
+						<span class="doux">{moment(d.creeLe)}, par {d.demandeur}</span>
 						<span class="texte">{d.texte}</span>
 					</li>
 					{#each d.fil as f, i (i)}
 						<li>
 							<strong>{TEXTES_FIL[f.quoi]}</strong>
-							<span class="doux">{moment(f.le)} · {f.par}</span>
+							<span class="doux">{moment(f.le)}, par {f.par}</span>
 							{#if f.texte}<span class="texte">{f.texte}</span>{/if}
 						</li>
 					{/each}

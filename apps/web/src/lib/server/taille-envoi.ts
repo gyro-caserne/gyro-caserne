@@ -13,7 +13,7 @@ export function envoiRefuse(request: Request, chemin: string): Response | null {
 	const longueur = annoncee === null || !/^\d+$/.test(annoncee) ? NaN : Number(annoncee);
 	const max = LIMITES[chemin] ?? ENVOI_MAX;
 	if (longueur <= max) return null;
-	const message = `Envoi trop lourd : ${max / MO} Mo au plus.`;
+	const message = `Envoi trop lourd, ${max / MO} Mo au plus.`;
 	if (request.headers.get('content-type')?.startsWith('application/json')) return Response.json({ message }, { status: 413 });
 	return new Response(message, { status: 413, headers: { 'content-type': 'text/plain; charset=utf-8' } });
 }

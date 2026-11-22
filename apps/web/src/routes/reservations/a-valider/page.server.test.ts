@@ -28,10 +28,10 @@ describe('/reservations/a-valider', () => {
 		const { base, alice, bruno, bancs } = await preparer();
 		const { id: a } = await reserver(base, alice, bancs, { debut: dans(3), fin: dans(3), quantite: 2 }, maintenantParis());
 		const { id: b } = await reserver(base, alice, bancs, { debut: dans(4), fin: dans(4), quantite: 2 }, maintenantParis());
-		expect(await agir('accepter', locaux(base, bruno), [['id', String(a)]])).toEqual({ succes: 'Demande acceptée : le demandeur est prévenu.' });
-		expect(await agir('refuser', locaux(base, bruno), [['id', String(b)], ['motif', 'Déjà prêtés']])).toEqual({ succes: 'Demande refusée : le demandeur est prévenu.' });
+		expect(await agir('accepter', locaux(base, bruno), [['id', String(a)]])).toEqual({ succes: 'Demande acceptée. Le demandeur est prévenu.' });
+		expect(await agir('refuser', locaux(base, bruno), [['id', String(b)], ['motif', 'Déjà prêtés']])).toEqual({ succes: 'Demande refusée. Le demandeur est prévenu.' });
 		expect(await etat(base, b)).toMatchObject({ etat: 'refusee', motif: 'Déjà prêtés' });
-		expect(await agir('annuler', locaux(base, bruno), [['id', String(a)], ['mot', 'Bancs cassés']])).toEqual({ succes: 'Réservation annulée : le demandeur est prévenu.' });
+		expect(await agir('annuler', locaux(base, bruno), [['id', String(a)], ['mot', 'Bancs cassés']])).toEqual({ succes: 'Réservation annulée. Le demandeur est prévenu.' });
 		expect(await etat(base, a)).toMatchObject({ etat: 'annulee', motif: 'Bancs cassés' });
 		expect(await agir('accepter', locaux(base, bruno), [['id', String(a)]])).toMatchObject({ status: 400, data: { message: 'Cette demande a déjà été traitée.' } });
 		expect(await agir('accepter', locaux(base, alice), [['id', String(b)]])).toMatchObject({ status: 403 });

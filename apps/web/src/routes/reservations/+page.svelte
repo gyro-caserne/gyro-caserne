@@ -7,18 +7,18 @@
 
 	let { data }: { data: { ressources: Ressource[]; peutReserver: boolean; reserveCitoyenne: boolean; aValider: number; mesAVenir: number; peutGererMateriel: boolean } } = $props();
 
-	const regle = (r: Ressource) => (r.forme === 'creneau' ? 'Par créneau, acceptée d’office si libre' : `${r.stock} en stock · validé par ${r.gestionnaire.nom}`);
+	const regle = (r: Ressource) => (r.forme === 'creneau' ? 'Par créneau, acceptée d’office si libre' : `${r.stock} en stock, validé par ${r.gestionnaire.nom}`);
 	const gere = $derived(data.aValider > 0 || data.ressources.some((r) => r.jeGere));
 </script>
 
 <svelte:head>
-	<title>Réservations · Gyro Caserne</title>
+	<title>Réservations</title>
 </svelte:head>
 
 <div class="page">
 	<EnTetePage
 		titre="Réservations"
-		phrase={data.reserveCitoyenne ? 'Réservez la VL pour la réserve citoyenne.' : 'La VL et le matériel de l’amicale : voyez ce qui est pris, réservez le reste.'}
+		phrase={data.reserveCitoyenne ? 'Réservez la VL pour la réserve citoyenne.' : 'La VL et le matériel de l’amicale. Voyez ce qui est pris, réservez le reste.'}
 		retour={{ href: '/caserne', libelle: 'Caserne' }}
 	/>
 

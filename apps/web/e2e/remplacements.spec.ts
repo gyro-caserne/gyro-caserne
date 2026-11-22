@@ -21,7 +21,7 @@ test.describe('remplacements', () => {
 			await expect(page.getByRole('heading', { level: 2, name: 'David Leroy cherche un remplaçant' })).toBeVisible();
 			await sansViolation(page);
 			await page.getByRole('button', { name: /^Accepter/ }).click();
-			await expect(page.getByRole('status')).toContainText('c’est conclu');
+			await expect(page.getByRole('status')).toContainText('C’est conclu');
 			await page.getByRole('link', { name: 'Mes demandes' }).click();
 			await expect(page.getByRole('heading', { level: 2, name: 'Je remplace David Leroy' })).toBeVisible();
 			await expect(page.getByText('Conclu', { exact: true })).toBeVisible();

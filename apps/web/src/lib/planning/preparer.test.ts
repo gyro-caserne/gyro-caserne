@@ -33,7 +33,7 @@ describe('préparer l’année', () => {
 
 	it('récapitule l’année', () => {
 		const r = recapitulatif({ semaines, manoeuvres: [{ annulee: false }, { annulee: true }], vacances: [{}], fetes: { noel: 4, nouvelAn: 1 }, equipes: [1, 2, 3, 4].map((id) => ({ id, nom: `Équipe ${id}`, couleur: '#000' })) });
-		expect(r).toEqual(['53 semaines, aucune changée', '1 manœuvre', 'Noël : Équipe 4 · Nouvel An : Équipe 1', '1 période de vacances']);
+		expect(r).toEqual(['53 semaines, aucune changée', '1 manœuvre', 'Noël pour l’équipe 4, Nouvel An pour l’équipe 1', '1 période de vacances']);
 	});
 
 	const proposition = (autres: Record<string, unknown> = {}) => ({
@@ -47,24 +47,24 @@ describe('préparer l’année', () => {
 	const equipes = [1, 2, 3, 4].map((id) => ({ id, nom: `Équipe ${id}`, couleur: '#000' }));
 
 	it('le résumé de la proposition, en une ligne', () => {
-		expect(resumeProposition(proposition() as never, equipes)).toBe('52 semaines, Noël : Équipe 2, Nouvel An : Équipe 4, 11 manœuvres reprises, Équipe 3 incomplète');
+		expect(resumeProposition(proposition() as never, equipes)).toBe('52 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 4, 11 manœuvres reprises, Équipe 3 incomplète');
 	});
 
 	it('le résumé rappelle les vacances à saisir ; aucune manœuvre, toutes les équipes armées', () => {
 		const r = resumeProposition(proposition({ vacances: 0, manoeuvres: [], equipes: [] }) as never, equipes);
-		expect(r).toBe('52 semaines, Noël : Équipe 2, Nouvel An : Équipe 4, Aucune manœuvre reprise, Aucune période de vacances saisie');
+		expect(r).toBe('52 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 4, Aucune manœuvre reprise, Aucune période de vacances saisie');
 	});
 
 	it('l’état d’une équipe, en toutes lettres', () => {
-		expect(etatEquipe({ nom: 'Équipe 3', effectif: 6, arme: false, manque: ['ce'] })).toBe('Équipe 3 : 6 agents, il manque 1 CE');
-		expect(etatEquipe({ nom: 'Équipe 1', effectif: 1, arme: false, manque: ['ca2', 'agent', 'agent'] })).toBe('Équipe 1 : 1 agent, il manque 1 CA tout engins, 2 agents');
-		expect(etatEquipe({ nom: 'Équipe 2', effectif: 7, arme: true, manque: [] })).toBe('Équipe 2 : 7 agents, peut armer le FPT seule');
+		expect(etatEquipe({ nom: 'Équipe 3', effectif: 6, arme: false, manque: ['ce'] })).toBe('Équipe 3 a 6 agents. Il manque 1 CE');
+		expect(etatEquipe({ nom: 'Équipe 1', effectif: 1, arme: false, manque: ['ca2', 'agent', 'agent'] })).toBe('Équipe 1 a 1 agent. Il manque 1 CA tout engins, 2 agents');
+		expect(etatEquipe({ nom: 'Équipe 2', effectif: 7, arme: true, manque: [] })).toBe('Équipe 2 a 7 agents et peut armer le FPT seule');
 	});
 
 	it('le compromis est dit clairement ; aucun sans compromis', () => {
 		const fetes = (noel: object, nouvelAn: object, memeSemaine = false) => ({ noel: { dansLeTour: true, ...noel }, nouvelAn: { dansLeTour: true, ...nouvelAn }, compromis: true, memeSemaine, deSuite: [] });
 		expect(texteCompromis(proposition().fetes as never, equipes)).toBeNull();
-		expect(texteCompromis(fetes({ equipeId: 2, attendues: [2] }, { equipeId: 1, dansLeTour: false, attendues: [2] }) as never, equipes)).toBe('Impossible de respecter le tour des deux fêtes : c’est à Équipe 2 de tenir Noël et le Nouvel An, et une équipe ne tient pas les deux. Compromis : Noël pour Équipe 2, Nouvel An pour Équipe 1.');
-		expect(texteCompromis(fetes({ equipeId: 1, attendues: [1] }, { equipeId: 1, dansLeTour: false, attendues: [2] }, true) as never, equipes)).toBe('Impossible de respecter le tour des deux fêtes : elles tombent dans la même semaine, et c’est à Équipe 1 de tenir Noël, à Équipe 2 de tenir le Nouvel An. Compromis : Équipe 1 tient les deux.');
+		expect(texteCompromis(fetes({ equipeId: 2, attendues: [2] }, { equipeId: 1, dansLeTour: false, attendues: [2] }) as never, equipes)).toBe('Impossible de respecter le tour des deux fêtes. C’est à Équipe 2 de tenir Noël et le Nouvel An, et une équipe ne tient pas les deux. En compromis, Noël pour Équipe 2, Nouvel An pour Équipe 1.');
+		expect(texteCompromis(fetes({ equipeId: 1, attendues: [1] }, { equipeId: 1, dansLeTour: false, attendues: [2] }, true) as never, equipes)).toBe('Impossible de respecter le tour des deux fêtes. Elles tombent dans la même semaine, et c’est à Équipe 1 de tenir Noël, à Équipe 2 de tenir le Nouvel An. En compromis, Équipe 1 tient les deux.');
 	});
 });

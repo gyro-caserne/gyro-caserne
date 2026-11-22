@@ -135,7 +135,7 @@ describe('fichier du planning', () => {
 			{ feuille: 'Semaines', ligne: 3, message: 'Équipe « Équipe 9 » inconnue' },
 			{ feuille: 'Manœuvres', ligne: 2, message: 'Date « 31/02/2027 » invalide (JJ/MM/AAAA)' },
 			{ feuille: 'Manœuvres', ligne: 3, message: 'Équipe « 7 » inconnue' },
-			{ feuille: 'Manœuvres', ligne: 4, message: 'Réf. 99 inconnue : laissez-la vide pour une nouvelle manœuvre' }
+			{ feuille: 'Manœuvres', ligne: 4, message: 'Réf. 99 inconnue. Laissez-la vide pour une nouvelle manœuvre' }
 		]);
 		expect(apercu.vacances).toEqual({ ajoutees: [], retirees: [] });
 		await expect(appliquerPlanning(base, chef, 2027, lu, maintenant, reglage)).rejects.toThrow(DonneeInvalide);
@@ -216,6 +216,6 @@ describe('fichier du planning', () => {
 		expect(await apercuPlanning(base, chef, 2027, relu(d), maintenant, reglage)).toMatchObject({ erreurs: [], manoeuvres: { ajoutees: [], modifiees: [], retirees: [] } });
 		// Une nouvelle sans fin dont la durée du centre passerait minuit : un message qui le dit.
 		const nouvelle = relu(d, (f) => (f['Manœuvres'] = [['', '04/04/2027', '22:00', '', 'Nuit', 'Caserne', 'Toutes', 'Non']]));
-		expect((await apercuPlanning(base, chef, 2027, nouvelle, maintenant, reglage)).erreurs).toEqual([{ feuille: 'Manœuvres', ligne: 2, message: 'Fin vide : la durée réglée par le centre passerait minuit, indiquez la fin' }]);
+		expect((await apercuPlanning(base, chef, 2027, nouvelle, maintenant, reglage)).erreurs).toEqual([{ feuille: 'Manœuvres', ligne: 2, message: 'Fin vide. La durée réglée par le centre passerait minuit, indiquez la fin' }]);
 	});
 });

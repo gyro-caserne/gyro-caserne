@@ -155,7 +155,7 @@ const cibleSql = sql<string | null>`case "journal"."cible_type"
 	when 'demande_remplacement' then (select p.prenom || ' ' || p.nom from demande_remplacement d join personne p on p.id = d.demandeur_id where d.id = "journal"."cible_id")
 	when 'demande_habillement' then (select p.prenom || ' ' || p.nom from demande_habillement d join personne p on p.id = d.demandeur_id where d.id = "journal"."cible_id")
 	when 'equipe' then (select e.nom from equipe e where e.id = "journal"."cible_id")
-	when 'anomalie' then (select e.nom || ' · ' || a.libelle from anomalie a join engin e on e.id = a.engin_id where a.id = "journal"."cible_id")
+	when 'anomalie' then (select a.libelle || ' (' || e.nom || ')' from anomalie a join engin e on e.id = a.engin_id where a.id = "journal"."cible_id")
 	when 'fete_centre' then (select f.nom from fete_centre f where f.id = "journal"."cible_id")
 end`;
 const roleSql = sql<string | null>`case when "journal"."cible_type" = 'attribution' then (select r.nom from attribution a join responsabilite r on r.id = a.responsabilite_id where a.id = "journal"."cible_id") end`;

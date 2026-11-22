@@ -32,7 +32,10 @@
 	// svelte-ignore state_referenced_locally
 	let coche = $state<string>(choisi === null ? (tous !== null ? 'tous' : '') : String(choisi));
 	const visibles = $derived(collegues.filter((c) => !plat(filtre) || plat(`${c.prenom} ${c.nom}`).includes(plat(filtre)) || String(c.id) === coche));
-	const sous = (c: Collegue) => [c.equipe?.nom, c.aptitudes.length ? c.aptitudes.join(', ') : 'Pas d’aptitude inscrite'].filter(Boolean).join(' · ');
+	const sous = (c: Collegue) => {
+		const aptitudes = c.aptitudes.length ? c.aptitudes.join(', ') : 'pas d’aptitude inscrite';
+		return c.equipe ? `${c.equipe.nom} (${aptitudes})` : aptitudes.charAt(0).toUpperCase() + aptitudes.slice(1);
+	};
 </script>
 
 <fieldset class="choix">
@@ -66,7 +69,7 @@
 					<span class="corps">
 						<span class="titre">{c.prenom} {c.nom}</span>
 						<span class="sous">{sous(c)}</span>
-						{#if c.manque.length > 0}<span class="manque"><strong>Il lui manque {c.manque.join(', ')}</strong> : votre chef de garde devra valider.</span>{/if}
+						{#if c.manque.length > 0}<span class="manque"><strong>Il lui manque {c.manque.join(', ')}.</strong> Votre chef de garde devra valider.</span>{/if}
 					</span>
 				</label>
 			</li>

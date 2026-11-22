@@ -111,7 +111,7 @@
 </script>
 
 <svelte:head>
-	<title>{groupe ? 'Infos du groupe' : 'Infos'} · {infos.nom} · Gyro Caserne</title>
+	<title>{groupe ? 'Infos du groupe' : 'Infos'} {infos.nom}</title>
 </svelte:head>
 
 {#snippet cadenas()}

@@ -273,7 +273,7 @@ describe('apercuImport : erreurs', () => {
 		const id = await nouvelle('Léa', 'Durand', { equipeId: 1 });
 		await nommer(id, resp('Chef de garde'), { type: 'equipe', id: 2 });
 		const apercu = await apercuImport(base, acteur, await exporter(base, acteur), aujourdhui, reservees);
-		expect(apercu.erreurs).toEqual([{ ligne: 2, colonne: 'Chef de garde', message: 'rôle tenu sur une autre équipe : à traiter à l’écran' }]);
+		expect(apercu.erreurs).toEqual([{ ligne: 2, colonne: 'Chef de garde', message: 'rôle tenu sur une autre équipe, à traiter à l’écran' }]);
 		expect(apercu.operations).toEqual([]);
 	});
 
@@ -287,7 +287,7 @@ describe('apercuImport : erreurs', () => {
 
 		const apercu = await apercuImport(base, acteur, fichier, aujourdhui, reservees);
 		expect(apercu.erreurs).toEqual([
-			{ ligne: 2, colonne: 'Comité : Amicale', message: 'deux rôles dans ce comité : à traiter à l’écran' },
+			{ ligne: 2, colonne: 'Comité : Amicale', message: 'deux rôles dans ce comité, à traiter à l’écran' },
 			{ ligne, colonne: 'Comité : Amicale', message: '« Trésorier » n’est pas un rôle de comité' }
 		]);
 		expect(apercu.operations).toEqual([]);

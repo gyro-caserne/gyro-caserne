@@ -39,7 +39,7 @@ describe('/engins/fiches/[id]', () => {
 	it('un refus est dit à côté du bon formulaire, avec la saisie', async () => {
 		const { base, chef, types } = await preparer();
 		const reponse = await geste(locaux(base, chef), types.VTU, [['quoi', 'ajouter_element'], ['zone', '999'], ['libelle', 'X'], ['quantite', 'deux'], ['cible', 'ajout:999']]);
-		expect(reponse).toMatchObject({ status: 400, data: { cible: 'ajout:999', message: 'Cette zone n’existe plus : la page a été rechargée.' } });
+		expect(reponse).toMatchObject({ status: 400, data: { cible: 'ajout:999', message: 'Cette zone n’existe plus. La page a été rechargée.' } });
 		const quantite = await geste(locaux(base, chef), types.VTU, [['quoi', 'ajouter_element'], ['zone', String((await lireFiche(base, types.VTU)).zones[0]!.ref)], ['libelle', 'X'], ['quantite', 'deux'], ['cible', 'a']]);
 		expect(quantite).toMatchObject({ status: 400, data: { message: expect.stringContaining('nombre entier de 1 à 999'), valeurs: { libelle: 'X', quantite: 'deux' } } });
 		expect(await geste(locaux(base, chef), types.VTU, [['quoi', 'n_importe_quoi']])).toMatchObject({ status: 400 });

@@ -28,11 +28,11 @@ describe('/moi', () => {
 		}
 	});
 
-	it('carte d’identité : visage à la couleur de l’équipe, nom, grade · équipe', () => {
+	it('carte d’identité : visage à la couleur de l’équipe, nom, grade et équipe', () => {
 		const page = html({ estPersonne: true, identite: { prenom: 'Claire', nom: 'Chef', grade: 'Lieutenant', equipe: { nom: 'Équipe 1', couleur: '#d4a017' } } });
 		expect(page).toMatch(/class="visage[^"]*"[^>]*style="background: #d4a017;/);
 		expect(page).toContain('Claire Chef');
-		expect(page).toContain('Lieutenant · Équipe 1');
+		expect(page).toContain('Lieutenant, Équipe 1');
 		expect(page.indexOf('Claire Chef')).toBeLessThan(page.indexOf('href="/profil"'));
 	});
 

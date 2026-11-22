@@ -322,7 +322,7 @@ describe('modifier, supprimer, épingler, fermer', () => {
 		const [premiere] = await base.select().from(publication);
 		const onzieme = await publier(base, base.photos, acteur(agent), 'vie', message(), maintenant);
 		const ailleurs = await publier(base, base.photos, acteur(chef), 'centre', message(), maintenant);
-		await expect(epingler(base, acteur(chef), onzieme, true, maintenant)).rejects.toThrow('Dix publications sont déjà épinglées : désépinglez-en une d’abord');
+		await expect(epingler(base, acteur(chef), onzieme, true, maintenant)).rejects.toThrow('Dix publications sont déjà épinglées. Désépinglez-en une d’abord');
 		// Une déjà épinglée le reste ; un autre mur n'est pas concerné.
 		await epingler(base, acteur(chef), premiere!.id, true, maintenant);
 		await epingler(base, acteur(chef), ailleurs, true, maintenant);

@@ -76,9 +76,9 @@ describe('agenda de l’agent', () => {
 		const texte = (await agendaDe(base, await monLienAgenda(base, alice, maintenant), maintenant, reglage))!;
 		expect(texte).toContain('\r\n');
 		// Semaine du 6 novembre (index 44, équipe 1) : vendredi 18 h → lundi 6 h d'un seul tenant
-		expect(texte).toContain('DTSTART:20261106T170000Z\r\nDTEND:20261109T050000Z\r\nSUMMARY:Astreinte · Équipe 1');
+		expect(texte).toContain('DTSTART:20261106T170000Z\r\nDTEND:20261109T050000Z\r\nSUMMARY:Astreinte\\, Équipe 1');
 		// De 7 h 45 à 12 h, heure de Paris (UTC+1 en novembre)
-		expect(texte).toContain('DTSTART:20261115T064500Z\r\nDTEND:20261115T110000Z\r\nSUMMARY:Manœuvre : Sport\\, SAP');
+		expect(texte).toContain('DTSTART:20261115T064500Z\r\nDTEND:20261115T110000Z\r\nSUMMARY:Manœuvre Sport\\, SAP');
 		expect(texte).toContain('LOCATION:Caserne');
 		expect(texte).not.toContain('Autre équipe');
 		expect(texte.split('BEGIN:VEVENT').length - 1).toBeGreaterThan(50);
@@ -104,7 +104,7 @@ describe('agenda de l’agent', () => {
 		const { base, alice, chef, ids } = await jeu();
 		await enregistrerManoeuvre(base, chef, { debut: '2026-11-15T08:30', theme: 'A\rEND:VEVENT\nB', lieu: 'Caserne', convoques: [ids[0]!], petitDejeuner: false }, maintenant);
 		const texte = (await agendaDe(base, await monLienAgenda(base, alice, maintenant), maintenant, reglage))!;
-		expect(texte).toContain('SUMMARY:Manœuvre : A\\nEND:VEVENT\\nB');
+		expect(texte).toContain('SUMMARY:Manœuvre A\\nEND:VEVENT\\nB');
 		expect(texte.split('\r\n').filter((l) => l === 'END:VEVENT')).toHaveLength(texte.split('BEGIN:VEVENT').length - 1);
 	});
 

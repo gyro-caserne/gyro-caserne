@@ -45,6 +45,6 @@ export const actions: Actions = {
 		} catch (erreur) {
 			return refus(erreur);
 		}
-		return { succes: `${nom} retiré : ses réservations à venir sont annulées.` };
+		return { succes: `${nom} retiré. Ses réservations à venir sont annulées.` };
 	}
 };

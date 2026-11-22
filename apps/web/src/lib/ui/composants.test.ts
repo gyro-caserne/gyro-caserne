@@ -446,8 +446,8 @@ describe('Rangee', () => {
 		expect(page).toMatch(/class="chevron[^"]*"[^>]*aria-hidden="true"/);
 	});
 	it('une sous-ligne par info quand il y en a trop pour une ligne', () => {
-		const page = net(Rangee, { titre: 'VSAV 1', sous: ['VSAV · AB-123-CD', 'Prise à faire · 1 anomalie ouverte'] });
-		expect(page).toMatch(/<span class="sous[^"]*">VSAV · AB-123-CD<\/span><span class="sous[^"]*">Prise à faire · 1 anomalie ouverte<\/span>/);
+		const page = net(Rangee, { titre: 'VSAV 1', sous: ['VSAV, AB-123-CD', 'Prise à faire, 1 anomalie ouverte'] });
+		expect(page).toMatch(/<span class="sous[^"]*">VSAV, AB-123-CD<\/span><span class="sous[^"]*">Prise à faire, 1 anomalie ouverte<\/span>/);
 	});
 	it('une tuile seulement sur demande : elle porte un sens (type, rôle)', () => {
 		expect(net(Rangee, { href: '/reglages/roles/3', titre: 'Référent', icone: 'casque' })).toContain(`d="${ICONES_ROLES.casque}"`);

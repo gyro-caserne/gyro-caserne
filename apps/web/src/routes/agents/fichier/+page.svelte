@@ -24,14 +24,14 @@
 
 	// Le classeur s'écrit et se lit dans le navigateur seulement.
 	const classeur = () => import('#lib/fichier-effectif/classeur.ts');
-	const texteErreur = (e: unknown) => (e instanceof ConnexionPerdue ? 'Connexion perdue : réessayez.' : e instanceof Error ? e.message : String(e));
+	const texteErreur = (e: unknown) => (e instanceof ConnexionPerdue ? 'Connexion perdue. Réessayez.' : e instanceof Error ? e.message : String(e));
 
 	async function demander<T>(url: string, init?: RequestInit): Promise<T> {
 		// Sans réponse, le navigateur rejette en anglais : on le dit en français.
 		const reponse = await fetch(url, init).catch(() => {
 			throw new ConnexionPerdue();
 		});
-		if (reponse.redirected) throw new Error("Vous n'êtes plus connecté : rechargez la page.");
+		if (reponse.redirected) throw new Error("Vous n'êtes plus connecté. Rechargez la page.");
 		const corps = (await reponse.json().catch(() => null)) as { message?: string } | null;
 		if (!reponse.ok || corps === null) throw new Error(corps?.message ?? 'Réponse inattendue du serveur');
 		return corps as T;
@@ -88,7 +88,7 @@
 	onDestroy(() => arret.abort());
 	beforeNavigate((navigation) => {
 		if (etape !== 'application' || navigation.willUnload) return;
-		if (!confirm("L'import est en cours : quitter l'arrêtera. Quitter quand même ?")) navigation.cancel();
+		if (!confirm("L'import est en cours. Quitter l'arrêtera. Quitter quand même ?")) navigation.cancel();
 	});
 	$effect(() => {
 		if (etape !== 'application') return;
@@ -134,7 +134,7 @@
 </script>
 
 <svelte:head>
-	<title>Fichier de l'effectif · Agents · Gyro Caserne</title>
+	<title>Fichier de l'effectif</title>
 </svelte:head>
 
 <div class="fichier">

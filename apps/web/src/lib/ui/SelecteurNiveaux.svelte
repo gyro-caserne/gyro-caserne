@@ -19,7 +19,7 @@
 		desactive?: boolean;
 	} = $props();
 
-	const phrase = $derived(valeur === 'sur_mesure' ? 'Des droits choisis un par un : voir le détail droit par droit.' : niveaux[valeur]?.phrase);
+	const phrase = $derived(valeur === 'sur_mesure' ? 'Des droits choisis un par un, détaillés plus bas.' : niveaux[valeur]?.phrase);
 	const nomDuNiveau = $derived(valeur === 'sur_mesure' ? 'Sur mesure' : (niveaux[valeur]?.libelle ?? ''));
 	let groupe: HTMLFieldSetElement;
 

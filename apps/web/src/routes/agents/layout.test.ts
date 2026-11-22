@@ -58,7 +58,7 @@ describe('/agents : vue de tous', () => {
 		// Le visage à la couleur de l'équipe ; gris sans équipe.
 		expect(mise).toMatch(/background: #b3121f[^>]*>AM</);
 		expect(mise).toMatch(/background: var\(--statut-neutre-fond\)[^>]*>TF</);
-		expect(mise).toMatch(/<h2[^>]*>\s*<button[\s\S]*Équipe 1[\s\S]*2 agents · chef : A\. Martin/);
+		expect(mise).toMatch(/<h2[^>]*>\s*<button[\s\S]*Équipe 1[\s\S]*2 agents, chef : A\. Martin/);
 		expect(mise).toMatch(/class="carre[^"]*"[^>]*style="background: #b3121f;?"/);
 		expect(boutonDuGroupe(mise, 'Équipe 1')).toBe('true');
 		expect(boutonDuGroupe(mise, 'Sans équipe')).toBe('true');
@@ -67,7 +67,7 @@ describe('/agents : vue de tous', () => {
 
 	it('signale en alerte une équipe sans chef de garde', () => {
 		const mise = html(Layout, { data, children: enfants });
-		expect(mise).toMatch(/class="resume[^"]*alerte[^"]*">1 agent · sans chef de garde</);
+		expect(mise).toMatch(/class="resume[^"]*alerte[^"]*">1 agent, sans chef de garde</);
 		expect(mise.match(/class="resume[^"]*alerte/g)).toHaveLength(1);
 		expect(mise).not.toContain('/nominations');
 	});
@@ -84,7 +84,7 @@ describe('/agents : vue de tous', () => {
 		const mise = html(Layout, { data, children: enfants });
 		expect(mise).toContain('Alice Martin');
 		expect(mise).toContain('Sergent-chef');
-		expect(mise).toMatch(/Sergent-chef(<!--[^>]*-->)* · (<!--[^>]*-->)*<span class="masque[^"]*">Rôles :<\/span> Chef de garde \(Équipe 1\) · Rapporteur \(Amicale\)/);
+		expect(mise).toMatch(/Sergent-chef(<!--[^>]*-->)*, (<!--[^>]*-->)*<span class="masque[^"]*">Rôles :<\/span> Chef de garde \(Équipe 1\), Rapporteur \(Amicale\)/);
 		expect(mise.match(/Rôles/g)).toHaveLength(1);
 		// Une espace entre « Rôles : » (lu seulement) et les rôles, pour le texte lu.
 		expect(mise).toMatch(/Rôles :<\/span> Chef de garde/);
@@ -94,7 +94,7 @@ describe('/agents : vue de tous', () => {
 		expect(mise).not.toContain('href="/agents/');
 		expect(mise).not.toContain('class="detail');
 		expect(mise).not.toContain('Contenu de la page');
-		expect(tete(Layout, { data, children: enfants })).toContain('<title>Agents · Gyro Caserne</title>');
+		expect(tete(Layout, { data, children: enfants })).toContain('<title>Agents</title>');
 		expect(html(Page, { data })).not.toContain('Choisissez un agent');
 	});
 
@@ -163,7 +163,7 @@ describe('/agents : gestion', () => {
 		expect(mise).not.toContain('alice@exemple.fr');
 		expect(mise).toMatch(/Alice Martin[\s\S]*Stagiaire[\s\S]*À compléter[\s\S]*Paul Durand/);
 		expect(mise).not.toContain('Opérationnel');
-		expect(mise).toMatch(/class="resume[^"]*alerte[^"]*">2 agents · sans chef de garde</);
+		expect(mise).toMatch(/class="resume[^"]*alerte[^"]*">2 agents, sans chef de garde</);
 	});
 
 	it('montre l’e-mail dans la sous-ligne quand c’est lui qui répond à la recherche', () => {

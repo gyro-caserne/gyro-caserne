@@ -27,9 +27,9 @@
 
 	async function demander<T>(url: string, init?: RequestInit): Promise<T> {
 		const reponse = await fetch(url, init).catch(() => {
-			throw new Error('Connexion perdue : réessayez.');
+			throw new Error('Connexion perdue. Réessayez.');
 		});
-		if (reponse.redirected) throw new Error("Vous n'êtes plus connecté : rechargez la page.");
+		if (reponse.redirected) throw new Error("Vous n'êtes plus connecté. Rechargez la page.");
 		const corps = (await reponse.json().catch(() => null)) as { message?: string } | null;
 		if (!reponse.ok || corps === null) throw new Error(corps?.message ?? 'Réponse inattendue du serveur');
 		return corps as T;
@@ -105,7 +105,7 @@
 </script>
 
 <svelte:head>
-	<title>Fichier du planning {data.annee} · Gyro Caserne</title>
+	<title>Fichier du planning {data.annee}</title>
 </svelte:head>
 
 <div class="fichier">
@@ -139,7 +139,7 @@
 					<section>
 						<h3>{pluriel(apercu.semaines.length, 'semaine changée', 'semaines changées')}</h3>
 						<ul>
-							{#each apercu.semaines as s (s.debut)}<li>S{s.numero}, semaine du {jourLong(s.debut)} : {s.avant} <span aria-hidden="true">→</span><span class="cache">devient</span> {s.apres}</li>{/each}
+							{#each apercu.semaines as s (s.debut)}<li>S{s.numero}, semaine du {jourLong(s.debut)}, {s.avant} devient {s.apres}</li>{/each}
 						</ul>
 					</section>
 				{/if}
@@ -148,7 +148,7 @@
 						<section>
 							<h3>{pluriel(apercu.manoeuvres[cle].length, s, p)}</h3>
 							<ul>
-								{#each apercu.manoeuvres[cle] as m, i (i)}<li>{momentLong(m.debut)} · {m.theme}{'annoncee' in m && m.annoncee ? ' (déjà annoncée : marquée « Annulée », convoqués prévenus)' : ''}</li>{/each}
+								{#each apercu.manoeuvres[cle] as m, i (i)}<li>{m.theme}, {momentLong(m.debut)}{'annoncee' in m && m.annoncee ? ' (déjà annoncée, elle sera marquée Annulée et les convoqués prévenus)' : ''}</li>{/each}
 							</ul>
 						</section>
 					{/if}
@@ -171,7 +171,7 @@
 				{#if apercu.erreurs.length}
 					<section>
 						<h3>{pluriel(apercu.erreurs.length, 'erreur', 'erreurs')}</h3>
-						<p class="note">Corrigez le fichier, puis importez-le de nouveau : rien n’est appliqué tant qu’il reste une erreur.</p>
+						<p class="note">Corrigez le fichier, puis importez-le de nouveau. Rien n’est appliqué tant qu’il reste une erreur.</p>
 						<ul class="erreurs">
 							{#each apercu.erreurs as e, i (i)}<li>{e.feuille}, ligne {e.ligne} : {e.message}</li>{/each}
 						</ul>

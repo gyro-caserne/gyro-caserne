@@ -67,7 +67,7 @@ describe('annonce à deux semaines', () => {
 		// Seulement les convoqués : Alice (équipe 1).
 		expect(await destinataires()).toEqual([alice.id]);
 		// Le jour est écrit en toutes lettres.
-		expect(JSON.stringify(await base.select().from(envoiPush))).toContain('dimanche 29 novembre, 8 h 30 à 11 h 30 · Caserne');
+		expect(JSON.stringify(await base.select().from(envoiPush))).toContain('dimanche 29 novembre, 8 h 30 à 11 h 30, Caserne');
 		expect(await base.select().from(envoiPush)).toHaveLength(1);
 		const vue = (await lireMur(base, alice, 'centre', {}, '2026-11-15T09:00')).publications[0]!;
 		expect(vue.auteur).toMatchObject({ prenom: 'Planning', nom: '', appli: true, ecrireA: null });
@@ -149,14 +149,14 @@ describe('changement ou annulation après annonce', () => {
 		await enregistrerManoeuvre(base, chef, { id, debut: '2026-11-29T09:00', theme: 'Feux de forêt', lieu: 'Caserne', convoques: 'tous', petitDejeuner: false }, '2026-11-18T19:02');
 		await manoeuvreChangee(base, id, '2026-11-18T19:02', chef);
 		const titres = async () => [...new Set((await base.select().from(envoiPush)).map((e) => JSON.parse(e.donnees).titre))];
-		expect(await titres()).toEqual(['Manœuvre modifiée par Chef T : Feux de forêt']);
+		expect(await titres()).toEqual(['Manœuvre modifiée par Chef T']);
 		const vue = (await lireMur(base, alice, 'centre', {}, '2026-11-18T20:00')).publications[0]!;
 		expect(vue.auteur).toMatchObject({ prenom: 'Planning', nom: '', appli: true });
 		expect(vue.modifieePar).toEqual({ nom: 'Chef T', le: '2026-11-18T19:02' });
 		await base.delete(envoiPush);
 		await supprimerManoeuvre(base, chef, id, '2026-11-19T08:15');
 		await manoeuvreChangee(base, id, '2026-11-19T08:15', chef);
-		expect(await titres()).toEqual(['Manœuvre annulée par Chef T : Feux de forêt']);
+		expect(await titres()).toEqual(['Manœuvre annulée par Chef T']);
 		expect((await lireMur(base, alice, 'centre', {}, '2026-11-19T09:00')).publications[0]!.modifieePar).toEqual({ nom: 'Chef T', le: '2026-11-19T08:15' });
 		const fil = await filDeNotifications(base, alice, '2026-11-19T09:00');
 		expect(fil.lignes[0]).toMatchObject({ auteur: { prenom: 'Planning', nom: '', appli: true } });
@@ -225,7 +225,7 @@ describe('heure de fin et choix du petit-déjeuner', () => {
 		const [p] = await base.select().from(publication);
 		expect(p).toMatchObject({ debut: '2026-11-29T07:45', fin: '2026-11-29T12:00' });
 		expect(JSON.parse(p!.sondageReponses!)).toEqual(choix);
-		expect(JSON.stringify(await base.select().from(envoiPush))).toContain('dimanche 29 novembre, 7 h 45 à 12 h · Caserne');
+		expect(JSON.stringify(await base.select().from(envoiPush))).toContain('dimanche 29 novembre, 7 h 45 à 12 h, Caserne');
 		// 11 h 30 : plus de 3 h après le début, toujours en cours.
 		const mur = (await lireMur(base, alice, 'centre', {}, '2026-11-29T11:30')).publications[0]!;
 		expect(mur.evenement).toMatchObject({ moment: 'enCours', fin: '2026-11-29T12:00' });
@@ -261,7 +261,7 @@ describe('heure de fin et choix du petit-déjeuner', () => {
 		expect(JSON.parse(p!.sondageReponses!)).toEqual(['Oui', 'Non']);
 		expect(p!.fin).toBe('2026-11-29T12:00');
 		await manoeuvreChangee(base, id, '2026-11-16T10:00', chef);
-		expect(JSON.stringify(await base.select().from(envoiPush))).toContain('dimanche 29 novembre, 8 h 30 à 12 h · Caserne');
+		expect(JSON.stringify(await base.select().from(envoiPush))).toContain('dimanche 29 novembre, 8 h 30 à 12 h, Caserne');
 	});
 
 	it('petit-déjeuner ajouté à une manœuvre déjà annoncée : les choix du centre', async () => {

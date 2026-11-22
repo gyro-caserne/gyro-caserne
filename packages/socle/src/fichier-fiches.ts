@@ -45,11 +45,11 @@ function lireFeuille(fiche: Fiche, lignes: { numero: number; cellules: string[] 
 		if (zoneBrute.length > LIMITES_FICHE.nomZone) erreur(numero, `Zone trop longue (${LIMITES_FICHE.nomZone} caractères au plus)`);
 		if (libelleBrut.length > LIMITES_FICHE.libelle) erreur(numero, `Élément trop long (${LIMITES_FICHE.libelle} caractères au plus)`);
 		const quantite = quantiteBrute === '' ? null : Number(quantiteBrute);
-		if (quantite !== null && !(Number.isInteger(quantite) && quantite >= 1 && quantite <= LIMITES_FICHE.quantite)) erreur(numero, `Quantité « ${quantiteBrute} » : un nombre entier de 1 à ${LIMITES_FICHE.quantite}, ou rien`);
+		if (quantite !== null && !(Number.isInteger(quantite) && quantite >= 1 && quantite <= LIMITES_FICHE.quantite)) erreur(numero, `Quantité « ${quantiteBrute} » invalide. Écrivez un nombre entier de 1 à ${LIMITES_FICHE.quantite}, ou rien`);
 		// Une « Réf. » inconnue de cette fiche (copiée d'une autre feuille, tapée à la main) : un nouvel élément.
 		let ref = /^\d+$/.test(refBrute) && connus.has(Number(refBrute)) ? Number(refBrute) : null;
 		if (ref !== null && vues.has(ref)) {
-			erreur(numero, `Réf. ${ref} en double : effacez-la sur la copie`);
+			erreur(numero, `Réf. ${ref} en double. Effacez-la sur la copie`);
 			ref = null;
 		}
 		if (ref !== null) vues.add(ref);
@@ -70,7 +70,7 @@ function changements(fiche: Fiche, zones: ZoneFiche[]): ChangementsFiche {
 	const modifies = apres.flatMap((e) => {
 		const a = avant.find((x) => x.ref === e.ref);
 		if (!a || (a.libelle === e.libelle && a.quantite === e.quantite && a.zone === e.zone)) return [];
-		return [a.zone !== e.zone ? `${e.libelle} (passe en ${nomZone.get(e.zone)})` : a.libelle !== e.libelle ? `${a.libelle} → ${e.libelle}` : `${e.libelle} : ${a.quantite ?? 'sans quantité'} → ${e.quantite ?? 'sans quantité'}`];
+		return [a.zone !== e.zone ? `${e.libelle} (passe en ${nomZone.get(e.zone)})` : a.libelle !== e.libelle ? `${a.libelle} renommé en ${e.libelle}` : `${e.libelle}, ${e.quantite ?? 'sans quantité'} au lieu de ${a.quantite ?? 'sans quantité'}`];
 	});
 	const ajoutes = apres.filter((e) => !avant.some((a) => a.ref === e.ref)).map((e) => e.libelle);
 	const retires = avant.filter((e) => !apres.some((a) => a.ref === e.ref)).map((e) => e.libelle);
@@ -98,7 +98,7 @@ async function analyser(base: Base, acteur: Acteur, lu: FichierFichesLu, mainten
 		}
 		if (fiche) vues.add(fiche.typeId);
 		if (!fiche) {
-			erreur(1, `Type d’engin « ${feuille} » inconnu : créez-le d’abord dans l’appli (Fiches → Nouveau type)`);
+			erreur(1, `Type d’engin « ${feuille} » inconnu. Créez-le d’abord dans l’appli, depuis Fiches puis Nouveau type.`);
 			continue;
 		}
 		const lues = lu.entetes?.[feuille];
@@ -107,7 +107,7 @@ async function analyser(base: Base, acteur: Acteur, lu: FichierFichesLu, mainten
 			continue;
 		}
 		if (lignes.length === 0) {
-			erreur(2, 'Feuille vide : une fiche garde au moins un élément (retirez la feuille pour ne pas toucher à cette fiche)');
+			erreur(2, 'Feuille vide. Une fiche garde au moins un élément (retirez la feuille pour ne pas toucher à cette fiche)');
 			continue;
 		}
 		const avantErreurs = erreurs.length;

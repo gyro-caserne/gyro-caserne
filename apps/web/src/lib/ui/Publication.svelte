@@ -59,7 +59,7 @@
 	// « J'aime » devient « Applaudir » sur un bravo : même donnée.
 	const aimer = $derived(bravo ? 'Applaudir' : 'J’aime');
 	const aimes = $derived(bravo ? pluriel(p.jaime, 'applaudissement') : `${p.jaime} j’aime`);
-	const commentaires = $derived(`${pluriel(p.commentaires, 'commentaire')}${p.commentairesFermes ? ' · commentaires fermés' : ''}`);
+	const commentaires = $derived(`${pluriel(p.commentaires, 'commentaire')}${p.commentairesFermes ? ', commentaires fermés' : ''}`);
 
 	// Après un geste, SvelteKit remet le focus en haut de la page : on le rend à son bouton ; si le bouton a disparu
 	// (vote, prise de connaissance), à la publication.
@@ -72,14 +72,14 @@
 </script>
 
 {#snippet signature()}
-	<span class="doux">{p.auteur.role ? `${p.auteur.role} · ` : ''}<time datetime={p.creeLe}>{quandBref(p.creeLe)}</time>{p.modifieeLe && !p.modifieePar ? ' · modifiée' : ''}</span>
+	<span class="doux">{p.auteur.role ? `${p.auteur.role}, ` : ''}<time datetime={p.creeLe}>{quandBref(p.creeLe)}</time>{p.modifieeLe && !p.modifieePar ? ', modifiée' : ''}</span>
 {/snippet}
 
 <article id="publication-{p.id}" class="publication {p.type}" class:a-confirmer={prise} aria-labelledby="auteur-{p.id}" tabindex="-1" bind:this={carte}>
 	{#if prise}
 		<p class="bandeau">
 			<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3l5 5-4 1-4 4 1 5-2 2-4-4-5 5-1-1 5-5-4-4 2-2 5 1 4-4z" /></svg>
-			{p.epinglee ? 'Épinglée · ' : ''}Annonce à lire et confirmer
+			{p.epinglee ? 'Annonce épinglée, à lire et confirmer' : 'Annonce à lire et confirmer'}
 		</p>
 	{/if}
 	{#if bravo && affichage.niveau !== 'sobre'}
@@ -124,7 +124,7 @@
 				<TuileDate iso={e.debut} />
 				<span class="colonne">
 					<strong class="texte titre-evenement">{p.texte}</strong>
-					<span class="doux">{heure(e.debut)}{e.fin ? ` à ${heure(e.fin)}` : ''} · {e.lieu}</span>
+					<span class="doux">{heure(e.debut)}{e.fin ? ` à ${heure(e.fin)}` : ''}, {e.lieu}</span>
 					<span class="doux petit">Convoqués : {convoques}{e.convoque ? ' (vous l’êtes)' : ''}</span>
 					{#if e.moment === 'enCours' && !p.annulee}<span><Pastille ton="ok">En cours</Pastille></span>{/if}
 				</span>
@@ -186,7 +186,7 @@
 				<form method="POST" action="?/aimer" use:enhance={garderFocus}>
 					<input type="hidden" name="id" value={p.id} />
 					<input type="hidden" name="oui" value={p.jaimeParMoi ? '0' : '1'} />
-					<button type="submit" class="pilule aimer" aria-pressed={p.jaimeParMoi}>{aimer} · <span class="nombre">{p.jaime}</span></button>
+					<button type="submit" class="pilule aimer" aria-pressed={p.jaimeParMoi}>{aimer} <span class="nombre">{p.jaime}</span></button>
 				</form>
 			{/if}
 			{#if !seule}
@@ -196,13 +196,13 @@
 					<a class="pilule" href="{lien}#commenter">Commenter</a>
 				{/if}
 			{/if}
-			{#if !agir || p.commentaires > 0 || p.commentairesFermes}<span class="doux">{agir ? commentaires : `${aimes} · ${commentaires}`}</span>{/if}
+			{#if !agir || p.commentaires > 0 || p.commentairesFermes}<span class="doux">{agir ? commentaires : `${aimes}, ${commentaires}`}</span>{/if}
 		</div>
 
 		{#if !seule && p.derniersCommentaires.length > 0}
 			<ul class="commentaires" aria-label="Derniers commentaires">
 				{#each p.derniersCommentaires as c (c.id)}
-					<li><span class="auteur">{nom(c.auteur)}</span> <span class="doux">· le {quand(c.creeLe)}</span><p class="texte">{c.texte}</p></li>
+					<li><span class="auteur">{nom(c.auteur)}</span><span class="doux">, le {quand(c.creeLe)}</span><p class="texte">{c.texte}</p></li>
 				{/each}
 			</ul>
 		{/if}

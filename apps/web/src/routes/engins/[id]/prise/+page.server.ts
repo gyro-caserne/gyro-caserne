@@ -84,7 +84,7 @@ export const actions: Actions = {
 		const cible = champ(f, 'cible');
 		const zone = idDe(champ(f, 'zone')) || null;
 		const fichier = f.get('photo');
-		if (fichier instanceof File && fichier.size > TAILLE_PHOTO_MAX) return fail(400, { cible, zone, message: 'Photo trop lourde : 200 Ko au plus.' });
+		if (fichier instanceof File && fichier.size > TAILLE_PHOTO_MAX) return fail(400, { cible, zone, message: 'Photo trop lourde, 200 Ko au plus.' });
 		const geste = await gesteDe(f);
 		if (!geste) return refusPrise(new DonneeInvalide('Geste inconnu'), { cible, zone });
 		try {

@@ -8,7 +8,7 @@
 4. Un élément signalé à une prise précédente est retrouvé ? **Oui, clore le signalement**.
 5. Sous la liste, appuyez sur **Tout est complet** (**Le reste est complet** s'il y a un écart) : la prise commence si ce n'est pas déjà fait, et la zone suivante s'affiche. Une erreur ? **Annuler**, ou appuyez sur la zone puis **Revoir la zone**.
 6. Sous le nom de l'engin, appuyez sur la ligne **Participants : …** (**Modifier**) : l'équipe d'astreinte d'abord ; cherchez un remplaçant ou un renfort par son nom ; cochez, puis **Enregistrer les participants**. Modifiable jusqu'à la relève suivante, même après la validation.
-7. En bas, le bandeau dit combien de zones il reste à voir. Toutes vues, **Valider la prise** devient actif : le résumé rappelle au nom de qui elle est faite. Chaque écart devient une anomalie suivie ; l'engin reste disponible.
+7. En bas, le bandeau dit combien de zones il reste à voir. Toutes vues, **Valider la prise** devient actif : une phrase rappelle au nom de qui elle est faite (« La prise sera à votre nom. »), et « Modifier les participants » vient dessous. Chaque écart devient une anomalie suivie ; l'engin reste disponible.
 
 Le brouillon est gardé : vous pouvez le reprendre sur un autre téléphone, ou un collègue peut le finir à votre place.
 

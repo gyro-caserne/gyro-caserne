@@ -37,7 +37,7 @@ async function preparer() {
 	const fiche = await lireFiche(j.base, j.types.VSAV);
 	const cabine = fiche.zones[0]!;
 	const gilets = cabine.elements.find((e) => e.libelle.startsWith('Gilets'))!;
-	const radio = cabine.elements.find((e) => e.libelle.startsWith('Radio'))!;
+	const radio = cabine.elements.find((e) => e.libelle === 'Essai radio')!;
 	const id = await commencerPrise(j.base, j.base.photos, j.alice, vsav, PENDANT, reglage);
 	await gestePrise(j.base, j.base.photos, j.alice, id, { quoi: 'ecart', element: gilets.ref, genre: 'manquant', manque: 1, note: '' }, PENDANT, reglage);
 	for (const z of fiche.zones) await gestePrise(j.base, j.base.photos, j.alice, id, { quoi: 'zone', zone: z.ref, vue: true }, PENDANT, reglage);

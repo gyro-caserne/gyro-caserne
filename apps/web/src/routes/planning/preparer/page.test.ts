@@ -52,7 +52,7 @@ describe('Préparer l’année en cinq étapes', () => {
 
 	it('Fêtes : hors de son tour, l’échange proposé à accepter', () => {
 		const html = page({ etape: 'fetes' });
-		expect(html).toContain('Hors de son tour : c’est à Équipe 2 de tenir Noël.');
+		expect(html).toContain('Hors de son tour. C’est à Équipe 2 de tenir Noël.');
 		expect(html).toContain('href="?annee=2027&amp;etape=fetes&amp;proposer=noel#proposition-noel"');
 		expect(html).toContain('Noël 2026');
 		const propose = page({ etape: 'fetes', proposer: 'noel' });
@@ -157,7 +157,7 @@ describe('Préparer l’année en cinq étapes', () => {
 	it('année publiée : le roulement ne se déplace plus, l’étape 5 change une semaine', () => {
 		const html = page({ preparation: preparation({ publiee: '2026-11-01T10:00' }) });
 		expect(html).not.toContain('name="deplacer"');
-		expect(html).toContain('Année publiée : le roulement ne change plus.');
+		expect(html).toContain('Année publiée. Le roulement ne change plus.');
 	});
 
 	it('année publiée : avant de changer une semaine, les remplacements touchés et qui sera prévenu ; commencée, elle ne change plus', () => {
@@ -170,7 +170,7 @@ describe('Préparer l’année en cinq étapes', () => {
 		expect(html).toContain('Les agents des deux équipes et les personnes de ces remplacements seront prévenus.');
 		expect(html.indexOf('remplacements touchés')).toBeLessThan(html.indexOf('name="semaine-2027-01-01"'));
 		const commencee = page({ etape: 'publier', preparation: publiee, semaine: '2027-01-01', semaineTouche: { commencee: true, remplacements: [] } });
-		expect(commencee).toContain('Semaine commencée : son équipe ne change plus.');
+		expect(commencee).toContain('Semaine commencée. Son équipe ne change plus.');
 		expect(commencee).not.toContain('name="semaine-2027-01-01"');
 	});
 
@@ -202,11 +202,11 @@ describe('Préparer l’année en cinq étapes', () => {
 	it('le panneau : l’état des équipes en tête, signalé seulement, puis le résumé et « Accepter »', () => {
 		const html = page({ preparation: preparation({ ordre: [], semaines: [] }), proposition });
 		expect(html).toContain('Proposition pour 2027');
-		expect(html).toContain('Équipe 3 : 6 agents, il manque 1 CE');
-		expect(html).toContain('Équipe 1 : 6 agents, peut armer le FPT seule');
+		expect(html).toContain('Équipe 3 a 6 agents. Il manque 1 CE');
+		expect(html).toContain('Équipe 1 a 6 agents et peut armer le FPT seule');
 		expect(html).toContain('href="/agents"');
 		expect(html).toContain('href="/nominations"');
-		expect(html).toContain('53 semaines, Noël : Équipe 2, Nouvel An : Équipe 1, 1 manœuvre reprise, Équipe 3 incomplète, Aucune période de vacances saisie');
+		expect(html).toContain('53 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 1, 1 manœuvre reprise, Équipe 3 incomplète, Aucune période de vacances saisie');
 		expect(html).toContain('action="?/proposition&amp;annee=2027&amp;etape=roulement"');
 		expect(html).toContain('Accepter et écrire le brouillon');
 		expect(html.indexOf('il manque 1 CE')).toBeLessThan(html.indexOf('Feux de forêt'));

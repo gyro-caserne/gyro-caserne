@@ -14,7 +14,7 @@ L'Accueil dit le temps qu'il fait au centre, et montre toujours la vigilance Mé
 
 - Pour le département du centre en métropole (`departement` dans `centre.ts`, par exemple `35`), aujourd'hui et demain. La vigilance « vagues-submersion » du littoral (zones côtières à part) et l'outre-mer ne sont pas lus.
 - Toujours visible, aujourd'hui et demain (le niveau le plus élevé des deux décide de la taille) :
-  - **vert** : une petite ligne discrète près de la ligne météo, « Vigilance verte · Ille-et-Vilaine » (le nom du département, `departementNom` dans `centre.ts`, sinon son numéro), lien vers vigilance.meteofrance.fr ;
+  - **vert** : une petite ligne discrète près de la ligne météo, « Vigilance verte, Ille-et-Vilaine » (le nom du département, `departementNom` dans `centre.ts`, sinon son numéro), lien vers vigilance.meteofrance.fr ;
   - **jaune** : la même ligne, un peu plus marquée, avec un jeton de couleur, le mot « jaune » et le phénomène : « Vigilance jaune orages, aujourd'hui » ;
   - **orange et rouge** : le grand bandeau en tête de l'Accueil, une ligne par jour : « Vigilance orange orages, aujourd'hui », « Vigilance rouge vent violent, demain », avec le lien vers vigilance.meteofrance.fr. Le niveau est toujours écrit en toutes lettres.
 - **Jamais un vert périmé** : la vigilance est relue toutes les 10 minutes et n'est valable que 2 heures. Au-delà, ou si la lecture échoue alors qu'une clé est configurée, la ligne dit « Vigilance indisponible, voir Météo-France » (avec le lien).

@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>Vos données · Gyro Caserne</title>
+	<title>Vos données</title>
 </svelte:head>
 
 <div class="page">
@@ -27,7 +27,7 @@
 				<li>Saisi par vous ou par le centre : date de naissance.</li>
 				<li>Ce que vous faites dans l’appli : disponibilités, remplacements, messages, publications, prises de garde, réservations, demandes de tenue.</li>
 			</ul>
-			<p class="doux">Pas de mot de passe : vous vous connectez par un lien reçu par e-mail.</p>
+			<p class="doux">Pas de mot de passe. Vous vous connectez par un lien reçu par e-mail.</p>
 		</Carte>
 
 		<Carte titre="Où">
@@ -48,7 +48,7 @@
 				<li>Messages : {centre.conservationMessagesMois} mois.</li>
 				<li>Publications des murs et leurs photos : {centre.conservationPublicationsMois} mois, sauf celles épinglées.</li>
 				<li>Réservations : 12 mois après leur fin. Demandes de tenue : 24 mois après leur fin. Notifications : 30 jours.</li>
-				<li>À votre départ, votre date de naissance et votre contact d’urgence sont effacés tout de suite. Le reste l’est 12 mois après votre départ : votre nom devient alors « Ancien agent » dans l’historique du centre (planning, prises de garde, anomalies), qui reste.</li>
+				<li>À votre départ, votre date de naissance et votre contact d’urgence sont effacés tout de suite. Le reste l’est 12 mois après votre départ. Votre nom devient alors « Ancien agent » dans l’historique du centre (planning, prises de garde, anomalies), qui reste.</li>
 			</ul>
 		</Carte>
 

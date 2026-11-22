@@ -67,6 +67,9 @@ const auteurDe = (texte: SQL | string) => sql`'personne:' || ${personne.id} = ${
 const couleurDe = (aujourdhui: string) =>
 	sql<string | null>`(select e.couleur from ${affectationEquipe} a join ${equipe} e on e.id = a.equipe_id where a.personne_id = "personne"."id" and a.debut <= ${aujourdhui} and (a.fin is null or a.fin >= ${aujourdhui}) order by a.debut desc limit 1)`;
 
+// « de Julie Martin », « d’Alice Martin ».
+const deNom = (nom: string) => (/^[aeiouyhàâéèêëîïôöûü]/i.test(nom) ? `d’${nom}` : `de ${nom}`);
+
 function nomDuMur(cle: string, equipes: { id: number; nom: string }[], comites: { id: number; nom: string }[]): string {
 	if (cle === 'centre') return 'Le centre';
 	if (cle === 'vie') return 'Vie du centre';
@@ -143,7 +146,7 @@ export async function notifierPublication(base: Base, id: number, maintenant: st
 		.filter((x) => x.id !== auteur && (x.a.tous || estMembre(x.a, p.mur)))
 		.map((x) => x.id);
 	if (ids.length === 0) return;
-	const donnees = { titre: `${nomDuMur(p.mur, equipes, comites)} · ${nomComplet(auteurs[0], p.auteur)}`, texte: extrait(p.texte), url: `/echanges/${p.mur}/${id}`, tag: `publication:${id}` };
+	const donnees = { titre: `Publication ${deNom(nomComplet(auteurs[0], p.auteur))} (${nomDuMur(p.mur, equipes, comites)})`, texte: extrait(p.texte), url: `/echanges/${p.mur}/${id}`, tag: `publication:${id}` };
 	await base.batch([ecrireFil(base, ids, id, null, maintenant), mettreEnFile(base, ids, `mur:${p.mur}`, donnees, maintenant)]);
 }
 
@@ -217,7 +220,7 @@ export async function notifierMessage(base: Base, id: number, maintenant: string
 	const ids = membres.map((x) => x.id);
 	if (!m || ids.length === 0) return;
 	const donnees = {
-		titre: m.type === 'deux' ? `Message de ${m.prenom}` : `${m.nomGroupe ?? ''} · ${m.prenom}`,
+		titre: m.type === 'deux' ? `Message de ${m.prenom}` : `Message de ${m.prenom} dans ${m.nomGroupe ?? 'un groupe'}`,
 		texte: extrait(m.texte) || 'Photo',
 		url: `/echanges/messages/${m.conversationId}`,
 		tag: `conversation:${m.conversationId}`
@@ -345,7 +348,7 @@ export async function filDeNotifications(base: Base, acteur: Acteur, maintenant:
 			demandeId: a.demandeId,
 			quoi: a.quoi,
 			titre: TITRES_AVIS[a.quoi],
-			texte: `${a.prenom} ${a.nom} · ${a.genre === 'manoeuvre' ? 'échange de manœuvre' : texteDemande(JSON.parse(a.periodes))}`,
+			texte: `${a.prenom} ${a.nom}, ${a.genre === 'manoeuvre' ? 'échange de manœuvre' : texteDemande(JSON.parse(a.periodes))}`,
 			issue,
 			creeLe: a.creeLe,
 			lue: a.lueLe !== null || issue !== null

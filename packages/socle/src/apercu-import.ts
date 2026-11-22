@@ -228,7 +228,7 @@ export async function apercuImport(base: Base, acteur: Acteur, fichier: FichierL
 		const roleComite = colonnesComites.map((c) => {
 			const valeur = v(c.entete);
 			const role = valeur ? rolesComite.find((r) => minuscules(r.nom) === minuscules(valeur)) : undefined;
-			if (valeur.includes(',')) erreur(c.entete, 'deux rôles dans ce comité : à traiter à l’écran');
+			if (valeur.includes(',')) erreur(c.entete, 'deux rôles dans ce comité, à traiter à l’écran');
 			else if (valeur && !role) erreur(c.entete, `« ${valeur} » n’est pas un rôle de comité`);
 			return { ...c, valeur, role };
 		});
@@ -298,7 +298,7 @@ export async function apercuImport(base: Base, acteur: Acteur, fichier: FichierL
 			for (const r of roles) {
 				const tenues = siennes.filter((a) => a.responsabiliteId === r.role.id);
 				if (r.role.typePerimetre === 'equipe' && tenues.some((a) => a.perimetreId !== courante)) {
-					erreur(r.entete, 'rôle tenu sur une autre équipe : à traiter à l’écran');
+					erreur(r.entete, 'rôle tenu sur une autre équipe, à traiter à l’écran');
 					continue;
 				}
 				let voulu: Perimetre | null = null;
@@ -315,7 +315,7 @@ export async function apercuImport(base: Base, acteur: Acteur, fichier: FichierL
 			}
 			for (const c of roleComite) {
 				const tenues = siennes.filter((a) => a.type === 'comite' && a.perimetreId === c.comiteId && rolesComite.some((r) => r.id === a.responsabiliteId));
-				if (tenues.length > 1 && !c.valeur.includes(',')) erreur(c.entete, 'deux rôles dans ce comité : à traiter à l’écran');
+				if (tenues.length > 1 && !c.valeur.includes(',')) erreur(c.entete, 'deux rôles dans ce comité, à traiter à l’écran');
 				if (tenues.length > 1 || (c.valeur && !c.role)) continue;
 				for (const a of tenues) if (a.responsabiliteId !== c.role?.id) finir(c.entete, rolesComite.find((r) => r.id === a.responsabiliteId)!, a);
 				if (c.role && !tenues.some((a) => a.responsabiliteId === c.role!.id)) demander(c.entete, c.role, { type: 'comite', id: c.comiteId });

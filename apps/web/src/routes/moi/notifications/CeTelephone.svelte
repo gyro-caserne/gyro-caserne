@@ -42,7 +42,7 @@
 		<div><Bouton variante="secondaire" onclick={desactiver}>Désactiver sur ce téléphone</Bouton></div>
 	{:else}
 		<p>Recevez une notification pour chaque publication de vos murs, chaque commentaire sous les vôtres et chaque message.</p>
-		<div><Bouton onclick={activer} desactive={etat === 'en-cours'}>{etat === 'en-cours' ? 'Activation…' : 'Activer sur ce téléphone'}</Bouton></div>
+		<div><Bouton onclick={activer} desactive={etat === 'en-cours'}>{etat === 'en-cours' ? 'Activation en cours' : 'Activer sur ce téléphone'}</Bouton></div>
 	{/if}
 	<p class="echec" role="alert">{echec ? 'L’activation n’a pas abouti. Réessayez dans un instant.' : ''}</p>
 	{#if appareils > 0}<p class="doux">Activées sur {pluriel(appareils, 'appareil')} en tout.</p>{/if}

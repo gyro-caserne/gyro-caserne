@@ -1163,7 +1163,7 @@ function orphelines(ids: number[], montrees: { id: number }[], copies: { photos:
 export async function retirerParModeration(base: Base, basePhotos: BasePhotos, acteur: Acteur, idSignalement: number, maintenant: string): Promise<void> {
 	await exigerModeration(base, acteur, exigerDateHeure(maintenant, 'Date'));
 	const s = await lireSignalement(base, idSignalement);
-	if (s.messageId === null) throw new DonneeInvalide('Message déjà effacé : classez le signalement');
+	if (s.messageId === null) throw new DonneeInvalide('Message déjà effacé, classez le signalement');
 	const id = s.messageId;
 	const [, , , , , montrees, copies] = await base.batch([
 		base.delete(reactionMessage).where(eq(reactionMessage.messageId, id)),

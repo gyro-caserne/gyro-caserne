@@ -13,7 +13,7 @@
 </script>
 
 <svelte:head>
-	<title>Ajouter un agent · Agents · Gyro Caserne</title>
+	<title>Ajouter un agent</title>
 </svelte:head>
 
 <div class="nouveau">

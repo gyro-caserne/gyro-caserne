@@ -3,7 +3,7 @@
 
 export const DELAIS_ATTENTE = [5, 10, 20];
 
-export const MESSAGE_ENVOI = 'Le serveur n’a pas pu répondre : votre envoi n’est peut-être pas passé. Vérifiez, puis réessayez dans un instant.';
+export const MESSAGE_ENVOI = 'Le serveur n’a pas pu répondre. Votre envoi n’est peut-être pas passé. Vérifiez, puis réessayez dans un instant.';
 
 export type Genre = 'page' | 'formulaire' | 'action';
 
@@ -51,7 +51,7 @@ p{margin:0;color:var(--doux)}
 @media (prefers-reduced-motion: reduce){.rayons{animation:none}}`;
 
 const page = (corps: string, script: string) => `<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="theme-color" content="#c8102e"><title>Un instant · Gyro Caserne</title><style>${STYLE}</style></head>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="robots" content="noindex, nofollow"><meta name="theme-color" content="#c8102e"><title>Un instant</title><style>${STYLE}</style></head>
 <body><main>${GYRO}${corps}</main><script>${script}</script></body></html>`;
 
 // La page montrée à la place de l'erreur. Après une page : nouveaux essais seuls, avec le nombre d'essais gardé dans l'historique
@@ -59,7 +59,7 @@ const page = (corps: string, script: string) => `<!doctype html>
 export function pageAttente(genre: 'page' | 'formulaire'): string {
 	if (genre === 'formulaire') {
 		return page(
-			`<h1>Un instant, ça arrive…</h1><p aria-live="polite">Le serveur n’a pas pu répondre. Votre envoi n’est peut-être pas passé : rien n’est renvoyé sans vous.</p><button class="bouton" type="button" id="retour">Revenir au formulaire</button>`,
+			`<h1>Un instant, ça arrive…</h1><p aria-live="polite">Le serveur n’a pas pu répondre. Votre envoi n’est peut-être pas passé. Rien n’est renvoyé sans vous.</p><button class="bouton" type="button" id="retour">Revenir au formulaire</button>`,
 			`document.getElementById('retour').addEventListener('click',function(){history.back()})`
 		);
 	}

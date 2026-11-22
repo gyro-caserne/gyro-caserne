@@ -70,7 +70,7 @@ async function tenues(base: Base, acteur: Acteur, aujourdhui: string): Promise<{
 		...(tient((l) => l.systeme === 'chef_centre' || l.systeme === 'chef_centre_adjoint') ? [centre] : []),
 		...equipes
 			.filter((e) => tient((l) => l.systeme === 'chef_equipe' && l.perimetreId === e.id))
-			.map((e) => ({ id: `equipe:${e.id}`, nom: `Chef de garde · ${e.nom}`, icone: 'casque' as const })),
+			.map((e) => ({ id: `equipe:${e.id}`, nom: `Chef de garde (${e.nom})`, icone: 'casque' as const })),
 		{ id: 'astreinte', nom: 'Mon astreinte', icone: 'casque' },
 		...[...referents].map(([id, r]) => ({ id: `role:${id}`, ...r })).sort(parNom),
 		...comites.filter((c) => tient((l) => l.type === 'comite' && l.perimetreId === c.id)).map((c) => ({ id: `comite:${c.id}`, nom: c.nom, icone: 'groupe' as const }))
@@ -236,7 +236,7 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 		...pourLete,
 		...(planning ? [{ texte: `Planning ${suivante} à préparer`, lien: `/planning/preparer?annee=${suivante}` }] : []),
 		...sansChef.map((e) => ({ texte: `${e.nom} sans chef de garde`, lien: '/nominations' })),
-		...sansTitulaire.map((r) => ({ texte: `${r.nom} : aucun titulaire`, lien: '/nominations' })),
+		...sansTitulaire.map((r) => ({ texte: `${r.nom} sans titulaire`, lien: '/nominations' })),
 		...(fiches > 0 ? [{ texte: `${fiches} ${fiches > 1 ? 'fiches' : 'fiche'} à compléter (grade ou date d’entrée manquants)`, lien: '/agents?filtre=a-completer' }] : [])
 	];
 }
@@ -292,7 +292,7 @@ async function contenu(base: Base, id: string, aDecider: ADecider[] | null, rese
 	const membres = new Map<number, { personneId: number; prenom: string; nom: string; role: string }>();
 	for (const l of lignes) {
 		const deja = membres.get(l.personneId);
-		membres.set(l.personneId, deja ? { ...deja, role: `${deja.role} · ${l.role}` } : l);
+		membres.set(l.personneId, deja ? { ...deja, role: `${deja.role}, ${l.role}` } : l);
 	}
 	return { type: 'comite', membres: [...membres.values()], aDecider: reservations };
 }

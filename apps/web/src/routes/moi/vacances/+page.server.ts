@@ -41,6 +41,6 @@ export const actions: Actions = {
 	},
 	toutLete: async ({ locals, request }) => {
 		const annee = Number(champ(await request.formData(), 'annee'));
-		return agir(locals, 'C’est noté : disponible tout l’été.', (m) => toutLete(locals.base, locals.acteur!, annee, m));
+		return agir(locals, 'C’est noté, vous êtes disponible tout l’été.', (m) => toutLete(locals.base, locals.acteur!, annee, m));
 	}
 };

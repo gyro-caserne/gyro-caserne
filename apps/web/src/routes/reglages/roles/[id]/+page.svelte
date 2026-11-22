@@ -83,7 +83,7 @@
 </script>
 
 <svelte:head>
-	<title>{role.nom} · Réglages · Gyro Caserne</title>
+	<title>{role.nom}</title>
 </svelte:head>
 
 {#snippet retour(cible: string)}
@@ -96,11 +96,11 @@
 {/snippet}
 
 <div class="en-tete-role">
-	<EnTetePage titre={role.nom} phrase="{porteeLibelle} · {quiAttribue(role.attributeur, data.comitesChoix)}">
+	<EnTetePage titre={role.nom} phrase="{porteeLibelle}, {quiAttribue(role.attributeur, data.comitesChoix)}">
 		{#snippet tete()}<IconeRole icone={iconeDuRole(role)} taille={48} />{/snippet}
 	</EnTetePage>
+	{#if data.modele}<p class="aide">Créé à partir du modèle {data.modele.nom}</p>{/if}
 	<div class="pastilles">
-		{#if data.modele}<Pastille ton="neutre">Créé · modèle {data.modele.nom}</Pastille>{/if}
 		{#if personnalise}<Pastille ton="alerte">Personnalisé</Pastille>{/if}
 		{#if role.systeme !== null}<Pastille ton="neutre">Rôle système</Pastille>{/if}
 		{#if role.archiveeLe !== null}<Pastille ton="neutre">Archivé</Pastille>{/if}
@@ -144,7 +144,7 @@
 	</Groupe>
 
 	{#if !lectureSeule}
-		<Groupe titre="Nom, icône et nomination" resume="{role.nom} · {porteeLibelle}">
+		<Groupe titre="Nom, icône et nomination" resume="{role.nom}, {porteeLibelle.toLocaleLowerCase('fr')}">
 			<div class="champs">
 				<Champ id="role-nom" name="nom" libelle="Nom" requis maxlength={60} valeur={saisie('nom', role.nom)} erreur={erreurs('role').nom} />
 				<Choix id="role-nature" name="nature" libelle="Nature" valeur={saisie('nature', role.nature)} erreur={erreurs('role').nature} options={NATURES} />

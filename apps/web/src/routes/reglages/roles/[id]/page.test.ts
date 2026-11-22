@@ -34,8 +34,8 @@ describe('page d’un rôle', () => {
 	it('en-tête : nom, portée, qui attribue, modèle et « Personnalisé »', () => {
 		const page = html({});
 		expect(page).toMatch(/<h1[^>]*>Référent engins<\/h1>/);
-		expect(page).toContain('Tout le centre · nommé par le chef de centre');
-		expect(page).toContain('Créé · modèle Référent matériel');
+		expect(page).toContain('Tout le centre, nommé par le chef de centre');
+		expect(page).toContain('Créé à partir du modèle Référent matériel');
 		expect(page).toMatch(/>(<!---->)?Personnalisé/);
 		expect(html({ role: role({ droits: [droit('TRAITER_ANOMALIE'), droit('GERER_FICHES')] }) })).not.toContain('Personnalisé');
 	});
@@ -146,7 +146,7 @@ describe('page d’un rôle', () => {
 	});
 
 	it('rôle système : tout en lecture seule, sans formulaire ni « Revenir au modèle »', () => {
-		const page = html({ peutPouvoir: true, modele: null, raison: 'Ce rôle fait partie du système : ses droits sont fixés, il ne se modifie pas.', role: role({ systeme: 'chef_equipe', modele: null, droits: [droit('VALIDER_REMPLACEMENT', true), droit('VOIR_MOTIFS_ABSENCE', true)] }) });
+		const page = html({ peutPouvoir: true, modele: null, raison: 'Ce rôle fait partie du système. Ses droits sont fixés, il ne se modifie pas.', role: role({ systeme: 'chef_equipe', modele: null, droits: [droit('VALIDER_REMPLACEMENT', true), droit('VOIR_MOTIFS_ABSENCE', true)] }) });
 		expect(page).toContain('fait partie du système');
 		expect(page).not.toMatch(/<form/);
 		expect(page).not.toContain('Revenir au modèle');
@@ -160,13 +160,13 @@ describe('page d’un rôle', () => {
 
 	it('les droits sans effet (motifs d’absence, annuaire) ne s’affichent nulle part sur la page', () => {
 		const droits = [droit('GERER_STOCK'), droit('VOIR_MOTIFS_ABSENCE'), droit('VOIR_ANNUAIRE')];
-		for (const page of [html({ role: role({ droits }) }), html({ raison: 'Ce rôle est archivé : il ne se modifie plus.', role: role({ droits, archiveeLe: '2026-01-01' }) })]) {
+		for (const page of [html({ role: role({ droits }) }), html({ raison: 'Ce rôle est archivé. Il ne se modifie plus.', role: role({ droits, archiveeLe: '2026-01-01' }) })]) {
 			expect(page).not.toMatch(/motifs d’absence|annuaire|VOIR_MOTIFS_ABSENCE|VOIR_ANNUAIRE/);
 		}
 	});
 
 	it('rôle système vu par le chef ou l’adjoint : les cases grisées disent pourquoi, sans parler de leurs droits', () => {
-		const raison = 'Ce rôle fait partie du système : ses droits sont fixés, il ne se modifie pas.';
+		const raison = 'Ce rôle fait partie du système. Ses droits sont fixés, il ne se modifie pas.';
 		const page = html({ peutPouvoir: true, modele: null, raison, role: role({ systeme: 'chef_equipe', modele: null }) });
 		expect(page).not.toContain('Seuls le chef de centre, son adjoint et le super administrateur');
 		expect(page).toMatch(/<p id="admin-aide" class="aide[^"]*">Ces cases ne se modifient pas sur ce rôle\./);

@@ -354,7 +354,7 @@ for (const theme of ['auto', 'sombre']) {
 				await page.goto(agent.fiche);
 				const cartes = await blocDeFiche(page, 'Rôles', (b) => b.locator('summary', { hasText: 'Passées (1)' }));
 				await cartes.locator('summary', { hasText: 'Passées (1)' }).click();
-				await expect(cartes.getByText('Chef de garde — Équipe 1', { exact: true })).toBeVisible();
+				await expect(cartes.getByText('Chef de garde (Équipe 1)', { exact: true })).toBeVisible();
 				// Terminer sans « Je confirme » : l'erreur reliée à sa case.
 				await cartes.locator('li', { hasText: 'Référent pharmacie' }).getByRole('button', { name: 'Terminer' }).click();
 				await expect(cartes.locator('li', { hasText: 'Référent pharmacie' }).getByRole('alert')).toHaveText('Cochez « Je confirme » pour terminer ce rôle.');
@@ -806,7 +806,7 @@ test.describe('échanges', () => {
 		await page.waitForURL(/\/echanges\/vie#publication-\d+$/);
 		await expect(publicationDe(page, texte)).toBeVisible();
 
-		await carte.getByRole('checkbox', { name: 'Je confirme : terminer Chef de garde — Équipe 1' }).check();
+		await carte.getByRole('checkbox', { name: 'Je confirme la fin du rôle Chef de garde (Équipe 1)' }).check();
 		await carte.getByRole('button', { name: 'Terminer' }).click();
 		await expect(carte.getByRole('status').first()).toHaveText('Rôle terminé');
 		await gestion.context().close();
@@ -1033,19 +1033,19 @@ test.describe('nominations', () => {
 		await formulaire.getByRole('button', { name: 'Attribuer' }).click();
 		await expect(formulaire.getByRole('status')).toHaveText('Rôle attribué');
 		// Dans la liste du bloc (le résumé du bloc porte le même nom).
-		await expect(carte.getByRole('list').getByText('Chef de garde — Équipe 1', { exact: true })).toBeVisible();
+		await expect(carte.getByRole('list').getByText('Chef de garde (Équipe 1)', { exact: true })).toBeVisible();
 
 		await agent.goto('/agents');
 		await ouvrirEquipe(agent);
 		await expect(agent.getByRole('listitem').filter({ hasText: nom })).toContainText('Rôles : Chef de garde (Équipe 1)');
 
 		// Changer la date de fin : le rôle reste, avec sa nouvelle fin.
-		await carte.getByLabel('Nouvelle date de fin : Chef de garde — Équipe 1').fill('2099-12-31');
+		await carte.getByLabel('Nouvelle date de fin : Chef de garde (Équipe 1)').fill('2099-12-31');
 		await carte.getByRole('button', { name: 'Changer la date de fin' }).click();
 		await expect(carte.getByRole('status').first()).toHaveText('Date de fin enregistrée');
 		await expect(carte.getByText('au 31/12/2099')).toBeVisible();
 
-		await carte.getByRole('checkbox', { name: 'Je confirme : terminer Chef de garde — Équipe 1' }).check();
+		await carte.getByRole('checkbox', { name: 'Je confirme la fin du rôle Chef de garde (Équipe 1)' }).check();
 		await carte.getByRole('button', { name: 'Terminer' }).click();
 		await expect(carte.getByRole('status').first()).toHaveText('Rôle terminé');
 		await expect(carte.getByText('Aucune responsabilité en cours.')).toBeVisible();
@@ -1165,7 +1165,7 @@ test.describe('anomalie', () => {
 		await page.waitForLoadState('networkidle');
 		await expect(page.locator('textarea, input[name="texte"]')).toHaveCount(0);
 
-		const attente = page.getByRole('link', { name: 'Mettre en attente…' });
+		const attente = page.getByRole('link', { name: 'Mettre en attente' });
 		await attente.focus();
 		await page.keyboard.press('Enter');
 		const panneau = page.getByRole('dialog', { name: 'Mettre en attente' });
@@ -1176,7 +1176,7 @@ test.describe('anomalie', () => {
 		await expect(panneau).toHaveCount(0);
 		await expect(attente).toBeFocused();
 
-		await page.getByRole('link', { name: 'Réparée…' }).click();
+		await page.getByRole('link', { name: 'Réparée' }).click();
 		const reparee = page.getByRole('dialog', { name: 'Réparée' });
 		await reparee.getByLabel(/^Ce qui a été fait/).fill('Vis resserrée');
 		await sansViolation(page);
@@ -1336,7 +1336,7 @@ test.describe('réglages', () => {
 		await page.getByRole('button', { name: 'Créer le rôle' }).click();
 		await expect(page).toHaveURL(/\/reglages\/roles\/\d+$/);
 		await expect(page.getByRole('heading', { level: 1, name: role })).toBeVisible();
-		await expect(entete.getByText('Créé · modèle Référent pharmacie')).toBeVisible();
+		await expect(entete.getByText('Créé à partir du modèle Référent pharmacie')).toBeVisible();
 		await expect(entete.getByText('Personnalisé', { exact: true })).toHaveCount(0);
 
 		const { groupe: stock } = await domaineOuvert(page, 'Stock et pharmacie');
@@ -1354,7 +1354,7 @@ test.describe('réglages', () => {
 		await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
 		await expect(page.getByText(`Le rôle « ${role} » est enregistré.`)).toBeVisible();
 		await page.reload();
-		await expect(entete.getByText('Créé · modèle Référent pharmacie')).toBeVisible();
+		await expect(entete.getByText('Créé à partir du modèle Référent pharmacie')).toBeVisible();
 		await expect(entete.getByText('Personnalisé', { exact: true })).toHaveCount(0);
 		await page.context().close();
 	});
@@ -1393,7 +1393,7 @@ test.describe('réglages', () => {
 		await expect(stock.getByRole('radio', { name: 'Gérer' })).toBeFocused();
 		await expect(stock.getByRole('radio', { name: 'Gérer' })).toBeChecked();
 		await expect(barre).toHaveText('1 domaine modifié, pas encore enregistré');
-		await expect(boutonStock).toHaveAccessibleName(/Gérer · modifié/);
+		await expect(boutonStock).toHaveAccessibleName(/Gérer, modifié/);
 
 		const boutonEngins = page.getByRole('button', { name: /^Engins et anomalies/ });
 		const engins = page.locator('main section').filter({ has: boutonEngins });
@@ -1454,7 +1454,7 @@ test.describe('fichier de l’effectif', () => {
 			await dialogue.dismiss();
 		});
 		await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Caserne' }).click();
-		await expect.poll(() => question).toBe("L'import est en cours : quitter l'arrêtera. Quitter quand même ?");
+		await expect.poll(() => question).toBe("L'import est en cours. Quitter l'arrêtera. Quitter quand même ?");
 		await expect(page).toHaveURL(/\/agents\/fichier$/);
 		await expect(page.getByRole('heading', { level: 2, name: 'Application en cours' })).toBeVisible();
 
@@ -1530,7 +1530,7 @@ test.describe('casquettes', () => {
 
 		await connecter(page, agent.email);
 		const liens = page.getByRole('navigation', { name: 'Casquettes' }).getByRole('link');
-		await expect(liens).toHaveText([/Chef de garde · Équipe 1/, /Mon astreinte/, /Référent engins/, /Référent pharmacie/, /Amicale/]);
+		await expect(liens).toHaveText([/Chef de garde \(Équipe 1\)/, /Mon astreinte/, /Référent engins/, /Référent pharmacie/, /Amicale/]);
 		expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
 
 		await liens.first().focus();

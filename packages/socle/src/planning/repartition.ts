@@ -74,7 +74,7 @@ export function texteManque(p: Periode, manque: Poste[]): string {
 	});
 	const texte = texteTranche(p);
 	const debut = `${texte[0]!.toUpperCase()}${texte.slice(1)}`;
-	return manque.length === 1 ? `${debut} : pas de ${comptes[0]} disponible` : `${debut} : manque ${comptes.join(', ')}`;
+	return manque.length === 1 ? `${debut}, pas de ${comptes[0]} disponible` : `${debut}, il manque ${comptes.join(', ')}`;
 }
 
 async function exigerGestion(base: Base, acteur: Acteur, maintenant: string) {
@@ -342,7 +342,7 @@ export async function publierEte(base: Base, acteur: Acteur, annee: number, main
 	await base.batch([
 		base.update(ete).set({ publieeLe: maintenant }).where(and(eq(ete.annee, annee), isNull(ete.publieeLe))),
 		journal(base, acteur, 'publier_ete', { annee }, maintenant),
-		...[...textes].flatMap(([id, t]) => avis(base, [id], 'repartition', `Planning d’été : ${t.join(' ; ')}.`, '/planning', maintenant, si))
+		...[...textes].flatMap(([id, t]) => avis(base, [id], 'repartition', `Dans le planning d’été, ${t.join(' ; ')}.`, '/planning', maintenant, si))
 	]);
 }
 
@@ -374,14 +374,14 @@ export async function analyserFeuilleEte(base: Base, annee: number, entetes: str
 	if (lu.plages.length === 0) return { erreurs: [{ ligne: 1, message: 'Proposez d’abord la répartition de l’été dans l’appli' }], changements: [], ecritures: () => [] };
 	const colonnes = entetes.slice(ENTETES_ETE.length).map((t) => lu.plagesEte.find((p) => colonnePlage(p) === t.trim()));
 	entetes.slice(ENTETES_ETE.length).forEach((t, i) => {
-		if (!colonnes[i]) erreurs.push({ ligne: 1, message: `Colonne « ${t} » : pas une plage de l’été` });
+		if (!colonnes[i]) erreurs.push({ ligne: 1, message: `La colonne « ${t} » n’est pas une plage de l’été` });
 	});
 	const ecarts = new Map(lu.plages.map((x) => [x.debut, { ajoutes: [...x.ajoutes], retires: [...x.retires] }]));
 	const changements: { debut: string; personneId: number; present: boolean }[] = [];
 	for (const l of lignes) {
 		const id = Number(l.cellules[0]);
 		if (!/^\d+$/.test((l.cellules[0] ?? '').trim())) {
-			erreurs.push({ ligne: l.numero, message: `N° « ${l.cellules[0] ?? ''} » : agent inconnu` });
+			erreurs.push({ ligne: l.numero, message: `Agent inconnu (N° « ${l.cellules[0] ?? ''} »)` });
 			continue;
 		}
 		// Parti depuis l'export : sa ligne ne compte plus.
@@ -394,7 +394,7 @@ export async function analyserFeuilleEte(base: Base, annee: number, entetes: str
 			const present = deBase ? !ecart.retires.includes(id) : ecart.ajoutes.includes(id);
 			if (voulu === present) return;
 			if (lu.e!.publiee && p.debut <= maintenant.slice(0, 16)) {
-				erreurs.push({ ligne: l.numero, message: `${colonnePlage(p)} : plage commencée, elle ne change plus` });
+				erreurs.push({ ligne: l.numero, message: `${colonnePlage(p)}. Plage commencée, elle ne change plus` });
 				return;
 			}
 			if (deBase) ecart.retires = voulu ? ecart.retires.filter((x) => x !== id) : [...ecart.retires, id];
@@ -406,7 +406,7 @@ export async function analyserFeuilleEte(base: Base, annee: number, entetes: str
 	const ecritures = () => [
 		...touchees.map((debut) => base.update(plageEte).set({ ajoutes: JSON.stringify(ecarts.get(debut)!.ajoutes), retires: JSON.stringify(ecarts.get(debut)!.retires) }).where(eq(plageEte.debut, debut))),
 		// Été publié : chaque agent touché est prévenu une fois.
-		...(lu.e!.publiee ? [...new Set(changements.map((c) => c.personneId))].flatMap((id) => avis(base, [id], 'repartition', 'Planning d’été : vos plages ont changé. Voyez votre planning.', '/planning', maintenant)) : [])
+		...(lu.e!.publiee ? [...new Set(changements.map((c) => c.personneId))].flatMap((id) => avis(base, [id], 'repartition', 'Vos plages du planning d’été ont changé. Voyez votre planning.', '/planning', maintenant)) : [])
 	];
 	return { erreurs, changements, ecritures };
 }

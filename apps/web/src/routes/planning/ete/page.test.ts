@@ -17,7 +17,7 @@ const ete = (autres: Record<string, unknown> = {}) => ({
 	],
 	proposee: true,
 	semaines: [{ debut: '2027-06-25', equipeId: 2, plages: [plage('2027-06-25T18:00', '2027-06-26T06:00', true), plage('2027-06-26T06:00', '2027-06-27T06:00', false)] }],
-	impossibles: ['24 h du samedi 26 juin : pas de CA tout engins disponible'],
+	impossibles: ['24 h du samedi 26 juin, pas de CA tout engins disponible'],
 	conflits: [],
 	relanceeAujourdhui: false,
 	...autres
@@ -35,7 +35,7 @@ describe('Été : le parcours du chef', () => {
 
 	it('période : une phrase et « Modifier » qui ouvre un panneau ; plus de champs affichés', () => {
 		const html = page(ete(), { etape: 'periode' });
-		expect(html).toContain('Du ven. 25 juin au jeu. 2 sept. · vacances avant le 15 mai');
+		expect(html).toContain('Du ven. 25 juin au jeu. 2 sept., vacances à donner avant le 15 mai');
 		expect(html).toMatch(/<a [^>]*href="\?annee=2027&amp;etape=periode&amp;panneau=periode"[^>]*>Modifier<span class="masque[^"]*"> la période<\/span>/);
 		expect(html).not.toContain('type="date"');
 		const panneau = page(ete(), { etape: 'periode', panneau: 'periode' });
@@ -67,7 +67,7 @@ describe('Été : le parcours du chef', () => {
 		expect(html.indexOf('⚠ 1 plage à revoir')).toBeGreaterThan(-1);
 		expect(html.indexOf('⚠ 1 plage à revoir')).toBeLessThan(revoir);
 		expect(html).toContain('✓ FPT armé 1/1');
-		expect(html).toMatch(/<a href="\?annee=2027&amp;etape=repartition&amp;plage=2027-06-25T18%3A00"[^>]*>[\s\S]*?Ven\. 25 juin · nuit/);
+		expect(html).toMatch(/<a href="\?annee=2027&amp;etape=repartition&amp;plage=2027-06-25T18%3A00"[^>]*>[\s\S]*?Ven\. 25 juin, nuit/);
 		expect(html).toMatch(/<details class="menu[^"]*">[\s\S]*?Recalculer la proposition/);
 		expect(html).not.toContain('action="?/proposer');
 		const confirmer = page(ete(), { panneau: 'recalculer' });
@@ -79,11 +79,11 @@ describe('Été : le parcours du chef', () => {
 			expect(page(ete(), { etape })).not.toContain('Publier l’été 2027');
 			expect(page(ete(), { etape })).not.toContain('<div class="barre');
 		}
-		expect(page(ete(), { etape: 'repartition' })).toMatch(/<a[^>]*href="\?annee=2027&amp;etape=publier"[^>]*>Publier ›/);
+		expect(page(ete(), { etape: 'repartition' })).toMatch(/<a[^>]*href="\?annee=2027&amp;etape=publier"[^>]*>Étape suivante \(Publier\)/);
 		const derniere = page(ete(), { etape: 'publier' });
 		expect(derniere).toMatch(/<div class="barre[^"]*"[\s\S]*action="\?\/publier[\s\S]*Publier l’été 2027/);
-		expect(derniere).toContain('1 plage sans FPT armé : vous pouvez publier quand même.');
-		expect(derniere).toMatch(/1 plage où le FPT n’est pas armé · <a [^>]*>Revoir/);
+		expect(derniere).toContain('1 plage sans FPT armé. Vous pouvez publier quand même.');
+		expect(derniere).toMatch(/1 plage où le FPT n’est pas armé\.<div[^>]*><a class="lien-secondaire[^"]*" [^>]*>Revoir la répartition<\/a><\/div>/);
 		// Rien à publier encore : le récapitulatif renvoie à la répartition, sans bouton.
 		const sansProposition = page(ete({ proposee: false, semaines: [] }), { etape: 'publier' });
 		expect(sansProposition).not.toContain('<div class="barre');
@@ -102,7 +102,7 @@ describe('Été : le parcours du chef', () => {
 		expect(bloc).toContain(conflits[0]);
 		expect(html.indexOf('2 remplacements à revoir')).toBeLessThan(html.indexOf('Semaine du'));
 		expect(page(ete())).not.toContain('class="alerte');
-		expect(page(ete({ conflits }), { etape: 'publier' })).toMatch(/2 remplacements à revoir · <a href="\?annee=2027&amp;etape=repartition">Revoir/);
+		expect(page(ete({ conflits }), { etape: 'publier' })).toMatch(/2 remplacements à revoir\.<div[^>]*><a class="lien-secondaire[^"]*" href="\?annee=2027&amp;etape=repartition">Revoir la répartition/);
 	});
 
 	it('une plage ouverte : le poste de chacun, ce qui manque en tête ; ceux qui comblent le manque d’abord', () => {
@@ -119,8 +119,8 @@ describe('Été : le parcours du chef', () => {
 			]
 		};
 		const html = page(ete(), { detail });
-		expect(html).toContain('Il manque : 1 CE');
-		expect(html.indexOf('Il manque : 1 CE')).toBeLessThan(html.indexOf('Cora Test'));
+		expect(html).toContain('Il manque 1 CE');
+		expect(html.indexOf('Il manque 1 CE')).toBeLessThan(html.indexOf('Cora Test'));
 		expect(html).toMatch(/CA tout engins[\s\S]*?Alice Test<span class="etiquette[^"]*">renfort<\/span>[\s\S]*?Conducteur[\s\S]*?Cora Test/);
 		expect(html).toMatch(/Retirer<span class="masque[^"]*"> Alice Test<\/span>/);
 		expect(html).toMatch(/Peuvent combler le manque[\s\S]*?Hugo Test[\s\S]*?Autres agents[\s\S]*?Gina Test/);

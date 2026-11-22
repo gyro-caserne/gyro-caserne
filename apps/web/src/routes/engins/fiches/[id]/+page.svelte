@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>Fiche {f.type} · Engins · Gyro Caserne</title>
+	<title>Fiche {f.type}</title>
 </svelte:head>
 
 {#snippet fleche(trace: string)}
@@ -53,8 +53,8 @@
 	<EnTetePage titre="Fiche {f.type}" phrase="Les modifications valent pour la prochaine prise." retour={{ href: '/engins/fiches', libelle: 'Fiches' }} />
 
 	<p class="version">
-		<strong>Version {f.version.numero}</strong>, du {dateCourte(f.version.creeLe)} ({f.version.auteur}) · {compteFiche(f.zones)}.
-		{#if f.version.utilisee}Elle a déjà servi à une prise : la modifier crée la version {f.version.numero + 1}, l’historique garde celle-ci.{/if}
+		<strong>Version {f.version.numero}</strong>, du {dateCourte(f.version.creeLe)} ({f.version.auteur}). {compteFiche(f.zones)}.
+		{#if f.version.utilisee}Elle a déjà servi à une prise. La modifier crée la version {f.version.numero + 1}, l’historique garde celle-ci.{/if}
 	</p>
 
 	<div role="status" class="masque">{form?.succes ?? ''}</div>
@@ -65,7 +65,7 @@
 		{#each f.zones as z, i (z.ref)}
 			<Groupe titre={z.nom} resume={pluriel(z.elements.length, 'élément')} ouvert={ouverte(z.ref, i)}>
 				<div class="zone" id="zone-{z.ref}" tabindex="-1" role="group" aria-label="Zone {z.nom}">
-					{#if z.elements.length === 0}<p class="doux">Aucun élément : ajoutez le premier ci-dessous.</p>{/if}
+					{#if z.elements.length === 0}<p class="doux">Aucun élément. Ajoutez le premier ci-dessous.</p>{/if}
 					<ol role="list">
 						{#each z.elements as e, j (e.ref)}
 							<li>
@@ -87,7 +87,7 @@
 											<input type="hidden" name="element" value={e.ref} />
 											<input type="hidden" name="cible" value="element:{e.ref}" />
 											<Champ id="libelle-{e.ref}" name="libelle" libelle="Élément" requis maxlength={120} valeur={e.libelle} />
-											<Champ id="quantite-{e.ref}" name="quantite" type="number" libelle="Quantité attendue" aide="Vide : seulement présent ou manquant." valeur={e.quantite === null ? '' : String(e.quantite)} />
+											<Champ id="quantite-{e.ref}" name="quantite" type="number" libelle="Quantité attendue" aide="Laissez vide pour un élément seulement présent ou manquant." valeur={e.quantite === null ? '' : String(e.quantite)} />
 											<Choix id="zone-{e.ref}" name="zone" libelle="Zone" valeur={String(z.ref)} options={f.zones.map((autre) => ({ valeur: String(autre.ref), libelle: autre.nom }))} />
 											<div><Bouton type="submit">Enregistrer<span class="masque">{' '}{e.libelle}</span></Bouton></div>
 										</form>

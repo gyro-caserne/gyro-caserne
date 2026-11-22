@@ -14,16 +14,16 @@
 	const resume = (refs: { ref: number }[]) => {
 		const ecarts = refs.filter((e) => signalee(e.ref) || dejaOuvert(e.ref)).length;
 		const retrouves = refs.filter((e) => retrouvee(e.ref)).length;
-		return [ecarts ? pluriel(ecarts, 'écart') : '', retrouves ? pluriel(retrouves, 'retrouvé') : ''].filter(Boolean).join(' · ') || 'Complète';
+		return [ecarts ? pluriel(ecarts, 'écart') : '', retrouves ? pluriel(retrouves, 'retrouvé') : ''].filter(Boolean).join(', ') || 'Complète';
 	};
 </script>
 
 <svelte:head>
-	<title>Prise du {jourCourt(p.releve)} · {p.engin.nom} · Gyro Caserne</title>
+	<title>{p.engin.nom}, prise du {jourCourt(p.releve)}</title>
 </svelte:head>
 
 <div class="page">
-	<EnTetePage titre="Prise du {jourCourt(p.releve)}" phrase="{p.engin.nom} · faite par {p.equipe ? parEquipe(p.equipe) : p.participants[0]}, {jourHeure(p.valideeLe)}" retour={{ href: `/engins/${p.engin.id}`, libelle: p.engin.nom }} />
+	<EnTetePage titre="Prise du {jourCourt(p.releve)}" phrase="{p.engin.nom}, faite par {p.equipe ? parEquipe(p.equipe) : p.participants[0]}, {jourHeure(p.valideeLe)}" retour={{ href: `/engins/${p.engin.id}`, libelle: p.engin.nom }} />
 
 	<section class="panneau" aria-labelledby="titre-bilan">
 		<h2 id="titre-bilan">Bilan</h2>

@@ -26,7 +26,7 @@
 	const horsEquipes = $derived<GroupeAgents[]>(data.groupes.filter((g) => !g.equipe));
 	const agents = (n: number) => pluriel(n, 'agent');
 	const resume = (n: number, equipe: { chefs: string[] } | null) =>
-		!equipe ? agents(n) : equipe.chefs.length === 0 ? `${agents(n)} · sans chef de garde` : `${agents(n)} · chef : ${equipe.chefs.join(', ')}`;
+		!equipe ? agents(n) : equipe.chefs.length === 0 ? `${agents(n)}, sans chef de garde` : `${agents(n)}, chef : ${equipe.chefs.join(', ')}`;
 	// Au téléphone, les équipes s'ouvrent à la demande. Le serveur ne connaît pas l'écran : tout part ouvert, ce qui reste lisible sans JavaScript.
 	let replier = $state(false);
 	let liste = $state<HTMLElement>();
@@ -69,7 +69,7 @@
 			{/if}
 			{#if p.grade || p.roles.length > 0 || email}
 				<span class="sous"
-					>{p.grade ?? ''}{#if p.grade && p.roles.length > 0}{' · '}{/if}{#if p.roles.length > 0}<span class="masque">Rôles :</span> {p.roles.join(' · ')}{/if}{#if email}{#if p.grade || p.roles.length > 0}{' · '}{/if}{p.email}{/if}</span
+					>{p.grade ?? ''}{#if p.grade && p.roles.length > 0}{', '}{/if}{#if p.roles.length > 0}<span class="masque">Rôles :</span> {p.roles.join(', ')}{/if}{#if email}{#if p.grade || p.roles.length > 0}{', '}{/if}{p.email}{/if}</span
 				>
 			{/if}
 		</span>
@@ -101,7 +101,7 @@
 
 <!-- Pour la gestion, le titre vient de la page affichée dans le volet. -->
 <svelte:head>
-	{#if !data.gestion}<title>Agents · Gyro Caserne</title>{/if}
+	{#if !data.gestion}<title>Agents</title>{/if}
 </svelte:head>
 
 <div class="page" class:a-cote={enfant}>

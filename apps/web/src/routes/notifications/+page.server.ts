@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 const PHRASES: Record<string, string> = {
 	'Signalement introuvable ou déjà classé': 'Ce signalement a déjà été traité.',
 	'Signalement invalide': 'Ce signalement est introuvable.',
-	'Message déjà effacé : classez le signalement': 'Ce message n’est plus dans la conversation : classez le signalement.'
+	'Message déjà effacé, classez le signalement': 'Ce message n’est plus dans la conversation. Classez le signalement.'
 };
 
 type Geste = typeof retirerParModeration;

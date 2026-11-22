@@ -11,11 +11,11 @@
 </script>
 
 <svelte:head>
-	<title>Aptitudes · Réglages · Gyro Caserne</title>
+	<title>Aptitudes</title>
 </svelte:head>
 
 <div class="page">
-	<EnTetePage titre="Aptitudes" phrase="Une aptitude contrôlée est vérifiée quand un agent se fait remplacer : s’il manque au remplaçant, le chef de garde valide." />
+	<EnTetePage titre="Aptitudes" phrase="Une aptitude contrôlée est vérifiée quand un agent se fait remplacer. S’il manque au remplaçant, le chef de garde valide." />
 
 	<div role="status" class="masque">{form?.succes ?? ''}</div>
 	{#if form?.succes}<p class="succes">{form.succes}</p>{/if}

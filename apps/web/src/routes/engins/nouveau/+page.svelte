@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>Ajouter un engin · Engins · Gyro Caserne</title>
+	<title>Ajouter un engin</title>
 </svelte:head>
 
 <div class="page">

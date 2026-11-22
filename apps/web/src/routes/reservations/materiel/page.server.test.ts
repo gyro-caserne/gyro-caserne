@@ -23,7 +23,7 @@ describe('/reservations/materiel', () => {
 		const [tables] = await base.select().from(ressource).where(eq(ressource.nom, 'Tables'));
 		expect(tables).toMatchObject({ stock: 6, icone: 'outil', gereeParComiteId: amicale });
 		expect(await agir('modifier', locaux(base, bruno), [['id', String(tables!.id)], ['nom', 'Tables pliantes'], ['stock', '8'], ['icone', 'livre']])).toEqual({ succes: 'Tables pliantes enregistré.' });
-		expect(await agir('retirer', locaux(base, bruno), [['id', String(bancs)]])).toEqual({ succes: 'Bancs retiré : ses réservations à venir sont annulées.' });
+		expect(await agir('retirer', locaux(base, bruno), [['id', String(bancs)]])).toEqual({ succes: 'Bancs retiré. Ses réservations à venir sont annulées.' });
 		expect((await charger(locaux(base, bruno))).ressources.map((r: { nom: string }) => r.nom)).toEqual(['Tables pliantes']);
 	});
 

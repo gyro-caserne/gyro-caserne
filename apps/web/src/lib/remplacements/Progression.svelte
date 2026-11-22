@@ -5,7 +5,7 @@
 </script>
 
 <nav class="progression" aria-label="Étapes">
-	<p class="ou">Étape {index + 1} sur {etapes.length}<span class="titre">{` · ${etapes[index]?.titre ?? ''}`}</span></p>
+	<p class="ou">Étape {index + 1} sur {etapes.length}<span class="titre">{`. ${etapes[index]?.titre ?? ''}`}</span></p>
 	<ol role="list">
 		{#each etapes as e, i (e.id)}
 			<li class:faite={i < index} class:courante={i === index}>

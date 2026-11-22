@@ -129,7 +129,7 @@ export function reprendreManoeuvres(precedentes: ManoeuvreSource[], annee: numbe
 	return { manoeuvres, tourDeRole: periode !== null, annulees, passees, deja };
 }
 
-const DEJA_PREPAREE = 'Cette année a déjà un roulement : la proposition n’écrase rien. Modifiez-la étape par étape.';
+const DEJA_PREPAREE = 'Cette année a déjà un roulement. La proposition n’écrase rien. Modifiez-la étape par étape.';
 
 export type PropositionAnnee = Awaited<ReturnType<typeof calculer>>;
 

@@ -3,19 +3,19 @@ import { etapeEteDe, libellePlage, phrasePeriode, resumeEte, texteArme, texteEng
 
 describe('tableau de l’été', () => {
 	it('le nom court d’une plage', () => {
-		expect(libellePlage({ debut: '2027-06-25T18:00', fin: '2027-06-26T06:00' })).toBe('Ven. 25 juin · nuit');
-		expect(libellePlage({ debut: '2027-06-26T06:00', fin: '2027-06-27T06:00' })).toBe('Sam. 26 juin · 24 h');
+		expect(libellePlage({ debut: '2027-06-25T18:00', fin: '2027-06-26T06:00' })).toBe('Ven. 25 juin, nuit');
+		expect(libellePlage({ debut: '2027-06-26T06:00', fin: '2027-06-27T06:00' })).toBe('Sam. 26 juin, 24 h');
 	});
 
 	it('FPT armé, en texte ; ce qui manque, compté', () => {
-		expect(texteArme(true, [])).toBe('FPT armé : oui');
-		expect(texteArme(false, ['ca2', 'agent', 'agent'])).toBe('FPT armé : non, manque CA tout engins, 2 agents');
-		expect(texteIlManque(['ce'])).toBe('Il manque : 1 CE');
-		expect(texteIlManque(['ca2', 'agent', 'agent'])).toBe('Il manque : 1 CA tout engins, 2 agents');
+		expect(texteArme(true, [])).toBe('FPT armé');
+		expect(texteArme(false, ['ca2', 'agent', 'agent'])).toBe('FPT non armé, il manque CA tout engins, 2 agents');
+		expect(texteIlManque(['ce'])).toBe('Il manque 1 CE');
+		expect(texteIlManque(['ca2', 'agent', 'agent'])).toBe('Il manque 1 CA tout engins, 2 agents');
 	});
 
 	it('la période en une phrase', () => {
-		expect(phrasePeriode('2027-06-25', '2027-09-03', '2027-05-15')).toBe('Du ven. 25 juin au jeu. 2 sept. · vacances avant le 15 mai');
+		expect(phrasePeriode('2027-06-25', '2027-09-03', '2027-05-15')).toBe('Du ven. 25 juin au jeu. 2 sept., vacances à donner avant le 15 mai');
 	});
 
 	it('le résumé en tête, chiffres réels', () => {

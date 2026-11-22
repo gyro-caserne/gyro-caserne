@@ -15,7 +15,7 @@
 </script>
 
 <svelte:head>
-	<title>Mon profil · Gyro Caserne</title>
+	<title>Mon profil</title>
 </svelte:head>
 
 <div class="page">
@@ -31,7 +31,7 @@
 	{#if profil === null}
 		<Vide
 			titre="Le super administrateur n’a pas de fiche."
-			texte="Il règle le centre sans en être un agent : ni téléphone ni contact d’urgence à renseigner ici."
+			texte="Il règle le centre sans en être un agent. Il n’a ni téléphone ni contact d’urgence à renseigner ici."
 			action={{ href: '/affichage', libelle: 'Régler l’affichage' }}
 		/>
 	{:else}

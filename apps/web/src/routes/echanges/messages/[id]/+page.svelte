@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.vue.nom} · Messages · Gyro Caserne</title>
+	<title>{data.vue.nom}</title>
 </svelte:head>
 
 <!-- À partir de 1280 px, les infos à droite de la conversation, après elle au clavier. -->

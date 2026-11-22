@@ -60,7 +60,7 @@ async function agir(locals: App.Locals, cible: string, succes: string, faire: (m
 }
 
 export const actions: Actions = {
-	proposition: async ({ locals, url }) => agir(locals, 'proposition', 'Proposition acceptée : le brouillon est écrit. Retouchez-le, puis publiez. Les agents ne voient rien avant.', (m) => accepterProposition(locals.base, locals.acteur!, anneeDe(url), m, centre.astreinte)),
+	proposition: async ({ locals, url }) => agir(locals, 'proposition', 'Proposition acceptée. Le brouillon est écrit. Retouchez-le, puis publiez. Les agents ne voient rien avant.', (m) => accepterProposition(locals.base, locals.acteur!, anneeDe(url), m, centre.astreinte)),
 	roulement: async ({ locals, request, url }) => {
 		const ordre = nombres(await request.formData(), 'ordre');
 		return agir(locals, 'roulement', 'Roulement enregistré.', (m) => reglerRoulement(locals.base, locals.acteur!, anneeDe(url), ordre, m));
@@ -72,7 +72,7 @@ export const actions: Actions = {
 		const ordre = deplacer(nombres(f, 'ordre'), Number(rang), sens === 'monter' ? -1 : 1);
 		// Une année publiée ne change plus de roulement d'un geste : ses semaines se changent une à une.
 		const [ligne] = await locals.base.select({ publieeLe: anneePlanning.publieeLe }).from(anneePlanning).where(eq(anneePlanning.annee, anneeDe(url)));
-		if (ligne?.publieeLe) return fail(400, { cible: 'roulement', message: 'Année publiée : changez plutôt l’équipe d’une semaine, à l’étape « Vérifier et publier ».' });
+		if (ligne?.publieeLe) return fail(400, { cible: 'roulement', message: 'Année publiée. Changez plutôt l’équipe d’une semaine, à l’étape « Vérifier et publier ».' });
 		return agir(locals, 'roulement', 'Roulement enregistré.', (m) => reglerRoulement(locals.base, locals.acteur!, anneeDe(url), ordre, m));
 	},
 	semaines: async ({ locals, request, url }) => {
@@ -127,7 +127,7 @@ export const actions: Actions = {
 		return agir(locals, 'vacances', 'Vacances retirées.', (m) => retirerVacances(locals.base, locals.acteur!, id, m));
 	},
 	publier: async ({ locals, url }) => {
-		const reponse = await agir(locals, 'publier', 'L’année est publiée : tous les agents la voient.', (m) => publierAnnee(locals.base, locals.acteur!, anneeDe(url), m));
+		const reponse = await agir(locals, 'publier', 'L’année est publiée. Tous les agents la voient.', (m) => publierAnnee(locals.base, locals.acteur!, anneeDe(url), m));
 		// Les manœuvres des deux prochaines semaines sont annoncées sans attendre le matin.
 		if ('succes' in reponse) annoncerSiJournee(locals);
 		return reponse;

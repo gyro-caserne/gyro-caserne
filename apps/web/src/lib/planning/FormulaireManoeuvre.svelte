@@ -59,7 +59,7 @@
 			<form method="POST" action="/planning/preparer/manoeuvre?/supprimer" class="carte">
 				<div role="alert">{#if form?.cible === 'supprimer' && form.message}<p class="echec">{form.message}</p>{/if}</div>
 				<input type="hidden" name="id" value={m.id} />
-				<p>{m.publiee ? 'Annuler la manœuvre : la publication reste, marquée « Annulée », et les convoqués sont prévenus.' : 'Pas encore annoncée : elle disparaît simplement.'}</p>
+				<p>{m.publiee ? 'Annuler la manœuvre. La publication reste, marquée « Annulée », et les convoqués sont prévenus.' : 'Pas encore annoncée. Elle disparaît simplement.'}</p>
 				<Bouton type="submit" variante="secondaire">{m.publiee ? 'Annuler la manœuvre' : 'Supprimer la manœuvre'}</Bouton>
 			</form>
 		{/if}

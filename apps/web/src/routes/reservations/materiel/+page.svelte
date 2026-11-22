@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Gérer le matériel · Réservations · Gyro Caserne</title>
+	<title>Gérer le matériel</title>
 </svelte:head>
 
 <div class="page">
@@ -37,7 +37,7 @@
 								<IconeRole icone={r.icone} taille={40} />
 								<div>
 									<h3>{r.nom}</h3>
-									<p class="doux">{r.forme === 'jours' ? `${r.stock} en stock · ${r.gestionnaire.nom}` : `Par créneau · ${r.gestionnaire.nom}`}</p>
+									<p class="doux">{r.forme === 'jours' ? `${r.stock} en stock, géré par ${r.gestionnaire.nom}` : `Par créneau, géré par ${r.gestionnaire.nom}`}</p>
 								</div>
 							</div>
 							{#if data.confirmer === r.id && r.forme === 'jours'}

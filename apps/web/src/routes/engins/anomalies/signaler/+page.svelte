@@ -37,13 +37,13 @@
 </script>
 
 <svelte:head>
-	<title>Signaler un problème · Engins · Gyro Caserne</title>
+	<title>Signaler un problème</title>
 </svelte:head>
 
 <div class="page">
 	<EnTetePage
 		titre="Signaler un problème"
-		phrase={nomChoisi ? `Sur ${nomChoisi}. L’engin reste disponible : le référent engins et les chefs sont prévenus et décident.` : 'L’engin reste disponible : le référent engins et les chefs sont prévenus et décident.'}
+		phrase={nomChoisi ? `Sur ${nomChoisi}. L’engin reste disponible. Le référent engins et les chefs sont prévenus et décident.` : 'L’engin reste disponible. Le référent engins et les chefs sont prévenus et décident.'}
 		retour={data.enginId !== null && nomChoisi ? { href: `/engins/${data.enginId}`, libelle: nomChoisi } : { href: '/engins/anomalies', libelle: 'Anomalies' }}
 	/>
 

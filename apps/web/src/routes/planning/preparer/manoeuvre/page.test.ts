@@ -33,7 +33,7 @@ describe('page d’une manœuvre', () => {
 		expect(html).toMatch(/value="equipes"[^>]*checked/);
 		expect(html).toMatch(/name="equipes" value="2"[^>]*checked/);
 		expect(html).toContain('Annuler la manœuvre');
-		expect(html).toContain('la publication sera mise à jour');
+		expect(html).toContain('La publication sera mise à jour');
 	});
 
 	it('un refus en modifiant garde l’identifiant : pas de doublon au renvoi', () => {

@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>{c.nom} · Réglages · Gyro Caserne</title>
+	<title>{c.nom}</title>
 </svelte:head>
 
 {#snippet retour(cible: string)}
@@ -40,7 +40,7 @@
 	</div>
 {/snippet}
 
-<EnTetePage titre={c.nom} phrase="{pluriel(c.membresEnCours, 'membre')} · {c.rapporteurs.length > 0 ? `rapporteur : ${c.rapporteurs.join(', ')}` : 'pas de rapporteur'}">
+<EnTetePage titre={c.nom} phrase="{pluriel(c.membresEnCours, 'membre')}, {c.rapporteurs.length > 0 ? `rapporteur : ${c.rapporteurs.join(', ')}` : 'pas de rapporteur'}">
 	{#snippet tete()}<IconeRole icone={iconeDuComite(c)} taille={48} />{/snippet}
 </EnTetePage>
 {#if c.dissousLe !== null}<p><Pastille ton="neutre">Dissous</Pastille></p>{/if}
@@ -77,7 +77,7 @@
 	{/if}
 {:else}
 	{@render retour('dissoudre')}
-	<p class="aide">Ce comité est dissous : il ne se modifie plus.</p>
+	<p class="aide">Ce comité est dissous. Il ne se modifie plus.</p>
 {/if}
 
 <style>

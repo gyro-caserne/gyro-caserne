@@ -45,8 +45,7 @@
 									<ul>
 										{#each m.changements as c (c.colonne)}
 											<li>
-												{c.colonne} : {c.avant || '(vide)'} <span aria-hidden="true">→</span><span class="cache">devient</span>
-												{c.apres || '(vide)'}
+												{c.colonne} passe de {c.avant || '(vide)'} à {c.apres || '(vide)'}
 											</li>
 										{/each}
 									</ul>
@@ -60,7 +59,7 @@
 			{#if apercu.erreurs.length > 0}
 				<section>
 					<h3>{pluriel(apercu.erreurs.length, 'erreur', 'erreurs')}</h3>
-					<p class="note">Ces lignes ne sont pas appliquées : corrigez-les dans le fichier ou à l'écran.</p>
+					<p class="note">Ces lignes ne sont pas appliquées. Corrigez-les dans le fichier ou à l'écran.</p>
 					<ul class="erreurs">
 						{#each apercu.erreurs as e, i (i)}<li>{erreur(e)}</li>{/each}
 					</ul>
@@ -70,7 +69,7 @@
 			{#if apercu.perimees.length > 0}
 				<section>
 					<h3>{pluriel(apercu.perimees.length, 'ligne périmée', 'lignes périmées')}</h3>
-					<p class="note">Agents modifiés dans l'appli depuis l'export : non appliqués. Réexportez pour les modifier par fichier.</p>
+					<p class="note">Agents modifiés dans l'appli depuis l'export, non appliqués. Réexportez pour les modifier par fichier.</p>
 					<ul>
 						{#each apercu.perimees as p, i (i)}<li>{p.ligne === 0 ? `${p.nom} (absent du fichier)` : `Ligne ${p.ligne} : ${p.nom}`}</li>{/each}
 					</ul>

@@ -34,16 +34,16 @@
 			{/each}
 		</ul>
 		{#if incompletes}
-			<p class="doux">L’appli signale seulement : aucun agent n’est déplacé. Pour ajuster : <a href="/agents">Agents</a> ou <a href="/nominations">Nominations</a>.</p>
+			<p class="doux">L’appli signale seulement. Aucun agent n’est déplacé. Pour ajuster, passez par <a href="/agents">Agents</a> ou <a href="/nominations">Nominations</a>.</p>
 		{/if}
 	</section>
 
 	<section aria-labelledby="roulement-fetes">
 		<h3 id="roulement-fetes">Roulement et fêtes</h3>
 		{#if p.precedente}
-			<p>Continue le roulement de {p.annee - 1} : {nom(p.ordre[0] ?? null)} prend la relève de janvier.</p>
+			<p>Continue le roulement de {p.annee - 1}, avec {nom(p.ordre[0] ?? null)} à la relève de janvier.</p>
 		{:else}
-			<p>{p.annee - 1} n’a pas de planning : le roulement de base du centre, {nom(p.ordre[0] ?? null)} en premier.</p>
+			<p>{p.annee - 1} n’a pas de planning. Le roulement de base du centre s’applique, avec {nom(p.ordre[0] ?? null)} en premier.</p>
 		{/if}
 		<ul role="list" class="fetes">
 			{#each LIGNES_FETES as f (f.cle)}
@@ -88,7 +88,7 @@
 	<section class="resume" aria-labelledby="resume-proposition">
 		<h3 id="resume-proposition">Résumé</h3>
 		<p>{resumeProposition(p, equipes)}</p>
-		{#if !p.vacances}<p class="doux">Les vacances scolaires ne sont pas reprises : saisissez-les ou importez-les à l’étape Repères.</p>{/if}
+		{#if !p.vacances}<p class="doux">Les vacances scolaires ne sont pas reprises. Saisissez-les ou importez-les à l’étape Repères.</p>{/if}
 		<form
 			method="POST"
 			{action}

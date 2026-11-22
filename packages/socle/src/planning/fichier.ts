@@ -173,7 +173,7 @@ async function analyser(base: Base, acteur: Acteur, annee: number, lu: FichierPl
 		const id = ref.trim() === '' ? null : Number(ref);
 		const existante = id === null ? undefined : existantes.get(id);
 		if (id !== null && !existante) {
-			erreur(`Réf. ${ref} inconnue : laissez-la vide pour une nouvelle manœuvre`);
+			erreur(`Réf. ${ref} inconnue. Laissez-la vide pour une nouvelle manœuvre`);
 			continue;
 		}
 		if (id !== null) vues.add(id);
@@ -200,7 +200,7 @@ async function analyser(base: Base, acteur: Acteur, annee: number, lu: FichierPl
 			continue;
 		}
 		if (!garder && vide && fin >= '24:00') {
-			erreur('Fin vide : la durée réglée par le centre passerait minuit, indiquez la fin');
+			erreur('Fin vide. La durée réglée par le centre passerait minuit, indiquez la fin');
 			continue;
 		}
 		if (!garder && (fin <= heure || fin >= '24:00')) {
@@ -229,7 +229,7 @@ async function analyser(base: Base, acteur: Acteur, annee: number, lu: FichierPl
 		if (existante) {
 			const pareil = existante.debut === valeurs.debut && existante.fin === valeurs.fin && existante.theme === valeurs.theme && existante.lieu === valeurs.lieu && JSON.stringify(existante.convoques) === valeurs.convoques && Number(existante.petitDejeuner) === petitDejeuner;
 			if (pareil) continue;
-			if (existante.debut < m) erreur('Manœuvre passée : elle ne se modifie plus');
+			if (existante.debut < m) erreur('Manœuvre passée. Elle ne se modifie plus');
 			else if (valeurs.debut < m) erreur('Cette date est déjà passée');
 			else modifications.push({ ...valeurs, id: existante.id });
 		} else if (valeurs.debut < m) erreur('Cette date est déjà passée');

@@ -78,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>{a.libelle} · {e.nom} · Anomalies · Gyro Caserne</title>
+	<title>{a.libelle}, {e.nom}</title>
 </svelte:head>
 
 {#snippet message(quoi: string)}
@@ -86,7 +86,7 @@
 {/snippet}
 
 <div class="page">
-	<EnTetePage titre={a.libelle} phrase={[e.nom, a.zone].filter(Boolean).join(' · ')} retour={{ href: `/engins/anomalies?engin=${e.id}`, libelle: 'Anomalies' }} />
+	<EnTetePage titre={a.libelle} phrase={[e.nom, a.zone].filter(Boolean).join(', ')} retour={{ href: `/engins/anomalies?engin=${e.id}`, libelle: 'Anomalies' }} />
 
 	<div role="status" class="masque">{form?.succes ?? reussite}</div>
 	{#if data.signalee}<p class="bandeau ok">Signalement envoyé. Le référent engins et les chefs sont prévenus.</p>{/if}
@@ -111,12 +111,12 @@
 					{#each etapes as etape, i (etape)}
 						<li class={CLASSES[etat(etape, i)]} aria-current={etat(etape, i) === 'en cours' ? 'step' : undefined}>
 							<span class="puce" aria-hidden="true">{#if etat(etape, i) === 'faite'}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>{/if}</span>
-							<span>{libelleEtape(etape, r)}{#if etape === 'en_attente' && a.motif && faites.has('en_attente')}{' '}<span class="doux">· {LIBELLES_MOTIF[a.motif].toLocaleLowerCase('fr')}</span>{/if}<span class="masque">{' '}: {etat(etape, i)}</span></span>
+							<span>{libelleEtape(etape, r)}{#if etape === 'en_attente' && a.motif && faites.has('en_attente')}{' '}<span class="doux">({LIBELLES_MOTIF[a.motif].toLocaleLowerCase('fr')})</span>{/if}<span class="masque">{' '}: {etat(etape, i)}</span></span>
 						</li>
 					{/each}
 					<li class={a.close ? 'faite' : 'a-venir'} aria-current={a.close ? 'step' : undefined}>
 						<span class="puce" aria-hidden="true">{#if a.close}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>{/if}</span>
-						<span>Close{#if a.close}{' '}<span class="doux">· le {dateCourte(a.close.le)} par {a.close.par}</span>{/if}<span class="masque">{' '}: {a.close ? 'faite' : 'à venir'}</span></span>
+						<span>Close{#if a.close}<span class="doux">, le {dateCourte(a.close.le)} par {a.close.par}</span>{/if}<span class="masque">{' '}: {a.close ? 'faite' : 'à venir'}</span></span>
 					</li>
 				</ol>
 
@@ -131,14 +131,14 @@
 						{#if peut('verifiee')}
 							<form method="POST" use:enhance={soumettre}>
 								<input type="hidden" name="quoi" value="verifiee" />
-								<Bouton type="submit" desactive={envoi}>{libelleEtape('verifiee', r)} : c’est bon</Bouton>
+								<Bouton type="submit" desactive={envoi}>Valider l’étape {libelleEtape('verifiee', r)}</Bouton>
 							</form>
 						{/if}
 					</div>{/if}
 					{@render message('prendre')}
 					{@render message('verifiee')}
 					{#if PANNEAUX.some(peut)}<div class="gestes">
-						{#each PANNEAUX.filter(peut) as cle (cle)}<a class="lien-secondaire" href={adresse(cle)} data-sveltekit-noscroll data-sveltekit-reset="false">{TITRES[cle]}…</a>{/each}
+						{#each PANNEAUX.filter(peut) as cle (cle)}<a class="lien-secondaire" href={adresse(cle)} data-sveltekit-noscroll data-sveltekit-reset="false">{TITRES[cle]}</a>{/each}
 					</div>{/if}
 				{:else if !a.close}
 					<p class="doux">{a.prisePar ? `Prise en charge par ${a.prisePar}.` : 'En attente d’une prise en charge.'}</p>
@@ -191,7 +191,7 @@
 					{#each a.historique as h, i (i)}
 						<li>
 							<strong>{h.quoi === 'close' && !reparee ? 'Close sans réparation' : TEXTES[h.quoi]}</strong>
-							<span class="doux">{moment(h.le)} · {h.par}</span>
+							<span class="doux">{moment(h.le)}, par {h.par}</span>
 							{#if h.texte && h.quoi !== 'signalee'}<span>{h.texte}</span>{/if}
 						</li>
 					{/each}

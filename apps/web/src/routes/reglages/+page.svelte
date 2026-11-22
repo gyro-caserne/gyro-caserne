@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-	<title>Réglages du centre · Gyro Caserne</title>
+	<title>Réglages du centre</title>
 </svelte:head>
 
 <div class="page">
@@ -32,7 +32,7 @@
 		{@const part = Math.min(100, Math.round((data.photos.octets / data.photos.limite) * 100))}
 		<ul class="lignes" role="list">
 			<li>
-				<Rangee titre="Photos" sous={`${enMo(data.photos.octets)} Mo sur ${enMo(data.photos.limite)} Mo${data.photos.alerte ? '. La base des photos est presque pleine : il faudra choisir entre l’offre payante (5 $/mois) ou un stockage R2.' : ''}`} alerte={data.photos.alerte}>
+				<Rangee titre="Photos" sous={`${enMo(data.photos.octets)} Mo sur ${enMo(data.photos.limite)} Mo${data.photos.alerte ? '. La base des photos est presque pleine. Il faudra choisir entre l’offre payante (5 $/mois) ou un stockage R2.' : ''}`} alerte={data.photos.alerte}>
 					{#snippet droite()}
 						<span class="mesure">
 							<span class="barre" aria-hidden="true"><span style:width="{part}%"></span></span>

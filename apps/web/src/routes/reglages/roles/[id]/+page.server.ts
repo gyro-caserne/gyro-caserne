@@ -19,7 +19,7 @@ import type { Actions, PageServerLoad } from './$types';
 
 type Nature = 'fonction' | 'mission';
 type Portee = 'centre' | 'equipe' | 'comite';
-const SYSTEME = 'Ce rôle fait partie du système : ses droits sont fixés, il ne se modifie pas.';
+const SYSTEME = 'Ce rôle fait partie du système. Ses droits sont fixés, il ne se modifie pas.';
 
 // Le rôle demandé, pour qui gère les responsabilités ; 404 s'il n'existe pas.
 async function lireRole(locals: App.Locals, brut: string) {
@@ -35,8 +35,8 @@ async function lireRole(locals: App.Locals, brut: string) {
 // Pourquoi la page est en lecture seule, ou null.
 function raison(role: Awaited<ReturnType<typeof lireRole>>['role']): string | null {
 	if (role.systeme !== null) return SYSTEME;
-	if (role.archiveeLe !== null) return 'Ce rôle est archivé : il ne se modifie plus.';
-	if (role.protegee) return 'Ce rôle donne un droit d’administration : seuls le chef de centre, son adjoint et le super administrateur le modifient.';
+	if (role.archiveeLe !== null) return 'Ce rôle est archivé. Il ne se modifie plus.';
+	if (role.protegee) return 'Ce rôle donne un droit d’administration. Seuls le chef de centre, son adjoint et le super administrateur le modifient.';
 	return null;
 }
 

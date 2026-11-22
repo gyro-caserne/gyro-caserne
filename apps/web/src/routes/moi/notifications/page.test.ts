@@ -8,7 +8,7 @@ import CeTelephone from './CeTelephone.svelte';
 const html = (data: Record<string, unknown>, form: unknown = null) => render(Page as any, { props: { data: { clePublique: 'BPub', tout: false, coupes: [], appareils: 0, urgences: null, courriel: null, ...data }, form } }).body;
 const telephone = (etat: string, appareils = 0) => render(CeTelephone as any, { props: { etat, appareils, activer: () => {}, desactiver: () => {} } }).body;
 
-describe('page Moi → Notifications', () => {
+describe('page Mes notifications', () => {
 	it('« Tout couper » : un interrupteur qui dit son état, dans un formulaire qui marche sans JavaScript', () => {
 		expect(html({})).toMatch(/<form[^>]*method="POST"[^>]*action="\?\/toutCouper"[\s\S]*?<input type="checkbox" role="switch" name="oui" value="1"(?![^>]*checked)[^>]*>[\s\S]*?Enregistrer/);
 		expect(html({ tout: true })).toMatch(/action="\?\/toutCouper"[\s\S]*?role="switch" name="oui" value="1"[^>]*checked/);

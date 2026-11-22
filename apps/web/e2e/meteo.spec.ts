@@ -54,8 +54,8 @@ test.describe('météo et vigilance', () => {
 	const jourParis = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' }).format(new Date());
 	const ancien = '2020-01-01T00:00';
 	for (const [nom, niveau, texte, majLe] of [
-		['verte', 1, 'Vigilance verte · Ille-et-Vilaine', null],
-		['jaune', 2, 'Vigilance jaune orages, aujourd’hui · Ille-et-Vilaine', null],
+		['verte', 1, 'Vigilance verte, Ille-et-Vilaine', null],
+		['jaune', 2, 'Vigilance jaune orages, aujourd’hui, Ille-et-Vilaine', null],
 		['indisponible', 1, 'Vigilance indisponible, voir Météo-France', ancien]
 	] as const) {
 		for (const theme of ['auto', 'sombre']) {

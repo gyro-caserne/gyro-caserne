@@ -1,3 +1,3 @@
 <svelte:head>
-	<title>Échanges · Gyro Caserne</title>
+	<title>Échanges</title>
 </svelte:head>

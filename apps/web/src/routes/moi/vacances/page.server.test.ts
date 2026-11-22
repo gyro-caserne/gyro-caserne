@@ -22,7 +22,7 @@ describe('/moi/vacances', () => {
 		expect(await envoyer(actions, 'ajouter', l, [['annee', a], ['debut', ''], ['fin', `${a}-07-10`]])).toMatchObject({ status: 400, data: { message: 'Indiquez les deux dates.' } });
 		const [p] = await base.select().from(vacancesAgent);
 		expect(await envoyer(actions, 'retirer', l, [['id', String(p!.id)]])).toEqual({ succes: 'Période retirée.' });
-		expect(await envoyer(actions, 'toutLete', l, [['annee', a]])).toEqual({ succes: 'C’est noté : disponible tout l’été.' });
+		expect(await envoyer(actions, 'toutLete', l, [['annee', a]])).toEqual({ succes: 'C’est noté, vous êtes disponible tout l’été.' });
 		expect((await charger(load, l)).vacances).toMatchObject({ ete: { annee: prochain }, reponse: { toutEte: true }, periodes: [] });
 	});
 });

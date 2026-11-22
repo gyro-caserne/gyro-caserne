@@ -25,7 +25,7 @@ describe('fichier des fiches', () => {
 		expect(donnees.entetes).toEqual(ENTETES);
 		expect(donnees.feuilles.map((f) => [f.nom, f.lignes.length])).toEqual([['VSAV', 33], ['FPT', 24], ['VTU', 15]]);
 		expect(feuille('VTU')[3]).toEqual(['61', 'Cabine', 'Gilets haute visibilité', '3']);
-		expect(feuille('VTU')[4]).toEqual(['62', 'Épuisement', 'Motopompe : plein et essai', '']);
+		expect(feuille('VTU')[4]).toEqual(['62', 'Épuisement', 'Motopompe (plein et essai)', '']);
 	});
 
 	it('réservé à qui gère les engins', async () => {
@@ -63,7 +63,7 @@ describe('fichier des fiches', () => {
 					nouvelleVersion: false,
 					ajoutes: ['Échelle de toit'],
 					retires: ['Aspirateur à eau'],
-					modifies: ['Niveau de carburant (au moins 3/4) → Carburant (au moins 3/4)', 'Gilets haute visibilité : 3 → 4', 'Électropompe (passe en Coffres)'],
+					modifies: ['Niveau de carburant (au moins 3/4) renommé en Carburant (au moins 3/4)', 'Gilets haute visibilité, 4 au lieu de 3', 'Électropompe (passe en Coffres)'],
 					ordre: false
 				}
 			]
@@ -83,7 +83,7 @@ describe('fichier des fiches', () => {
 		const fpt = feuille('FPT');
 		fpt.pop();
 		const apercu = await apercuFiches(base, referent, lu({ FPT: fpt }), maintenant);
-		expect(apercu.fiches[0]).toMatchObject({ nouvelleVersion: true, retires: ['Tronçonneuse : plein et essai'] });
+		expect(apercu.fiches[0]).toMatchObject({ nouvelleVersion: true, retires: ['Tronçonneuse (plein et essai)'] });
 		await appliquerFiches(base, referent, lu({ FPT: fpt }), maintenant);
 		expect((await lireFiche(base, types.FPT)).version.numero).toBe(2);
 	});
@@ -97,11 +97,11 @@ describe('fichier des fiches', () => {
 		const fichier = lu({ VTU: vtu, CCF: [['', 'Cabine', 'Radio', '']], FPT: [] });
 		const { erreurs } = await apercuFiches(base, referent, fichier, maintenant);
 		expect(erreurs).toEqual([
-			{ feuille: 'VTU', ligne: 2, message: 'Quantité « deux » : un nombre entier de 1 à 999, ou rien' },
+			{ feuille: 'VTU', ligne: 2, message: 'Quantité « deux » invalide. Écrivez un nombre entier de 1 à 999, ou rien' },
 			{ feuille: 'VTU', ligne: 3, message: 'Zone vide' },
-			{ feuille: 'VTU', ligne: 5, message: 'Réf. 61 en double : effacez-la sur la copie' },
-			{ feuille: 'CCF', ligne: 1, message: 'Type d’engin « CCF » inconnu : créez-le d’abord dans l’appli (Fiches → Nouveau type)' },
-			{ feuille: 'FPT', ligne: 2, message: 'Feuille vide : une fiche garde au moins un élément (retirez la feuille pour ne pas toucher à cette fiche)' }
+			{ feuille: 'VTU', ligne: 5, message: 'Réf. 61 en double. Effacez-la sur la copie' },
+			{ feuille: 'CCF', ligne: 1, message: 'Type d’engin « CCF » inconnu. Créez-le d’abord dans l’appli, depuis Fiches puis Nouveau type.' },
+			{ feuille: 'FPT', ligne: 2, message: 'Feuille vide. Une fiche garde au moins un élément (retirez la feuille pour ne pas toucher à cette fiche)' }
 		]);
 		await expect(appliquerFiches(base, referent, fichier, maintenant)).rejects.toThrow(new DonneeInvalide('Le fichier contient des erreurs'));
 		expect((await lireFiche(base, types.VTU)).version.creeLe).not.toBe(maintenant);
