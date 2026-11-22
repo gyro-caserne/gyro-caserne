@@ -8,8 +8,9 @@
 		id,
 		sondage,
 		agir = false,
+		nonConvoque = false,
 		garderFocus = () => {}
-	}: { id: number; sondage: NonNullable<PublicationVue['sondage']>; agir?: boolean; garderFocus?: SubmitFunction } = $props();
+	}: { id: number; sondage: NonNullable<PublicationVue['sondage']>; agir?: boolean; nonConvoque?: boolean; garderFocus?: SubmitFunction } = $props();
 
 	const s = $derived(sondage);
 	const etat = $derived(s.etat === 'ferme' ? 'Fermé' : s.etat === 'avenir' && s.ouverture ? `Ouvre le ${jourEtHeure(s.ouverture)}` : 'Ouvert');
@@ -59,7 +60,7 @@
 			</details>
 		{/if}
 	{:else if ouvert}
-		<p class="doux">Les résultats sont réservés à ceux qui ont voté.</p>
+		<p class="doux">{nonConvoque ? 'Sondage réservé aux convoqués.' : 'Les résultats sont réservés à ceux qui ont voté.'}</p>
 	{/if}
 	{#if s.resultats}<p class="doux">{pluriel(total, 'réponse')}</p>{/if}
 </div>

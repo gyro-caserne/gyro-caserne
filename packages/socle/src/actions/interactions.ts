@@ -81,11 +81,13 @@ export async function repondreEvenement(base: Base, acteur: Acteur, id: number, 
 	await base.insert(reponseEvenement).values({ publicationId: id, personneId: moi, reponse }).onConflictDoUpdate({ target: [reponseEvenement.publicationId, reponseEvenement.personneId], set: { reponse } });
 }
 
-// Un vote par personne : le rang de la réponse choisie ; voter à nouveau le change. Seulement entre l'ouverture et la clôture.
+// Un vote par personne : le rang de la réponse choisie ; voter à nouveau le change. Seulement entre l'ouverture et la clôture,
+// et, pour le sondage d'un événement, seulement les convoqués (ils seuls sont comptés pour le petit-déjeuner).
 export async function voter(base: Base, acteur: Acteur, id: number, reponse: number, maintenant: string): Promise<void> {
-	const { ligne, moi } = await pourAgir(base, acteur, id, exigerDateHeure(maintenant, 'Date'));
+	const { ligne, cle, appartenances, moi } = await pourAgir(base, acteur, id, exigerDateHeure(maintenant, 'Date'));
 	if (ligne.sondageReponses === null) throw new DonneeInvalide('Pas de sondage');
 	if (ligne.annuleeLe !== null) throw new DonneeInvalide('Cet événement est annulé');
+	if (ligne.debut !== null && !estConvoque(appartenances, cle, JSON.parse(ligne.convoques ?? '"tous"'), moi)) throw refusMur(cle, 'lire', 'Vous n’êtes pas convoqué à cet événement');
 	const etat = etatSondage(ligne.sondageOuverture, ligne.sondageCloture, maintenant);
 	if (etat === 'avenir') throw new DonneeInvalide('Sondage pas encore ouvert');
 	if (etat === 'ferme') throw new DonneeInvalide('Sondage fermé');

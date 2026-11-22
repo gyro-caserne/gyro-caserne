@@ -10,6 +10,6 @@ Ouvert à tout agent, sur les murs où il peut publier.
 6. Vérifiez « Ouvre le » (maintenant, par défaut) et « Ferme le » (dans 7 jours, par défaut ; pour un événement, à son début). La clôture tombe moins d'un an après l'ouverture, et pour un événement au plus tard à son début.
 7. Appuyez sur « Publier dans … ». Vous revenez sur le mur, votre publication en tête.
 
-Chacun répond une fois et peut changer d'avis tant que le sondage est ouvert. Il voit les résultats après avoir voté. Une fois le sondage fermé, plus personne ne vote et tout le monde voit les résultats.
+Chacun répond une fois et peut changer d'avis tant que le sondage est ouvert. Le sondage d'un événement est réservé à ses convoqués. Il voit les résultats après avoir voté. Une fois le sondage fermé, plus personne ne vote et tout le monde voit les résultats.
 
 Les dates ne se changent plus après la publication.

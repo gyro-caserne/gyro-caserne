@@ -67,7 +67,7 @@ export async function aNePasManquer(base: Base, acteur: Acteur, aujourdhui: stri
 			.where(and(surSesMurs, or(gt(publication.debut, debutMinimumEvenement(maintenant)), gt(publication.fin, m)), isNull(publication.annuleeLe)))
 			.orderBy(asc(publication.debut), asc(publication.id)),
 		base
-			.select(champs)
+			.select({ ...champs, debut: publication.debut, convoques: publication.convoques })
 			.from(publication)
 			.leftJoin(voteSondage, and(eq(voteSondage.publicationId, publication.id), eq(voteSondage.personneId, moi)))
 			.where(and(surSesMurs, sql`${publication.sondageQuestion} is not null`, ouvert, recent, isNull(voteSondage.publicationId), isNull(publication.annuleeLe)))
@@ -100,7 +100,8 @@ export async function aNePasManquer(base: Base, acteur: Acteur, aujourdhui: stri
 				const enCours = momentEvenement(p.debut!, maintenant, p.fin) === 'enCours';
 				return { ...item(p), debut: p.debut!, demain: !enCours && p.debut!.slice(0, 10) === demain, enCours, reponse: p.reponse };
 			}),
-		sondages: sondages.map(item),
+		// Le sondage d'un événement n'attend que ses convoqués.
+		sondages: sondages.filter((p) => p.debut === null || estConvoque(appartenances, p.mur, JSON.parse(p.convoques ?? '"tous"'), moi)).map(item),
 		epinglees: epinglees.filter((p) => parCle.has(p.mur)).map(item),
 		remplacements: remplacements.map((r) => ({
 			id: r.id,
