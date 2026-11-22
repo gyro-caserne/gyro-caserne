@@ -72,7 +72,7 @@ test('demander des bancs ; le super administrateur l’accepte depuis « À vali
 	await gestion.context().close();
 
 	await page.goto('/notifications');
-	await expect(page.getByRole('link', { name: /Bancs : demande acceptée/ }).first()).toBeVisible();
+	await expect(page.getByRole('link', { name: /Demande acceptée \(Bancs\)/ }).first()).toBeVisible();
 	await page.goto('/reservations/miennes');
 	await expect(page.locator('article', { hasText: mot })).toContainText('Acceptée');
 });
