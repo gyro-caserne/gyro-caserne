@@ -7,6 +7,7 @@ const pub = (p: Partial<PublicationVue> = {}): PublicationVue => ({
 	id: 1,
 	cle: 'vie',
 	auteur: { prenom: 'Alice', nom: 'Martin', couleur: null, role: null, ecrireA: null },
+	comite: null,
 	type: 'message',
 	texte: 'Bonjour',
 	creeLe: '2026-10-28T14:05:00',
@@ -93,6 +94,18 @@ describe('page d’un mur', () => {
 		// Chaque photo s'ouvre en grand dans la visionneuse ; sans JavaScript, le lien mène à la photo.
 		expect(page).toMatch(/<a href="\/echanges\/photo\/7" data-visionneuse=""[^>]*><img src="\/echanges\/photo\/7"/);
 		expect(page).toContain('2 j’aime, 1 commentaire');
+	});
+
+	it('au nom d’un comité : son icône et son nom, « par » l’auteur dessous, sans initiales ni rôle', () => {
+		const auteur = { prenom: 'Alice', nom: 'Martin', couleur: '#c2185b', role: 'Chef de garde', ecrireA: 7 };
+		const page = html({ estPersonne: true, publications: [pub({ auteur, comite: { nom: 'Amicale', icone: 'coeur' }, texte: 'Repas de Sainte-Barbe' })] });
+		expect(page).toMatch(/<strong id="auteur-1">Amicale<\/strong>/);
+		expect(page).toMatch(/class="icone-appli[^"]*" aria-hidden="true"><svg[^>]*><path d="M12 20/);
+		expect(page).toMatch(/par Alice Martin, <time/);
+		expect(page).not.toContain('class="visage');
+		expect(page).not.toContain('Chef de garde');
+		// « Répondre en privé » écrit à la personne, pas au comité.
+		expect(html({ estPersonne: true, messagerie: true, publications: [pub({ auteur, comite: { nom: 'Amicale', icone: 'coeur' } })] })).toMatch(/aria-label="Répondre en privé à Alice Martin"/);
 	});
 
 	it('une manœuvre annulée par le planning : « Annulée », plus de réponse ; signée « Planning » avec l’icône du calendrier, jamais d’initiales', () => {

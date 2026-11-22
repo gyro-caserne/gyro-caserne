@@ -244,7 +244,9 @@ export const publication = sqliteTable(
 		sondageOuverture: text('sondage_ouverture'),
 		sondageCloture: text('sondage_cloture'),
 		// Manœuvre annulée (planning) : la publication reste, marquée « Annulée ».
-		annuleeLe: text('annulee_le')
+		annuleeLe: text('annulee_le'),
+		// Publiée par le rapporteur au nom de ce comité (Vie du centre seulement) ; l'auteur reste la personne.
+		comiteId: integer('comite_id').references(() => comite.id)
 	},
 	(t) => [
 		check('publication_type', checkDans('type', TYPES_PUBLICATION)),

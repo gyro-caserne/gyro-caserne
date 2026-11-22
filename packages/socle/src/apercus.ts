@@ -26,7 +26,7 @@ function surUneLigne(texte: string): string {
 
 // Pour la liste des murs : identité de chaque mur et dernière publication. Deux requêtes au plus.
 export async function apercusDesMurs(base: Base, acteur: Acteur, aujourdhui: string): Promise<Apercu[]> {
-	const { murs, appartenances } = await mursEtAppartenances(base, acteur, aujourdhui);
+	const { murs, appartenances, comites } = await mursEtAppartenances(base, acteur, aujourdhui);
 	if (murs.length === 0) return [];
 
 	const idsDernieres = sql`select max(${publication.id}) from ${publication} where ${inArray(publication.mur, murs.map((m) => m.cle))} group by ${publication.mur}`;
@@ -61,7 +61,9 @@ export async function apercusDesMurs(base: Base, acteur: Acteur, aujourdhui: str
 		const p = lesDernieres.find((x) => x.mur === m.cle);
 		if (p) {
 			const a = auteurVu(p.auteur, lesAuteurs.find((x) => `personne:${x.id}` === p.auteur));
-			r.derniere = { auteur: p.auteur.startsWith('super:') ? 'Super administrateur' : p.auteur === 'planning' ? 'Planning' : a.prenom || a.nom, texte: surUneLigne(p.texte), creeLe: p.creeLe };
+			// Au nom d'un comité : son nom, lu avec les murs.
+			const auNomDe = comites.find((c) => c.id === p.comiteId);
+			r.derniere = { auteur: auNomDe ? auNomDe.nom : p.auteur.startsWith('super:') ? 'Super administrateur' : p.auteur === 'planning' ? 'Planning' : a.prenom || a.nom, texte: surUneLigne(p.texte), creeLe: p.creeLe };
 		}
 		return r;
 	});

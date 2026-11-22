@@ -6,7 +6,8 @@ import { DonneeInvalide } from '../erreurs.ts';
 import { ligneJournal } from '../journal.ts';
 import { REPONSES_EVENEMENT, TYPES_PUBLICATION, type ReponseEvenement, type TypePublication } from '../listes.ts';
 import { avecPhotos, effacerPhotos, exigerPhotos, lireOctets, roleDe, texte, type Photo } from '../commun.ts';
-import { accesMur, agentsDuJour, equipesConvoquees, estConvoque, type Convocation, exigerMur, lecturesAgents, membresDe, refusMur, type AgentsLus, type Appartenances, type CleMur, type Mur } from '../murs.ts';
+import { iconeDuComite, type NomIcone } from '../icones.ts';
+import { accesMur, agentsDuJour, equipesConvoquees, estConvoque, type Convocation, exigerMur, lecturesAgents, membresDe, refusMur, type AgentsLus, type Appartenances, type CleMur, type ComiteLu, type Mur } from '../murs.ts';
 import { commentaire, equipe, jaime, journal, manoeuvre, personne, photoPublication, priseConnaissance, publication, reponseEvenement, visiteMur, voteSondage } from '../schema.ts';
 import { photo as octetsPhoto } from '../schema-photos.ts';
 import type { CommentaireVue } from './interactions.ts';
@@ -27,6 +28,8 @@ export type DonneesPublication = {
 	evenement?: { debut: string; lieu: string; convoques: Convoques };
 	sondage?: { question: string; reponses: string[]; ouverture: string; cloture: string };
 	photos?: Photo[];
+	// Au nom de ce comité : son rapporteur en fonction, dans Vie du centre seulement.
+	comiteId?: number | null;
 };
 
 export type PublicationVue = {
@@ -36,6 +39,8 @@ export type PublicationVue = {
 	// `ecrireA` : l'auteur, à qui l'acteur peut répondre en privé (il a la messagerie, et ce n'est pas l'acteur) ; null sinon.
 	// `appli` : publiée par l'appli (le planning), signée de son icône, sans initiales.
 	auteur: { prenom: string; nom: string; couleur: string | null; role: string | null; ecrireA: number | null; appli?: true };
+	// Publiée au nom d'un comité : son nom et son icône d'aujourd'hui, même s'il est dissous ou que l'auteur n'est plus rapporteur.
+	comite: { nom: string; icone: NomIcone } | null;
 	type: TypePublication;
 	texte: string;
 	creeLe: string;
@@ -112,10 +117,21 @@ async function exigerEvenement(base: Base, mur: Mur, donnees: DonneesPublication
 	return { debut: ev.debut, lieu, convoques: JSON.stringify(convoques) };
 }
 
+// Le comité au nom duquel on publie : dans Vie du centre, par son rapporteur en fonction, s'il n'est pas dissous. Absent : la personne seule.
+function exigerComite(comiteId: unknown, cle: string, a: Appartenances, comites: ComiteLu[]): ComiteLu | null {
+	if (comiteId === undefined || comiteId === null) return null;
+	if (!Number.isInteger(comiteId) || (comiteId as number) <= 0) throw new DonneeInvalide('Comité inconnu');
+	if (cle !== 'vie') throw new DonneeInvalide('Publication au nom d’un comité réservée à Vie du centre');
+	const c = comites.find((x) => x.id === comiteId);
+	if (!c || c.dissousLe !== null || !a.rapporteur.has(c.id)) throw refusMur(`comite:${comiteId}`, 'moderer', 'Seul le rapporteur du comité publie en son nom');
+	return c;
+}
+
 // Les octets d'abord, dans la base des photos ; puis la publication et ses références, dans la base principale.
 export async function publier(base: Base, basePhotos: BasePhotos, acteur: Acteur, cle: string, donnees: DonneesPublication, maintenant: string): Promise<number> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
-	const mur = await exigerMur(base, acteur, cle, aujourdhui, 'publier');
+	const { mur, appartenances, comites } = await accesMur(base, acteur, cle, aujourdhui, 'publier');
+	const auNomDe = exigerComite(donnees.comiteId, cle, appartenances, comites);
 	if (!(TYPES_PUBLICATION as readonly string[]).includes(donnees.type)) throw new DonneeInvalide('Type inconnu');
 	const corps = texte(donnees.texte, 'Texte', 4000);
 	if (donnees.priseDeConnaissance) {
@@ -129,10 +145,10 @@ export async function publier(base: Base, basePhotos: BasePhotos, acteur: Acteur
 	const ecritures = [
 		base
 			.insert(publication)
-			.values({ mur: cle, auteur: nomActeur(acteur), type: donnees.type, texte: corps, priseDeConnaissance: donnees.priseDeConnaissance ? 1 : 0, creeLe: maintenant, ...evenement, ...sondage })
+			.values({ mur: cle, auteur: nomActeur(acteur), comiteId: auNomDe?.id ?? null, type: donnees.type, texte: corps, priseDeConnaissance: donnees.priseDeConnaissance ? 1 : 0, creeLe: maintenant, ...evenement, ...sondage })
 			.returning({ id: publication.id }),
 		// Juste après l'insertion, last_insert_rowid() est l'id de la publication. Jamais le texte au journal.
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'publier', cibleType: 'publication', cibleId: sql`last_insert_rowid()`, details: { mur: cle, type: donnees.type, photos: photos.length } }, maintenant)
+		ligneJournal(base, { acteur: nomActeur(acteur), action: 'publier', cibleType: 'publication', cibleId: sql`last_insert_rowid()`, details: { mur: cle, type: donnees.type, photos: photos.length, ...(auNomDe && { comite: auNomDe.nom }) } }, maintenant)
 	] as const;
 	// Le batch est une transaction : aucune autre écriture ne s'intercale, et AUTOINCREMENT donne le plus grand id à la publication qui vient d'être insérée.
 	const derniere = sql`(select max(${publication.id}) from ${publication})`;
@@ -152,8 +168,8 @@ export function droitsSur(acteur: Acteur, mur: Mur, p: { auteur: string; comment
 export async function cible(base: Base, acteur: Acteur, id: number, aujourdhui: string) {
 	const [ligne] = await base.select().from(publication).where(eq(publication.id, id));
 	if (!ligne) throw new DonneeInvalide('Publication inconnue');
-	const { mur, appartenances } = await accesMur(base, acteur, ligne.mur, aujourdhui, 'lire');
-	return { ligne, mur, appartenances, cle: ligne.mur, droits: droitsSur(acteur, mur, ligne) };
+	const { mur, appartenances, comites } = await accesMur(base, acteur, ligne.mur, aujourdhui, 'lire');
+	return { ligne, mur, appartenances, comites, cle: ligne.mur, droits: droitsSur(acteur, mur, ligne) };
 }
 
 // Le texte d'une publication, si l'acteur peut lire son mur (« Répondre en privé »). Deux requêtes.
@@ -244,7 +260,7 @@ export async function lireMur(
 	const { avant, nombre = 20 } = page;
 	if (avant !== undefined && !(Number.isInteger(avant) && avant > 0)) throw new DonneeInvalide('Page invalide');
 	const taille = Number.isInteger(nombre) ? Math.min(Math.max(nombre, 1), PAGE_MAX) : 20;
-	const { mur, appartenances } = await accesMur(base, acteur, cle, aujourdhui, 'lire');
+	const { mur, appartenances, comites } = await accesMur(base, acteur, cle, aujourdhui, 'lire');
 
 	const [epinglees, suivantes] = await base.batch([
 		base.select().from(publication).where(and(eq(publication.mur, cle), eq(publication.epinglee, 1)))
@@ -261,7 +277,7 @@ export async function lireMur(
 	const enTete = avant === undefined ? epinglees : [];
 	const publications = suivantes.slice(0, taille);
 	const lignes = [...enTete, ...publications];
-	const { vues, audience } = await vuesDe(base, acteur, mur, appartenances, lignes, { maintenant, visite: true });
+	const { vues, audience } = await vuesDe(base, acteur, mur, appartenances, comites, lignes, { maintenant, visite: true });
 	const vue = (p: (typeof lignes)[number]) => vues.find((v) => v.id === p.id)!;
 	// Un mur d'équipe est « le sien » pour un membre de l'équipe ou son chef de garde, pas pour le chef de centre qui les lit tous.
 	const equipeId = mur.type === 'equipe' ? Number(cle.slice('equipe:'.length)) : null;
@@ -271,11 +287,11 @@ export async function lireMur(
 
 // Une publication seule, avec tous ses commentaires (la visite du mur n'est pas marquée). Trois requêtes.
 export async function lirePublication(base: Base, acteur: Acteur, id: number, maintenant: string): Promise<{ mur: Mur; publication: PublicationVue; commentaires: CommentaireVue[] }> {
-	const { ligne, mur, appartenances } = await cible(base, acteur, id, exigerDateHeure(maintenant, 'Date'));
+	const { ligne, mur, appartenances, comites } = await cible(base, acteur, id, exigerDateHeure(maintenant, 'Date'));
 	const tous: CommentaireVue[] = [];
 	const {
 		vues: [vue]
-	} = await vuesDe(base, acteur, mur, appartenances, [ligne], { maintenant, tous, lue: id });
+	} = await vuesDe(base, acteur, mur, appartenances, comites, [ligne], { maintenant, tous, lue: id });
 	return { mur, publication: vue!, commentaires: tous };
 }
 
@@ -321,6 +337,7 @@ async function vuesDe(
 	acteur: Acteur,
 	mur: Mur,
 	appartenances: Appartenances,
+	comites: ComiteLu[],
 	lignes: (typeof publication.$inferSelect)[],
 	options: { maintenant: string; visite?: boolean; tous?: CommentaireVue[]; lue?: number }
 ): Promise<{ vues: PublicationVue[]; audience: number }> {
@@ -433,10 +450,12 @@ async function vuesDe(
 		const monVote = sesVotes.find((v) => v.deMoi === 1)?.reponse ?? null;
 		const etat = etatSondage(p.sondageOuverture, p.sondageCloture, maintenant);
 		const fiche = auteurs.find((a) => `personne:${a.id}` === p.auteur);
+		const auNomDe = comites.find((c) => c.id === p.comiteId);
 		return {
 			id: p.id,
 			cle: p.mur as CleMur,
 			auteur: { ...auteurVu(p.auteur, fiche), ...visage(lus, equipes, idPersonne(p.auteur)), ecrireA: fiche?.messagerie === 1 && fiche.id !== moi && joignables(lui, parAgent.find((x) => x.id === fiche.id)?.a) ? fiche.id : null },
+			comite: auNomDe ? { nom: auNomDe.nom, icone: iconeDuComite(auNomDe) } : null,
 			type: p.type,
 			texte: p.texte,
 			creeLe: p.creeLe,

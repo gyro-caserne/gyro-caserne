@@ -408,6 +408,7 @@ describe('lireMur', () => {
 			id,
 			cle: 'vie',
 			auteur: { prenom: 'Chef', nom: 'Test', couleur: null, role: 'Chef de centre', ecrireA: chef },
+			comite: null,
 			type: 'evenement',
 			texte: 'Repas',
 			creeLe: maintenant,
@@ -862,5 +863,93 @@ describe('conservation des publications (tâche de nuit)', () => {
 	it('refuse une date mal formée', async () => {
 		const { base } = await jeu();
 		await expect(effacerVieillesPublications(base, base.photos, '2024-13-01')).rejects.toThrow(DonneeInvalide);
+	});
+});
+
+describe('publier au nom d’un comité', () => {
+	async function jeuComite() {
+		const j = await jeu();
+		const rapporteur = await j.nouvelle('Rapporteur');
+		await j.nommer(rapporteur, 'Rapporteur de comité', { type: 'comite', id: j.amicale.id });
+		return { ...j, rapporteur };
+	}
+	const auNom = (comiteId: number, texte = 'Repas de Sainte-Barbe') => ({ ...message(texte), comiteId });
+
+	it('le rapporteur publie dans Vie du centre au nom du comité ; il reste l’auteur ; journal avec le nom du comité ; aucune requête de plus', async () => {
+		const { base, rapporteur, amicale } = await jeuComite();
+		const avant = base.requetes;
+		const id = await publier(base, base.photos, acteur(rapporteur), 'vie', auNom(amicale.id), maintenant);
+		expect(base.requetes - avant).toBe(2);
+		const [ligne] = await base.select().from(publication).where(eq(publication.id, id));
+		expect(ligne).toMatchObject({ mur: 'vie', auteur: `personne:${rapporteur}`, comiteId: amicale.id });
+		const [entree] = await base.select().from(journal).where(eq(journal.action, 'publier'));
+		expect(JSON.parse(entree!.details!)).toMatchObject({ mur: 'vie', comite: 'Amicale' });
+		// Sans comité : rien ne change.
+		const moi = await publier(base, base.photos, acteur(rapporteur), 'vie', message(), maintenant);
+		expect((await base.select().from(publication).where(eq(publication.id, moi)))[0]!.comiteId).toBeNull();
+	});
+
+	it('refusé pour un simple membre, un ancien rapporteur, le chef de centre qui n’est pas rapporteur, un comité dissous', async () => {
+		const { base, agent, chef, nommer, nouvelle, rapporteur, amicale } = await jeuComite();
+		await nommer(agent, 'Membre de comité', { type: 'comite', id: amicale.id });
+		await expect(publier(base, base.photos, acteur(agent), 'vie', auNom(amicale.id), maintenant)).rejects.toThrow(RefusDroit);
+		await expect(publier(base, base.photos, acteur(chef), 'vie', auNom(amicale.id), maintenant)).rejects.toThrow(RefusDroit);
+		const ancien = await nouvelle('Ancien');
+		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Rapporteur de comité'));
+		await base.insert(attribution).values({ personneId: ancien, responsabiliteId: r!.id, perimetreType: 'comite', perimetreId: amicale.id, debut: '2026-01-01', fin: '2026-06-30', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		await expect(publier(base, base.photos, acteur(ancien), 'vie', auNom(amicale.id), maintenant)).rejects.toThrow(RefusDroit);
+		// Le super administrateur, et une personne d'un profil extérieur qui écrit dans Vie du centre, même nommée rapporteur.
+		await expect(publier(base, base.photos, superAdmin, 'vie', auNom(amicale.id), maintenant)).rejects.toThrow(RefusDroit);
+		const [reserve] = await base.select().from(profil).where(eq(profil.typePersonne, 'exterieur'));
+		await base.update(profil).set({ mursOuverts: JSON.stringify({ vie: 'ecriture', [`comite:${amicale.id}`]: 'ecriture' }) }).where(eq(profil.id, reserve!.id));
+		const [ext] = await base.insert(personne).values({ email: 'ext@exemple.fr', prenom: 'Ext', nom: 'Test', profilId: reserve!.id, statut: 'operationnel' }).returning();
+		await nommer(ext!.id, 'Rapporteur de comité', { type: 'comite', id: amicale.id });
+		await expect(publier(base, base.photos, acteur(ext!.id), 'vie', message(), maintenant)).resolves.toBeGreaterThan(0);
+		await expect(publier(base, base.photos, acteur(ext!.id), 'vie', auNom(amicale.id), maintenant)).rejects.toThrow(RefusDroit);
+		await base.update(comite).set({ dissousLe: '2026-10-01' }).where(eq(comite.id, amicale.id));
+		await expect(publier(base, base.photos, acteur(rapporteur), 'vie', auNom(amicale.id), maintenant)).rejects.toThrow(RefusDroit);
+		expect((await base.select().from(publication)).map((p) => p.comiteId)).toEqual([null]);
+	});
+
+	it('seulement dans Vie du centre ; un comité mal désigné est refusé', async () => {
+		const { base, rapporteur, chef, nommer, amicale, affecter, e1 } = await jeuComite();
+		await affecter(rapporteur, e1.id);
+		await nommer(chef, 'Rapporteur de comité', { type: 'comite', id: amicale.id });
+		for (const [qui, cle] of [[rapporteur, `equipe:${e1.id}`], [rapporteur, `comite:${amicale.id}`], [chef, 'centre']] as const)
+			await expect(publier(base, base.photos, acteur(qui), cle, auNom(amicale.id), maintenant), cle).rejects.toThrow('Publication au nom d’un comité réservée à Vie du centre');
+		for (const comiteId of [0, -1, 1.5, '1']) await expect(publier(base, base.photos, acteur(rapporteur), 'vie', { ...message(), comiteId: comiteId as never }, maintenant)).rejects.toThrow(DonneeInvalide);
+		await expect(publier(base, base.photos, acteur(rapporteur), 'vie', auNom(9999), maintenant)).rejects.toThrow(RefusDroit);
+	});
+
+	it('le mur et la publication seule portent le nom et l’icône du comité, sans requête de plus ; la signature reste après la fin du rôle et la dissolution', async () => {
+		const { base, rapporteur, agent, amicale } = await jeuComite();
+		const id = await publier(base, base.photos, acteur(rapporteur), 'vie', auNom(amicale.id), maintenant);
+		await publier(base, base.photos, acteur(rapporteur), 'vie', message('De moi'), maintenant);
+		const avant = base.requetes;
+		const { publications } = await lireMur(base, acteur(agent), 'vie', {}, maintenant);
+		expect(base.requetes - avant).toBe(3);
+		expect(publications.map((p) => [p.texte, p.comite])).toEqual([
+			['De moi', null],
+			['Repas de Sainte-Barbe', { nom: 'Amicale', icone: 'coeur' }]
+		]);
+		expect(publications[1]!.auteur).toMatchObject({ prenom: 'Rapporteur', nom: 'Test' });
+		await base.update(attribution).set({ fin: '2026-10-01' }).where(eq(attribution.personneId, rapporteur));
+		await base.update(comite).set({ dissousLe: '2026-10-01', icone: 'banc' }).where(eq(comite.id, amicale.id));
+		expect((await lirePublication(base, acteur(agent), id, maintenant)).publication.comite).toEqual({ nom: 'Amicale', icone: 'banc' });
+	});
+
+	it('un événement au nom du comité garde sa convocation et ses réponses', async () => {
+		const { base, rapporteur, agent, amicale } = await jeuComite();
+		const id = await publier(base, base.photos, acteur(rapporteur), 'vie', { type: 'evenement', texte: 'Repas de Sainte-Barbe', comiteId: amicale.id, evenement: { debut: '2026-12-05T19:00', lieu: 'Caserne', convoques: 'tous' } }, maintenant);
+		const { publication: vue } = await lirePublication(base, acteur(agent), id, maintenant);
+		expect(vue.comite).toEqual({ nom: 'Amicale', icone: 'coeur' });
+		expect(vue.evenement).toMatchObject({ convoques: 'tous', convoque: true, moment: 'avenir' });
+	});
+
+	it('modifier reste à l’auteur, sans changer le comité', async () => {
+		const { base, rapporteur, amicale } = await jeuComite();
+		const id = await publier(base, base.photos, acteur(rapporteur), 'vie', auNom(amicale.id), maintenant);
+		await modifierPublication(base, acteur(rapporteur), id, { texte: 'Repas reporté' }, maintenant);
+		expect((await base.select().from(publication).where(eq(publication.id, id)))[0]).toMatchObject({ texte: 'Repas reporté', comiteId: amicale.id });
 	});
 });

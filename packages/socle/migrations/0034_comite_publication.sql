@@ -1,0 +1,1 @@
+ALTER TABLE `publication` ADD `comite_id` integer REFERENCES comite(id);
