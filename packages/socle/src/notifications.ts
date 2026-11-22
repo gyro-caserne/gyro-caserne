@@ -9,7 +9,7 @@ import { iconeDuComite, type NomIcone } from './icones.ts';
 import { aLaMessagerie, nombreSignalements, nonLusPour, signalementsPour } from './messagerie.ts';
 import { aTrancherPar } from './reservations-gestion.ts';
 import { nombreAValider } from './reservations.ts';
-import { agentsDuJour, estConvoque, type Convocation, estMembre, exigerMur, lecturesAgents, type CleMur } from './murs.ts';
+import { agentsDuJour, estConvoque, type Convocation, estMembre, exigerMur, lecturesAgents, type CleMur, type ComiteLu } from './murs.ts';
 import { periodeCourte } from './reservations-calcul.ts';
 import { texteDemande } from './remplacements/tranches.ts';
 import { aValiderPar } from './remplacements/compte.ts';
@@ -72,8 +72,6 @@ const couleurDe = (aujourdhui: string) =>
 
 // « de Julie Martin », « d’Alice Martin ».
 const deNom = (nom: string) => (/^[aeiouyhàâéèêëîïôöûü]/i.test(nom) ? `d’${nom}` : `de ${nom}`);
-
-type ComiteNomme = { id: number; nom: string; icone: string | null; theme: string };
 
 function nomDuMur(cle: string, equipes: { id: number; nom: string }[], comites: { id: number; nom: string }[]): string {
 	if (cle === 'centre') return 'Le centre';
@@ -375,7 +373,7 @@ function deMurs(
 	lignes: { id: number; publicationId: number; commentaireId: number | null; creeLe: string; lueLe: string | null; mur: string; comiteId: number | null; auteur: string; texte: string }[],
 	personnes: { id: number; prenom: string; nom: string; couleur: string | null }[],
 	equipes: { id: number; nom: string }[],
-	comites: ComiteNomme[]
+	comites: Pick<ComiteLu, 'id' | 'nom' | 'icone' | 'theme'>[]
 ): LigneFil[] {
 	return lignes.map((l) => {
 			const p = personnes.find((x) => x.id === idPersonne(l.auteur));

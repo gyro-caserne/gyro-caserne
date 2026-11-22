@@ -258,6 +258,7 @@ describe('publier au nom d’un comité', () => {
 			status: 400,
 			data: { erreurs: { auNomDe: 'On ne publie au nom d’un comité que dans Vie du centre.' }, valeurs: { auNomDe: String(amicale.id) } }
 		});
+		expect(await agir(locaux(base, alice), [['mur', 'vie'], ['type', 'message'], ['texte', 'x'], ['auNomDe', 'abc']])).toMatchObject({ status: 400, data: { erreurs: { auNomDe: 'Choisissez au nom de qui publier.' } } });
 		expect(await agir(locaux(base, bruno), [['mur', 'vie'], ['type', 'message'], ['texte', 'x'], ['auNomDe', String(amicale.id)]])).toMatchObject({
 			status: 403,
 			data: { message: 'Seul le rapporteur du comité publie en son nom.', erreurs: { auNomDe: 'Seul le rapporteur du comité publie en son nom.' } }
