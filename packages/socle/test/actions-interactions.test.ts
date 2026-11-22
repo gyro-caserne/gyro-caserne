@@ -240,6 +240,20 @@ describe('sondages', () => {
 		const vue = async (qui: number) => (await lireMur(base, acteur(qui), 'centre', {}, maintenant)).publications[0]!.evenement!.convoque;
 		expect([await vue(agent), await vue(autre)]).toEqual([true, false]);
 	});
+
+	it('sondage d’un événement : « tous » et mur d’équipe ; un sondage sans événement reste ouvert à tout lecteur', async () => {
+		const { base, agent, autre, chef, affecter, e1, e2 } = await jeu();
+		await affecter(agent, e1.id);
+		await affecter(autre, e2.id);
+		const avecSondage = (convoques: 'tous' | number[] = 'tous') => ({ ...evenement(convoques), sondage: { question: 'Petit-déjeuner ?', reponses: ['Oui', 'Non'], ouverture: maintenant, cloture: '2026-11-01T18:00' } });
+		const tous = await publier(base, base.photos, acteur(chef), 'centre', avecSondage(), maintenant);
+		await voter(base, acteur(autre), tous, 0, maintenant);
+		const surEquipe = await publier(base, base.photos, acteur(chef), `equipe:${e1.id}`, avecSondage(), maintenant);
+		await voter(base, acteur(agent), surEquipe, 0, maintenant);
+		const simple = await publier(base, base.photos, acteur(chef), 'centre', { ...message(), sondage: { question: 'Pizza ?', reponses: ['Oui', 'Non'], ...dates } }, maintenant);
+		await voter(base, acteur(autre), simple, 1, maintenant);
+		expect(await base.select().from(voteSondage)).toHaveLength(3);
+	});
 });
 
 describe('sondages datés', () => {

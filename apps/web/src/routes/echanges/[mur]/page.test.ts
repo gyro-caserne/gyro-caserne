@@ -243,6 +243,19 @@ describe('gestes sur une publication', () => {
 		expect(passe).not.toContain('?/repondre');
 	});
 
+	it('sondage d’un événement : sans convocation, ni vote ni changement de vote, et la raison', () => {
+		const evenement = { debut: '2026-11-05T19:30', fin: null, lieu: 'Caserne', convoques: [2], convoque: false, moment: 'avenir' as const, reponse: null, compte: { present: 0, absent: 0, incertain: 0 }, presents: [] };
+		const sondage = { question: 'Petit déjeuner ?', reponses: ['Oui', 'Non'], ouverture: null, cloture: null, etat: 'ouvert' as const, resultats: null, vote: null };
+		const sansVote = agir(pub({ type: 'evenement', evenement, sondage }));
+		expect(sansVote).not.toContain('action="?/voter"');
+		expect(sansVote).toContain('Sondage réservé aux convoqués.');
+		const dejaVote = agir(pub({ type: 'evenement', evenement, sondage: { ...sondage, resultats: [1, 0], vote: 0 } }));
+		expect(dejaVote).toContain('Oui : 1 voix, 100 % (votre choix)');
+		expect(dejaVote).not.toContain('Changer mon vote');
+		expect(dejaVote).toContain('Sondage réservé aux convoqués.');
+		expect(agir(pub({ type: 'evenement', evenement: { ...evenement, convoque: true }, sondage }))).toContain('action="?/voter"');
+	});
+
 	it('sondage : les choix, puis les résultats en nombre et en pourcentage (jamais la couleur seule)', () => {
 		const sondage = { question: 'Petit déjeuner ?', reponses: ['Oui', 'Non'], ouverture: null, cloture: null, etat: 'ouvert' as const, resultats: [3, 1], vote: null };
 		const avant = agir(pub({ sondage }));

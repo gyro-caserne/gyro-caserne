@@ -59,6 +59,7 @@
 				</form>
 			</details>
 		{/if}
+		{#if ouvert && nonConvoque}<p class="doux">Sondage réservé aux convoqués.</p>{/if}
 	{:else if ouvert}
 		<p class="doux">{nonConvoque ? 'Sondage réservé aux convoqués.' : 'Les résultats sont réservés à ceux qui ont voté.'}</p>
 	{/if}
