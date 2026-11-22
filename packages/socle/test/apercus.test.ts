@@ -48,6 +48,17 @@ describe('apercusDesMurs', () => {
 		expect(a.find((x) => x.cle === 'vie')!.derniere).toEqual({ auteur: 'Personne inconnue', texte: 'Parti', creeLe: '2026-10-04T08:00:00Z' });
 	});
 
+	it('une publication au nom d’un comité s’affiche sous le nom du comité, même dissous, sans requête de plus', async () => {
+		const { base, chef, nouvelle, amicale } = await jeu();
+		const lea = await nouvelle('Léa');
+		await base.insert(publication).values({ mur: 'vie', auteur: `personne:${lea}`, comiteId: amicale.id, type: 'message', texte: 'Repas de Sainte-Barbe', creeLe: '2026-10-03T08:00:00Z' });
+		await base.update(comite).set({ dissousLe: '2026-10-10' }).where(eq(comite.id, amicale.id));
+		const avant = base.requetes;
+		const a = await apercusDesMurs(base, { type: 'personne', id: chef }, aujourdhui);
+		expect(base.requetes - avant).toBeLessThanOrEqual(2);
+		expect(a.find((x) => x.cle === 'vie')!.derniere).toEqual({ auteur: 'Amicale', texte: 'Repas de Sainte-Barbe', creeLe: '2026-10-03T08:00:00Z' });
+	});
+
 	it('un super administrateur auteur s’affiche « Super administrateur »', async () => {
 		const { base, chef, publier } = await jeu();
 		await publier('centre', 'super:admin@exemple.fr', 'Salut', '2026-10-03T08:00:00Z');

@@ -15,16 +15,19 @@
 	import Champ from './Champ.svelte';
 	import ChoixRadio from './ChoixRadio.svelte';
 
-	type Valeurs = { mur?: string; type?: string; texte?: string; priseDeConnaissance?: boolean; debut?: string; lieu?: string; equipes?: string[]; question?: string; reponses?: string[]; ouverture?: string; cloture?: string };
+	type Valeurs = { mur?: string; auNomDe?: string; type?: string; texte?: string; priseDeConnaissance?: boolean; debut?: string; lieu?: string; equipes?: string[]; question?: string; reponses?: string[]; ouverture?: string; cloture?: string };
 	let {
 		murs,
 		choisi,
+		auNomDe = [],
 		equipes,
 		defauts,
 		form
 	}: {
 		murs: MurPropose[];
 		choisi: string | null;
+		// Les comités dont la personne est rapporteur : elle peut publier en leur nom dans Vie du centre.
+		auNomDe?: { id: number; nom: string }[];
 		equipes: { id: number; nom: string; active: number }[];
 		defauts: { texte: string; ouverture: string; cloture: string };
 		form?: { cible?: string; message?: string; erreurs?: Record<string, string>; valeurs?: Valeurs } | null;
@@ -46,6 +49,8 @@
 
 	// svelte-ignore state_referenced_locally
 	let mur = $state(valeurs.mur || choisi || '');
+	// svelte-ignore state_referenced_locally
+	let enTantQue = $state(valeurs.auNomDe ?? '');
 	// svelte-ignore state_referenced_locally
 	let type = $state(valeurs.type || 'message');
 	// svelte-ignore state_referenced_locally
@@ -121,6 +126,14 @@
 			<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
 			<span>{choix ? `${phraseAudience(choix.type, choix.nom, choix.audience)}.` : ''}</span>
 		</p>
+	{/if}
+
+	{#if auNomDe.length > 0 && (!js || mur === 'vie')}
+		<!-- Avec JavaScript, seulement pour Vie du centre : ailleurs, le choix ne part pas avec le formulaire. -->
+		<div class="en-tant-que">
+			<ChoixRadio id="publier-au-nom-de" legende="Publier en tant que" name="auNomDe" bind:valeur={enTantQue} erreur={erreurs.auNomDe} options={[{ valeur: '', libelle: 'Moi' }, ...auNomDe.map((c) => ({ valeur: String(c.id), libelle: c.nom }))]} />
+			{#if !js}<p class="aide">Dans Vie du centre seulement.</p>{/if}
+		</div>
 	{/if}
 
 	<ChoixRadio id="publier-type" legende="Quel genre ?" name="type" bind:valeur={type} disposition="tuiles" erreur={erreurs.type} options={GENRES} />
@@ -382,6 +395,11 @@
 	}
 	.mention {
 		display: block;
+	}
+	.en-tant-que {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-8);
 	}
 	.aide {
 		color: var(--doux);

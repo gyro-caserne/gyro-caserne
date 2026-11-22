@@ -23,7 +23,7 @@
 	{#if data.murs.length === 0}
 		<p class="aucun">Vous ne pouvez publier sur aucun mur.</p>
 	{:else}
-		<FormulairePublication murs={data.murs} choisi={data.choisi} equipes={data.equipes} defauts={{ texte: data.texte, ouverture: data.ouverture, cloture: data.cloture }} {form} />
+		<FormulairePublication murs={data.murs} choisi={data.choisi} auNomDe={data.auNomDe ?? []} equipes={data.equipes} defauts={{ texte: data.texte, ouverture: data.ouverture, cloture: data.cloture }} {form} />
 	{/if}
 </div>
 

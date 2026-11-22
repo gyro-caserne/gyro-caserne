@@ -1,17 +1,18 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { asc } from 'drizzle-orm';
-import { apercusDesMurs, audiences, equipe, mursDe, notifierPublication, publier } from '@gyro-caserne/socle';
+import { apercusDesMurs, audiences, equipe, mursEtAppartenances, notifierPublication, publier } from '@gyro-caserne/socle';
 import { aujourdhuiParis, clotureParDefaut, maintenantParis } from '#lib/aujourdhui.ts';
 import { avecJavaScript, echecMur, envoiTropLourd, exigerActeur, lirePublication, type Reponse } from '#lib/server/formulaire-mur.ts';
 import { enArrierePlan } from '#lib/server/notifier.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 // Les murs où l'on peut publier, avec qui les voit et leur identité (pastille, couleur).
+// `auNomDe` : les comités dont on est rapporteur en fonction, au nom desquels on peut publier dans Vie du centre.
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const acteur = exigerActeur(locals);
 	const aujourdhui = aujourdhuiParis();
-	const [murs, apercus, equipes] = await Promise.all([
-		mursDe(locals.base, acteur, aujourdhui),
+	const [{ murs, appartenances, comites }, apercus, equipes] = await Promise.all([
+		mursEtAppartenances(locals.base, acteur, aujourdhui),
 		apercusDesMurs(locals.base, acteur, aujourdhui),
 		locals.base.select({ id: equipe.id, nom: equipe.nom, active: equipe.active }).from(equipe).orderBy(asc(equipe.ordreRotation))
 	]);
@@ -27,6 +28,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		murs: proposes,
 		choisi,
+		auNomDe: proposes.some((m) => m.cle === 'vie') ? comites.filter((c) => c.dissousLe === null && appartenances.rapporteur.has(c.id)).map((c) => ({ id: c.id, nom: c.nom })) : [],
 		// Texte prérempli : seulement pour le lien « Souhaiter », vers Vie du centre.
 		texte: choisi === 'vie' ? (url.searchParams.get('texte') ?? '').slice(0, 4000) : '',
 		ouverture,

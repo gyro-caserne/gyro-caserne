@@ -5,10 +5,11 @@ import type { Base } from './base.ts';
 import { exigerDate, exigerDateHeure, heureDeParis } from './dates.ts';
 import type { Acteur } from './droits.ts';
 import { DonneeInvalide } from './erreurs.ts';
+import { iconeDuComite, type NomIcone } from './icones.ts';
 import { aLaMessagerie, nombreSignalements, nonLusPour, signalementsPour } from './messagerie.ts';
 import { aTrancherPar } from './reservations-gestion.ts';
 import { nombreAValider } from './reservations.ts';
-import { agentsDuJour, estConvoque, type Convocation, estMembre, exigerMur, lecturesAgents, type CleMur } from './murs.ts';
+import { agentsDuJour, estConvoque, type Convocation, estMembre, exigerMur, lecturesAgents, type CleMur, type ComiteLu } from './murs.ts';
 import { periodeCourte } from './reservations-calcul.ts';
 import { texteDemande } from './remplacements/tranches.ts';
 import { aValiderPar } from './remplacements/compte.ts';
@@ -44,6 +45,8 @@ type LigneMur = {
 	publicationId: number;
 	// `appli` : publiée par l'appli (le planning), montrée avec son icône.
 	auteur: { prenom: string; nom: string; couleur: string | null; appli?: true };
+	// Une publication faite au nom d'un comité : montrée avec son nom et son icône.
+	comite?: { nom: string; icone: NomIcone };
 	extrait: string;
 	creeLe: string;
 	lue: boolean;
@@ -78,7 +81,7 @@ function nomDuMur(cle: string, equipes: { id: number; nom: string }[], comites: 
 	return liste.find((x) => x.id === Number(numero))?.nom ?? '';
 }
 
-const nomsDesMurs = (base: Base) => [base.select({ id: equipe.id, nom: equipe.nom }).from(equipe), base.select({ id: comite.id, nom: comite.nom }).from(comite)] as const;
+const nomsDesMurs = (base: Base) => [base.select({ id: equipe.id, nom: equipe.nom }).from(equipe), base.select({ id: comite.id, nom: comite.nom, icone: comite.icone, theme: comite.theme }).from(comite)] as const;
 
 const moiDe = (acteur: Acteur) => {
 	if (acteur.type !== 'personne') throw new DonneeInvalide('Réservé aux personnes ayant une fiche');
@@ -131,7 +134,7 @@ const nomComplet = (p: { prenom: string; nom: string } | undefined, auteur: stri
 export async function notifierPublication(base: Base, id: number, maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const [lignes, agents, affectations, tenues, equipes, comites, auteurs] = await base.batch([
-		base.select({ mur: publication.mur, auteur: publication.auteur, texte: publication.texte }).from(publication).where(eq(publication.id, id)),
+		base.select({ mur: publication.mur, auteur: publication.auteur, texte: publication.texte, comiteId: publication.comiteId }).from(publication).where(eq(publication.id, id)),
 		...lecturesAgents(base, aujourdhui, true),
 		...nomsDesMurs(base),
 		base
@@ -146,7 +149,9 @@ export async function notifierPublication(base: Base, id: number, maintenant: st
 		.filter((x) => x.id !== auteur && (x.a.tous || estMembre(x.a, p.mur)))
 		.map((x) => x.id);
 	if (ids.length === 0) return;
-	const donnees = { titre: `Publication ${deNom(nomComplet(auteurs[0], p.auteur))} (${nomDuMur(p.mur, equipes, comites)})`, texte: extrait(p.texte), url: `/echanges/${p.mur}/${id}`, tag: `publication:${id}` };
+	const auNomDe = comites.find((c) => c.id === p.comiteId);
+	const titre = auNomDe ? `${auNomDe.nom} a publié dans ${nomDuMur(p.mur, equipes, comites)}` : `Publication ${deNom(nomComplet(auteurs[0], p.auteur))} (${nomDuMur(p.mur, equipes, comites)})`;
+	const donnees = { titre, texte: extrait(p.texte), url: `/echanges/${p.mur}/${id}`, tag: `publication:${id}` };
 	await base.batch([ecrireFil(base, ids, id, null, maintenant), mettreEnFile(base, ids, `mur:${p.mur}`, donnees, maintenant)]);
 }
 
@@ -312,6 +317,7 @@ export async function filDeNotifications(base: Base, acteur: Acteur, maintenant:
 				creeLe: notification.creeLe,
 				lueLe: notification.lueLe,
 				mur: publication.mur,
+				comiteId: publication.comiteId,
 				auteur: auteur.as('auteur'),
 				texte: sql<string>`substr(coalesce(${commentaire.texte}, ${publication.texte}), 1, 400)`.as('texte')
 			})
@@ -364,13 +370,15 @@ export async function filDeNotifications(base: Base, acteur: Acteur, maintenant:
 }
 
 function deMurs(
-	lignes: { id: number; publicationId: number; commentaireId: number | null; creeLe: string; lueLe: string | null; mur: string; auteur: string; texte: string }[],
+	lignes: { id: number; publicationId: number; commentaireId: number | null; creeLe: string; lueLe: string | null; mur: string; comiteId: number | null; auteur: string; texte: string }[],
 	personnes: { id: number; prenom: string; nom: string; couleur: string | null }[],
 	equipes: { id: number; nom: string }[],
-	comites: { id: number; nom: string }[]
+	comites: Pick<ComiteLu, 'id' | 'nom' | 'icone' | 'theme'>[]
 ): LigneFil[] {
 	return lignes.map((l) => {
 			const p = personnes.find((x) => x.id === idPersonne(l.auteur));
+			// Seule la publication est signée du comité : un commentaire reste à son auteur.
+			const auNomDe = l.commentaireId === null ? comites.find((c) => c.id === l.comiteId) : undefined;
 			return {
 				id: l.id,
 				type: l.commentaireId === null ? 'publication' : 'commentaire',
@@ -378,6 +386,7 @@ function deMurs(
 				nomMur: nomDuMur(l.mur, equipes, comites),
 				publicationId: l.publicationId,
 				auteur: p ? { prenom: p.prenom, nom: p.nom, couleur: p.couleur } : l.auteur === 'planning' ? { prenom: 'Planning', nom: '', couleur: null, appli: true } : l.auteur.startsWith('super:') ? { prenom: 'Super', nom: 'administrateur', couleur: null } : { prenom: '', nom: 'Personne inconnue', couleur: null },
+				...(auNomDe && { comite: { nom: auNomDe.nom, icone: iconeDuComite(auNomDe) } }),
 				extrait: extrait(l.texte),
 				creeLe: l.creeLe,
 				lue: l.lueLe !== null

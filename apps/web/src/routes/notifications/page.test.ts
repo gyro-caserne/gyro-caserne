@@ -44,6 +44,14 @@ describe('page des notifications', () => {
 		expect(page).toContain('1 notification non lue.');
 	});
 
+	it('une publication au nom d’un comité : son icône et « Amicale a publié dans Vie du centre »', () => {
+		const page = html({ lignes: [ligne({ cle: 'vie', nomMur: 'Vie du centre', comite: { nom: 'Amicale', icone: 'coeur' } })] });
+		expect(page).toContain('Amicale a publié dans Vie du centre');
+		expect(page).not.toContain('Élodie Martin');
+		expect(page).toMatch(/class="pictogramme[^"]*" aria-hidden="true"><svg[^>]*><path d="M12 20/);
+		expect(page).not.toContain('class="visage');
+	});
+
 	it('une publication du planning : l’icône du calendrier et « Planning », jamais d’initiales', () => {
 		const page = html({ lignes: [ligne({ auteur: { prenom: 'Planning', nom: '', couleur: null, appli: true }, extrait: 'Manœuvre : Feux' })] });
 		expect(page).toContain('Planning a publié dans Le centre');

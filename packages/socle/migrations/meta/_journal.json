@@ -239,6 +239,13 @@
       "when": 1795371843975,
       "tag": "0033_murs_ouverts",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1795385627923,
+      "tag": "0034_comite_publication",
+      "breakpoints": true
     }
   ]
 }
