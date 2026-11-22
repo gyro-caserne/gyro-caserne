@@ -17,7 +17,7 @@ describe('Armement des engins', () => {
 		const html = page();
 		expect(html).toContain('3 postes : CA 1 agrès, CE, agent');
 		expect(html).toContain('6 postes : CA tout engins, conducteur, 2 CE, 2 agents');
-		expect(html).toMatch(/href="\?engin=FPT"[^>]*>Modifier<span class="masque[^"]*"> le FPT<\/span>/);
+		expect(html).toMatch(/href="\?engin=FPT"[^>]*>Modifier<span class="masque[^"]*"> l’armement de FPT<\/span>/);
 		expect(html).not.toContain('type="number"');
 		expect(html).not.toContain('<dialog');
 	});

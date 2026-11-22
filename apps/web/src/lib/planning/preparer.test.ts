@@ -56,9 +56,9 @@ describe('préparer l’année', () => {
 	});
 
 	it('l’état d’une équipe, en toutes lettres', () => {
-		expect(etatEquipe({ nom: 'Équipe 3', effectif: 6, arme: false, manque: ['ce'] })).toBe('Équipe 3 : 6 agents, il manque 1 CE');
-		expect(etatEquipe({ nom: 'Équipe 1', effectif: 1, arme: false, manque: ['ca2', 'agent', 'agent'] })).toBe('Équipe 1 : 1 agent, il manque 1 CA tout engins, 2 agents');
-		expect(etatEquipe({ nom: 'Équipe 2', effectif: 7, arme: true, manque: [] })).toBe('Équipe 2 : 7 agents, peut armer le FPT seule');
+		expect(etatEquipe({ nom: 'Équipe 3', effectif: 6, arme: false, manque: ['ce'] })).toBe('Équipe 3 a 6 agents. Il manque 1 CE');
+		expect(etatEquipe({ nom: 'Équipe 1', effectif: 1, arme: false, manque: ['ca2', 'agent', 'agent'] })).toBe('Équipe 1 a 1 agent. Il manque 1 CA tout engins, 2 agents');
+		expect(etatEquipe({ nom: 'Équipe 2', effectif: 7, arme: true, manque: [] })).toBe('Équipe 2 a 7 agents et peut armer le FPT seule');
 	});
 
 	it('le compromis est dit clairement ; aucun sans compromis', () => {

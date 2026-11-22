@@ -215,7 +215,7 @@ export async function signalerAnomalie(base: Base, basePhotos: BasePhotos, acteu
 				.returning({ id: anomalie.id }),
 			ligneJournal(base, { acteur: `personne:${moi}`, action: 'signaler_anomalie', cibleType: 'anomalie', cibleId: sql`last_insert_rowid()` }, maintenant)
 		]);
-		const avis = avisAnomalies(base, prevenus, { titre: `Anomalie signalée sur le ${e.nom}`, texte: `${libelle}, ${GENRES[s.genre]} (${nomDe(auteur)})`, url: `/engins/anomalies/${cree!.id}` }, maintenant);
+		const avis = avisAnomalies(base, prevenus, { titre: `Anomalie signalée sur l’engin ${e.nom}`, texte: `${libelle}, ${GENRES[s.genre]} (${nomDe(auteur)})`, url: `/engins/anomalies/${cree!.id}` }, maintenant);
 		// La cloche après coup : un échec n'annule pas le signalement.
 		if (avis.length) await base.batch([avis[0]!, avis[1]!]).catch(() => {});
 		return cree!.id;

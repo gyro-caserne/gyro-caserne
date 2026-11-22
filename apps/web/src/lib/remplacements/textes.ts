@@ -50,7 +50,7 @@ export function frise(v: VueDemande): Pas[] {
 	// Refusée par le collègue visé : le demandeur peut encore l'ouvrir à tous, elle n'est pas finie.
 	if (v.etat === 'refusee') {
 		const par = qui ? `Refusée par ${nom(qui)}` : 'Refusée';
-		return [...pas, v.gestes.ouvrir ? { libelle: `${par}, vous pouvez l’ouvrir à tous`, etat: 'en-cours' } : { libelle: par, etat: 'arret' }];
+		return [...pas, v.gestes.ouvrir ? { libelle: `${par}. Vous pouvez l’ouvrir à tous`, etat: 'en-cours' } : { libelle: par, etat: 'arret' }];
 	}
 	pas.push(acceptee ? { libelle: `Acceptée par ${nom(v.remplacant)}`, etat: 'fait' } : { libelle: qui && v.cible ? `En attente de ${nom(qui)}` : 'En attente d’un collègue', etat: v.etat === 'attente' ? 'en-cours' : 'a-venir' });
 	// Un court refusé après coup : le motif dit par qui.

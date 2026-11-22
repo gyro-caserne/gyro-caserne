@@ -51,7 +51,7 @@ export async function courrielsDeDemande(base: Base, d: DemandeACourriel, aujour
 	const quelles =
 		d.genre === 'habillement' ? and(eq(avisHabillement.url, `/habillement/${d.id}`), eq(avisHabillement.titre, 'Nouvelle demande d’habillement'))
 		: d.genre === 'anomalie' ? and(eq(avisAnomalie.url, `/engins/anomalies/${d.id}`), like(avisAnomalie.titre, 'Anomalie signalée sur %'))
-		: and(eq(avisAnomalie.url, `/engins/anomalies?engin=${d.enginId}`), eq(avisAnomalie.creeLe, d.quand), like(avisAnomalie.titre, 'Prise de garde du %'));
+		: and(eq(avisAnomalie.url, `/engins/anomalies?engin=${d.enginId}`), eq(avisAnomalie.creeLe, d.quand), like(avisAnomalie.titre, '%, prise de garde'));
 	return base
 		.select({ a: personne.email, titre: t.titre, texte: t.texte, url: t.url })
 		.from(t)

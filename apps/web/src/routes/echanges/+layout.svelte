@@ -186,7 +186,7 @@
 					{#if s.supervision.length > 0}
 						<details class="repli" open={ouvrir.supervision}>
 							<summary
-								>Supervision {#if totalSupervision > 0}({pluriel(totalSupervision, 'nouveauté')}){:else}<span class="doux">({s.supervision.length})</span>{/if}</summary
+								>Supervision {#if totalSupervision > 0}<span class="compte"><span aria-hidden="true">{totalSupervision}</span><span class="masque">{pluriel(totalSupervision, 'nouveauté')}</span></span>{:else}<span class="doux">({s.supervision.length})</span>{/if}</summary
 							>
 							<ul>
 								{#each s.supervision as t (t.cle)}{@render tuile(t)}{/each}

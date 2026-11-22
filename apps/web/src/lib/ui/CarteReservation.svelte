@@ -9,7 +9,7 @@
 	let { r, aujourdhui, demandeur = false, children }: { r: VueReservation; aujourdhui: string; demandeur?: boolean; children?: Snippet } = $props();
 	const qui = $derived(demandeur ? `${r.demandeur}${r.nomDemandeur ? ', réserve citoyenne' : ''}` : r.nomDemandeur);
 	const etat = $derived(etatAffiche(r, aujourdhui));
-	const quand = $derived(`${r.forme === 'jours' ? `Quantité ${r.quantite}, ` : ''}${periodeCourte(r.forme, r.debut, r.fin)}`);
+	const quand = $derived(`${r.forme === 'jours' ? `${r.quantite}, ` : ''}${periodeCourte(r.forme, r.debut, r.fin)}`);
 </script>
 
 <article class="carte" id="reservation-{r.id}" aria-labelledby="reservation-{r.id}-titre">

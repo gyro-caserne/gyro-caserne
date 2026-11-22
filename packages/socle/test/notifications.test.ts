@@ -298,7 +298,7 @@ describe('le fil et la cloche', () => {
 		await notifierPublication(base, await publier(base, base.photos, acteur(chef), 'centre', { type: 'message', texte: 'Note' }, maintenant), maintenant);
 		// L'avis d'été mène au planning, qui ne marque rien : seule la cloche peut le marquer.
 		await base.insert(avisEte).values([bruno, chloe].map((personneId) => ({ personneId, quoi: 'repartition' as const, texte: 'Planning d’été : renfort', url: '/planning', creeLe: maintenant })));
-		await base.insert(avisAnomalie).values({ personneId: chloe, titre: 'Prise de garde du VSAV', texte: '1 anomalie', url: '/engins/anomalies?engin=1', creeLe: maintenant });
+		await base.insert(avisAnomalie).values({ personneId: chloe, titre: 'VSAV, prise de garde', texte: '1 anomalie', url: '/engins/anomalies?engin=1', creeLe: maintenant });
 		const nonLues = async (id: number) => (await enTeteDe(base, acteur(id), aujourdhui)).nonLues;
 		expect([await nonLues(bruno), await nonLues(chloe)]).toEqual([2, 3]);
 		const lignes = (await filDeNotifications(base, acteur(chloe), maintenant)).lignes;

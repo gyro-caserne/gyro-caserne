@@ -160,7 +160,7 @@
 							<p class="fete-titre"><strong>{FETES[f]} {p.annee}</strong> <span class="doux">({MOMENTS[f]})</span></p>
 							<p><PastilleEquipe nom={e.nom} couleur={e.couleur} /></p>
 							{#if horsTour(f)}
-								<p class="avertissement">Hors de son tour : c’est à {noms(attendues(f))} de tenir {f === 'noel' ? 'Noël' : 'le Nouvel An'}.</p>
+								<p class="avertissement">Hors de son tour. C’est à {noms(attendues(f))} de tenir {f === 'noel' ? 'Noël' : 'le Nouvel An'}.</p>
 								{#if data.proposer !== f}<a class="lien-secondaire" href="{ici({ proposer: f })}#proposition-{f}">Proposer un échange de semaines</a>{/if}
 							{:else if attendues(f).length}
 								<p class="doux">Dans son tour.</p>

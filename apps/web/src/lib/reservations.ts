@@ -71,5 +71,5 @@ export function disponibilite(r: Pick<Ressource, 'nom' | 'forme' | 'stock' | 'ge
 	const plusPris = restantParJour(r.stock, prises, v.debut, v.fin).reduce((a, b) => (b.restant < a.restant ? b : a));
 	const voulue = Number(v.quantite) || 1;
 	if (voulue > plusPris.restant) return { ton: 'danger', texte: plusPris.restant <= 0 ? `Plus rien de libre le ${jourCourt(plusPris.jour)}` : `Pas assez. Il en reste ${plusPris.restant} le ${jourCourt(plusPris.jour)}` };
-	return { ton: 'ok', texte: plusPris.restant === r.stock ? `Disponible, ${r.stock} sur ${r.stock} sur toute la période.` : `Disponible, il en reste au moins ${plusPris.restant} sur toute la période.` };
+	return { ton: 'ok', texte: plusPris.restant === r.stock ? `Disponible. Les ${r.stock} sont libres sur toute la période.` : `Disponible. Il en reste au moins ${plusPris.restant} sur toute la période.` };
 }

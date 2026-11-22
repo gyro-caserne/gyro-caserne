@@ -105,7 +105,7 @@ describe('liste des murs', () => {
 		const supervision = [{ ...sections.supervision[0], nouveautes: 4 }];
 		const page = texte(html({ sections: { ...sections, supervision } }, 'sobre'));
 		expect(page).toContain('5 nouveautés depuis votre dernière visite.');
-		expect(page).toContain('Supervision (4 nouveautés)');
+		expect(html({ sections: { ...sections, supervision } }, 'sobre')).toMatch(/Supervision (<!--[^>]*-->)*<span class="compte[^"]*"><span aria-hidden="true">4<\/span><span class="masque[^"]*">4 nouveautés<\/span>/);
 		expect(texte(html({}, 'sobre'))).toContain('Supervision (1)');
 		const seule = { ...sections, centre: { ...sections.centre, nouveautes: 0 }, groupes: [], supervision };
 		expect(texte(html({ sections: seule }, 'sobre'))).toContain('Rien de neuf depuis votre dernière visite.');

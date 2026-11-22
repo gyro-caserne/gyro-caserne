@@ -71,7 +71,7 @@
 		<a class="annuler" href={ajout ? `/echanges/messages/${ajout.id}/infos` : '/echanges/messages/nouveau'}>Annuler</a>
 		<h1>{ajout ? 'Ajouter des membres' : 'Nouveau groupe'}</h1>
 	</header>
-	<p class="etape">{ajout ? `Au groupe « ${ajout.nom} »` : etape === 'nom' ? 'Étape 2 sur 2 : nom et icône' : 'Étape 1 sur 2 : les membres'}</p>
+	<p class="etape">{ajout ? `Au groupe « ${ajout.nom} »` : etape === 'nom' ? 'Étape 2 sur 2. Nom et icône' : 'Étape 1 sur 2. Les membres'}</p>
 	<div class="masque" role="alert">{annonce}</div>
 
 	{#if etape === 'membres'}

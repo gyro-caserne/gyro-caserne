@@ -139,7 +139,7 @@
 					<section>
 						<h3>{pluriel(apercu.semaines.length, 'semaine changée', 'semaines changées')}</h3>
 						<ul>
-							{#each apercu.semaines as s (s.debut)}<li>S{s.numero}, semaine du {jourLong(s.debut)} , {s.avant} devient {s.apres}</li>{/each}
+							{#each apercu.semaines as s (s.debut)}<li>S{s.numero}, semaine du {jourLong(s.debut)}, {s.avant} devient {s.apres}</li>{/each}
 						</ul>
 					</section>
 				{/if}

@@ -19,7 +19,7 @@ describe('textes des remplacements', () => {
 
 	it('frise : refusée, annulée, expirée s’arrêtent là', () => {
 		expect(lire(v({ etat: 'refusee', cible: bruno }))).toEqual(['Envoyée (fait)', 'Refusée par Bruno Test (arret)']);
-		expect(lire(v({ etat: 'refusee', cible: bruno, gestes: { ouvrir: true } as VueDemande['gestes'] }))).toEqual(['Envoyée (fait)', 'Refusée par Bruno Test, vous pouvez l’ouvrir à tous (en-cours)']);
+		expect(lire(v({ etat: 'refusee', cible: bruno, gestes: { ouvrir: true } as VueDemande['gestes'] }))).toEqual(['Envoyée (fait)', 'Refusée par Bruno Test. Vous pouvez l’ouvrir à tous (en-cours)']);
 		expect(lire(v({ etat: 'annulee' }))).toEqual(['Envoyée (fait)', 'Annulée (arret)']);
 		expect(lire(v({ etat: 'expiree', genre: 'echange', cible: bruno }))).toEqual(['Proposée (fait)', 'Expirée (arret)']);
 	});

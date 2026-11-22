@@ -91,7 +91,7 @@ test.describe('chef : préparer l’année', () => {
 
 	test('armement : un engin dans un panneau, − et + annoncés', async ({ page }) => {
 		await page.goto('/reglages/armement');
-		await page.getByRole('link', { name: 'Modifier le FPT' }).click();
+		await page.getByRole('link', { name: 'Modifier l’armement de FPT' }).click();
 		const panneau = page.getByRole('dialog', { name: 'FPT' });
 		await expect(panneau).toBeVisible();
 		await panneau.getByRole('button', { name: /^Un poste Agent de plus/ }).click();

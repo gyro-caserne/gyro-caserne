@@ -806,7 +806,7 @@ test.describe('échanges', () => {
 		await page.waitForURL(/\/echanges\/vie#publication-\d+$/);
 		await expect(publicationDe(page, texte)).toBeVisible();
 
-		await carte.getByRole('checkbox', { name: 'Je confirme : terminer Chef de garde (Équipe 1)' }).check();
+		await carte.getByRole('checkbox', { name: 'Je confirme la fin du rôle Chef de garde (Équipe 1)' }).check();
 		await carte.getByRole('button', { name: 'Terminer' }).click();
 		await expect(carte.getByRole('status').first()).toHaveText('Rôle terminé');
 		await gestion.context().close();
@@ -1045,7 +1045,7 @@ test.describe('nominations', () => {
 		await expect(carte.getByRole('status').first()).toHaveText('Date de fin enregistrée');
 		await expect(carte.getByText('au 31/12/2099')).toBeVisible();
 
-		await carte.getByRole('checkbox', { name: 'Je confirme : terminer Chef de garde (Équipe 1)' }).check();
+		await carte.getByRole('checkbox', { name: 'Je confirme la fin du rôle Chef de garde (Équipe 1)' }).check();
 		await carte.getByRole('button', { name: 'Terminer' }).click();
 		await expect(carte.getByRole('status').first()).toHaveText('Rôle terminé');
 		await expect(carte.getByText('Aucune responsabilité en cours.')).toBeVisible();

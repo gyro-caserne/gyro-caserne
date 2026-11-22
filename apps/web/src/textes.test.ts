@@ -123,15 +123,29 @@ export const balisage = (source: string): Texte[] =>
 		.split('\n')
 		.map((texte, n) => ({ texte, ligne: n + 1 }));
 
-// Ce que le balisage ne doit pas contenir : un bouton ou un lien qui finit par « … » ; « au nom de : vous » ;
-// un lien collé derrière la fin d'une phrase (une action va sur sa ligne, en bouton secondaire).
-const BALISAGE: [RegExp, string][] = [
-	[/…['"`]?\s*\}?\s*(<\/span>\s*)?<\/(a|button|summary|Bouton)>/, 'points de suspension dans un bouton ou un lien'],
-	[/\bde\s?:\s|:\s+vous\b/, 'deux-points devant un nom'],
-	[/[.!?](\s|\{'\s*'\}|&nbsp;)*<a\s/, 'lien collé derrière une phrase'],
-];
-export const fautesBalisage = (fichier: string, lignes: Texte[]): string[] =>
-	lignes.flatMap(({ texte, ligne }) => BALISAGE.filter(([motif]) => motif.test(texte)).map(([, nom]) => `${fichier}:${ligne} ${nom} : ${texte.trim().slice(0, 80)}`));
+// Dans le balisage : « au nom de : vous » (ligne par ligne). Les autres deux-points entre deux idées se relisent à la main.
+const DEUX_POINTS = /\bde\s?:\s|:\s+vous\b/;
+
+// Un bouton ou un lien qui finit par « … », même écrit sur plusieurs lignes ou en ternaire :
+// on lit le contenu de la balise jusqu'à sa fermeture, son texte et les chaînes de ses expressions.
+const CONTROLE = /<(Bouton|button|a|summary)\b[^>]*>([\s\S]*?)<\/\1>/g;
+// Un lien collé derrière la fin d'une phrase, même à la ligne ou derrière un {#if …} : il va sur sa ligne, en bouton secondaire.
+const LIEN_COLLE = /[.!?](?:\s|&nbsp;|\{'\s*'\}|\{[#:/][^}]*\})*<a\s/g;
+
+export function fautesBalisage(fichier: string, lignes: Texte[]): string[] {
+	const texte = lignes.map((l) => l.texte).join('\n');
+	const ligneDe = (pos: number) => texte.slice(0, pos).split('\n').length;
+	const extrait = (t: string) => t.replace(/\s+/g, ' ').trim().slice(0, 80);
+	const trouvees: [number, string][] = lignes.filter((l) => DEUX_POINTS.test(l.texte)).map((l) => [l.ligne, `deux-points devant un nom : ${extrait(l.texte)}`]);
+	for (const m of texte.matchAll(CONTROLE)) {
+		const contenu = m[2]!;
+		const brut = contenu.replace(/\{[^}]*\}/g, ' ').replace(/<[^>]*>/g, ' ');
+		const morceaux = [brut, ...[...contenu.matchAll(/\{([^}]*)\}/g)].flatMap((e) => chaines(e[1]!).map((c) => c.texte))];
+		if (morceaux.some((x) => /…\s*$/.test(x.trim()) || /…$/.test(brut.trim()))) trouvees.push([ligneDe(m.index!), `points de suspension dans un bouton ou un lien : ${extrait(m[0])}`]);
+	}
+	for (const m of texte.matchAll(LIEN_COLLE)) trouvees.push([ligneDe(m.index!), `lien collé derrière une phrase : ${extrait(m[0])}`]);
+	return trouvees.sort((x, y) => x[0] - y[0]).map(([l, t]) => `${fichier}:${l} ${t}`);
+}
 
 export function fautes(fichier: string, textes: Texte[]): string[] {
 	return textes.flatMap(({ texte, ligne }) => SEPARATEURS.filter(([motif]) => motif.test(texte)).map(([, nom]) => `${fichier}:${ligne} ${nom} : ${texte.trim().slice(0, 80)}`));
@@ -161,13 +175,34 @@ describe('textes visibles', () => {
 	});
 
 	it('la garde attrape aussi « … » dans un bouton, « au nom de : vous » et un lien collé derrière une phrase', () => {
-		const svelte = "<script>const t = 'Voir. <a href=x>';</script>\n<summary>Abandonner la prise…</summary>\n<a href=\"?x\">{TITRES[cle]}…</a>\n<p>La prise sera au nom de : <strong>{noms}</strong>.</p>\n<p>Responsable : vous</p>\n<p>Réglez le roulement. <a href=\"/r\">Aller au roulement</a></p>\n<p>Pour ajuster, passez par <a href=\"/agents\">Agents</a>.</p>\n<!-- Fin. <a href=x> -->";
+		const svelte = [
+			"<script>const t = 'Voir. <a href=x>';</script>",
+			'<summary>Abandonner la prise…</summary>',
+			'<a href="?x">{TITRES[cle]}…</a>',
+			'<p>La prise sera au nom de : <strong>{noms}</strong>.</p>',
+			'<p>Responsable : vous</p>',
+			'<p>Réglez le roulement. <a href="/r">Aller au roulement</a></p>',
+			'<p>Pour ajuster, passez par <a href="/agents">Agents</a>.</p>',
+			'<Bouton',
+			'\tvariante="secondaire"',
+			'>',
+			'\tAnnuler ma demande…',
+			'</Bouton>',
+			"<button type=\"submit\">{envoi ? 'Envoi…' : 'Publier'}</button>",
+			'<p>Ses anomalies sont closes.',
+			'\t{#if x}<a href="/a">Voir l’anomalie</a>{/if}</p>',
+			'<!-- Fin. <a href=x> -->',
+			'<button type="submit">Publier</button>'
+		].join('\n');
 		expect(fautesBalisage('exemple.svelte', balisage(svelte)).map((f) => f.split(' : ')[0])).toEqual([
 			'exemple.svelte:2 points de suspension dans un bouton ou un lien',
 			'exemple.svelte:3 points de suspension dans un bouton ou un lien',
 			'exemple.svelte:4 deux-points devant un nom',
 			'exemple.svelte:5 deux-points devant un nom',
-			'exemple.svelte:6 lien collé derrière une phrase'
+			'exemple.svelte:6 lien collé derrière une phrase',
+			'exemple.svelte:8 points de suspension dans un bouton ou un lien',
+			'exemple.svelte:13 points de suspension dans un bouton ou un lien',
+			'exemple.svelte:14 lien collé derrière une phrase'
 		]);
 	});
 

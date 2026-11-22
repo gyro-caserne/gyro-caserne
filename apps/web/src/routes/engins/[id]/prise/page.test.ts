@@ -366,7 +366,7 @@ describe('/engins/[id]/prise', () => {
 
 	it('le titre de l’onglet, sans point médian', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
-		expect(tete(data())).toContain('<title>Prise de garde du FPT, Gyro Caserne</title>');
+		expect(tete(data())).toContain('<title>FPT, prise de garde, Gyro Caserne</title>');
 	});
 
 	it('les photos d’écart, signalé ou noté pendant la prise, s’ouvrent en grand dans la visionneuse', () => {

@@ -78,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>{a.libelle} du {e.nom}, Gyro Caserne</title>
+	<title>{a.libelle}, {e.nom}, Gyro Caserne</title>
 </svelte:head>
 
 {#snippet message(quoi: string)}
@@ -131,7 +131,7 @@
 						{#if peut('verifiee')}
 							<form method="POST" use:enhance={soumettre}>
 								<input type="hidden" name="quoi" value="verifiee" />
-								<Bouton type="submit" desactive={envoi}>{libelleEtape('verifiee', r)} : c’est bon</Bouton>
+								<Bouton type="submit" desactive={envoi}>Valider l’étape {libelleEtape('verifiee', r)}</Bouton>
 							</form>
 						{/if}
 					</div>{/if}

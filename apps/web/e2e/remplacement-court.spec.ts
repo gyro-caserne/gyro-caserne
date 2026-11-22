@@ -78,7 +78,7 @@ test.describe.serial('remplacement court', () => {
 		await page.reload();
 		await expect(page.getByRole('heading', { level: 2, name: 'Remplacé par Chloé Durand' })).toBeVisible();
 		await page.locator('summary', { hasText: 'Refuser ce remplaçant' }).click();
-		await expect(page.getByRole('button', { name: 'Je confirme : refuser ce remplaçant' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Oui, refuser ce remplaçant' })).toBeVisible();
 		await sansViolation(page);
 	});
 });

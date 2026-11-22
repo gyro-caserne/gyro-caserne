@@ -31,7 +31,7 @@ describe('taille des envois, pour toutes les routes', () => {
 	it('refuse en 413, avant toute lecture, un envoi sans longueur ou de plus de 2 Mo', async () => {
 		const sans = envoiRefuse(envoi(null), '/echanges/vie');
 		expect(sans?.status).toBe(413);
-		expect(await sans!.text()).toBe('Envoi trop lourd : 2 Mo au plus.');
+		expect(await sans!.text()).toBe('Envoi trop lourd, 2 Mo au plus.');
 		expect(envoiRefuse(envoi(2 * MO + 1), '/echanges/vie')?.status).toBe(413);
 		expect(envoiRefuse(envoi(-1), '/echanges/vie')?.status).toBe(413);
 		expect(envoiRefuse(envoi(2 * MO), '/echanges/vie')).toBeNull();
@@ -48,7 +48,7 @@ describe('taille des envois, pour toutes les routes', () => {
 		expect(envoiRefuse(envoi(3 * MO, 'application/json'), '/agents/fichier/apercu')).toBeNull();
 		const refus = envoiRefuse(envoi(4 * MO + 1, 'application/json'), '/agents/fichier/apercu');
 		expect(refus?.status).toBe(413);
-		expect(await refus!.json()).toEqual({ message: 'Envoi trop lourd : 4 Mo au plus.' });
+		expect(await refus!.json()).toEqual({ message: 'Envoi trop lourd, 4 Mo au plus.' });
 		expect(envoiRefuse(envoi(3 * MO, 'application/json'), '/agents/fichier/operation')?.status).toBe(413);
 	});
 

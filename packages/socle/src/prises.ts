@@ -466,7 +466,7 @@ export async function validerPrise(base: Base, acteur: Acteur, id: number, maint
 		...avisAnomalies(
 			base,
 			traitent,
-			{ titre: `Prise de garde du ${b.nomEngin}`, texte: `${nouvelles.length} ${nouvelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${nouvelles.map((e) => e.libelle).join(', ')}`, url: `/engins/anomalies?engin=${enginId}` },
+			{ titre: `${b.nomEngin}, prise de garde`, texte: `${nouvelles.length} ${nouvelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${nouvelles.map((e) => e.libelle).join(', ')}`, url: `/engins/anomalies?engin=${enginId}` },
 			maintenant,
 			validee
 		),

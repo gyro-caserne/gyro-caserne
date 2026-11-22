@@ -394,7 +394,7 @@ export async function analyserFeuilleEte(base: Base, annee: number, entetes: str
 			const present = deBase ? !ecart.retires.includes(id) : ecart.ajoutes.includes(id);
 			if (voulu === present) return;
 			if (lu.e!.publiee && p.debut <= maintenant.slice(0, 16)) {
-				erreurs.push({ ligne: l.numero, message: `${colonnePlage(p)}, plage commencée qui ne change plus` });
+				erreurs.push({ ligne: l.numero, message: `${colonnePlage(p)}. Plage commencée, elle ne change plus` });
 				return;
 			}
 			if (deBase) ecart.retires = voulu ? ecart.retires.filter((x) => x !== id) : [...ecart.retires, id];

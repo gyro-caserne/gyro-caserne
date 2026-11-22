@@ -156,7 +156,7 @@
 								type="checkbox"
 								name="confirmation"
 								value="oui"
-								aria-label={`Je confirme : terminer ${intitule(l)}`}
+								aria-label={`Je confirme la fin du rôle ${intitule(l)}`}
 								aria-invalid={concerne(cible) && form?.erreurs?.confirmation ? 'true' : undefined}
 								aria-describedby={concerne(cible) && form?.erreurs?.confirmation ? `${cible}-erreur` : undefined}
 							/>

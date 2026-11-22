@@ -18,7 +18,7 @@ describe('page « À valider »', () => {
 
 	it('une demande : qui, quoi, quand, le mot ; « Accepter » d’un geste, « Refuser » avec un motif facultatif', () => {
 		const page = html({ demandes: [{ demande: res({}), conflits: [] }] });
-		expect(page).toMatch(/Bancs[\s\S]*?Quantité 4, du 12 au 14 nov\.[\s\S]*?Demandé par Alice Test[\s\S]*?Anniversaire/);
+		expect(page).toMatch(/Bancs[\s\S]*?4, du 12 au 14 nov\.[\s\S]*?Demandé par Alice Test[\s\S]*?Anniversaire/);
 		expect(page).toMatch(/<form[^>]*method="POST"[^>]*action="\?\/accepter"[\s\S]*?name="id" value="1"[\s\S]*?Accepter<span class="masque[^"]*"> la demande de Alice Test<\/span>/);
 		expect(page).toMatch(/<summary[^>]*>Refuser[\s\S]*?action="\?\/refuser"[\s\S]*?<textarea[^>]*name="motif"/);
 	});

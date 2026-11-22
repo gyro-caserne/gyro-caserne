@@ -72,9 +72,9 @@ export function resumeProposition(p: Pick<PropositionAnnee, 'semaines' | 'fetes'
 	].join(', ');
 }
 
-// « Équipe 3 : 6 agents, il manque 1 CE »
+// « Équipe 3 a 6 agents. Il manque 1 CE », « Équipe 1 a 7 agents et peut armer le FPT seule »
 export function etatEquipe(e: Pick<PropositionAnnee['equipes'][number], 'nom' | 'effectif' | 'arme' | 'manque'>): string {
-	return `${e.nom} : ${pluriel(e.effectif, 'agent')}, ${e.arme ? 'peut armer le FPT seule' : `il manque ${manquants(e.manque).join(', ')}`}`;
+	return `${e.nom} a ${pluriel(e.effectif, 'agent')}${e.arme ? ' et peut armer le FPT seule' : `. Il manque ${manquants(e.manque).join(', ')}`}`;
 }
 
 // Le tour des deux fêtes n'a pas pu être respecté : le dire, avec le compromis gardé. Null sinon.

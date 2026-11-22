@@ -48,7 +48,7 @@ describe('Préparer l’année en cinq étapes', () => {
 
 	it('Fêtes : hors de son tour, l’échange proposé à accepter', () => {
 		const html = page({ etape: 'fetes' });
-		expect(html).toContain('Hors de son tour : c’est à Équipe 2 de tenir Noël.');
+		expect(html).toContain('Hors de son tour. C’est à Équipe 2 de tenir Noël.');
 		expect(html).toContain('href="?annee=2027&amp;etape=fetes&amp;proposer=noel#proposition-noel"');
 		expect(html).toContain('Noël 2026');
 		const propose = page({ etape: 'fetes', proposer: 'noel' });
@@ -149,8 +149,8 @@ describe('Préparer l’année en cinq étapes', () => {
 	it('le panneau : l’état des équipes en tête, signalé seulement, puis le résumé et « Accepter »', () => {
 		const html = page({ preparation: preparation({ ordre: [], semaines: [] }), proposition });
 		expect(html).toContain('Proposition pour 2027');
-		expect(html).toContain('Équipe 3 : 6 agents, il manque 1 CE');
-		expect(html).toContain('Équipe 1 : 6 agents, peut armer le FPT seule');
+		expect(html).toContain('Équipe 3 a 6 agents. Il manque 1 CE');
+		expect(html).toContain('Équipe 1 a 6 agents et peut armer le FPT seule');
 		expect(html).toContain('href="/agents"');
 		expect(html).toContain('href="/nominations"');
 		expect(html).toContain('53 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 1, 1 manœuvre reprise, Équipe 3 incomplète, Aucune période de vacances saisie');
