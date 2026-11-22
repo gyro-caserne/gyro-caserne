@@ -7,7 +7,7 @@ import { RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
 import { enTeteDe, filDeNotifications } from '../src/notifications.ts';
 import { enregistrerManoeuvre } from '../src/planning/annee.ts';
-import { journal, personne, profil, responsabilite } from '../src/schema.ts';
+import { feteCentre, journal, personne, profil, responsabilite } from '../src/schema.ts';
 import { ACTIONS_SUIVI, actionsDuSujet, SUJETS_SUIVI, suiviDuCentre } from '../src/suivi.ts';
 import { baseDeTest } from './base-de-test.ts';
 
@@ -33,7 +33,7 @@ async function jeu() {
 
 describe('la liste des actions suivies', () => {
 	it('planning, nominations, réglages, fiches des agents, décisions sur les demandes, remplacements validés ; rien de privé', () => {
-		for (const a of ['modifier_manoeuvre', 'annuler_manoeuvre', 'publier_annee', 'attribuer', 'terminer_attribution', 'creer_responsabilite', 'creer_comite', 'modifier_droits_profil', 'modifier_engin', 'modifier_ressource', 'regler_armement', 'deposer_ecusson', 'ajouter_personne', 'modifier_fiche', 'changer_statut', 'affecter_equipe', 'effacer_agent', 'prendre_habillement', 'refuser_habillement', 'livrer_habillement', 'signaler_anomalie', 'rendre_indisponible', 'remettre_en_service', 'clore_anomalie', 'accepter_reservation', 'refuser_reservation', 'valider_remplacement', 'refuser_validation'])
+		for (const a of ['modifier_manoeuvre', 'annuler_manoeuvre', 'publier_annee', 'attribuer', 'terminer_attribution', 'creer_responsabilite', 'creer_comite', 'modifier_droits_profil', 'modifier_engin', 'modifier_ressource', 'regler_armement', 'deposer_ecusson', 'ajouter_personne', 'modifier_fiche', 'changer_statut', 'affecter_equipe', 'effacer_agent', 'prendre_habillement', 'refuser_habillement', 'livrer_habillement', 'signaler_anomalie', 'rendre_indisponible', 'remettre_en_service', 'clore_anomalie', 'accepter_reservation', 'refuser_reservation', 'valider_remplacement', 'refuser_validation', 'ajouter_fete', 'modifier_fete', 'supprimer_fete', 'noter_fete_centre'])
 			expect(ACTIONS_SUIVI, a).toContain(a);
 		for (const a of ['creer_conversation', 'modifier_mon_profil', 'publier', 'reserver', 'supprimer_commentaire', 'annuler_reservation', 'demander_remplacement', 'signaler_message', 'annoncer_manoeuvre']) expect(ACTIONS_SUIVI, a).not.toContain(a);
 	});
@@ -53,6 +53,20 @@ describe('les sujets du suivi', () => {
 });
 
 describe('suiviDuCentre', () => {
+	it('les fêtes du centre : la fête nommée, le lien vers l’étape Fêtes', async () => {
+		const { base, claire, remi } = await jeu();
+		const [sainteBarbe] = await base.insert(feteCentre).values({ nom: 'Sainte-Barbe', debut: '2026-12-05T18:00', fin: '2026-12-06T02:00', equipeId: 1, creePar: `personne:${claire.id}`, creeLe: '2026-11-18T09:00' }).returning();
+		await base.insert(journal).values([
+			{ quand: '2026-11-18T10:00', acteur: `personne:${remi.id}`, action: 'ajouter_fete', cibleType: 'fete_centre', cibleId: sainteBarbe!.id },
+			{ quand: '2026-11-18T11:00', acteur: `personne:${remi.id}`, action: 'supprimer_fete', cibleType: 'fete_centre', cibleId: 999 }
+		]);
+		const { lignes } = await suiviDuCentre(base, claire, aujourdhui);
+		expect(lignes.map((l) => [l.phrase, l.lien])).toEqual([
+			['a supprimé la fête', '/planning/preparer?etape=fetes'],
+			['a ajouté la fête Sainte-Barbe', '/planning/preparer?etape=fetes']
+		]);
+	});
+
 	it('réservé au chef de centre, à l’adjoint et au super administrateur', async () => {
 		const { base, claire, remi, alice } = await jeu();
 		await expect(suiviDuCentre(base, alice, aujourdhui)).rejects.toThrow(RefusDroit);

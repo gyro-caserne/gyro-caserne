@@ -1,7 +1,8 @@
 import { fail } from '@sveltejs/kit';
+import { ajouterJours } from '@gyro-caserne/socle/dates';
 import { eq } from 'drizzle-orm';
 import centre from '$centre';
-import { accepterProposition, ajouterVacances, anneePlanning, calculerAnnee, changerSemaines, noterFete, preparerAnnee, proposerAnnee, publierAnnee, reglerRoulement, remplacementsDeSemaine, retirerVacances } from '@gyro-caserne/socle';
+import { accepterProposition, ajouterVacances, anneePlanning, calculerAnnee, changerSemaines, enregistrerFete, noterFete, noterFeteCentre, preparerAnnee, supprimerFete, proposerAnnee, publierAnnee, reglerRoulement, remplacementsDeSemaine, retirerVacances } from '@gyro-caserne/socle';
 import { maintenantParis } from '#lib/aujourdhui.ts';
 import { deplacer, etapeDe } from '#lib/planning/preparer.ts';
 import { champ, echecPlanning, nombres } from '#lib/server/formulaire-planning.ts';
@@ -39,6 +40,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		semaine: ouverte?.debut ?? null,
 		semaineTouche,
 		proposition,
+		// Le panneau d'une fête du centre : « nouvelle » ou son numéro ; `supprimer` : la confirmation de la suppression.
+		fete: url.searchParams.get('fete') === 'nouvelle' ? ('nouvelle' as const) : nombre('fete'),
+		supprimer: url.searchParams.has('supprimer'),
+		maintenant: m.slice(0, 16),
 		proposer: url.searchParams.get('proposer') === 'noel' ? ('noel' as const) : url.searchParams.get('proposer') === 'nouvel_an' ? ('nouvel_an' as const) : null
 	};
 };
@@ -83,6 +88,34 @@ export const actions: Actions = {
 		const equipe = champ(f, 'equipe');
 		const fete = champ(f, 'fete') === 'nouvel_an' ? 'nouvel_an' : 'noel';
 		return agir(locals, 'fetes', equipe ? 'Historique enregistré.' : 'Ligne retirée.', (m) => noterFete(locals.base, locals.acteur!, Number(champ(f, 'annee')), fete, equipe ? Number(equipe) : null, m));
+	},
+	// Une fête du centre : la date, l'heure de début et de fin (une fin avant le début tombe le lendemain), l'équipe imposée.
+	// Des remplacements deviendraient inutiles : la liste est rendue à confirmer (`confirme`).
+	feteCentre: async ({ locals, request }) => {
+		const f = await request.formData();
+		const valeurs: Record<string, string> = { id: champ(f, 'id'), nom: champ(f, 'nom'), date: champ(f, 'date'), debut: champ(f, 'debut'), fin: champ(f, 'fin'), equipe: champ(f, 'equipe') };
+		const jourDeFin = valeurs.fin && valeurs.fin < valeurs.debut && /^\d{4}-\d{2}-\d{2}$/.test(valeurs.date) ? ajouterJours(valeurs.date, 1) : valeurs.date;
+		const donnees = { ...(valeurs.id ? { id: Number(valeurs.id) } : {}), nom: valeurs.nom, debut: `${valeurs.date}T${valeurs.debut}`, fin: `${jourDeFin}T${valeurs.fin}`, equipeId: Number(valeurs.equipe) };
+		let inutiles: string[] = [];
+		const reponse = await agir(locals, 'fete', 'Fête enregistrée.', async (m) => {
+			const r = await enregistrerFete(locals.base, locals.acteur!, donnees, m, centre.astreinte, champ(f, 'confirme') === 'oui');
+			if ('inutiles' in r) inutiles = r.inutiles;
+		}, valeurs);
+		return inutiles.length ? { cible: 'fete', inutiles, valeurs } : reponse;
+	},
+	supprimerFete: async ({ locals, request }) => {
+		const f = await request.formData();
+		const valeurs: Record<string, string> = { id: champ(f, 'id') };
+		let inutiles: string[] = [];
+		const reponse = await agir(locals, 'fete', 'Fête supprimée.', async (m) => {
+			inutiles = (await supprimerFete(locals.base, locals.acteur!, Number(valeurs.id), m, centre.astreinte, champ(f, 'confirme') === 'oui')).inutiles;
+		}, valeurs);
+		return inutiles.length ? { cible: 'fete', inutiles, valeurs, suppression: true } : reponse;
+	},
+	noterFeteCentre: async ({ locals, request }) => {
+		const f = await request.formData();
+		const equipe = champ(f, 'equipe');
+		return agir(locals, 'historique-fetes', equipe ? 'Historique enregistré.' : 'Ligne retirée.', (m) => noterFeteCentre(locals.base, locals.acteur!, Number(champ(f, 'annee')), champ(f, 'nom'), equipe ? Number(equipe) : null, m));
 	},
 	vacances: async ({ locals, request }) => {
 		const f = await request.formData();

@@ -57,6 +57,13 @@ describe('vues du planning', () => {
 		expect(repereDu(court('2026-11-15T01:00', '2026-11-15T03:00'))).toEqual([{ jour: '2026-11-15', texte: 'je remplace Alice Martin, dimanche 15 novembre, de 1 h à 3 h' }]);
 	});
 
+	it('une fête du centre : l’équipe imposée et ses heures, dans la semaine et sous son jour', () => {
+		const s = { ...semaine('2026-12-04'), imposees: [{ debut: '2026-12-05T18:00', fin: '2026-12-06T02:00', nom: 'Sainte-Barbe', equipeId: 3 }] };
+		const avecEquipes = { ...d, equipes: [{ id: 3, nom: 'Équipe 3' }] };
+		expect(reperesDe(s, avecEquipes, 'moi').filter((r) => r.genre === 'fete')).toEqual([{ genre: 'fete', texte: 'Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h', date: '2026-12-05' }]);
+		expect(joursDeLaSemaine(s, avecEquipes, 'equipes').find((j) => j.date === '2026-12-05')!.reperes).toEqual([{ genre: 'fete', texte: 'Sainte-Barbe, Équipe 3 de 18 h à 2 h', date: '2026-12-05' }]);
+	});
+
 	it('mes repères : seulement mes manœuvres et mes remplacements', () => {
 		const r = reperesDe(semaine('2026-11-06'), d, 'moi');
 		expect(r.map((x) => x.genre)).toEqual(['ferie', 'manoeuvre']);

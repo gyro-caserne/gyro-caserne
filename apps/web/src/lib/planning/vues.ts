@@ -1,5 +1,5 @@
 import { ajouterJours } from '@gyro-caserne/socle/dates';
-import { texteTranche, type PeriodePlanning, type SemaineCalculee, type Vacances } from '@gyro-caserne/socle';
+import { dePlage, texteTranche, type PeriodePlanning, type SemaineCalculee, type Vacances } from '@gyro-caserne/socle';
 import { heure } from '../murs/quand.ts';
 import { pluriel } from '../pluriel.ts';
 import { dansLaSemaine, finDeSemaine, jourLong } from './dates.ts';
@@ -8,7 +8,7 @@ import { dansLaSemaine, finDeSemaine, jourLong } from './dates.ts';
 
 export type Mode = 'moi' | 'equipes';
 export type Remplacement = { debut: string; fin: string; titulaire: string; remplacant: string; moi: 'cede' | 'prend' | null };
-export type Donnees = { annee: number; feries: { date: string; nom: string }[]; vacances: Vacances[]; manoeuvres: { id: number; debut: string; theme: string; convoque: boolean }[]; remplacements: Remplacement[] };
+export type Donnees = { annee: number; feries: { date: string; nom: string }[]; vacances: Vacances[]; manoeuvres: { id: number; debut: string; theme: string; convoque: boolean }[]; remplacements: Remplacement[]; equipes?: { id: number; nom: string }[] };
 export type Repere = { genre: 'ferie' | 'vacances' | 'manoeuvre' | 'fete' | 'remplacement'; texte: string; date: string };
 export const SIGNES: Record<Repere['genre'], string> = { ferie: 'Férié', vacances: 'Vacances', manoeuvre: 'Manœuvre', fete: 'Fête', remplacement: 'Remplacement' };
 
@@ -40,6 +40,11 @@ export function reperesDe(s: SemaineCalculee, d: Donnees, mode: Mode, jour = fal
 		if (!p || (mode === 'moi' && r.moi === null)) continue;
 		// Une plage après minuit va au jour de sa nuit, celui où la nuit est dite.
 		liste.push({ genre: 'remplacement', texte: texteRemplacement(r, true), date: (estNuit(p) ? p.debut : r.debut).slice(0, 10) });
+	}
+	// Les fêtes du centre : l'équipe imposée pendant leurs heures, dites au jour où elles commencent.
+	for (const i of s.imposees ?? []) {
+		const equipe = d.equipes?.find((e) => e.id === i.equipeId)?.nom ?? 'une autre équipe';
+		liste.push({ genre: 'fete', texte: jour ? `${i.nom}, ${equipe} ${dePlage(i)}` : `${i.nom}, ${jourLong(i.debut)}, ${equipe} ${dePlage(i)}`, date: i.debut.slice(0, 10) });
 	}
 	if (contient(s, `${d.annee}-12-25T12:00`)) liste.push({ genre: 'fete', texte: 'Garde de Noël', date: `${d.annee}-12-25` });
 	if (contient(s, `${d.annee}-12-31T23:00`)) liste.push({ genre: 'fete', texte: 'Garde du Nouvel An', date: `${d.annee}-12-31` });

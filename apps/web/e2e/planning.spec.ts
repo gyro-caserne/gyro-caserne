@@ -158,6 +158,41 @@ test.describe('chef : préparer l’année', () => {
 		await expect(page.getByRole('heading', { level: 1, name: `Préparer ${annee + 1}` })).toBeVisible();
 		await expect(page.getByRole('link', { name: new RegExp(theme) })).toBeVisible();
 	});
+
+	test('fêtes du centre : ajouter une fête dans le panneau, la voir avec son équipe, la supprimer après confirmation', async ({ page }, info) => {
+		test.setTimeout(60_000);
+		const annee = new Date().getFullYear() + 1;
+		// Les deux tailles d'écran jouent ce test : chacune son nom et son jour, sans chevauchement.
+		const nom = `Sainte-Barbe ${info.project.name}`;
+		const date = `${annee}-12-${info.project.name === 'telephone' ? '04' : '11'}`;
+		await page.goto(`/planning/preparer?annee=${annee}&etape=fetes`);
+		await expect(page.getByRole('heading', { level: 3, name: 'Fêtes du centre' })).toBeVisible();
+		await page.getByRole('link', { name: 'Ajouter une fête', exact: true }).click();
+		const panneau = page.getByRole('dialog', { name: 'Nouvelle fête' });
+		await expect(panneau).toBeVisible();
+		await panneau.getByLabel('Nom', { exact: true }).fill(nom);
+		await panneau.getByLabel('Date', { exact: true }).fill(date);
+		await panneau.getByLabel('Début', { exact: true }).fill('18:00');
+		await panneau.getByLabel('Fin', { exact: true }).fill('02:00');
+		await panneau.getByLabel('Équipe 3', { exact: true }).check();
+		await sansViolation(page);
+		await panneau.getByRole('button', { name: 'Ajouter la fête', exact: true }).click();
+		await expect(page.getByText('Fête enregistrée.', { exact: true })).toBeVisible();
+		await expect(panneau).toHaveCount(0);
+		const fete = page.locator('li.fete').filter({ hasText: nom });
+		await expect(fete).toContainText('de 18 h à 2 h');
+		await expect(fete).toContainText('Équipe 3');
+		await sansViolation(page);
+		await fete.getByRole('link', { name: `Modifier la fête ${nom}`, exact: true }).click();
+		const modifier = page.getByRole('dialog', { name: 'Modifier la fête' });
+		await expect(modifier.getByLabel('Nom', { exact: true })).toHaveValue(nom);
+		await modifier.getByRole('link', { name: 'Supprimer la fête', exact: true }).click();
+		await expect(modifier.getByRole('heading', { level: 3, name: 'Supprimer cette fête ?' })).toBeVisible();
+		await sansViolation(page);
+		await modifier.getByRole('button', { name: 'Supprimer la fête', exact: true }).click();
+		await expect(page.getByText('Fête supprimée.', { exact: true })).toBeVisible();
+		await expect(page.locator('li.fete').filter({ hasText: nom })).toHaveCount(0);
+	});
 });
 
 test.describe('agent : mon année et mon agenda', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { anneePlanning, gardeFete, semaineChangee, vacancesScolaires } from '@gyro-caserne/socle';
+import { anneePlanning, feteCentre, gardeFete, gardeFeteCentre, semaineChangee, vacancesScolaires } from '@gyro-caserne/socle';
 import { actions, load } from './+page.server';
 import { charger, envoyer, locaux, preparer } from '../de-test.ts';
 
@@ -44,6 +44,28 @@ describe('/planning/preparer', () => {
 		expect(await charger(load, l, `${q}&etape=fetes&proposer=noel`)).toMatchObject({ etape: 'fetes', proposer: 'noel' });
 		expect(await charger(load, l, `${q}&etape=manoeuvres&manoeuvre=nouvelle`)).toMatchObject({ manoeuvre: 'nouvelle' });
 		expect(await charger(load, l, `${q}&etape=manoeuvres&manoeuvre=12`)).toMatchObject({ manoeuvre: 12 });
+	});
+
+	it('fêtes du centre : ajouter (fin le lendemain), refuser un chevauchement en gardant la saisie, modifier, supprimer, noter une année passée', async () => {
+		const { base, chef, annee, ids } = await preparer({ publiee: false });
+		const l = locaux(base, chef);
+		const q = `?annee=${annee + 1}&etape=fetes&fete=nouvelle`;
+		const date = `${annee + 1}-12-04`;
+		const champs = (autres: [string, string][] = [], equipe = ids[2]): [string, string][] => [['nom', 'Sainte-Barbe'], ['date', date], ['debut', '18:00'], ['fin', '02:00'], ['equipe', String(equipe)], ...autres];
+		expect(await charger(load, l, q)).toMatchObject({ etape: 'fetes', fete: 'nouvelle', supprimer: false });
+		expect(await envoyer(actions, 'feteCentre', l, champs(), q)).toMatchObject({ cible: 'fete', succes: 'Fête enregistrée.' });
+		const [f] = await base.select().from(feteCentre);
+		expect(f).toMatchObject({ nom: 'Sainte-Barbe', debut: `${date}T18:00`, fin: `${annee + 1}-12-05T02:00`, equipeId: ids[2] });
+		expect((await charger(load, l, `?annee=${annee + 1}&etape=fetes&fete=${f!.id}`)).fete).toBe(f!.id);
+		const refus = await envoyer(actions, 'feteCentre', l, [['nom', 'Loto'], ['date', date], ['debut', '20:00'], ['fin', '23:00'], ['equipe', String(ids[1])]], q);
+		expect(refus).toMatchObject({ status: 400, data: { cible: 'fete', message: 'Une autre fête tombe à ces heures. Choisissez d’autres heures.', valeurs: { nom: 'Loto', debut: '20:00' } } });
+		expect(await envoyer(actions, 'feteCentre', l, champs([['id', String(f!.id)]], ids[3]), q)).toMatchObject({ succes: 'Fête enregistrée.' });
+		expect((await base.select().from(feteCentre))[0]!.equipeId).toBe(ids[3]);
+		expect(await envoyer(actions, 'supprimerFete', l, [['id', String(f!.id)]], q)).toMatchObject({ cible: 'fete', succes: 'Fête supprimée.' });
+		expect(await base.select().from(feteCentre)).toHaveLength(0);
+		expect(await envoyer(actions, 'noterFeteCentre', l, [['annee', String(annee - 1)], ['nom', 'Sainte-Barbe'], ['equipe', String(ids[0])]], q)).toMatchObject({ cible: 'historique-fetes', succes: 'Historique enregistré.' });
+		expect(await base.select().from(gardeFeteCentre)).toEqual([{ annee: annee - 1, nom: 'Sainte-Barbe', equipeId: ids[0] }]);
+		expect((await charger(load, l, `?annee=${annee + 1}&etape=fetes`)).preparation.fetesCentre.historique).toHaveLength(1);
 	});
 
 	it('monter une équipe enregistre le roulement', async () => {

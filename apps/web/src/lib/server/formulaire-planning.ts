@@ -26,7 +26,15 @@ const MESSAGES: Record<string, string> = {
 	'Plage commencée': 'Cette plage est commencée : elle ne change plus.',
 	'Plage inconnue': 'Cette plage n’existe plus : rechargez la page.',
 	'Déjà relancés aujourd’hui': 'Les agents sans réponse ont déjà été relancés aujourd’hui.',
-	'Tout le monde a répondu': 'Tout le monde a répondu : personne à relancer.'
+	'Tout le monde a répondu': 'Tout le monde a répondu : personne à relancer.',
+	'Une autre fête tombe à ces heures': 'Une autre fête tombe à ces heures. Choisissez d’autres heures.',
+	'La fin doit suivre le début': 'Indiquez une heure de fin différente du début.',
+	'Une fête dure 24 h au plus': 'Une fête dure 24 h au plus.',
+	'Fête passée': 'Cette date est déjà passée.',
+	'Fête inconnue': 'Cette fête n’existe plus. Rechargez la page.',
+	'Fête commencée : elle ne change plus': 'Cette fête a commencé. Elle ne change plus.',
+	'Nom de la fête vide': 'Indiquez le nom de la fête.',
+	'Nom de la fête trop long': 'Un nom de 60 caractères au plus.'
 };
 
 export function echecPlanning(erreur: unknown, cible: string, valeurs?: ReponsePlanning['valeurs']) {

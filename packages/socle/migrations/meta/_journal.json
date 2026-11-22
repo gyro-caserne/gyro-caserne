@@ -225,6 +225,13 @@
       "when": 1795287740331,
       "tag": "0031_reouverture_prise",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1795300157003,
+      "tag": "0032_fetes_centre",
+      "breakpoints": true
     }
   ]
 }

@@ -62,6 +62,7 @@
 				{#if p.plage}<p class="plage">{p.plage}</p>{/if}
 				{#each remplacants as qui (qui)}<p class="plage">Remplacé par {qui}</p>{/each}
 			{/if}
+			{#each a.fetes ?? [] as f (f)}<p class="plage">{f}</p>{/each}
 			{#if prise}
 				<a class="prise" href="/engins/prise">{@render icone(PRISE)}Faire la prise de garde{@render icone(SUITE)}</a>
 			{/if}
@@ -71,6 +72,7 @@
 				<p class="plage">{p.quand.charAt(0).toUpperCase() + p.quand.slice(1)}, {a.equipe.nom}</p>
 				{#if p.plage}<p class="plage">{p.plage}</p>{/if}
 				{#each remplacants as qui (qui)}<p class="plage">Remplacé par {qui}</p>{/each}
+				{#each a.fetes ?? [] as f (f)}<p class="plage">{f}</p>{/each}
 			</div>
 			{#if a.mienne}
 				<div class="gestes-plaque">
