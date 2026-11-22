@@ -149,6 +149,15 @@ describe('à ne pas manquer', () => {
 		await voter(base, acteur(agent), vote, 0, maintenant);
 		expect(ids((await aNePasManquer(base, acteur(agent), aujourdhui, maintenant)).sondages)).toEqual([recent, limite]);
 	});
+	it('sondage d’un événement : seulement pour ses convoqués', async () => {
+		const { base, chef, agent, autre, affecter, e1, e2 } = await jeu();
+		await affecter(agent, e1.id);
+		await affecter(autre, e2.id);
+		const ev = evenement('2026-11-07T08:00', [e1.id]);
+		const id = await publier(base, base.photos, acteur(chef), 'centre', { ...ev, sondage: { question: 'Petit-déjeuner ?', reponses: ['Oui', 'Non'], ouverture: maintenant, cloture: '2026-11-06T18:00' } }, maintenant);
+		expect(ids((await aNePasManquer(base, acteur(agent), aujourdhui, maintenant)).sondages)).toEqual([id]);
+		expect((await aNePasManquer(base, acteur(autre), aujourdhui, maintenant)).sondages).toEqual([]);
+	});
 
 	it('épinglées de moins de 30 jours des murs lisibles', async () => {
 		const { base, chef, agent } = await jeu();

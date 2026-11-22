@@ -376,6 +376,13 @@ describe('Sondage', () => {
 		expect(page).not.toContain('?/voter');
 		expect(page).not.toContain('Changer mon vote');
 	});
+	it('non convoqué à l’événement : ni vote ni changement, et il sait pourquoi', () => {
+		const page = html(Sondage, { id: 4, sondage: base, agir: false, nonConvoque: true });
+		expect(page).not.toContain('?/voter');
+		expect(page).toContain('Sondage réservé aux convoqués.');
+		const dejaVote = html(Sondage, { id: 4, sondage: { ...base, resultats: [0, 1], vote: 1 }, agir: false, nonConvoque: true });
+		expect(dejaVote).not.toContain('Changer mon vote');
+	});
 	it('sans dates (publié avant les dates) : ouvert, sans ligne de dates', () => {
 		const page = sondage({ ouverture: null, cloture: null });
 		expect(page).toContain('Ouvert');

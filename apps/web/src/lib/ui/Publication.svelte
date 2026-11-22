@@ -150,7 +150,7 @@
 			<p class="texte">{p.texte}</p>
 		{/if}
 
-		{#if p.sondage}<Sondage id={p.id} sondage={p.sondage} {agir} {garderFocus} />{/if}
+		{#if p.sondage}<Sondage id={p.id} sondage={p.sondage} agir={agir && (p.evenement?.convoque ?? true)} nonConvoque={p.evenement?.convoque === false} {garderFocus} />{/if}
 
 		{#if prise}
 			{#if prise.attendues > 0}
