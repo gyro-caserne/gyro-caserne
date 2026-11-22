@@ -6,7 +6,7 @@ import type { Acteur } from '../src/droits.ts';
 import { dissoudreComite } from '../src/actions/comites.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
-import { appartenances, audiences, estConvoque, estMembre, exigerMur, mursDe, type Mur } from '../src/murs.ts';
+import { appartenances, audiences, estConvoque, estMembre, exigerMur, lireMursOuverts, mursDe, type Mur } from '../src/murs.ts';
 import { affectationEquipe, attribution, comite, equipe, personne, photoPublication, profil, publication, responsabilite } from '../src/schema.ts';
 import { photo as photoOctets } from '../src/schema-photos.ts';
 import { baseDeTest } from './base-de-test.ts';
@@ -64,8 +64,8 @@ describe('mursDe', () => {
 		const id = await nouvelle('David');
 		const murs = await mursDe(base, acteur(id), aujourdhui);
 		expect(murs).toEqual([
-			{ cle: 'centre', nom: 'Le centre', type: 'centre', peutPublier: false, peutModerer: false, lectureSeule: false },
-			{ cle: 'vie', nom: 'Vie du centre', type: 'vie', peutPublier: true, peutModerer: false, lectureSeule: false }
+			{ cle: 'centre', nom: 'Le centre', type: 'centre', peutPublier: false, peutReagir: true, peutModerer: false, lectureSeule: false },
+			{ cle: 'vie', nom: 'Vie du centre', type: 'vie', peutPublier: true, peutReagir: true, peutModerer: false, lectureSeule: false }
 		]);
 	});
 
@@ -74,7 +74,7 @@ describe('mursDe', () => {
 		const id = await nouvelle('David');
 		await affecter(id, e1.id);
 		const murs = await mursDe(base, acteur(id), aujourdhui);
-		expect(murs[2]).toEqual({ cle: `equipe:${e1.id}`, nom: e1.nom, type: 'equipe', peutPublier: true, peutModerer: false, lectureSeule: false });
+		expect(murs[2]).toEqual({ cle: `equipe:${e1.id}`, nom: e1.nom, type: 'equipe', peutPublier: true, peutReagir: true, peutModerer: false, lectureSeule: false });
 		expect(murs).toHaveLength(3);
 	});
 
@@ -99,7 +99,7 @@ describe('mursDe', () => {
 		const rapporteur = await nouvelle('Chloé');
 		await nommer(membre, 'Membre de comité', { type: 'comite', id: amicale.id });
 		await nommer(rapporteur, 'Rapporteur de comité', { type: 'comite', id: amicale.id });
-		expect((await mursDe(base, acteur(membre), aujourdhui))[2]).toEqual({ cle: `comite:${amicale.id}`, nom: 'Amicale', type: 'comite', peutPublier: true, peutModerer: false, lectureSeule: false });
+		expect((await mursDe(base, acteur(membre), aujourdhui))[2]).toEqual({ cle: `comite:${amicale.id}`, nom: 'Amicale', type: 'comite', peutPublier: true, peutReagir: true, peutModerer: false, lectureSeule: false });
 		expect(resume(await mursDe(base, acteur(rapporteur), aujourdhui))[2]).toBe(`comite:${amicale.id} PM-`);
 	});
 
@@ -317,5 +317,110 @@ describe('tables des murs', () => {
 			.filter(Boolean);
 		expect(instructions.length).toBeGreaterThan(0);
 		expect(instructions.every((i) => /^CREATE (UNIQUE )?(TABLE|INDEX) /.test(i))).toBe(true);
+	});
+});
+
+describe('murs ouverts à un profil', () => {
+	// P : publier, R : réagir (commenter, aimer, voter, répondre), M : modérer, L : lecture seule.
+	const etat = (murs: Mur[]) => murs.map((m) => `${m.cle} ${m.peutPublier ? 'P' : '-'}${m.peutReagir ? 'R' : '-'}${m.peutModerer ? 'M' : '-'}${m.lectureSeule ? 'L' : '-'}`);
+
+	type Jeu = Awaited<ReturnType<typeof jeu>>;
+	async function avecRetraite(choix: Record<string, string> | string | ((j: Jeu) => Record<string, string>), statut?: 'parti' | 'suspendu') {
+		const j = await jeu();
+		const ouverts = typeof choix === 'function' ? choix(j) : choix;
+		const [retraite] = await j.base
+			.insert(profil)
+			.values({ nom: 'Retraité', typePersonne: 'exterieur', mursOuverts: typeof ouverts === 'string' ? ouverts : JSON.stringify(ouverts) })
+			.returning();
+		const [p] = await j.base.insert(personne).values({ email: 'rene@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: retraite!.id, statut: statut ?? 'operationnel' }).returning();
+		return { ...j, retraite: retraite!, rene: p!.id };
+	}
+
+	it('lireMursOuverts : tolérant, seules les clés centre, vie et comite:<id> avec un niveau connu', () => {
+		expect(lireMursOuverts(null)).toEqual({});
+		expect(lireMursOuverts('pas du json')).toEqual({});
+		expect(lireMursOuverts('[1,2]')).toEqual({});
+		expect(lireMursOuverts('{"vie":"lecture","comite:4":"ecriture","centre":"ecriture","equipe:1":"ecriture","comite:x":"lecture","salon":"lecture","comite:5":"tout"}')).toEqual({ vie: 'lecture', 'comite:4': 'ecriture', centre: 'ecriture' });
+	});
+
+	it('lecture et écriture sur Vie du centre et un comité', async () => {
+		const { base, rene } = await avecRetraite({ vie: 'lecture' });
+		expect(etat(await mursDe(base, acteur(rene), aujourdhui))).toEqual(['vie ----']);
+		const autre = await avecRetraite(({ amicale }) => ({ vie: 'ecriture', [`comite:${amicale.id}`]: 'ecriture' }));
+		expect(etat(await mursDe(autre.base, acteur(autre.rene), aujourdhui))).toEqual(['vie PR--', `comite:${autre.amicale.id} PR--`]);
+		const lecteur = await avecRetraite(({ amicale }) => ({ [`comite:${amicale.id}`]: 'lecture' }));
+		expect(etat(await mursDe(lecteur.base, acteur(lecteur.rene), aujourdhui))).toEqual([`comite:${lecteur.amicale.id} ----`]);
+		await expect(exigerMur(lecteur.base, acteur(lecteur.rene), `comite:${lecteur.amicale.id}`, aujourdhui, 'publier')).rejects.toBeInstanceOf(RefusDroit);
+	});
+
+	it('Le centre en écriture : réagir, jamais publier', async () => {
+		const { base, rene } = await avecRetraite({ centre: 'ecriture' });
+		expect(etat(await mursDe(base, acteur(rene), aujourdhui))).toEqual(['centre -R--']);
+		await expect(exigerMur(base, acteur(rene), 'centre', aujourdhui, 'publier')).rejects.toBeInstanceOf(RefusDroit);
+	});
+
+	it('comité dissous ou inconnu : ignoré, sans erreur', async () => {
+		const { base, rene, amicale } = await avecRetraite({ vie: 'lecture' });
+		await base.update(comite).set({ dissousLe: '2026-10-01' }).where(eq(comite.id, amicale.id));
+		await base.update(profil).set({ mursOuverts: JSON.stringify({ 'comite:999': 'ecriture', [`comite:${amicale.id}`]: 'ecriture', vie: 'lecture' }) }).where(eq(profil.nom, 'Retraité'));
+		expect(etat(await mursDe(base, acteur(rene), aujourdhui))).toEqual(['vie ----']);
+		await expect(exigerMur(base, acteur(rene), `comite:${amicale.id}`, aujourdhui, 'lire')).rejects.toBeInstanceOf(RefusDroit);
+	});
+
+	it('parti ou suspendu : aucun mur', async () => {
+		for (const statut of ['parti', 'suspendu'] as const) {
+			const { base, rene } = await avecRetraite({ vie: 'ecriture', centre: 'lecture' }, statut);
+			expect(await mursDe(base, acteur(rene), aujourdhui)).toEqual([]);
+		}
+	});
+
+	it('les équipes ne s’ouvrent jamais, même écrites à la main ; JSON invalide : aucun mur', async () => {
+		const { base, rene, e1 } = await avecRetraite(({ e1 }) => ({ [`equipe:${e1.id}`]: 'ecriture' }));
+		expect(await mursDe(base, acteur(rene), aujourdhui)).toEqual([]);
+		const casse = await avecRetraite('{oups');
+		expect(await mursDe(casse.base, acteur(casse.rene), aujourdhui)).toEqual([]);
+	});
+
+	it('jamais de modération ni d’équipe, même avec un rôle de comité ou une affectation déjà en base', async () => {
+		const { base, rene, amicale, nommer, affecter, e1 } = await avecRetraite(({ amicale }) => ({ [`comite:${amicale.id}`]: 'ecriture' }));
+		await nommer(rene, 'Rapporteur de comité', { type: 'comite', id: amicale.id });
+		await nommer(rene, 'Chef de centre', { type: 'centre' });
+		await affecter(rene, e1.id);
+		expect(etat(await mursDe(base, acteur(rene), aujourdhui))).toEqual([`comite:${amicale.id} PR--`]);
+		await expect(exigerMur(base, acteur(rene), `comite:${amicale.id}`, aujourdhui, 'moderer')).rejects.toBeInstanceOf(RefusDroit);
+	});
+
+	it('un agent reste inchangé, et réagit partout où il lit, sauf en lecture seule', async () => {
+		const { base, nouvelle, retraite } = await avecRetraite({ vie: 'ecriture' });
+		const id = await nouvelle('David');
+		expect(etat(await mursDe(base, acteur(id), aujourdhui))).toEqual(['centre -R--', 'vie PR--']);
+		expect(retraite.typePersonne).toBe('exterieur');
+	});
+
+	it('membre et convoqué : lecture membre seulement, écriture convoqué aux événements « tous »', () => {
+		const lecteur = appartenances([], [], aujourdhui, { vie: 'lecture', 'comite:7': 'lecture' });
+		const ecrivain = appartenances([], [], aujourdhui, { vie: 'ecriture', 'comite:7': 'ecriture' });
+		expect(['centre', 'vie', 'comite:7', 'comite:8', 'equipe:1'].map((c) => estMembre(lecteur, c))).toEqual([false, true, true, false, false]);
+		expect(estConvoque(lecteur, 'vie', 'tous', 9)).toBe(false);
+		expect(estConvoque(ecrivain, 'vie', 'tous', 9)).toBe(true);
+		expect(estConvoque(ecrivain, 'comite:7', [1], 9)).toBe(false);
+		expect(estConvoque(ecrivain, 'comite:7', { equipes: [1], ajoutes: [9], retires: [] }, 9)).toBe(false);
+		// Un rôle tenu ne compte pas pour un profil ouvert.
+		const avecRole = appartenances([{ equipeId: 1, debut: '2026-01-01', fin: null }], [{ type: 'centre', portee: 'centre', perimetreId: null, systeme: 'chef_centre', nomme: null }], aujourdhui, { vie: 'lecture' });
+		expect(avecRole.tous).toBe(false);
+		expect(estMembre(avecRole, 'equipe:1')).toBe(false);
+	});
+
+	it('audiences : comptent les personnes au mur ouvert, en une requête', async () => {
+		const { base, nouvelle, amicale } = await avecRetraite(({ amicale }) => ({ vie: 'lecture', [`comite:${amicale.id}`]: 'ecriture' }));
+		await nouvelle('David');
+		base.requetes = 0;
+		const n = await audiences(base, ['centre', 'vie', `comite:${amicale.id}`], aujourdhui);
+		expect(base.requetes).toBe(1);
+		expect([...n]).toEqual([
+			['centre', 1],
+			['vie', 2],
+			[`comite:${amicale.id}`, 1]
+		]);
 	});
 });

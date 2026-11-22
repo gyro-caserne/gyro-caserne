@@ -1,0 +1,1 @@
+ALTER TABLE `profil` ADD `murs_ouverts` text DEFAULT '{}' NOT NULL;
