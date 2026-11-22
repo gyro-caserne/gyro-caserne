@@ -2,11 +2,11 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
 import { attribuer } from '../src/actions/attributions.ts';
-import { listerProfils, modifierDroitsProfil } from '../src/actions/profils.ts';
+import { creerProfil, listerProfils, modifierDroitsProfil, modifierMursOuverts, renommerProfil, supprimerProfil } from '../src/actions/profils.ts';
 import { aLeDroit, type Acteur } from '../src/droits.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
-import { journal, personne, profil, profilDroit, responsabilite } from '../src/schema.ts';
+import { comite, journal, personne, profil, profilDroit, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
 const aujourdhui = '2026-10-28';
@@ -39,6 +39,7 @@ describe('listerProfils', () => {
 		expect(profils[0]!.droits).toContain('SIGNALER_ANOMALIE');
 		expect(profils[0]!.droits).toHaveLength(12);
 		expect(profils[1]!.droits).toEqual(['RESERVER']);
+		expect(profils.map((p) => [p.personnes, p.depart, p.mursOuverts])).toEqual([[3, true, {}], [0, false, {}]]);
 	});
 
 	it('refuse le référent technique', async () => {
@@ -105,5 +106,82 @@ describe('modifierDroitsProfil', () => {
 		base.requetes = 0;
 		await modifierDroitsProfil(base, chef, agent.id, ['VOIR_PLANNING', 'RESERVER'], aujourdhui);
 		expect(base.requetes).toBeLessThanOrEqual(10);
+	});
+});
+
+describe('créer, renommer, supprimer un profil', () => {
+	it('le chef de centre crée un profil (nom unique, 60 caractères), au journal', async () => {
+		const { base, chef } = await jeu();
+		const id = await creerProfil(base, chef, { nom: ' Retraité ', typePersonne: 'exterieur' }, aujourdhui);
+		const [lu] = await base.select().from(profil).where(eq(profil.id, id));
+		expect(lu).toMatchObject({ nom: 'Retraité', typePersonne: 'exterieur', mursOuverts: '{}' });
+		expect(await base.select().from(journal).where(eq(journal.action, 'creer_profil'))).toMatchObject([{ cibleType: 'profil', cibleId: id }]);
+		await expect(creerProfil(base, chef, { nom: 'retraité', typePersonne: 'agent' }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Nom déjà utilisé'));
+		await expect(creerProfil(base, chef, { nom: 'x'.repeat(61), typePersonne: 'agent' }, aujourdhui)).rejects.toThrow(DonneeInvalide);
+		await expect(creerProfil(base, chef, { nom: 'Autre', typePersonne: 'pompier' as 'agent' }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Type inconnu'));
+	});
+
+	it('réservé au chef de centre, à l’adjoint et au super administrateur', async () => {
+		const { base, adjoint, referent, agent } = await jeu();
+		await expect(creerProfil(base, referent, { nom: 'Retraité', typePersonne: 'exterieur' }, aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
+		await expect(renommerProfil(base, referent, agent.id, 'Pompier', aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
+		await expect(supprimerProfil(base, referent, agent.id, aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
+		expect(await creerProfil(base, adjoint, { nom: 'Retraité', typePersonne: 'exterieur' }, aujourdhui)).toBeGreaterThan(0);
+		expect(await creerProfil(base, superAdmin, { nom: 'Jeune', typePersonne: 'agent' }, aujourdhui)).toBeGreaterThan(0);
+	});
+
+	it('renommer : toujours, même « Agent » ; nom unique ; au journal', async () => {
+		const { base, chef, agent } = await jeu();
+		await renommerProfil(base, chef, agent.id, 'Sapeur', aujourdhui);
+		expect((await base.select().from(profil).where(eq(profil.id, agent.id)))[0]!.nom).toBe('Sapeur');
+		expect(await base.select().from(journal).where(eq(journal.action, 'renommer_profil'))).toMatchObject([{ cibleId: agent.id, details: JSON.stringify({ nom: { avant: 'Agent', apres: 'Sapeur' } }) }]);
+		await expect(renommerProfil(base, chef, agent.id, 'Réserve citoyenne', aujourdhui)).rejects.toThrow(new DonneeInvalide('Nom déjà utilisé'));
+		await expect(renommerProfil(base, chef, 999, 'Autre', aujourdhui)).rejects.toThrow(new DonneeInvalide('Profil inconnu'));
+	});
+
+	it('supprimer : seulement si personne ne l’a, jamais le profil Agent de départ ; ses droits partent avec ; au journal', async () => {
+		const { base, chef, agent } = await jeu();
+		await expect(supprimerProfil(base, chef, agent.id, aujourdhui)).rejects.toThrow(new DonneeInvalide('Le profil des agents ne se supprime pas'));
+		const id = await creerProfil(base, chef, { nom: 'Retraité', typePersonne: 'exterieur' }, aujourdhui);
+		await modifierDroitsProfil(base, chef, id, ['RESERVER'], aujourdhui);
+		const [p] = await base.insert(personne).values({ email: 'rene@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: id }).returning();
+		await expect(supprimerProfil(base, chef, id, aujourdhui)).rejects.toThrow(new DonneeInvalide('Ce profil est encore attribué'));
+		await base.delete(personne).where(eq(personne.id, p!.id));
+		await supprimerProfil(base, chef, id, aujourdhui);
+		expect(await base.select().from(profil).where(eq(profil.id, id))).toEqual([]);
+		expect(await base.select().from(profilDroit).where(eq(profilDroit.profilId, id))).toEqual([]);
+		expect(await base.select().from(journal).where(eq(journal.action, 'supprimer_profil'))).toMatchObject([{ cibleId: id, details: JSON.stringify({ nom: 'Retraité' }) }]);
+	});
+});
+
+describe('modifierMursOuverts', () => {
+	it('ouvre Le centre, Vie du centre et des comités en cours à un profil extérieur, au journal avant et après', async () => {
+		const { base, chef } = await jeu();
+		const id = await creerProfil(base, chef, { nom: 'Retraité', typePersonne: 'exterieur' }, aujourdhui);
+		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
+		const cle = `comite:${amicale!.id}`;
+		await modifierMursOuverts(base, chef, id, { vie: 'lecture', [cle]: 'ecriture' }, aujourdhui);
+		expect(JSON.parse((await base.select().from(profil).where(eq(profil.id, id)))[0]!.mursOuverts)).toEqual({ vie: 'lecture', [cle]: 'ecriture' });
+		expect((await listerProfils(base, chef, aujourdhui)).find((p) => p.id === id)!.mursOuverts).toEqual({ vie: 'lecture', [cle]: 'ecriture' });
+		await modifierMursOuverts(base, chef, id, { [cle]: 'lecture' }, aujourdhui);
+		const lignes = await base.select().from(journal).where(eq(journal.action, 'modifier_murs_ouverts'));
+		expect(lignes).toHaveLength(2);
+		expect(JSON.parse(lignes[1]!.details!)).toEqual({ murs: { avant: { vie: 'lecture', [cle]: 'ecriture' }, apres: { [cle]: 'lecture' } } });
+		// Sans changement : rien au journal.
+		await modifierMursOuverts(base, chef, id, { [cle]: 'lecture' }, aujourdhui);
+		expect(await base.select().from(journal).where(eq(journal.action, 'modifier_murs_ouverts'))).toHaveLength(2);
+	});
+
+	it('refusé : profil agent, équipe, comité dissous ou inconnu, niveau inconnu, sans le droit', async () => {
+		const { base, chef, referent, agent } = await jeu();
+		const id = await creerProfil(base, chef, { nom: 'Retraité', typePersonne: 'exterieur' }, aujourdhui);
+		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
+		await expect(modifierMursOuverts(base, chef, agent.id, { vie: 'lecture' }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Seul un profil extérieur reçoit des murs ouverts'));
+		await expect(modifierMursOuverts(base, chef, id, { 'equipe:1': 'lecture' } as Record<string, 'lecture'>, aujourdhui)).rejects.toThrow(new DonneeInvalide('Mur inconnu'));
+		await expect(modifierMursOuverts(base, chef, id, { 'comite:999': 'lecture' }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Mur inconnu'));
+		await expect(modifierMursOuverts(base, chef, id, { vie: 'tout' as 'lecture' }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Niveau inconnu'));
+		await base.update(comite).set({ dissousLe: '2026-10-01' }).where(eq(comite.id, amicale!.id));
+		await expect(modifierMursOuverts(base, chef, id, { [`comite:${amicale!.id}`]: 'lecture' }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Mur inconnu'));
+		await expect(modifierMursOuverts(base, referent, id, { vie: 'lecture' }, aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
 	});
 });

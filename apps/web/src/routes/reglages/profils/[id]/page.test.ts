@@ -2,7 +2,8 @@ import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import Page from './+page.svelte';
 
-const data = { profil: { id: 1, nom: 'Agent', typePersonne: 'agent', droits: ['VOIR_PLANNING', 'RESERVER'] } };
+const data = { profil: { id: 1, nom: 'Agent', typePersonne: 'agent', droits: ['VOIR_PLANNING', 'RESERVER'], mursOuverts: {}, personnes: 3, depart: true }, comitesChoix: [{ id: 4, nom: 'Retraités' }] };
+const retraite = { ...data, profil: { id: 5, nom: 'Retraité', typePersonne: 'exterieur', droits: [], mursOuverts: { 'comite:4': 'ecriture', vie: 'lecture' }, personnes: 0, depart: false } };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const html = (props: Record<string, unknown>) => render(Page as any, { props }).body;
 
@@ -24,5 +25,32 @@ describe('page d’un profil', () => {
 	it('ne parle pas des droits sans effet (annuaire, motifs d’absence)', () => {
 		const page = html({ data: { profil: { ...data.profil, droits: ['VOIR_PLANNING', 'VOIR_ANNUAIRE', 'VOIR_MOTIFS_ABSENCE'] } } });
 		expect(page).not.toMatch(/annuaire|motifs d’absence/);
+	});
+
+	it('profil extérieur : un choix par mur ouvrable, au niveau enregistré ; jamais les équipes', () => {
+		const page = html({ data: retraite, form: null });
+		expect(page).toContain('Murs ouverts');
+		expect(page).toMatch(/action="\?\/murs"/);
+		for (const nom of ['Le centre', 'Vie du centre', 'Retraités']) expect(page).toMatch(new RegExp(`<legend[^>]*>${nom}</legend>`));
+		expect(page).toMatch(/name="mur-comite:4" value="ecriture" checked/);
+		expect(page).toMatch(/name="mur-vie" value="lecture" checked/);
+		expect(page).toMatch(/name="mur-centre" value="aucun" checked/);
+		expect(page).not.toContain('equipe:');
+		expect(page).toContain('Aucun accès');
+	});
+
+	it('profil agent : pas de murs ouverts ; renommer sous « Plus » ; le profil de départ ne se supprime pas', () => {
+		const page = html({ data, form: null });
+		expect(page).not.toContain('Murs ouverts');
+		expect(page).toMatch(/<details class="plus"/);
+		expect(page).toContain('Renommer le profil');
+		expect(page).not.toContain('?/supprimer');
+		expect(page).toContain('Le profil des agents de départ ne se supprime pas.');
+		expect(html({ data: { ...data, profil: { ...data.profil, depart: false } }, form: null })).toContain('3 personnes ont ce profil.');
+	});
+
+	it('profil que personne n’a : supprimer, en contour rouge, avec « Je confirme »', () => {
+		const page = html({ data: retraite, form: null });
+		expect(page).toMatch(/action="\?\/supprimer"[\s\S]*name="confirmation" value="oui"[\s\S]*class="grave[^"]*"[^>]*>(<!---->)?Supprimer le profil/);
 	});
 });

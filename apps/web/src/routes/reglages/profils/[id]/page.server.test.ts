@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { profil } from '@gyro-caserne/socle';
+import { comite, journal, personne, profil } from '@gyro-caserne/socle';
 import { charger, envoyer, locaux, preparer, super_ } from '../../de-test.ts';
 import { actions, load } from './+page.server';
 
@@ -34,5 +34,30 @@ describe('page d’un profil', () => {
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1']], { id: String(reserve!.id) });
 		expect(await droitsProfil(reserve!.id)).toEqual(['RESERVER']);
+	});
+
+	it('murs ouverts d’un profil extérieur : chaque mur à son niveau, « Aucun accès » le ferme', async () => {
+		const { base, chef } = await preparer();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
+		const params = { id: String(reserve!.id) };
+		const r = await envoyer(actions, 'murs', locaux(base, chef), [['mur-centre', 'aucun'], ['mur-vie', 'lecture'], [`mur-comite:${amicale!.id}`, 'ecriture']], params);
+		expect(r).toMatchObject({ cible: 'murs', succes: 'Les murs ouverts sont enregistrés.' });
+		expect((await charger(load, locaux(base, chef), params)).profil.mursOuverts).toEqual({ vie: 'lecture', [`comite:${amicale!.id}`]: 'ecriture' });
+		expect(await envoyer(actions, 'murs', locaux(base, chef), [['mur-equipe:1', 'lecture']], params)).toMatchObject({ status: 400 });
+	});
+
+	it('renommer, puis supprimer avec confirmation ; refusé tant que quelqu’un l’a', async () => {
+		const { base, chef, profilAgent } = await preparer();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const params = { id: String(reserve!.id) };
+		expect(await envoyer(actions, 'renommer', locaux(base, chef), [['nom', 'Réservistes']], params)).toMatchObject({ cible: 'renommer', succes: 'Le profil s’appelle désormais « Réservistes ».' });
+		expect(await envoyer(actions, 'supprimer', locaux(base, chef), [], params)).toMatchObject({ status: 400, data: { message: 'Cochez « Je confirme » pour continuer.' } });
+		const [p] = await base.insert(personne).values({ email: 'r@exemple.fr', prenom: 'R', nom: 'S', profilId: reserve!.id }).returning();
+		expect(await envoyer(actions, 'supprimer', locaux(base, chef), [['confirmation', 'oui']], params)).toMatchObject({ status: 400, data: { message: 'Ce profil est encore attribué. Changez d’abord le profil des personnes qui l’ont.' } });
+		await base.delete(personne).where(eq(personne.id, p!.id));
+		await expect(envoyer(actions, 'supprimer', locaux(base, chef), [['confirmation', 'oui']], params)).rejects.toMatchObject({ status: 303, location: '/reglages' });
+		expect(await base.select().from(journal).where(eq(journal.action, 'supprimer_profil'))).toHaveLength(1);
+		expect(await envoyer(actions, 'supprimer', locaux(base, chef), [['confirmation', 'oui']], { id: String(profilAgent.id) })).toMatchObject({ status: 400 });
 	});
 });

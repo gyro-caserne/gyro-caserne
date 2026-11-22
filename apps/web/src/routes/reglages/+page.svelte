@@ -25,6 +25,11 @@
 					><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d={DESSINS.plus} /></svg>Comité</a
 				>
 			{/if}
+			{#if data.profils}
+				<a class="lien-secondaire" href="/reglages/profils/nouveau" aria-label="Nouveau profil"
+					><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d={DESSINS.plus} /></svg>Profil</a
+				>
+			{/if}
 		{/snippet}
 	</EnTetePage>
 

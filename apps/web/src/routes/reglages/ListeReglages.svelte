@@ -92,7 +92,8 @@
 	{#if data.profils}
 		<ListeRangees titre="Profils" compte={data.profils.length}>
 			{#each data.profils as p (p.id)}
-				<li><Rangee href="/reglages/profils/{p.id}" courant={courant(`/reglages/profils/${p.id}`)} titre={p.nom} sous={resumeProfil(p.droits)} /></li>
+				{@const murs = Object.keys(p.mursOuverts ?? {}).length}
+				<li><Rangee href="/reglages/profils/{p.id}" courant={courant(`/reglages/profils/${p.id}`)} titre={p.nom} sous={resumeProfil(p.droits) + (murs > 0 ? `, ${pluriel(murs, 'mur ouvert', 'murs ouverts')}` : '')} /></li>
 			{/each}
 		</ListeRangees>
 	{/if}

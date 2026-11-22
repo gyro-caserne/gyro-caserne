@@ -19,11 +19,11 @@ export { creerComite, dissoudreComite, listerComites, modifierComite } from './a
 export { archiverResponsabilite, creerResponsabilite, listerResponsabilites, modifierResponsabilite, type Attributeur } from './actions/responsabilites.ts';
 export { iconeDuComite, iconeDuRole, NOMS_ICONES, type NomIcone } from './icones.ts';
 export { MODELES, type Modele } from './modeles.ts';
-export { listerProfils, modifierDroitsProfil } from './actions/profils.ts';
+export { creerProfil, listerProfils, modifierDroitsProfil, modifierMursOuverts, renommerProfil, supprimerProfil } from './actions/profils.ts';
 export { accueilDe, aDecider, casquettesDe, type Accueil, type ADecider, type Casquette, type ContenuCasquette } from './casquettes.ts';
 export { apercusDesMurs, type Apercu as ApercuMur } from './apercus.ts';
 export { ouvreQuiFaitQuoi, quiFaitQuoi, type QuiFaitQuoi, type RoleTenu } from './qui-fait-quoi.ts';
-export { audiences, equipesConvoquees, exigerMur, mursDe, type CleMur, type Convocation, type Mur } from './murs.ts';
+export { audiences, equipesConvoquees, exigerMur, lireMursOuverts, mursDe, NIVEAUX_OUVERTS, type CleMur, type Convocation, type Mur, type NiveauOuvert } from './murs.ts';
 export { TAILLE_PHOTO_MAX, type Photo } from './commun.ts';
 export { effacerPhotosOrphelines } from './photos-orphelines.ts';
 export { dateDEffacement, effacerAgent, effacerAgentsPartis, PARTIS_PAR_NUIT } from './partis.ts';
