@@ -52,6 +52,14 @@ Chaque publication montre le **visage** de son auteur (ses initiales sur la coul
 
 En option, un **sondage** : une question, 2 à 6 réponses, une seule par personne, une date d'**ouverture** (maintenant, par défaut) et de **clôture** (préremplie dans 7 jours ; pour un événement, à son début, sans dépasser un an après l'ouverture). La clôture tombe après l'ouverture, moins d'un an après, et pour un événement au plus tard à son début. Avant l'ouverture, il s'affiche « Ouvre le … » et refuse les votes. Pendant qu'il est ouvert, les résultats s'affichent **une fois qu'on a voté**, pour ne pas orienter le vote ; l'auteur et les modérateurs les voient toujours, et ils ne sont même pas envoyés au téléphone de qui n'a pas voté. On peut changer son vote. Le sondage d'un événement (le petit-déjeuner d'une manœuvre, par exemple) est **réservé à ses convoqués** : les autres voient « Sondage réservé aux convoqués. », et il ne leur est pas rappelé. Fermé, il refuse les votes et montre les résultats **à tous**. Les dates ne se changent pas après la publication. Un sondage publié avant les dates reste ouvert. Voir [Comment créer un sondage ?](../utilisation/comment-creer-un-sondage.md).
 
+### Au nom d'un comité
+
+Le **rapporteur** d'un comité peut publier **au nom du comité**, et seulement dans **Vie du centre**. Sur l'écran de publication, quand il choisit Vie du centre, un choix « Publier en tant que » propose « Moi » (par défaut) ou le nom de chacun des comités qu'il anime. Un simple membre, un ancien rapporteur, le chef de centre qui n'est pas rapporteur, ou le rapporteur d'un comité dissous ne voient pas ce choix, et le serveur refuse s'il est forcé.
+
+La publication porte alors l'**icône et le nom du comité**, avec « par Prénom Nom » dessous. Dans la cloche et sur le téléphone, la notification dit « Amicale a publié dans Vie du centre ». La personne reste l'auteur : elle seule modifie la publication (les modérateurs suppriment, comme pour toute autre), « Répondre en privé » lui écrit, et le journal garde son nom avec celui du comité. Le choix ne se change pas après la publication, et la signature reste même si l'auteur n'est plus rapporteur ou si le comité est dissous. Les événements, les sondages et les autres murs ne changent pas.
+
+Exemple : le rapporteur de l'Amicale annonce le repas de Sainte-Barbe dans Vie du centre au nom de l'Amicale. Chacun voit « Amicale, par Julie Martin ».
+
 Autour de chaque publication : « J'aime », commentaires (l'auteur ou un modérateur peut les fermer), épingle (modérateurs, dix publications épinglées au plus par mur). L'auteur modifie ou supprime ; un modérateur supprime. La suppression est inscrite au journal, sans le contenu.
 
 ### Selon la présence de Gyro
