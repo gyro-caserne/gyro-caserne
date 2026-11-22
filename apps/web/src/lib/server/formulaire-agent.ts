@@ -87,6 +87,7 @@ const CHAMP_DE_L_ERREUR: Record<string, string> = {
 	'Nom invalide': 'nom',
 	'Grade inconnu': 'gradeId',
 	'Profil inconnu': 'profilId',
+	'Le chef de centre et son adjoint restent agents': 'profilId',
 	'Équipe inconnue': 'equipeId',
 	'Équipe inactive': 'equipeId'
 };

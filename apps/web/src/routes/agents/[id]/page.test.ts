@@ -401,3 +401,20 @@ describe('page fiche agent : aptitudes', () => {
 		expect(page).toContain('Enregistrer l’aptitude');
 	});
 });
+
+describe('passage à un profil extérieur', () => {
+	const profils = [{ id: 1, nom: 'Agent', typePersonne: 'agent' }, { id: 2, nom: 'Retraité', typePersonne: 'exterieur' }];
+	const role = { id: 7, responsabilite: { id: 7, nom: 'Membre de comité', icone: 'groupe' }, perimetre: { type: 'comite', id: 3, nom: 'Amicale' }, debut: '2026-01-01', fin: null, saisiePar: 'Chef Test', peutTerminer: true };
+	const avec = { ...data, profils, fiche: { ...fiche, profil: { id: 1, nom: 'Agent', typePersonne: 'agent' }, equipe: { id: 1, nom: 'Équipe 2', couleur: '#c00' } }, attributions: { ...aucun, enCours: [role] } };
+
+	it('le profil actuel : rien à confirmer', () => {
+		expect(html({ data: avec, form: null })).not.toContain('name="passage"');
+	});
+
+	it('un profil extérieur choisi (après un refus) : ce qu’il quitte, puis « Je confirme »', () => {
+		const page = html({ data: avec, form: { erreurs: { passage: 'Cochez « Je confirme » pour changer de profil.' }, valeurs: { profilId: '2' } } });
+		expect(page).toContain('Alice Martin quitte Équipe 2 et perd son rôle de Membre de comité (Amicale).');
+		expect(page).toMatch(/name="passage" value="oui"/);
+		expect(page).toContain('Cochez « Je confirme » pour changer de profil.');
+	});
+});

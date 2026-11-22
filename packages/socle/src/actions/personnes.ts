@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import type { Base, BasePhotos } from '../base.ts';
 import { effacerPhotos } from '../commun.ts';
 import { effacerLiensVers, normaliserAdresse } from '../connexion.ts';
@@ -10,9 +10,10 @@ import { ligneJournal } from '../journal.ts';
 import { STATUTS_AVEC_ACCES, STATUTS_OPERATIONNELS, type StatutOperationnel } from '../listes.ts';
 import { departDesGroupes } from '../messagerie.ts';
 import { effacerNotificationsDe } from '../notifications.ts';
+import { FINIES } from '../habillement.ts';
 import { annulerAuDepart } from '../reservations.ts';
 import { remplacementsAuDepart } from '../remplacements/depart.ts';
-import { affectationEquipe, attribution, cleAgenda, equipe, grade, personne, profil, profilDroit, session, souhaitAnniversaire, user } from '../schema.ts';
+import { affectationEquipe, attribution, cleAgenda, demandeHabillement, equipe, filHabillement, grade, personne, profil, profilDroit, session, souhaitAnniversaire, user } from '../schema.ts';
 
 const centre: Perimetre = { type: 'centre' };
 
@@ -212,7 +213,16 @@ function deconnecter(base: Base, email: string) {
 export type ChampsFiche = { email: string; prenom: string; nom: string; profilId: number } & Required<Complements>;
 const CHAMPS_FICHE = ['email', 'prenom', 'nom', 'gradeId', 'dateGrade', 'profilId', 'telephone', 'naissance', 'entreeCentre', 'engagementSpv'] as const;
 
-export async function modifierFiche(base: Base, acteur: Acteur, id: number, champs: Partial<ChampsFiche>, aujourdhui: string, adressesReservees: string[]): Promise<void> {
+// `passage` : ce qu'il faut pour faire passer un agent à un profil extérieur (un retraité), avec les suites d'un départ.
+export async function modifierFiche(
+	base: Base,
+	acteur: Acteur,
+	id: number,
+	champs: Partial<ChampsFiche>,
+	aujourdhui: string,
+	adressesReservees: string[],
+	passage?: { basePhotos: BasePhotos; maintenant: string }
+): Promise<void> {
 	exigerDate(aujourdhui);
 	await exiger(base, acteur, centre, aujourdhui);
 	const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
@@ -236,11 +246,12 @@ export async function modifierFiche(base: Base, acteur: Acteur, id: number, cham
 	if (nouveaux.email !== undefined) exigerAdresseNonReservee(nouveaux.email, adressesReservees);
 	exigerLongueurs(nouveaux);
 	await exigerComplements(base, nouveaux);
-	if (nouveaux.profilId !== undefined) await exigerProfil(base, nouveaux.profilId);
+	const nouveauProfil = nouveaux.profilId !== undefined ? await exigerProfil(base, nouveaux.profilId) : null;
 
 	const changes = Object.fromEntries(Object.entries(nouveaux).filter(([cle, valeur]) => valeur !== fiche[cle as keyof ChampsFiche])) as Partial<ChampsFiche>;
 	if (Object.keys(changes).length === 0) return;
 	if (changes.email !== undefined) await exigerAdresseLibre(base, changes.email);
+	const suites = changes.profilId !== undefined && nouveauProfil?.typePersonne === 'exterieur' ? await passageExterieur(base, acteur, fiche, aujourdhui, passage) : null;
 
 	const ecritures = [
 		base.update(personne).set(changes).where(eq(personne.id, id)),
@@ -248,7 +259,41 @@ export async function modifierFiche(base: Base, acteur: Acteur, id: number, cham
 		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_fiche', cibleType: 'personne', cibleId: id, details: { champs: Object.keys(changes), ...(changes.email === undefined ? {} : { email: { avant: fiche.email, apres: changes.email } }) } }, aujourdhui)
 	] as const;
 	// L'adresse sert à la connexion : l'ancienne ne doit plus ouvrir de session.
-	await ecrireAdresse(() => base.batch(changes.email === undefined ? ecritures : [...ecritures, ...deconnecter(base, fiche.email)]));
+	await ecrireAdresse(() => base.batch([...ecritures, ...(changes.email === undefined ? [] : deconnecter(base, fiche.email)), ...(suites?.ecritures ?? [])]));
+	if (suites) await effacerPhotos(passage!.basePhotos, suites.photos);
+}
+
+// Un agent qui passe à un profil extérieur (un retraité) quitte ce qu'un départ lui fait quitter : son équipe et ses rôles (finis la veille),
+// ses groupes de messagerie, ses remplacements et échanges, ses réservations et ses demandes d'habillement en cours. Contrairement à un
+// départ, sa fiche, ses notifications et ses conversations à deux restent, et il n'est jamais effacé. Le chef de centre et l'adjoint, non.
+async function passageExterieur(base: Base, acteur: Acteur, fiche: typeof personne.$inferSelect, aujourdhui: string, passage?: { basePhotos: BasePhotos; maintenant: string }) {
+	const [ancien] = fiche.profilId === null ? [] : await base.select({ type: profil.typePersonne }).from(profil).where(eq(profil.id, fiche.profilId));
+	if (ancien?.type === 'exterieur') return null;
+	if ((await estChefDeCentre(base, fiche.id, aujourdhui)) || (await occupe(base, fiche.id, 'chef_centre_adjoint', aujourdhui))) throw new DonneeInvalide('Le chef de centre et son adjoint restent agents');
+	if (!passage) throw new DonneeInvalide('Le passage à un profil extérieur se fait depuis la fiche');
+	const { maintenant } = passage;
+	exigerDateHeure(maintenant, 'Date');
+	const affectations = await base.select().from(affectationEquipe).where(eq(affectationEquipe.personneId, fiche.id));
+	const groupes = await departDesGroupes(base, fiche.id, maintenant);
+	const enCoursHabillement = and(eq(demandeHabillement.demandeurId, fiche.id), notInArray(demandeHabillement.etape, [...FINIES, 'traitee']));
+	return {
+		ecritures: [
+			...retraitEquipe(base, acteur, fiche.id, affectations, aujourdhui),
+			...finirOuSupprimer(base, attribution, eq(attribution.personneId, fiche.id), aujourdhui),
+			...groupes.ecritures,
+			...(await remplacementsAuDepart(base, fiche.id, maintenant)),
+			annulerAuDepart(base, fiche.id, maintenant),
+			// L'annulation s'écrit au fil de chaque demande, puis la demande est close.
+			base.insert(filHabillement).select(
+				base
+					.select({ id: sql<null>`null`.as('id'), demandeId: demandeHabillement.id, quoi: sql<string>`'annulation'`.as('quoi'), texte: sql<null>`null`.as('texte'), par: sql<number>`${fiche.id}`.as('par'), le: sql<string>`${maintenant}`.as('le'), jeton: sql<null>`null`.as('jeton') })
+					.from(demandeHabillement)
+					.where(enCoursHabillement)
+			),
+			base.update(demandeHabillement).set({ etape: 'annulee', finLe: maintenant, majLe: maintenant }).where(enCoursHabillement)
+		],
+		photos: groupes.photos
+	};
 }
 
 const REFUS_EQUIPE = {

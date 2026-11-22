@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { DESSINS } from '#lib/ui/icones-roles.ts';
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { rechercheListe } from '#lib/liste-agents.ts';
@@ -17,6 +18,7 @@
 	let { data, form } = $props();
 
 	const fiche = $derived(data.fiche);
+
 	// Après un envoi, la liste à côté garde sa recherche et son filtre.
 	const action = (nom: string) => `?/${nom}${rechercheListe(page.url).replace('?', '&')}`;
 	// Les messages d'un formulaire à cible (rôles) restent à côté de lui.
@@ -64,6 +66,20 @@
 
 	// Résumés des blocs fermés.
 	const enCours = $derived(data.attributions.enCours);
+
+	// Passer à un profil extérieur (un retraité) : la page dit ce que l'agent quitte, et demande une confirmation.
+	const profilDeDepart = () => texte('profilId', fiche.profil ? String(fiche.profil.id) : '');
+	let profilChoisi = $state(untrack(profilDeDepart));
+	$effect.pre(() => {
+		profilChoisi = profilDeDepart();
+	});
+	const versExterieur = $derived(fiche.profil?.typePersonne !== 'exterieur' && data.profils.some((p) => String(p.id) === profilChoisi && p.typePersonne === 'exterieur'));
+	const enumerer = (noms: string[]) => new Intl.ListFormat('fr', { type: 'conjunction' }).format(noms);
+	const ceQuIlQuitte = $derived.by(() => {
+		const quitte = [fiche.equipe ? `quitte ${fiche.equipe.nom}` : null, enCours.length > 0 ? `perd ${enCours.length > 1 ? 'ses rôles' : 'son rôle'} de ${enumerer(enCours.map(intitule))}` : null].filter(Boolean);
+		const qui = `${fiche.prenom} ${fiche.nom}`;
+		return quitte.length > 0 ? `${qui} ${quitte.join(' et ')}.` : `${qui} n’a ni équipe ni rôle à quitter.`;
+	});
 	const sousTitre = $derived([fiche.grade?.libelle, fiche.equipe?.nom].filter(Boolean).join(', '));
 	const resumes = $derived({
 		identite: [fiche.effaceLe ? null : fiche.email, fiche.telephone].filter(Boolean).join(', '),
@@ -261,10 +277,26 @@
 							name="profilId"
 							libelle="Profil"
 							requis
-							valeur={texte('profilId', fiche.profil ? String(fiche.profil.id) : '')}
+							bind:valeur={profilChoisi}
 							erreur={erreurs.profilId}
 							options={[...(fiche.profil ? [] : [{ valeur: '', libelle: 'À choisir' }]), ...data.profils.map((p) => ({ valeur: String(p.id), libelle: p.nom }))]}
 						/>
+						{#if versExterieur}
+							<div class="passage">
+								<p id="passage-avertissement"><strong>{ceQuIlQuitte}</strong> Ses remplacements, réservations et demandes d’habillement en cours sont annulés, et la personne sort des groupes de messagerie. Sa fiche et ses conversations à deux restent.</p>
+								<label>
+									<input
+										type="checkbox"
+										name="passage"
+										value="oui"
+										aria-invalid={erreurs.passage ? 'true' : undefined}
+										aria-describedby={erreurs.passage ? 'passage-avertissement passage-erreur' : 'passage-avertissement'}
+									/>
+									Je confirme
+								</label>
+								{#if erreurs.passage}<p id="passage-erreur" class="erreur">{erreurs.passage}</p>{/if}
+							</div>
+						{/if}
 						<Champ id="entree-centre" name="entreeCentre" type="date" libelle="Entrée au centre" valeur={texte('entreeCentre', fiche.entreeCentre)} erreur={erreurs.entreeCentre} />
 						<Champ id="engagement-spv" name="engagementSpv" type="date" libelle="Engagement SPV" valeur={texte('engagementSpv', fiche.engagementSpv)} erreur={erreurs.engagementSpv} />
 						<Bouton type="submit">Enregistrer</Bouton>
@@ -690,5 +722,10 @@
 		min-height: var(--cible);
 		display: flex;
 		align-items: center;
+	}
+	.passage {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-8);
 	}
 </style>
