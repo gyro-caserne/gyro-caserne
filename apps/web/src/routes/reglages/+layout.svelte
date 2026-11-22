@@ -29,10 +29,11 @@
 	{#if enfant}
 		<nav class="cote" aria-label="Réglages du centre" bind:this={cote}>
 			<!-- Les créations restent à portée depuis une page de réglage, avec les mêmes droits que la page Réglages. -->
-			{#if data.responsabilites || data.comites}
+			{#if data.responsabilites || data.comites || data.profils}
 				<div class="creer">
 					{#if data.responsabilites}{@render creer('/reglages/roles/nouveau', 'Nouveau rôle')}{/if}
 					{#if data.comites}{@render creer('/reglages/comites/nouveau', 'Nouveau comité')}{/if}
+					{#if data.profils}{@render creer('/reglages/profils/nouveau', 'Nouveau profil')}{/if}
 				</div>
 			{/if}
 			<ListeReglages {data} niveauTitre={2} />

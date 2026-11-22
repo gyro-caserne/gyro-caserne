@@ -49,7 +49,7 @@ export async function comitesChoix(base: App.Locals['base']) {
 }
 
 // Ce que reçoit la page après un envoi. `cible` dit quel formulaire est concerné (role, detail, archiver…) : le message s'affiche à côté.
-export type Valeurs = { nom?: string; theme?: string; nature?: string; portee?: string; attributeur?: string; icone?: string; droits?: string[]; niveaux?: Record<string, string>; admin?: string[] };
+export type Valeurs = { nom?: string; type?: string; theme?: string; nature?: string; portee?: string; attributeur?: string; icone?: string; droits?: string[]; niveaux?: Record<string, string>; admin?: string[] };
 export type Reponse = { cible: string; succes?: string; message?: string; erreurs?: Record<string, string>; valeurs?: Valeurs };
 
 // Message du socle -> champ du formulaire et phrase claire. Un message absent de la table s'affiche tel quel.
@@ -83,6 +83,12 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Icône inconnue': { champ: 'icone', texte: 'Choisissez une icône de la liste.' },
 	'Modèle inconnu': { texte: 'Ce modèle n’existe pas. Choisissez-en un dans la liste.' },
 	'Profil inconnu': { texte: 'Ce profil n’existe pas.' },
+	'Type inconnu': { champ: 'type', texte: 'Choisissez le type du profil.' },
+	'Ce profil est encore attribué': { texte: 'Ce profil est encore attribué. Changez d’abord le profil des personnes qui l’ont.' },
+	'Le profil des agents ne se supprime pas': { texte: 'Le profil des agents de départ ne se supprime pas.' },
+	'Seul un profil extérieur reçoit des murs ouverts': { texte: 'Seul un profil extérieur reçoit des murs ouverts.' },
+	'Mur inconnu': { texte: 'Un des murs n’existe plus. Rechargez la page.' },
+	'Niveau inconnu': { texte: 'Choisissez Aucun accès, Lecture ou Écriture pour chaque mur.' },
 	'Un profil ne donne pas de droit de pouvoir': { texte: 'Un profil ne donne pas de droit d’administration.' },
 	'Droit réservé au centre': {
 		texte: '« Gérer les accès », « Gérer les comités » et « Gérer les responsabilités » valent pour tout le centre. Ils ne se donnent qu’à un rôle de portée « Tout le centre ». Décochez-les ou changez la portée.'

@@ -8,7 +8,7 @@ import { finirOuSupprimer } from '../fin-de-periode.ts';
 import { iconeDuRole, type NomIcone } from '../icones.ts';
 import { ligneJournal } from '../journal.ts';
 import type { TypePerimetre } from '../listes.ts';
-import { attribution, avisNomination as avisNominationTable, comite, equipe, personne, responsabilite } from '../schema.ts';
+import { attribution, avisNomination as avisNominationTable, comite, equipe, personne, profil, responsabilite } from '../schema.ts';
 import { mettreEnFile } from '../notifications.ts';
 import { nomActeur } from './personnes.ts';
 
@@ -75,9 +75,11 @@ export async function attribuer(
 	if (laResponsabilite.archiveeLe !== null) throw new DonneeInvalide('Responsabilité archivée');
 	if (a.perimetre.type !== laResponsabilite.typePerimetre) throw new DonneeInvalide('Périmètre différent de celui de la responsabilité');
 	if (a.fin !== undefined && a.fin < a.debut) throw new DonneeInvalide('Fin avant le début');
-	const [fiche] = await base.select({ id: personne.id, statut: personne.statut }).from(personne).where(eq(personne.id, a.personneId));
+	const [fiche] = await base.select({ id: personne.id, statut: personne.statut, typePersonne: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, a.personneId));
 	if (!fiche) throw new DonneeInvalide('Personne inconnue');
 	if (fiche.statut === 'parti') throw new DonneeInvalide('Cette personne est partie');
+	// Une personne d'un profil extérieur ne tient pas de rôle de comité : un agent ou le chef anime le comité.
+	if (fiche.typePersonne === 'exterieur' && a.perimetre.type === 'comite') throw new DonneeInvalide('Une personne extérieure ne tient pas de rôle de comité');
 	let nomPerimetre = 'Le centre';
 	if (a.perimetre.type === 'equipe') {
 		const [uneEquipe] = await base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.id, a.perimetre.id));

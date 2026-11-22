@@ -116,10 +116,10 @@ const citesParSysteme = (filtre: SQL | undefined) => sql`(select j.value from ${
 
 const STATUTS = sql.raw(STATUTS_AVEC_ACCES.map((s) => `'${s}'`).join(', '));
 
-// Seule règle d'accès à la messagerie, en SQL pour l'appliquer à beaucoup de personnes en une requête : un agent qui a accès
+// Règle d'accès d'un agent, en SQL pour l'appliquer à beaucoup de personnes en une requête : un agent qui a accès
 // (ni parti, ni suspendu, ni extérieur) et qui tient UTILISER_MESSAGERIE sur le centre ce jour-là, par son profil ou par une
-// responsabilité en cours (même calcul que droitsDe, vérifié par les tests).
-export function aLaMessagerie(id: SQLWrapper | number, aujourdhui: string): SQL {
+// responsabilité en cours (même calcul que droitsDe, vérifié par les tests). Seuls les agents ont les groupes.
+export function messagerieDAgent(id: SQLWrapper | number, aujourdhui: string): SQL {
 	return sql`exists (select 1 from personne p left join profil pr on pr.id = p.profil_id
 		where p.id = ${id} and p.statut in (${STATUTS}) and (pr.type_personne is null or pr.type_personne <> 'exterieur')
 		and (exists (select 1 from profil_droit pd where pd.profil_id = p.profil_id and pd.droit = 'UTILISER_MESSAGERIE' and pd.perimetre_type = 'centre')
@@ -129,7 +129,46 @@ export function aLaMessagerie(id: SQLWrapper | number, aujourdhui: string): SQL 
 				where a.personne_id = p.id and a.perimetre_type = 'centre' and r.type_perimetre = 'centre' and a.debut <= ${aujourdhui} and (a.fin is null or a.fin >= ${aujourdhui}))))`;
 }
 
+// Une personne d'un profil extérieur.
+const exterieur = (id: SQLWrapper | number) => sql`exists (select 1 from personne p join profil pr on pr.id = p.profil_id where p.id = ${id} and pr.type_personne = 'exterieur')`;
+
+// Les comités en cours qu'un profil extérieur ouvre en écriture à cette personne (JSON invalide : aucun).
+const comitesEcrits = (id: SQLWrapper | number) =>
+	sql`select c.id from personne p join profil pr on pr.id = p.profil_id, json_each(case when json_valid(pr.murs_ouverts) then pr.murs_ouverts else '{}' end) j
+		join comite c on j.key = 'comite:' || c.id
+		where p.id = ${id} and pr.type_personne = 'exterieur' and pr.murs_ouverts <> '{}' and j.value = 'ecriture' and c.dissous_le is null`;
+
+// Les comités en cours où un agent tient un rôle de comité ce jour-là.
+const comitesTenus = (id: SQLWrapper | number, aujourdhui: string) =>
+	sql`select a.perimetre_id from attribution a join responsabilite r on r.id = a.responsabilite_id join comite c on c.id = a.perimetre_id
+		where a.personne_id = ${id} and not ${exterieur(id)} and a.perimetre_type = 'comite' and r.type_perimetre = 'comite' and r.archivee_le is null
+		and c.dissous_le is null and a.debut <= ${aujourdhui} and (a.fin is null or a.fin >= ${aujourdhui})`;
+
+// Le chef de centre ou son adjoint ce jour-là.
+const chefOuAdjoint = (id: SQLWrapper | number, aujourdhui: string) =>
+	sql`exists (select 1 from attribution a join responsabilite r on r.id = a.responsabilite_id
+		where a.personne_id = ${id} and not ${exterieur(id)} and a.perimetre_type = 'centre' and r.systeme in ('chef_centre', 'chef_centre_adjoint')
+		and a.debut <= ${aujourdhui} and (a.fin is null or a.fin >= ${aujourdhui}))`;
+
+// Seule règle d'accès à la messagerie : un agent qui l'a (messagerieDAgent), ou une personne d'un profil extérieur, ni partie ni
+// suspendue, à qui son profil ouvre au moins un comité en cours en écriture.
+export function aLaMessagerie(id: SQLWrapper | number, aujourdhui: string): SQL {
+	return sql`(${messagerieDAgent(id, aujourdhui)} or exists (select 1 from personne p join profil pr on pr.id = p.profil_id where p.id = ${id} and pr.type_personne = 'exterieur' and pr.murs_ouverts <> '{}' and p.statut in (${STATUTS}) and exists (${comitesEcrits(id)})))`;
+}
+
+// Une personne d'un profil extérieur et une autre sont liées si l'autre est chef de centre ou adjoint, ou si elles partagent un
+// comité qu'il a en écriture (l'autre y tenant un rôle, ou l'ayant aussi en écriture).
+const lies = (ext: SQLWrapper | number, autre: SQLWrapper | number, aujourdhui: string) =>
+	sql`(${exterieur(ext)} and (${chefOuAdjoint(autre, aujourdhui)} or exists (select 1 from (${comitesEcrits(ext)}) x where x.id in (${comitesEcrits(autre)}) or x.id in (${comitesTenus(autre, aujourdhui)}))))`;
+
+// L'acteur `moi` peut-il écrire à `autre` (et `autre` à lui) ? L'autre a la messagerie, et ce sont deux agents ou deux personnes liées.
+export function peutEcrireA(moi: SQLWrapper | number, autre: SQLWrapper | number, aujourdhui: string): SQL {
+	return sql`(((not ${exterieur(moi)} and not ${exterieur(autre)}) or ${lies(moi, autre, aujourdhui)} or ${lies(autre, moi, aujourdhui)}) and ${aLaMessagerie(autre, aujourdhui)})`;
+}
+
 const lireAcces = (base: Base, id: number, aujourdhui: string) => base.select({ id: personne.id }).from(personne).where(and(eq(personne.id, id), aLaMessagerie(id, aujourdhui)));
+// Les groupes ne sont qu'entre agents.
+const lireAccesDAgent = (base: Base, id: number, aujourdhui: string) => base.select({ id: personne.id }).from(personne).where(and(eq(personne.id, id), messagerieDAgent(id, aujourdhui)));
 
 export async function exigerMessagerie(base: Base, acteur: Acteur, aujourdhui: string): Promise<number> {
 	const moi = idDe(acteur);
@@ -161,7 +200,7 @@ export async function annuaire(base: Base, acteur: Acteur, aujourdhui: string) {
 		base
 			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, surnom: personne.surnom })
 			.from(personne)
-			.where(and(ne(personne.id, moi), aLaMessagerie(personne.id, aujourdhui))),
+			.where(and(ne(personne.id, moi), peutEcrireA(moi, personne.id, aujourdhui))),
 		affectationsDuJour(base, aujourdhui),
 		requeteTenues(base, null, aujourdhui)
 	]);
@@ -170,7 +209,7 @@ export async function annuaire(base: Base, acteur: Acteur, aujourdhui: string) {
 	return agents.map((a) => ({ ...a, equipe: equipes.get(a.id) ?? null, role: roleDe(tenues, a.id) })).sort(parNom);
 }
 
-// Une conversation à deux dont l'autre n'a plus la messagerie (parti, suspendu) ne sert plus qu'à relire.
+// Une conversation à deux dont l'autre n'est plus joignable (parti, suspendu, plus lié à un profil extérieur) ne sert plus qu'à relire.
 const enLectureSeule = (type: TypeConversation, autres: { acces: number }[]) => type === 'deux' && (autres.length === 0 || autres.some((a) => !a.acces));
 
 // Sans texte, au moins une photo.
@@ -228,7 +267,7 @@ export async function envoyer(
 			.where(eq(conversation.id, laConversation)),
 		// La personne visée ou, pour une conversation, les autres membres : ont-ils encore la messagerie ?
 		base
-			.select({ id: personne.id, acces: sql<number>`${aLaMessagerie(personne.id, aujourdhui)}`.as('acces') })
+			.select({ id: personne.id, acces: sql<number>`${peutEcrireA(moi, personne.id, aujourdhui)}`.as('acces') })
 			.from(personne)
 			.where(autre !== null ? eq(personne.id, autre) : inArray(personne.id, base.select({ id: membreConversation.personneId }).from(membreConversation).where(and(eq(membreConversation.conversationId, laConversation), ne(membreConversation.personneId, moi))))),
 		base
@@ -312,7 +351,7 @@ function lecturesDuFil(base: Base, id: number, moi: number, aujourdhui: string, 
 				luJusquA: membreConversation.luJusquA,
 				entreLe: membreConversation.entreLe,
 				coches: personne.cochesLecture,
-				acces: sql<number>`${aLaMessagerie(membreConversation.personneId, aujourdhui)}`.as('acces')
+				acces: sql<number>`${peutEcrireA(moi, membreConversation.personneId, aujourdhui)}`.as('acces')
 			})
 			.from(membreConversation)
 			.innerJoin(personne, eq(personne.id, membreConversation.personneId))
@@ -602,7 +641,7 @@ async function lireMessage(base: Base, acteur: Acteur, id: number, maintenant: s
 			.innerJoin(membreConversation, and(eq(membreConversation.conversationId, message.conversationId), eq(membreConversation.personneId, moi)))
 			.where(eq(message.id, id)),
 		base
-			.select({ acces: sql<number>`${aLaMessagerie(membreConversation.personneId, aujourdhui)}`.as('acces') })
+			.select({ acces: sql<number>`${peutEcrireA(moi, membreConversation.personneId, aujourdhui)}`.as('acces') })
 			.from(membreConversation)
 			.where(and(inArray(membreConversation.conversationId, saConversation), ne(membreConversation.personneId, moi))),
 		base
@@ -771,7 +810,7 @@ async function lireGroupe(base: Base, acteur: Acteur, id: number, maintenant: st
 	const moi = idDe(acteur);
 	exigerId(id, 'Conversation');
 	const [acces, place, membres, joignables, photos = []] = await base.batch([
-		lireAcces(base, moi, aujourdhui),
+		lireAccesDAgent(base, moi, aujourdhui),
 		base.select({ type: conversation.type }).from(conversation).where(eq(conversation.id, id)),
 		base
 			.select({ id: membreConversation.personneId, animateur: membreConversation.animateur, entreLe: membreConversation.entreLe })
@@ -780,7 +819,7 @@ async function lireGroupe(base: Base, acteur: Acteur, id: number, maintenant: st
 		base
 			.select({ id: personne.id })
 			.from(personne)
-			.where(and(inArray(personne.id, cibles), aLaMessagerie(personne.id, aujourdhui))),
+			.where(and(inArray(personne.id, cibles), messagerieDAgent(personne.id, aujourdhui))),
 		...(pourQuitter ? [photosDesDerniers(base, eq(message.conversationId, id))] : [])
 	]);
 	if (acces.length === 0) throw refus();
@@ -805,11 +844,11 @@ export async function creerGroupe(base: Base, acteur: Acteur, donnees: { nom: st
 	if (autres.length + 1 > TAILLE_GROUPE) throw new DonneeInvalide(`${TAILLE_GROUPE} membres au plus`);
 
 	const [acces, joignables] = await base.batch([
-		lireAcces(base, moi, aujourdhui),
+		lireAccesDAgent(base, moi, aujourdhui),
 		base
 			.select({ id: personne.id })
 			.from(personne)
-			.where(and(inArray(personne.id, autres), aLaMessagerie(personne.id, aujourdhui)))
+			.where(and(inArray(personne.id, autres), messagerieDAgent(personne.id, aujourdhui)))
 	]);
 	if (acces.length === 0) throw refus();
 	if (joignables.length !== autres.length) throw new DonneeInvalide('Une personne n’est pas dans l’annuaire');
@@ -974,8 +1013,8 @@ export async function membresPourGroupe(base: Base, acteur: Acteur, source: { eq
 	const pourEquipe = 'equipe' in source;
 	const id = pourEquipe ? exigerId(source.equipe, 'Équipe') : exigerId(source.comite, 'Comité');
 	const [acces, avecMessagerie, agents, affectations, tenues, lignes] = await base.batch([
-		lireAcces(base, moi, aujourdhui),
-		base.select({ id: personne.id }).from(personne).where(aLaMessagerie(personne.id, aujourdhui)),
+		lireAccesDAgent(base, moi, aujourdhui),
+		base.select({ id: personne.id }).from(personne).where(messagerieDAgent(personne.id, aujourdhui)),
 		...lecturesAgents(base, aujourdhui),
 		pourEquipe
 			? base.select({ nom: equipe.nom }).from(equipe).where(and(eq(equipe.id, id), eq(equipe.active, 1)))
@@ -996,6 +1035,8 @@ const autresMembres = (agents: AgentDuJour[], cle: string, moi: number, avecMess
 };
 
 export type PourVous = {
+	// Faux pour une personne d'un profil extérieur : pas de groupe.
+	groupes: boolean;
 	chefs: number[];
 	equipes: { id: number; numero: number; nom: string; couleur: string; membres: number }[];
 	comites: { id: number; nom: string; icone: NomIcone; membres: number }[];
@@ -1008,7 +1049,7 @@ export async function pourVous(base: Base, acteur: Acteur, aujourdhui: string): 
 	const moi = idDe(acteur);
 	const [acces, avecMessagerie, agents, affectations, tenues, equipes, comites] = await base.batch([
 		lireAcces(base, moi, aujourdhui),
-		base.select({ id: personne.id }).from(personne).where(aLaMessagerie(personne.id, aujourdhui)),
+		base.select({ id: personne.id }).from(personne).where(messagerieDAgent(personne.id, aujourdhui)),
 		...lecturesAgents(base, aujourdhui),
 		base.select({ id: equipe.id, numero: equipe.ordreRotation, nom: equipe.nom, couleur: equipe.couleur }).from(equipe).where(eq(equipe.active, 1)).orderBy(equipe.ordreRotation),
 		base.select({ id: comite.id, nom: comite.nom, theme: comite.theme, icone: comite.icone }).from(comite).where(isNull(comite.dissousLe)).orderBy(comite.nom)
@@ -1016,10 +1057,11 @@ export async function pourVous(base: Base, acteur: Acteur, aujourdhui: string): 
 	if (acces.length === 0) throw refus();
 	const tous = agentsDuJour([agents, affectations, tenues], aujourdhui);
 	const a = tous.find((x) => x.id === moi)?.a;
-	if (!a) return { chefs: [], equipes: [], comites: [] };
+	if (!a) return { groupes: false, chefs: [], equipes: [], comites: [] };
 	const ouverts = new Set(avecMessagerie.map((p) => p.id));
 	const compter = (cle: string) => autresMembres(tous, cle, moi, avecMessagerie).length;
 	return {
+		groupes: true,
 		chefs: tous.filter((x) => x.id !== moi && ouverts.has(x.id) && [...a.membreEquipe].some((e) => x.a.chefEquipe.has(e))).map((x) => x.id),
 		equipes: equipes
 			.filter((e) => a.membreEquipe.has(e.id) || a.chefEquipe.has(e.id))

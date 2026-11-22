@@ -7,7 +7,9 @@ export const profil = sqliteTable(
 	{
 		id: integer('id').primaryKey({ autoIncrement: true }),
 		nom: text('nom').notNull(),
-		typePersonne: text('type_personne', { enum: TYPES_PERSONNE }).notNull()
+		typePersonne: text('type_personne', { enum: TYPES_PERSONNE }).notNull(),
+		// Murs ouverts à un profil extérieur, en JSON : {"vie":"lecture","comite:4":"ecriture"} (lireMursOuverts).
+		mursOuverts: text('murs_ouverts').notNull().default('{}')
 	},
 	() => [check('profil_type_personne', checkDans('type_personne', TYPES_PERSONNE))]
 );

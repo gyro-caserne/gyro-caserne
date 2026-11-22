@@ -22,7 +22,7 @@
 - **Signaler un message** : il part vers ceux qui ont le droit `MODERER_MESSAGERIE` (le chef de centre et son adjoint, et le super administrateur), avec **uniquement** le message signalé, pas le reste de la conversation. Ils le voient dans la cloche, avec l'auteur, la date et qui a signalé. Ils peuvent **retirer le message** pour tous (« Message retiré par la modération ») ou **classer** le signalement. Le signalement garde une copie du message (texte et photos) jusqu'à son classement, au cas où l'auteur le supprime.
 - **Prévenir** : chaque nouveau message envoie une notification au téléphone des autres membres (pas de ligne dans la cloche) ; le haut-parleur de la conversation la coupe. L'onglet « Messages » d'Échanges et l'icône de l'appli comptent les messages non lus. Voir [Notifications](notifications.md).
 - **Conservation** : les messages sont effacés après une durée réglable par le centre, 12 mois par défaut. L'effacement a lieu chaque nuit.
-- Les extérieurs (réserve citoyenne) n'ont pas accès à la messagerie.
+- Les extérieurs n'ont pas la messagerie, sauf si leur profil leur ouvre un comité en écriture. Ils écrivent alors à deux aux membres de ces comités (les agents qui y tiennent un rôle, et les extérieurs qui ont aussi ce comité en écriture), au chef de centre et à l'adjoint, qui peuvent leur répondre. Ils ne créent pas de groupe et n'y sont pas ajoutés. Une conversation avec quelqu'un qui n'est plus joignable (il a quitté le comité, par exemple) reste lisible, en lecture seule.
 
 ## Ce que la fonction ne fait pas
 

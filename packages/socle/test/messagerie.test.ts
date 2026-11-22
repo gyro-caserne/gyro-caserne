@@ -839,6 +839,7 @@ describe('groupes', () => {
 		const vus = await pourVous(base, acteur(manon), aujourdhui);
 		expect(base.requetes - avant).toBe(1);
 		expect(vus).toEqual({
+			groupes: true,
 			chefs: [romain],
 			equipes: [{ id: e1.id, numero: e1.ordreRotation, nom: e1.nom, couleur: e1.couleur, membres: 2 }],
 			comites: [{ id: amicale!.id, nom: 'Amicale', icone: 'coeur', membres: 1 }]

@@ -15,7 +15,9 @@
 	const annonceSucces = $derived(form?.succes ?? '');
 	const annonceEchec = $derived(form && !form.succes ? (form.message ?? 'La publication contient des erreurs.') : '');
 
-	const agir = $derived(data.estPersonne === true && !data.mur.lectureSeule);
+	// Un profil extérieur qui n'a ce mur qu'en lecture ne réagit pas, mais confirme une annonce.
+	const confirmer = $derived(data.estPersonne === true && !data.mur.lectureSeule);
+	const agir = $derived(confirmer && data.mur.peutReagir);
 	const retour = (id: number) => (form?.cible === `publication:${id}` ? form : undefined);
 	const suite = $derived(data.plusAnciennes);
 	// « Alice Martin, Bruno Petit et Chloé Roux »
@@ -67,14 +69,14 @@
 {#if data.epinglees.length > 0}
 	<section aria-labelledby="titre-epinglees" class="liste">
 		<h2 id="titre-epinglees">Épinglées</h2>
-		{#each data.epinglees as p (p.id)}<Publication {p} equipes={data.equipes} retour={retour(p.id)} {agir} lectureSeule={data.mur.lectureSeule} messagerie={data.messagerie} animer={p.id === premierBravo} />{/each}
+		{#each data.epinglees as p (p.id)}<Publication {p} equipes={data.equipes} retour={retour(p.id)} {agir} {confirmer} lectureSeule={!data.mur.peutReagir} messagerie={data.messagerie} animer={p.id === premierBravo} />{/each}
 	</section>
 {/if}
 
 <section aria-labelledby="titre-publications" class="liste">
 	<h2 id="titre-publications">{suite ? 'Publications plus anciennes' : 'Publications'}</h2>
 	{#each data.publications as p (p.id)}
-		<Publication {p} equipes={data.equipes} retour={retour(p.id)} {agir} lectureSeule={data.mur.lectureSeule} messagerie={data.messagerie} animer={p.id === premierBravo} />
+		<Publication {p} equipes={data.equipes} retour={retour(p.id)} {agir} {confirmer} lectureSeule={!data.mur.peutReagir} messagerie={data.messagerie} animer={p.id === premierBravo} />
 	{:else}
 		<Vide texte={suite ? 'Aucune publication plus ancienne.' : 'Rien n’a encore été publié ici.'} />
 	{/each}
@@ -91,6 +93,8 @@
 	</a>
 {:else if data.mur.lectureSeule}
 	<p class="aide">Ce mur est en lecture seule. On n’y publie plus.</p>
+{:else if !data.mur.peutReagir}
+	<p class="aide">Vous lisez ce mur sans y publier ni commenter.</p>
 {:else}
 	<p class="aide">Vous lisez ce mur ; seuls ses modérateurs y publient.</p>
 {/if}

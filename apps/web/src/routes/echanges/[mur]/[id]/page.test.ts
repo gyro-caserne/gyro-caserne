@@ -25,7 +25,7 @@ const publication: PublicationVue = {
 	derniersCommentaires: [],
 	droits: { modifier: true, supprimer: true, epingler: true, fermer: true }
 };
-const mur = { cle: 'centre', nom: 'Le centre', type: 'centre', peutPublier: true, peutModerer: true, lectureSeule: false };
+const mur = { cle: 'centre', nom: 'Le centre', type: 'centre', peutPublier: true, peutReagir: true, peutModerer: true, lectureSeule: false };
 const commentaires = ['Un', 'Deux', 'Trois'].map((texte, i) => ({ id: i + 1, auteur: { prenom: 'Alice', nom: 'Petit' }, texte, creeLe: '2026-10-28T15:00', supprimable: i === 0 }));
 const personne = (prenom: string) => ({ id: prenom.length, prenom, nom: 'Test' });
 const html = (data: Record<string, unknown> = {}, form: unknown = null) =>
@@ -57,6 +57,14 @@ describe('page d’une publication', () => {
 		expect(fermes).not.toContain('?/commenter');
 		expect(fermes).toContain('Les commentaires sont fermés.');
 		expect(html({ mur: { ...mur, lectureSeule: true } })).not.toContain('?/commenter');
+	});
+
+	it('mur ouvert en lecture seulement (profil extérieur) : confirmer l’annonce, sans aimer ni commenter', () => {
+		const lecteur = html({ mur: { ...mur, peutPublier: false, peutReagir: false, peutModerer: false }, publication: { ...publication, droits: { modifier: false, supprimer: false, epingler: false, fermer: false } } });
+		expect(lecteur).toContain('?/prendreConnaissance');
+		expect(lecteur).not.toContain('?/aimer');
+		expect(lecteur).not.toContain('?/commenter');
+		expect(lecteur).toContain('Vous lisez ce mur sans y commenter.');
 	});
 
 	it('refus du commentaire : message et saisie gardée ; une seule zone annoncée', () => {

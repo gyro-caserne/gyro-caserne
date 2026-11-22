@@ -3,7 +3,7 @@ import type { Base } from './base.ts';
 import { enCours } from './dates.ts';
 import { aLeDroit, occupe, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
-import type { StatutOperationnel } from './listes.ts';
+import type { StatutOperationnel, TypePersonne } from './listes.ts';
 import { affectationEquipe, attribution, comite, equipe, grade, personne, profil, responsabilite } from './schema.ts';
 
 export type EquipeCourante = { id: number; nom: string; couleur: string };
@@ -30,7 +30,7 @@ export type ListeGestion = { groupes: GroupeAgents<LigneGestion>[]; comptes: Rec
 export type FicheAgent = Omit<typeof personne.$inferSelect, 'photo' | 'gradeId' | 'profilId'> & {
 	equipe: EquipeCourante | null;
 	grade: { id: number; libelle: string } | null;
-	profil: { id: number; nom: string } | null;
+	profil: { id: number; nom: string; typePersonne: TypePersonne } | null;
 	protection: 'chef' | 'adjoint' | null;
 };
 
@@ -181,7 +181,7 @@ export async function ficheAgent(base: Base, acteur: Acteur, id: number, aujourd
 	const { photo: _photo, gradeId, profilId, ...champs } = p;
 
 	const [leGrade] = gradeId === null ? [] : await base.select({ id: grade.id, libelle: grade.libelle }).from(grade).where(eq(grade.id, gradeId));
-	const [leProfil] = profilId === null ? [] : await base.select({ id: profil.id, nom: profil.nom }).from(profil).where(eq(profil.id, profilId));
+	const [leProfil] = profilId === null ? [] : await base.select({ id: profil.id, nom: profil.nom, typePersonne: profil.typePersonne }).from(profil).where(eq(profil.id, profilId));
 	const e = (await equipesCourantes(base, aujourdhui)).get(id);
 	const protection = (await occupe(base, id, 'chef_centre', aujourdhui)) ? 'chef' : (await occupe(base, id, 'chef_centre_adjoint', aujourdhui)) ? 'adjoint' : null;
 

@@ -107,6 +107,8 @@ describe('page Réglages', () => {
 		const sansComites = html(Page, { data: { ...data, comites: null, profils: null } });
 		expect(sansComites).not.toContain('/reglages/comites/nouveau');
 		expect(sansComites).not.toContain('>Profils<');
+		expect(page).toMatch(/href="\/reglages\/profils\/nouveau" aria-label="Nouveau profil"/);
+		expect(sansComites).not.toContain('/reglages/profils/nouveau');
 		expect(sansComites).toContain('>Référents<');
 	});
 

@@ -416,3 +416,26 @@ describe('/agents/[id] : aptitudes', () => {
 		await expect(agir('aptitude', locaux(base, { type: 'personne', id: agent }), agent, { aptitudeId: String(ca1!.id), obtenueLe: '2020-03-01' })).rejects.toMatchObject({ status: 403 });
 	});
 });
+
+describe('/agents/[id] : passage à un profil extérieur', () => {
+	it('sans « Je confirme » : refusé, rien d’écrit ; confirmé : profil changé, équipe quittée', async () => {
+		const { base, chef, agent, equipe1, profilAgent } = await preparer();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		await base.insert(affectationEquipe).values({ personneId: agent, equipeId: equipe1.id, debut: '2020-01-01' });
+		const locals = locaux(base, { type: 'personne', id: chef });
+		expect(await agir('fiche', locals, agent, { profilId: String(reserve!.id) })).toMatchObject({ status: 400, data: { erreurs: { passage: 'Cochez « Je confirme » pour changer de profil.' } } });
+		expect((await lirePersonne(base, agent)).profilId).toBe(profilAgent.id);
+		expect(await agir('fiche', locals, agent, { profilId: String(reserve!.id), passage: 'oui' })).toMatchObject({ succes: true, bloc: 'parcours' });
+		expect((await lirePersonne(base, agent)).profilId).toBe(reserve!.id);
+		expect((await base.select().from(affectationEquipe).where(eq(affectationEquipe.personneId, agent)))[0]!.fin).not.toBeNull();
+		// Retour vers Agent : sans confirmation.
+		expect(await agir('fiche', locals, agent, { profilId: String(profilAgent.id) })).toMatchObject({ succes: true });
+	});
+
+	it('l’adjoint ne passe pas à un profil extérieur : le message sur le champ', async () => {
+		const { base, adjoint } = await preparer();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const r = await agir('fiche', locaux(base, super_), adjoint, { profilId: String(reserve!.id), passage: 'oui' });
+		expect(r).toMatchObject({ status: 400, data: { erreurs: { profilId: 'Le chef de centre et son adjoint restent agents' } } });
+	});
+});

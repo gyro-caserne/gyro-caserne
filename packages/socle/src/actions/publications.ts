@@ -294,6 +294,19 @@ function visage([agents, affectations, tenues]: AgentsLus, equipes: { id: number
 
 const PRESENTS_MAX = 3;
 
+// « Répondre en privé » : la règle de peutEcrireA (messagerie.ts), refaite ici sur ce qui est déjà lu, sans requête de plus.
+// Deux agents se joignent toujours ; une personne d'un profil extérieur, le chef, l'adjoint et qui partage un de ses comités en écriture.
+// L'envoi reste contrôlé par la règle SQL.
+function joignables(a: Appartenances | undefined, b: Appartenances | undefined): boolean {
+	if (!a || !b) return false;
+	if (a.ouverts === null && b.ouverts === null) return true;
+	const lie = (ext: Appartenances, autre: Appartenances) =>
+		ext.ouverts !== null &&
+		((autre.ouverts === null && autre.tous) ||
+			[...ext.ouverts].some(([cle, niveau]) => niveau === 'ecriture' && cle.startsWith('comite:') && (autre.ouverts === null ? autre.membreComite.has(Number(cle.slice('comite:'.length))) : autre.ouverts.get(cle) === 'ecriture')));
+	return lie(a, b) || lie(b, a);
+}
+
 const idPersonne = (auteur: string) => {
 	const id = /^personne:(\d+)$/.exec(auteur)?.[1];
 	return id === undefined ? null : Number(id);
@@ -319,7 +332,7 @@ async function vuesDe(
 	const moi = acteur.type === 'personne' ? acteur.id : 0;
 	const aujourdhui = options.maintenant.slice(0, 10);
 	const lectures = [
-		...lecturesAgents(base, aujourdhui),
+		...lecturesAgents(base, aujourdhui, true),
 		base.select({ id: equipe.id, couleur: equipe.couleur }).from(equipe),
 		base
 			.select({ publicationId: jaime.publicationId, n: count(), deMoi: sql<number>`max(${jaime.personneId} = ${moi})` })
@@ -393,7 +406,9 @@ async function vuesDe(
 					: [];
 	const [agents, affectations, tenues, equipes, jaimes, commentaires, reponses, votes, prises, presents, photos, auteurs, derniers, changements] = await base.batch([...lectures, ...ecritures]);
 	const lus: AgentsLus = [agents, affectations, tenues];
-	const membres = membresDe(agentsDuJour(lus, aujourdhui), cle);
+	const parAgent = agentsDuJour(lus, aujourdhui);
+	const membres = membresDe(parAgent, cle);
+	const lui = parAgent.find((x) => x.id === moi)?.a;
 	const vusCommentaires = derniers.map((c) => ({ ...commentaireVu(acteur, mur, c), publicationId: c.publicationId }));
 	options.tous?.push(...vusCommentaires.map(({ publicationId: _, ...c }) => c));
 
@@ -421,7 +436,7 @@ async function vuesDe(
 		return {
 			id: p.id,
 			cle: p.mur as CleMur,
-			auteur: { ...auteurVu(p.auteur, fiche), ...visage(lus, equipes, idPersonne(p.auteur)), ecrireA: fiche?.messagerie === 1 && fiche.id !== moi ? fiche.id : null },
+			auteur: { ...auteurVu(p.auteur, fiche), ...visage(lus, equipes, idPersonne(p.auteur)), ecrireA: fiche?.messagerie === 1 && fiche.id !== moi && joignables(lui, parAgent.find((x) => x.id === fiche.id)?.a) ? fiche.id : null },
 			type: p.type,
 			texte: p.texte,
 			creeLe: p.creeLe,
@@ -442,7 +457,7 @@ async function vuesDe(
 							fin: p.fin,
 							lieu: p.lieu ?? '',
 							convoques,
-							convoque: estConvoque(appartenances, cle, convocation, moi),
+							convoque: estConvoque(appartenances, cle, convocation, moi, p.auteur),
 							moment: momentEvenement(p.debut, maintenant, p.fin),
 							reponse: sesReponses.find((r) => r.deMoi === 1)?.reponse ?? null,
 							compte: Object.fromEntries(REPONSES_EVENEMENT.map((r) => [r, sesReponses.find((x) => x.reponse === r)?.n ?? 0])) as Record<ReponseEvenement, number>,

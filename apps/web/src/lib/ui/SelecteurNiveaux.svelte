@@ -9,7 +9,8 @@
 		niveaux,
 		valeur = $bindable(0),
 		surMesure = false,
-		desactive = false
+		desactive = false,
+		segments = false
 	}: {
 		name: string;
 		legende: string;
@@ -17,6 +18,8 @@
 		valeur?: number | 'sur_mesure';
 		surMesure?: boolean;
 		desactive?: boolean;
+		// `segments` : une barre à quelques choix sur une ligne (le bloc segmenté commun) au lieu des boutons.
+		segments?: boolean;
 	} = $props();
 
 	const phrase = $derived(valeur === 'sur_mesure' ? 'Des droits choisis un par un, détaillés plus bas.' : niveaux[valeur]?.phrase);
@@ -32,14 +35,14 @@
 
 <fieldset class="selecteur" bind:this={groupe} disabled={desactive}>
 	<legend class="cache">{legende}</legend>
-	<div class="options">
+	<div class={segments ? 'segments radios' : 'options'}>
 		{#each niveaux as niveau, i (niveau.libelle)}
-			<label class="option"
+			<label class={segments ? undefined : 'option'}
 				><input type="radio" {name} value={String(i)} checked={valeur === i} onchange={() => (valeur = i)} /><span>{niveau.libelle}</span></label
 			>
 		{/each}
 		{#if surMesure}
-			<label class="option"
+			<label class={segments ? undefined : 'option'}
 				><input type="radio" {name} value="sur_mesure" checked={valeur === 'sur_mesure'} onchange={() => (valeur = 'sur_mesure')} /><span>Sur mesure</span></label
 			>
 		{/if}

@@ -132,7 +132,7 @@ export async function notifierPublication(base: Base, id: number, maintenant: st
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const [lignes, agents, affectations, tenues, equipes, comites, auteurs] = await base.batch([
 		base.select({ mur: publication.mur, auteur: publication.auteur, texte: publication.texte }).from(publication).where(eq(publication.id, id)),
-		...lecturesAgents(base, aujourdhui),
+		...lecturesAgents(base, aujourdhui, true),
 		...nomsDesMurs(base),
 		base
 			.select({ prenom: personne.prenom, nom: personne.nom })
@@ -155,15 +155,15 @@ export async function notifierPublication(base: Base, id: number, maintenant: st
 export async function notifierConvoques(base: Base, id: number, maintenant: string, message: { titre: string; texte: string; seulementSansReponse: boolean }): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const [lignes, agents, affectations, tenues, reponses] = await base.batch([
-		base.select({ mur: publication.mur, convoques: publication.convoques }).from(publication).where(eq(publication.id, id)),
-		...lecturesAgents(base, aujourdhui),
+		base.select({ mur: publication.mur, auteur: publication.auteur, convoques: publication.convoques }).from(publication).where(eq(publication.id, id)),
+		...lecturesAgents(base, aujourdhui, true),
 		base.select({ personneId: reponseEvenement.personneId }).from(reponseEvenement).where(eq(reponseEvenement.publicationId, id))
 	]);
 	const p = lignes[0];
 	if (!p) return;
 	const convoques = JSON.parse(p.convoques ?? '"tous"') as Convocation;
 	const ids = agentsDuJour([agents, affectations, tenues], aujourdhui)
-		.filter((x) => estConvoque(x.a, p.mur, convoques, x.id) && !(message.seulementSansReponse && reponses.some((r) => r.personneId === x.id)))
+		.filter((x) => estConvoque(x.a, p.mur, convoques, x.id, p.auteur) && !(message.seulementSansReponse && reponses.some((r) => r.personneId === x.id)))
 		.map((x) => x.id);
 	if (ids.length === 0) return;
 	const donnees = { titre: message.titre, texte: extrait(message.texte), url: `/echanges/${p.mur}/${id}`, tag: `publication:${id}` };
@@ -179,7 +179,7 @@ export async function notifierCommentaire(base: Base, id: number, maintenant: st
 			.from(commentaire)
 			.innerJoin(publication, eq(publication.id, commentaire.publicationId))
 			.where(eq(commentaire.id, id)),
-		...lecturesAgents(base, aujourdhui),
+		...lecturesAgents(base, aujourdhui, true),
 		base
 			.select({ prenom: personne.prenom, nom: personne.nom })
 			.from(personne)

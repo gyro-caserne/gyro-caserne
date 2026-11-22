@@ -25,7 +25,23 @@ export const ICONES_ROLES = {
 	drapeau: 'M5 21V4h13l-2.5 4 2.5 4H5',
 	haltere: 'M5 7h3v10H5zM16 7h3v10h-3zM8 12h8M3 10v4M21 10v4',
 	megaphone: 'M3 10v4h3l11 5V5L6 10zM6 14l1.5 5h3l-1-4.2M20 9.5v5',
-	euro: 'M18 7a7 7 0 1 0 0 10M4 10h9M4 14h9'
+	euro: 'M18 7a7 7 0 1 0 0 10M4 10h9M4 14h9',
+	// Une canne.
+	retraites: 'M8 7a3.5 3.5 0 0 1 7 0v14M13 21h4',
+	// Une gélule.
+	pharmacie: 'M4.8 12.2l7.4-7.4a4.2 4.2 0 0 1 6 6l-7.4 7.4a4.2 4.2 0 0 1-6-6zM8.5 8.5l6 6',
+	// Un chronomètre.
+	sport: 'M12 8a6.5 6.5 0 1 0 0 13 6.5 6.5 0 1 0 0-13M12 11.5v3l2 1.5M10 3h4M12 3v5M17.5 7.5l1.5-1.5',
+	// Une puce.
+	informatique: 'M7 7h10v10H7zM10 10h4v4h-4zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4',
+	// Une toque de diplômé.
+	formation: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6',
+	// Une toque de cuisinier.
+	cuisine: 'M7 14a4 4 0 0 1-.5-8A4 4 0 0 1 12 3.5 4 4 0 0 1 17.5 6a4 4 0 0 1-.5 8M7 14v6h10v-6M7 17h10',
+	// Une boîte à outils.
+	outils: 'M3 9h18v10H3zM8 9V6h8v3M3 13h18M10 13v2h4v-2',
+	// Une médaille et son ruban.
+	medaille: 'M8 3l4 7 4-7M12 10a5.5 5.5 0 1 0 0 11 5.5 5.5 0 1 0 0-11M12 13.5v4'
 } as const;
 
 export type IconeRole = keyof typeof ICONES_ROLES;

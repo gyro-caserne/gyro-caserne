@@ -607,3 +607,40 @@ body {
 	content: '✓';
 	content: '✓' / '';
 }
+/* Le même bloc pour des boutons radio d'un formulaire (marche sans JavaScript) : les options se partagent la ligne. */
+.segments.radios > label {
+	position: relative;
+	flex: 1 1 0;
+	min-width: 0;
+	min-height: var(--cible);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 var(--espace-8);
+	border-radius: var(--rayon-bouton);
+	color: var(--encre);
+	font: 600 var(--texte-15) var(--police);
+	white-space: nowrap;
+	cursor: pointer;
+}
+.segments.radios input {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+.segments.radios > label:has(input:checked) {
+	background: var(--encre);
+	color: var(--fond);
+	font-weight: 700;
+}
+.segments.radios > label:has(input:focus-visible) {
+	outline: 3px solid var(--focus);
+	outline-offset: 2px;
+}
+@media (forced-colors: active) {
+	.segments.radios > label:has(input:checked) {
+		outline: 2px solid CanvasText;
+	}
+}

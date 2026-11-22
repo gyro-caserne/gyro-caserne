@@ -66,7 +66,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const [[grades, profils, equipes], aptitudes] = await Promise.all([
 		base.batch([
 			base.select({ id: grade.id, libelle: grade.libelle }).from(grade).orderBy(asc(grade.ordre)),
-			base.select({ id: profil.id, nom: profil.nom }).from(profil).orderBy(asc(profil.id)),
+			base.select({ id: profil.id, nom: profil.nom, typePersonne: profil.typePersonne }).from(profil).orderBy(asc(profil.id)),
 			base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation))
 		]),
 		aptitudesEtListe(base, acteur, fiche.id, aujourdhui)
@@ -139,12 +139,17 @@ export const actions: Actions = {
 	},
 
 	fiche: async ({ locals, params, request }) => {
-		const { acteur, aujourdhui, id } = await lireFiche(locals, params.id);
+		const { acteur, aujourdhui, id, fiche } = await lireFiche(locals, params.id);
 		const { champs, erreurs, valeurs } = lireFormulaire(await request.formData());
 		if (Object.keys(erreurs).length > 0) return fail<Reponse>(400, { erreurs, valeurs });
 		const { equipeId: _equipe, profilId, ...autres } = champs;
+		// Passer à un profil extérieur (un retraité) fait quitter l'équipe et les rôles : rien sans confirmation explicite.
+		if (profilId != null && profilId !== fiche.profil?.id && fiche.profil?.typePersonne !== 'exterieur') {
+			const [vise] = await locals.base.select({ type: profil.typePersonne }).from(profil).where(eq(profil.id, profilId));
+			if (vise?.type === 'exterieur' && valeurs.passage !== 'oui') return fail<Reponse>(400, { erreurs: { passage: 'Cochez « Je confirme » pour changer de profil.' }, valeurs });
+		}
 		try {
-			await modifierFiche(locals.base, acteur, id, { ...autres, ...(profilId != null && { profilId }) }, aujourdhui, locals.superAdmins);
+			await modifierFiche(locals.base, acteur, id, { ...autres, ...(profilId != null && { profilId }) }, aujourdhui, locals.superAdmins, { basePhotos: locals.basePhotos, maintenant: maintenantParis() });
 		} catch (erreur) {
 			return echec(erreur, { valeurs });
 		}
