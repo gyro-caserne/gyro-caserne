@@ -32,13 +32,13 @@ export const actions: Actions = {
 		}
 		return { cible, succes: `Le profil « ${profil.nom} » est enregistré.` } satisfies Reponse;
 	},
-	// Un choix par mur : « mur-<clé> » vaut aucun, lecture ou ecriture.
+	// Un choix par mur : « mur-<clé> » vaut 0 (aucun accès), 1 (lecture) ou 2 (écriture).
 	murs: async ({ locals, params, request }) => {
 		const { acteur, base, aujourdhui, profil } = await lireProfil(locals, params.id);
 		const cible = 'murs';
 		const ouverts: Record<string, NiveauOuvert> = {};
 		for (const [cle, valeur] of (await request.formData()).entries())
-			if (cle.startsWith('mur-') && valeur !== 'aucun') ouverts[cle.slice('mur-'.length)] = String(valeur) as NiveauOuvert;
+			if (cle.startsWith('mur-') && valeur !== '0') ouverts[cle.slice('mur-'.length)] = (valeur === '1' ? 'lecture' : valeur === '2' ? 'ecriture' : String(valeur)) as NiveauOuvert;
 		try {
 			await modifierMursOuverts(base, acteur, profil.id, ouverts, aujourdhui);
 		} catch (erreur) {

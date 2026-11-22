@@ -41,10 +41,10 @@ describe('page d’un profil', () => {
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
 		const params = { id: String(reserve!.id) };
-		const r = await envoyer(actions, 'murs', locaux(base, chef), [['mur-centre', 'aucun'], ['mur-vie', 'lecture'], [`mur-comite:${amicale!.id}`, 'ecriture']], params);
+		const r = await envoyer(actions, 'murs', locaux(base, chef), [['mur-centre', '0'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], params);
 		expect(r).toMatchObject({ cible: 'murs', succes: 'Les murs ouverts sont enregistrés.' });
 		expect((await charger(load, locaux(base, chef), params)).profil.mursOuverts).toEqual({ vie: 'lecture', [`comite:${amicale!.id}`]: 'ecriture' });
-		expect(await envoyer(actions, 'murs', locaux(base, chef), [['mur-equipe:1', 'lecture']], params)).toMatchObject({ status: 400 });
+		expect(await envoyer(actions, 'murs', locaux(base, chef), [['mur-equipe:1', '1']], params)).toMatchObject({ status: 400 });
 	});
 
 	it('renommer, puis supprimer avec confirmation ; refusé tant que quelqu’un l’a', async () => {

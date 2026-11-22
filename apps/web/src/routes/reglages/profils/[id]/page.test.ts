@@ -32,9 +32,9 @@ describe('page d’un profil', () => {
 		expect(page).toContain('Murs ouverts');
 		expect(page).toMatch(/action="\?\/murs"/);
 		for (const nom of ['Le centre', 'Vie du centre', 'Retraités']) expect(page).toMatch(new RegExp(`<legend[^>]*>${nom}</legend>`));
-		expect(page).toMatch(/name="mur-comite:4" value="ecriture" checked/);
-		expect(page).toMatch(/name="mur-vie" value="lecture" checked/);
-		expect(page).toMatch(/name="mur-centre" value="aucun" checked/);
+		expect(page).toMatch(/name="mur-comite:4" value="2" checked/);
+		expect(page).toMatch(/name="mur-vie" value="1" checked/);
+		expect(page).toMatch(/name="mur-centre" value="0" checked/);
 		expect(page).not.toContain('equipe:');
 		expect(page).toContain('Aucun accès');
 	});

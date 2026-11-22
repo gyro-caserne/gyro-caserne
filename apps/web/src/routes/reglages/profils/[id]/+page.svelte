@@ -7,7 +7,7 @@
 	import BarreActions from '#lib/ui/BarreActions.svelte';
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import Champ from '#lib/ui/Champ.svelte';
-	import ChoixRadio from '#lib/ui/ChoixRadio.svelte';
+	import SelecteurNiveaux from '#lib/ui/SelecteurNiveaux.svelte';
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import Domaines from '../../Domaines.svelte';
 
@@ -28,12 +28,14 @@
 	const exterieur = $derived(data.profil.typePersonne === 'exterieur');
 	// Les murs qui s'ouvrent : Le centre, Vie du centre et les comités en cours (jamais les équipes).
 	const murs = $derived([{ cle: 'centre', nom: 'Le centre' }, { cle: 'vie', nom: 'Vie du centre' }, ...(data.comitesChoix ?? []).map((c: { id: number; nom: string }) => ({ cle: `comite:${c.id}`, nom: c.nom }))]);
-	const NIVEAUX = [
-		{ valeur: 'aucun', libelle: 'Aucun accès' },
-		{ valeur: 'lecture', libelle: 'Lecture' },
-		{ valeur: 'ecriture', libelle: 'Écriture' }
+	// Envoyés par leur rang : 0 aucun accès, 1 lecture, 2 écriture.
+	const NIVEAUX = ['aucun', 'lecture', 'ecriture'];
+	const niveauxDuMur = (cle: string) => [
+		{ libelle: 'Aucun accès', phrase: 'Ce mur reste fermé.' },
+		{ libelle: 'Lecture', phrase: 'Voir les publications et en être prévenu.' },
+		{ libelle: 'Écriture', phrase: cle === 'centre' ? 'Aussi commenter, voter et répondre.' : 'Aussi commenter, voter, répondre et publier.' }
 	];
-	const niveauDe = (cle: string) => (data.profil.mursOuverts as Record<string, string>)[cle] ?? 'aucun';
+	const niveauDe = (cle: string) => Math.max(0, NIVEAUX.indexOf((data.profil.mursOuverts as Record<string, string>)[cle] ?? 'aucun'));
 </script>
 
 {#snippet retour(cible: string)}
@@ -72,7 +74,10 @@
 		<form method="POST" action="?/murs" class="formulaire">
 			<ul class="murs" role="list">
 				{#each murs as m (m.cle)}
-					<li><ChoixRadio id="mur-{m.cle}" name="mur-{m.cle}" legende={m.nom} options={NIVEAUX} valeur={niveauDe(m.cle)} /></li>
+					<li>
+						<h3 class="mur" aria-hidden="true">{m.nom}</h3>
+						<SelecteurNiveaux name="mur-{m.cle}" legende={m.nom} niveaux={niveauxDuMur(m.cle)} valeur={niveauDe(m.cle)} />
+					</li>
 				{/each}
 			</ul>
 			<Bouton type="submit">Enregistrer les murs</Bouton>
@@ -145,6 +150,13 @@
 	}
 	.murs > li {
 		padding: var(--espace-12) 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-8);
+	}
+	.mur {
+		margin: 0;
+		font-size: var(--texte-15);
 	}
 	.murs > li + li {
 		border-top: 1px solid var(--trait-doux);
