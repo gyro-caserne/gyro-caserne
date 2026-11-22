@@ -23,6 +23,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		}));
 		return {
 			personnes,
+			// Une personne d'un profil extérieur écrit à deux seulement.
+			groupes: raccourcis.groupes,
 			pourVous: {
 				chefs: personnes.filter((p) => raccourcis.chefs.includes(p.id)),
 				equipes: raccourcis.equipes.map((e) => ({ ...e, lien: `/echanges/messages/nouveau/groupe?equipe=${e.id}` })),

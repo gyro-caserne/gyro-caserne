@@ -10,7 +10,7 @@ import { accesMur, agentsDuJour, equipesConvoquees, estConvoque, type Convocatio
 import { commentaire, equipe, jaime, journal, manoeuvre, personne, photoPublication, priseConnaissance, publication, reponseEvenement, visiteMur, voteSondage } from '../schema.ts';
 import { photo as octetsPhoto } from '../schema-photos.ts';
 import type { CommentaireVue } from './interactions.ts';
-import { aLaMessagerie } from '../messagerie.ts';
+import { peutEcrireA } from '../messagerie.ts';
 import { nomActeur } from './personnes.ts';
 import { marquerLueLaPublication, marquerLuesDuMur } from '../notifications.ts';
 
@@ -353,7 +353,7 @@ async function vuesDe(
 		// Les identifiants seulement : les octets sont servis un par un, par photo().
 		base.select({ id: photoPublication.id, publicationId: photoPublication.publicationId }).from(photoPublication).where(inArray(photoPublication.publicationId, ids)).orderBy(photoPublication.ordre),
 		base
-			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, messagerie: sql<number>`${aLaMessagerie(personne.id, aujourdhui)}` })
+			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, messagerie: sql<number>`${peutEcrireA(moi, personne.id, aujourdhui)}` })
 			.from(personne)
 			.where(inArray(personne.id, idsAuteurs)),
 		base

@@ -54,6 +54,9 @@ describe('nouveau message', () => {
 
 	it('sans raccourci, « Pour vous » n’apparaît pas', () => {
 		expect(texte(html({ pourVous: { chefs: [], equipes: [], comites: [] } })).toUpperCase()).not.toContain('POUR VOUS');
+		// Une personne d'un profil extérieur écrit à deux seulement.
+		expect(html({ groupes: false, pourVous: { chefs: [], equipes: [], comites: [] } })).not.toContain('/echanges/messages/nouveau/groupe');
+		expect(html()).toContain('/echanges/messages/nouveau/groupe');
 	});
 
 	it('tout le centre : chaque agent avec son rôle ou son équipe, vers sa conversation', () => {

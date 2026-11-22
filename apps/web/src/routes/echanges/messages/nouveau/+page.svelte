@@ -32,12 +32,14 @@
 	</form>
 
 	{#if !cherche}
-		<a class="ligne grande" href="/echanges/messages/nouveau/groupe">
-			<span class="rond" aria-hidden="true">
-				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="9" r="3.5" /><path d="M3 19c.8-3.2 3.2-5 6-5s5.2 1.8 6 5M18 8v6M15 11h6" /></svg>
-			</span>
-			<strong class="nom">Nouveau groupe</strong>
-		</a>
+		{#if data.groupes !== false}
+			<a class="ligne grande" href="/echanges/messages/nouveau/groupe">
+				<span class="rond" aria-hidden="true">
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="9" r="3.5" /><path d="M3 19c.8-3.2 3.2-5 6-5s5.2 1.8 6 5M18 8v6M15 11h6" /></svg>
+				</span>
+				<strong class="nom">Nouveau groupe</strong>
+			</a>
+		{/if}
 
 		{#if raccourcis}
 			<h2>Pour vous</h2>
