@@ -136,7 +136,7 @@ const exterieur = (id: SQLWrapper | number) => sql`exists (select 1 from personn
 const comitesEcrits = (id: SQLWrapper | number) =>
 	sql`select c.id from personne p join profil pr on pr.id = p.profil_id, json_each(case when json_valid(pr.murs_ouverts) then pr.murs_ouverts else '{}' end) j
 		join comite c on j.key = 'comite:' || c.id
-		where p.id = ${id} and pr.type_personne = 'exterieur' and j.value = 'ecriture' and c.dissous_le is null`;
+		where p.id = ${id} and pr.type_personne = 'exterieur' and pr.murs_ouverts <> '{}' and j.value = 'ecriture' and c.dissous_le is null`;
 
 // Les comités en cours où un agent tient un rôle de comité ce jour-là.
 const comitesTenus = (id: SQLWrapper | number, aujourdhui: string) =>
@@ -153,7 +153,7 @@ const chefOuAdjoint = (id: SQLWrapper | number, aujourdhui: string) =>
 // Seule règle d'accès à la messagerie : un agent qui l'a (messagerieDAgent), ou une personne d'un profil extérieur, ni partie ni
 // suspendue, à qui son profil ouvre au moins un comité en cours en écriture.
 export function aLaMessagerie(id: SQLWrapper | number, aujourdhui: string): SQL {
-	return sql`(${messagerieDAgent(id, aujourdhui)} or exists (select 1 from personne p where p.id = ${id} and p.statut in (${STATUTS}) and exists (${comitesEcrits(id)})))`;
+	return sql`(${messagerieDAgent(id, aujourdhui)} or exists (select 1 from personne p join profil pr on pr.id = p.profil_id where p.id = ${id} and pr.type_personne = 'exterieur' and pr.murs_ouverts <> '{}' and p.statut in (${STATUTS}) and exists (${comitesEcrits(id)})))`;
 }
 
 // Une personne d'un profil extérieur et une autre sont liées si l'autre est chef de centre ou adjoint, ou si elles partagent un
@@ -163,7 +163,7 @@ const lies = (ext: SQLWrapper | number, autre: SQLWrapper | number, aujourdhui: 
 
 // L'acteur `moi` peut-il écrire à `autre` (et `autre` à lui) ? L'autre a la messagerie, et ce sont deux agents ou deux personnes liées.
 export function peutEcrireA(moi: SQLWrapper | number, autre: SQLWrapper | number, aujourdhui: string): SQL {
-	return sql`(${aLaMessagerie(autre, aujourdhui)} and ((not ${exterieur(moi)} and not ${exterieur(autre)}) or ${lies(moi, autre, aujourdhui)} or ${lies(autre, moi, aujourdhui)}))`;
+	return sql`(((not ${exterieur(moi)} and not ${exterieur(autre)}) or ${lies(moi, autre, aujourdhui)} or ${lies(autre, moi, aujourdhui)}) and ${aLaMessagerie(autre, aujourdhui)})`;
 }
 
 const lireAcces = (base: Base, id: number, aujourdhui: string) => base.select({ id: personne.id }).from(personne).where(and(eq(personne.id, id), aLaMessagerie(id, aujourdhui)));

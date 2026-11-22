@@ -10,7 +10,7 @@ import { accesMur, agentsDuJour, equipesConvoquees, estConvoque, type Convocatio
 import { commentaire, equipe, jaime, journal, manoeuvre, personne, photoPublication, priseConnaissance, publication, reponseEvenement, visiteMur, voteSondage } from '../schema.ts';
 import { photo as octetsPhoto } from '../schema-photos.ts';
 import type { CommentaireVue } from './interactions.ts';
-import { peutEcrireA } from '../messagerie.ts';
+import { aLaMessagerie } from '../messagerie.ts';
 import { nomActeur } from './personnes.ts';
 import { marquerLueLaPublication, marquerLuesDuMur } from '../notifications.ts';
 
@@ -294,6 +294,19 @@ function visage([agents, affectations, tenues]: AgentsLus, equipes: { id: number
 
 const PRESENTS_MAX = 3;
 
+// « Répondre en privé » : la règle de peutEcrireA (messagerie.ts), refaite ici sur ce qui est déjà lu, sans requête de plus.
+// Deux agents se joignent toujours ; une personne d'un profil extérieur, le chef, l'adjoint et qui partage un de ses comités en écriture.
+// L'envoi reste contrôlé par la règle SQL.
+function joignables(a: Appartenances | undefined, b: Appartenances | undefined): boolean {
+	if (!a || !b) return false;
+	if (a.ouverts === null && b.ouverts === null) return true;
+	const lie = (ext: Appartenances, autre: Appartenances) =>
+		ext.ouverts !== null &&
+		((autre.ouverts === null && autre.tous) ||
+			[...ext.ouverts].some(([cle, niveau]) => niveau === 'ecriture' && cle.startsWith('comite:') && (autre.ouverts === null ? autre.membreComite.has(Number(cle.slice('comite:'.length))) : autre.ouverts.get(cle) === 'ecriture')));
+	return lie(a, b) || lie(b, a);
+}
+
 const idPersonne = (auteur: string) => {
 	const id = /^personne:(\d+)$/.exec(auteur)?.[1];
 	return id === undefined ? null : Number(id);
@@ -353,7 +366,7 @@ async function vuesDe(
 		// Les identifiants seulement : les octets sont servis un par un, par photo().
 		base.select({ id: photoPublication.id, publicationId: photoPublication.publicationId }).from(photoPublication).where(inArray(photoPublication.publicationId, ids)).orderBy(photoPublication.ordre),
 		base
-			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, messagerie: sql<number>`${peutEcrireA(moi, personne.id, aujourdhui)}` })
+			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, messagerie: sql<number>`${aLaMessagerie(personne.id, aujourdhui)}` })
 			.from(personne)
 			.where(inArray(personne.id, idsAuteurs)),
 		base
@@ -393,7 +406,9 @@ async function vuesDe(
 					: [];
 	const [agents, affectations, tenues, equipes, jaimes, commentaires, reponses, votes, prises, presents, photos, auteurs, derniers, changements] = await base.batch([...lectures, ...ecritures]);
 	const lus: AgentsLus = [agents, affectations, tenues];
-	const membres = membresDe(agentsDuJour(lus, aujourdhui), cle);
+	const parAgent = agentsDuJour(lus, aujourdhui);
+	const membres = membresDe(parAgent, cle);
+	const lui = parAgent.find((x) => x.id === moi)?.a;
 	const vusCommentaires = derniers.map((c) => ({ ...commentaireVu(acteur, mur, c), publicationId: c.publicationId }));
 	options.tous?.push(...vusCommentaires.map(({ publicationId: _, ...c }) => c));
 
@@ -421,7 +436,7 @@ async function vuesDe(
 		return {
 			id: p.id,
 			cle: p.mur as CleMur,
-			auteur: { ...auteurVu(p.auteur, fiche), ...visage(lus, equipes, idPersonne(p.auteur)), ecrireA: fiche?.messagerie === 1 && fiche.id !== moi ? fiche.id : null },
+			auteur: { ...auteurVu(p.auteur, fiche), ...visage(lus, equipes, idPersonne(p.auteur)), ecrireA: fiche?.messagerie === 1 && fiche.id !== moi && joignables(lui, parAgent.find((x) => x.id === fiche.id)?.a) ? fiche.id : null },
 			type: p.type,
 			texte: p.texte,
 			creeLe: p.creeLe,
