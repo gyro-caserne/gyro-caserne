@@ -36,15 +36,24 @@ describe('page d’un profil', () => {
 		expect(await droitsProfil(reserve!.id)).toEqual(['RESERVER']);
 	});
 
-	it('murs ouverts d’un profil extérieur : chaque mur à son niveau, « Aucun accès » le ferme', async () => {
-		const { base, chef } = await preparer();
+	it('un seul « Enregistrer » : droits et murs ouverts ensemble, chacun au journal ; « Aucun accès » ferme le mur', async () => {
+		const { base, chef, droitsProfil } = await preparer();
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
 		const params = { id: String(reserve!.id) };
-		const r = await envoyer(actions, 'murs', locaux(base, chef), [['mur-centre', '0'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], params);
-		expect(r).toMatchObject({ cible: 'murs', succes: 'Les murs ouverts sont enregistrés.' });
+		const r = await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['niveau-planning', '1'], ['mur-centre', '0'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], params);
+		expect(r).toMatchObject({ cible: 'profil', succes: 'Le profil « Réserve citoyenne » est enregistré.' });
 		expect((await charger(load, locaux(base, chef), params)).profil.mursOuverts).toEqual({ vie: 'lecture', [`comite:${amicale!.id}`]: 'ecriture' });
-		expect(await envoyer(actions, 'murs', locaux(base, chef), [['mur-equipe:1', '1']], params)).toMatchObject({ status: 400 });
+		expect(await droitsProfil(reserve!.id)).toContain('VALIDER_REMPLACEMENT');
+		const actions_ = (await base.select().from(journal)).map((l) => l.action);
+		expect(actions_).toContain('modifier_murs_ouverts');
+		expect(actions_).toContain('modifier_droits_profil');
+		expect(await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['mur-equipe:1', '1']], params)).toMatchObject({ status: 400 });
+	});
+
+	it('profil agent : les murs envoyés ne sont pas lus, les droits s’enregistrent', async () => {
+		const { base, chef, profilAgent } = await preparer();
+		expect(await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['mur-vie', '1']], { id: String(profilAgent.id) })).toMatchObject({ succes: expect.any(String) });
 	});
 
 	it('renommer, puis supprimer avec confirmation ; refusé tant que quelqu’un l’a', async () => {

@@ -30,7 +30,11 @@ describe('page d’un profil', () => {
 	it('profil extérieur : un choix par mur ouvrable, au niveau enregistré ; jamais les équipes', () => {
 		const page = html({ data: retraite, form: null });
 		expect(page).toContain('Murs ouverts');
-		expect(page).toMatch(/action="\?\/murs"/);
+		// Un seul formulaire et un seul « Enregistrer » pour les droits et les murs.
+		expect(page).not.toContain('?/murs');
+		expect(page.match(/>(<!---->)?Enregistrer</g)).toHaveLength(1);
+		// Une barre à trois choix par mur, sur une ligne : le bloc segmenté commun.
+		expect(page.match(/<div class="segments radios[^"]*"/g)).toHaveLength(3);
 		for (const nom of ['Le centre', 'Vie du centre', 'Retraités']) expect(page).toMatch(new RegExp(`<legend[^>]*>${nom}</legend>`));
 		expect(page).toMatch(/name="mur-comite:4" value="2" checked/);
 		expect(page).toMatch(/name="mur-vie" value="1" checked/);

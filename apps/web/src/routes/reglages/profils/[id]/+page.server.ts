@@ -22,29 +22,24 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 export const actions: Actions = {
+	// Un seul « Enregistrer » : les murs ouverts d'un profil extérieur (« mur-<clé> » vaut 0 aucun accès, 1 lecture, 2 écriture), puis
+	// les droits. Chacun garde son action du socle et sa ligne au journal.
 	default: async ({ locals, params, request }) => {
 		const { acteur, base, aujourdhui, profil } = await lireProfil(locals, params.id);
 		const cible = 'profil';
+		const formulaire = await request.formData();
 		try {
-			await modifierDroitsProfil(base, acteur, profil.id, appliquerNiveaux(profil.droits as Droit[], niveauxChoisis(await request.formData())), aujourdhui);
+			if (profil.typePersonne === 'exterieur') {
+				const ouverts: Record<string, NiveauOuvert> = {};
+				for (const [cle, valeur] of formulaire.entries())
+					if (cle.startsWith('mur-') && valeur !== '0') ouverts[cle.slice('mur-'.length)] = (valeur === '1' ? 'lecture' : valeur === '2' ? 'ecriture' : String(valeur)) as NiveauOuvert;
+				await modifierMursOuverts(base, acteur, profil.id, ouverts, aujourdhui);
+			}
+			await modifierDroitsProfil(base, acteur, profil.id, appliquerNiveaux(profil.droits as Droit[], niveauxChoisis(formulaire)), aujourdhui);
 		} catch (erreur) {
 			return echec(erreur, cible);
 		}
 		return { cible, succes: `Le profil « ${profil.nom} » est enregistré.` } satisfies Reponse;
-	},
-	// Un choix par mur : « mur-<clé> » vaut 0 (aucun accès), 1 (lecture) ou 2 (écriture).
-	murs: async ({ locals, params, request }) => {
-		const { acteur, base, aujourdhui, profil } = await lireProfil(locals, params.id);
-		const cible = 'murs';
-		const ouverts: Record<string, NiveauOuvert> = {};
-		for (const [cle, valeur] of (await request.formData()).entries())
-			if (cle.startsWith('mur-') && valeur !== '0') ouverts[cle.slice('mur-'.length)] = (valeur === '1' ? 'lecture' : valeur === '2' ? 'ecriture' : String(valeur)) as NiveauOuvert;
-		try {
-			await modifierMursOuverts(base, acteur, profil.id, ouverts, aujourdhui);
-		} catch (erreur) {
-			return echec(erreur, cible);
-		}
-		return { cible, succes: 'Les murs ouverts sont enregistrés.' } satisfies Reponse;
 	},
 	renommer: async ({ locals, params, request }) => {
 		const { acteur, base, aujourdhui, profil } = await lireProfil(locals, params.id);

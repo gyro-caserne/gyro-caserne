@@ -61,29 +61,24 @@
 
 <form method="POST" class="formulaire">
 	<Domaines droits={droits} bind:choix profil />
-	<BarreActions {message}>
-		<Bouton type="submit">Enregistrer</Bouton>
-	</BarreActions>
-</form>
-
-{#if exterieur}
-	<section class="carte" aria-labelledby="titre-murs">
-		<h2 id="titre-murs" class="titre-groupe">Murs ouverts</h2>
-		<p class="aide">En lecture, on voit les publications et on en est prévenu. En écriture, on peut aussi commenter, voter, répondre et publier (sauf sur Le centre). Un comité ouvert en écriture donne la messagerie avec ses membres.</p>
-		{@render retour('murs')}
-		<form method="POST" action="?/murs" class="formulaire">
+	{#if exterieur}
+		<section class="carte" aria-labelledby="titre-murs">
+			<h2 id="titre-murs" class="titre-groupe">Murs ouverts</h2>
+			<p class="aide">En lecture, on voit les publications et on en est prévenu. En écriture, on peut aussi commenter, voter, répondre et publier (sauf sur Le centre). Un comité ouvert en écriture donne la messagerie avec ses membres.</p>
 			<ul class="murs" role="list">
 				{#each murs as m (m.cle)}
 					<li>
 						<p class="mur" aria-hidden="true">{m.nom}</p>
-						<SelecteurNiveaux name="mur-{m.cle}" legende={m.nom} niveaux={niveauxDuMur(m.cle)} valeur={niveauDe(m.cle)} />
+						<SelecteurNiveaux name="mur-{m.cle}" legende={m.nom} niveaux={niveauxDuMur(m.cle)} valeur={niveauDe(m.cle)} segments />
 					</li>
 				{/each}
 			</ul>
-			<Bouton type="submit">Enregistrer les murs</Bouton>
-		</form>
-	</section>
-{/if}
+		</section>
+	{/if}
+	<BarreActions {message}>
+		<Bouton type="submit">Enregistrer</Bouton>
+	</BarreActions>
+</form>
 
 <details class="plus">
 	<summary>Plus</summary>
