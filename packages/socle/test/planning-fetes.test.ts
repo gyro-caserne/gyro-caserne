@@ -202,6 +202,17 @@ describe('les fêtes du centre, enregistrées', async () => {
 		expect(apres!.etat).toBe('annulee');
 	});
 
+	it('l’accueil du chef lit les fêtes une seule fois, dans le batch de l’astreinte, par l’index', async () => {
+		const { base, chef, fete } = await jeu();
+		await enregistrerFete(base, chef, fete, AVANT, reglage);
+		const { accueilDe } = await import('../src/casquettes.ts');
+		base.jouees = [];
+		await Promise.all([accueilDe(base, chef, null, '2026-12-05', '2026-12-05T20:00', reglage), astreinteDe(base, chef, '2026-12-05T20:00', reglage)]);
+		const lectures = base.jouees.filter((r) => /from "fete_centre"/.test(r.sql));
+		expect(lectures).toHaveLength(1);
+		expect(base.plan(lectures[0]!).join(" ")).toMatch(/fete_centre_debut/);
+	});
+
 	it('historique et tour : par nom, saisie des années passées, hors du tour signalé', async () => {
 		const { base, chef, ids, fete } = await jeu();
 		await noterFeteCentre(base, chef, 2025, 'Sainte-Barbe', ids[2]!, AVANT);
