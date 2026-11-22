@@ -71,10 +71,10 @@ const PHRASES: Record<string, string> = {
 	'Réservé aux agents du centre': 'Les demandes de tenue sont réservées aux agents du centre.',
 	'Message vide': 'Écrivez votre message.',
 	'Texte trop long': 'Le message est trop long (500 caractères au plus).',
-	'Refus sans explication': 'Expliquez le refus en un mot : l’agent le lira.',
+	'Refus sans explication': 'Expliquez le refus en un mot. L’agent le lira.',
 	'Récupération à préciser': 'Dites où récupérer la tenue.',
 	'Issue inconnue': 'Choisissez une issue.',
-	'Geste impossible': 'Ce geste n’est plus possible : la demande a avancé.',
-	'Demande changée entre-temps': 'La demande vient de changer : elle est rechargée, refaites votre geste.'
+	'Geste impossible': 'Ce geste n’est plus possible. La demande a avancé.',
+	'Demande changée entre-temps': 'La demande vient de changer. Elle est rechargée, refaites votre geste.'
 };
 export const phraseHabillement = (message: string) => PHRASES[message] ?? 'Ce geste n’a pas pu être enregistré.';

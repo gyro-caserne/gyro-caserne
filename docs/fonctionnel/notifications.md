@@ -37,7 +37,7 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 ## Suivi du centre (chef de centre, adjoint)
 
 - Caserne → **Suivi du centre** : ce qui s'est passé au centre, du plus récent au plus ancien, une ligne par action, avec le lien (« Claire Martin a modifié la manœuvre Feux de forêt », « Rémi Leroy a pris en compte la demande d'habillement d'Alice Martin »). Les **trois derniers mois** seulement : le journal, lui, garde tout. Le super administrateur y a accès aussi.
-- En haut, des filtres : **Tout · Planning · Nominations · Demandes · Agents · Réglages** (Demandes : habillement, anomalies, réservations, remplacements validés ou refusés ; une fiche d'engin modifiée tombe dans Agents, même action que la fiche d'un agent). Le filtre est dans l'adresse : on peut garder le lien. Seule l'arrivée dans le suivi compte pour une visite : passer d'un filtre à l'autre garde le repère au même endroit.
+- En haut, des filtres : **Tout**, **Planning**, **Nominations**, **Demandes**, **Agents** et **Réglages** (Demandes : habillement, anomalies, réservations, remplacements validés ou refusés ; une fiche d'engin modifiée tombe dans Agents, même action que la fiche d'un agent). Le filtre est dans l'adresse : on peut garder le lien. Seule l'arrivée dans le suivi compte pour une visite : passer d'un filtre à l'autre garde le repère au même endroit.
 - Un trait **« Avant votre dernière visite »** sépare les nouveautés du reste.
 - 25 lignes à la fois ; « Voir les plus anciennes » ajoute les 25 suivantes sous la liste (sans JavaScript, la page suivante remplace la liste).
 - Ce qui est suivi : le planning et les manœuvres, les nominations et retraits, les réglages (rôles, comités, profils, engins, ressources, armement, écusson, aptitudes), les fiches des agents, les décisions sur les demandes (habillement, anomalies, réservations à valider), les remplacements validés ou refusés par le chef de garde. Rien de privé : ni les conversations, ni « mon profil », ni les publications, commentaires ou réservations d'un agent.
@@ -61,7 +61,7 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 
 - Moi → Notifications → « Activer sur ce téléphone ». Dix appareils au plus par agent : au-delà, le plus ancien laisse sa place.
 - Sur iPhone, il faut d'abord ajouter l'appli à l'écran d'accueil (exigence d'Apple) : l'écran l'explique, étapes à l'appui (voir « Installer l'appli » plus bas).
-- La notification dit le lieu et l'auteur (« Équipe 2 · Élodie Martin », « Message de Romain », « Départ de Thomas · Manon ») et le début du texte. Pas de photo.
+- La notification dit le lieu et l'auteur (« Publication d’Élodie Martin (Équipe 2) », « Message de Romain », « Message de Manon dans Départ de Thomas ») et le début du texte. Pas de photo.
 - La toucher ouvre sa page et marque lue sa ligne de la cloche, quelle qu'elle soit. Publications, commentaires, réservations et remplacements : leur page les marque déjà lues. Avis de l'été (dont le rappel des vacances) et anomalies, que leur page ne marque pas : la notification passe par la même adresse que la cloche (`/notifications/ouvrir`). Sans ligne de cloche (un message, une demande de réservation à trancher, une vigilance rouge) : sa page, directement.
 - Plusieurs messages d'une même conversation se remplacent : une seule notification par conversation à l'écran.
 - Délai : tout de suite (quelques secondes) jusqu'à 20 téléphones ; au-delà, le reste dans les dix minutes, puis dix minutes de plus par tranche de 40 (« Le centre » avec 100 appareils : 20 tout de suite, le reste en 20 minutes au plus). Une notification refusée par le téléphone n'est pas renvoyée. Un envoi interrompu de notre côté (coupure de Cloudflare) n'est pas perdu : il repart 5 à 15 minutes plus tard (plus tôt si quelqu'un publie entre-temps). Il remplace la notification encore affichée au lieu de s'ajouter, et ne recouvre jamais une notification plus récente de la même conversation ou publication.
@@ -109,6 +109,6 @@ Rappels programmés, e-mail pour la suite d'une demande, récapitulatif quotidie
 
 ## Exemple
 
-Élodie publie « Manœuvre samedi 9 h » sur le mur de l'équipe 2. Romain (équipe 2) reçoit sur son téléphone « Équipe 2 · Élodie Martin — Manœuvre samedi 9 h » ; la cloche de son appli et l'icône sur son écran d'accueil passent à 1. Il touche la notification : la publication s'ouvre, le chiffre retombe, sur l'icône aussi. Manon, qui a coupé le mur de l'équipe 2, ne reçoit rien au téléphone, mais la publication est dans sa cloche.
+Élodie publie « Manœuvre samedi 9 h » sur le mur de l'équipe 2. Romain (équipe 2) reçoit sur son téléphone « Publication d’Élodie Martin (Équipe 2) », avec « Manœuvre samedi 9 h » ; la cloche de son appli et l'icône sur son écran d'accueil passent à 1. Il touche la notification : la publication s'ouvre, le chiffre retombe, sur l'icône aussi. Manon, qui a coupé le mur de l'équipe 2, ne reçoit rien au téléphone, mais la publication est dans sa cloche.
 
 Plus tard, Thomas écrit à Romain dans la messagerie. Sa cloche reste à 0, mais l'icône passe à 1 avec la notification : c'est le message non lu. Il l'ouvre : l'icône s'efface.

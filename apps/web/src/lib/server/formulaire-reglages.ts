@@ -62,7 +62,7 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Le comité du centre ne se renomme pas': { champ: 'nom', texte: 'Le comité du centre ne se renomme pas.' },
 	'Le comité du centre ne se dissout pas': { texte: 'Le comité du centre ne se dissout pas.' },
 	'Comité inconnu': { texte: 'Ce comité n’existe pas.' },
-	'Comité dissous': { texte: 'Ce comité est dissous : il ne peut plus servir ni être modifié.' },
+	'Comité dissous': { texte: 'Ce comité est dissous. Il ne peut plus servir ni être modifié.' },
 	'Comité déjà dissous': { texte: 'Ce comité est déjà dissous.' },
 	'Nature inconnue': { champ: 'nature', texte: 'Choisissez la nature : fonction ou mission.' },
 	'Portée inconnue': { champ: 'portee', texte: 'Choisissez la portée : centre, équipe ou comité.' },
@@ -74,18 +74,18 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 		texte: 'Une responsabilité de portée « comité » est attribuée par le comité visé ou par un comité désigné, pas par le chef de centre.'
 	},
 	'Responsabilité inconnue': { texte: 'Cette responsabilité n’existe pas.' },
-	'Responsabilité archivée': { texte: 'Cette responsabilité est archivée : elle ne peut plus être modifiée.' },
+	'Responsabilité archivée': { texte: 'Cette responsabilité est archivée. Elle ne peut plus être modifiée.' },
 	'Responsabilité déjà archivée': { texte: 'Cette responsabilité est déjà archivée.' },
 	'La portée d’une responsabilité système ne change pas': { champ: 'portee', texte: 'La portée d’une responsabilité système ne change pas.' },
-	'Portée verrouillée : la responsabilité est tenue': { champ: 'portee', texte: 'La portée ne change pas tant que quelqu’un tient ou tiendra cette responsabilité.' },
-	'Droit verrouillé : impossible de le retirer': { champ: 'droits', texte: 'Un droit verrouillé ne se retire pas.' },
+	'Portée verrouillée, la responsabilité est tenue': { champ: 'portee', texte: 'La portée ne change pas tant que quelqu’un tient ou tiendra cette responsabilité.' },
+	'Droit verrouillé, impossible de le retirer': { champ: 'droits', texte: 'Un droit verrouillé ne se retire pas.' },
 	'Une responsabilité système ne s’archive pas': { texte: 'Une responsabilité système (chef de centre, adjoint, chef de garde) ne s’archive pas.' },
 	'Icône inconnue': { champ: 'icone', texte: 'Choisissez une icône de la liste.' },
-	'Modèle inconnu': { texte: 'Ce modèle n’existe pas : choisissez-en un dans la liste.' },
+	'Modèle inconnu': { texte: 'Ce modèle n’existe pas. Choisissez-en un dans la liste.' },
 	'Profil inconnu': { texte: 'Ce profil n’existe pas.' },
 	'Un profil ne donne pas de droit de pouvoir': { texte: 'Un profil ne donne pas de droit d’administration.' },
 	'Droit réservé au centre': {
-		texte: '« Gérer les accès », « Gérer les comités » et « Gérer les responsabilités » valent pour tout le centre : ils ne se donnent qu’à un rôle de portée « Tout le centre ». Décochez-les ou changez la portée.'
+		texte: '« Gérer les accès », « Gérer les comités » et « Gérer les responsabilités » valent pour tout le centre. Ils ne se donnent qu’à un rôle de portée « Tout le centre ». Décochez-les ou changez la portée.'
 	}
 };
 

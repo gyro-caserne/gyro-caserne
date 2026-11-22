@@ -28,7 +28,7 @@ describe('éditeur de fiche', () => {
 	});
 
 	it('une version déjà utilisée annonce la suivante', () => {
-		expect(html({ fiche: fiche(true), retirerZone: null, nouveau: false })).toContain('la modifier crée la version 3');
+		expect(html({ fiche: fiche(true), retirerZone: null, nouveau: false })).toContain('La modifier crée la version 3');
 	});
 
 	it('après un geste, la zone touchée est ouverte et le succès dit ; retirer une zone demande confirmation', () => {

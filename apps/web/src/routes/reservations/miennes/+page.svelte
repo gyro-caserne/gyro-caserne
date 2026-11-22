@@ -9,7 +9,7 @@
 
 	let { data, form }: { data: { aVenir: VueReservation[]; passees: VueReservation[]; reservee: 'attente' | 'acceptee' | null; confirmer: number | null; aujourdhui: string; qui: string }; form?: { message?: string; succes?: string } | null } = $props();
 
-	const REUSSITE = { attente: 'Demande envoyée : vous serez prévenu de la réponse.', acceptee: 'Réservation acceptée : elle est à vous.' };
+	const REUSSITE = { attente: 'Demande envoyée. Vous serez prévenu de la réponse.', acceptee: 'Réservation acceptée. Elle est à vous.' };
 	const succes = $derived(form?.succes ?? (data.reservee ? REUSSITE[data.reservee] : ''));
 </script>
 

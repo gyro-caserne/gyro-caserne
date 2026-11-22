@@ -42,9 +42,9 @@ describe('/engins/anomalies/[id] : les gestes en panneaux', () => {
 		expect(html).not.toContain('<dialog');
 		expect(html).not.toContain('<details');
 		expect(html).not.toContain('name="texte"');
-		expect(html).toMatch(/<a [^>]*href="\?panneau=attente"[^>]*>Mettre en attente…<\/a>/);
-		expect(html).toMatch(/<a [^>]*href="\?panneau=reparee"[^>]*>Réparée…<\/a>/);
-		expect(html).toMatch(/<a [^>]*href="\?panneau=clore"[^>]*>Clore sans réparation…<\/a>/);
+		expect(html).toMatch(/<a [^>]*href="\?panneau=attente"[^>]*>Mettre en attente<\/a>/);
+		expect(html).toMatch(/<a [^>]*href="\?panneau=reparee"[^>]*>Réparée<\/a>/);
+		expect(html).toMatch(/<a [^>]*href="\?panneau=clore"[^>]*>Clore sans réparation<\/a>/);
 	});
 
 	it.each([

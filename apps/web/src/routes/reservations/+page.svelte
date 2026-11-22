@@ -18,7 +18,7 @@
 <div class="page">
 	<EnTetePage
 		titre="Réservations"
-		phrase={data.reserveCitoyenne ? 'Réservez la VL pour la réserve citoyenne.' : 'La VL et le matériel de l’amicale : voyez ce qui est pris, réservez le reste.'}
+		phrase={data.reserveCitoyenne ? 'Réservez la VL pour la réserve citoyenne.' : 'La VL et le matériel de l’amicale. Voyez ce qui est pris, réservez le reste.'}
 		retour={{ href: '/caserne', libelle: 'Caserne' }}
 	/>
 

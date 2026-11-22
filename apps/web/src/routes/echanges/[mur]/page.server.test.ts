@@ -83,7 +83,7 @@ describe('modération', () => {
 		const id = String(await publier(base, base.photos, chef, 'vie', { type: 'message', texte: 'Onzième' }, maintenantParis()));
 		expect(await agir('epingler', locaux(base, chef), 'vie', [['id', id], ['oui', '1']])).toMatchObject({
 			status: 400,
-			data: { cible: `publication:${id}`, message: 'Dix publications sont déjà épinglées : désépinglez-en une d’abord' }
+			data: { cible: `publication:${id}`, message: 'Dix publications sont déjà épinglées. Désépinglez-en une d’abord' }
 		});
 	});
 
@@ -150,7 +150,7 @@ describe('interactions', () => {
 		expect(await agir('repondre', locaux(base, alice), 'centre', [['id', id], ['reponse', 'peut-etre']])).toMatchObject({ status: 400, data: { message: 'Choisissez une réponse.' } });
 		// Commencé : plus de réponse.
 		await base.update(publication).set({ debut: '2026-01-01T08:00' });
-		expect(await agir('repondre', locaux(base, alice), 'centre', [['id', id], ['reponse', 'absent']])).toMatchObject({ status: 400, data: { message: 'Cet événement est passé : vous ne pouvez plus répondre.' } });
+		expect(await agir('repondre', locaux(base, alice), 'centre', [['id', id], ['reponse', 'absent']])).toMatchObject({ status: 400, data: { message: 'Cet événement est passé. Vous ne pouvez plus répondre.' } });
 	});
 
 	it('voter : un choix par personne, qu’on peut changer', async () => {

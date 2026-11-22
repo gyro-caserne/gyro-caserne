@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 // Les refus du socle, dits sous le champ.
 const ERREURS: Record<string, string> = {
 	'Photo JPEG ou WebP seulement': 'Image JPEG ou WebP seulement.',
-	'Photo trop lourde (200 Ko au plus)': 'Image trop lourde : 200 Ko au plus.'
+	'Photo trop lourde (200 Ko au plus)': 'Image trop lourde, 200 Ko au plus.'
 };
 
 export const actions: Actions = {

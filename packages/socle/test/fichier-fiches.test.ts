@@ -97,11 +97,11 @@ describe('fichier des fiches', () => {
 		const fichier = lu({ VTU: vtu, CCF: [['', 'Cabine', 'Radio', '']], FPT: [] });
 		const { erreurs } = await apercuFiches(base, referent, fichier, maintenant);
 		expect(erreurs).toEqual([
-			{ feuille: 'VTU', ligne: 2, message: 'Quantité « deux » : un nombre entier de 1 à 999, ou rien' },
+			{ feuille: 'VTU', ligne: 2, message: 'Quantité « deux » invalide. Écrivez un nombre entier de 1 à 999, ou rien' },
 			{ feuille: 'VTU', ligne: 3, message: 'Zone vide' },
-			{ feuille: 'VTU', ligne: 5, message: 'Réf. 61 en double : effacez-la sur la copie' },
+			{ feuille: 'VTU', ligne: 5, message: 'Réf. 61 en double. Effacez-la sur la copie' },
 			{ feuille: 'CCF', ligne: 1, message: 'Type d’engin « CCF » inconnu. Créez-le d’abord dans l’appli, depuis Fiches puis Nouveau type.' },
-			{ feuille: 'FPT', ligne: 2, message: 'Feuille vide : une fiche garde au moins un élément (retirez la feuille pour ne pas toucher à cette fiche)' }
+			{ feuille: 'FPT', ligne: 2, message: 'Feuille vide. Une fiche garde au moins un élément (retirez la feuille pour ne pas toucher à cette fiche)' }
 		]);
 		await expect(appliquerFiches(base, referent, fichier, maintenant)).rejects.toThrow(new DonneeInvalide('Le fichier contient des erreurs'));
 		expect((await lireFiche(base, types.VTU)).version.creeLe).not.toBe(maintenant);

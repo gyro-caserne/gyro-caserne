@@ -166,7 +166,7 @@
 		{:else if convoquables.length > 0 && murs.some((m) => m.type !== 'equipe')}
 			<fieldset class="convoques" aria-describedby="publier-convoques-aide">
 				<legend>Équipes convoquées</legend>
-				<p id="publier-convoques-aide" class="aide">Aucune équipe cochée : tout le mur est convoqué.{js ? '' : ' Sur un mur d’équipe, toute l’équipe est convoquée.'}</p>
+				<p id="publier-convoques-aide" class="aide">Aucune équipe cochée. Tout le mur est convoqué.{js ? '' : ' Sur un mur d’équipe, toute l’équipe est convoquée.'}</p>
 				{#each convoquables as e (e.id)}
 					<label class="case"><input type="checkbox" name="equipe" value={e.id} checked={valeurs.equipes?.includes(String(e.id))} /> {e.nom}</label>
 				{/each}
@@ -228,7 +228,7 @@
 		</div>
 	</details>
 
-	<button type="submit" class="publier" disabled={envoi}>{envoi ? 'Envoi…' : js && choix ? `Publier dans ${choix.nom}` : 'Publier'}</button>
+	<button type="submit" class="publier" disabled={envoi}>{envoi ? 'Envoi en cours' : js && choix ? `Publier dans ${choix.nom}` : 'Publier'}</button>
 </form>
 
 <style>

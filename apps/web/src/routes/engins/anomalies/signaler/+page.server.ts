@@ -21,7 +21,7 @@ export const actions: Actions = {
 		const f = await request.formData();
 		const saisie = { engin: champ(f, 'engin'), libelle: champ(f, 'libelle'), genre: champ(f, 'genre'), note: champ(f, 'note') };
 		const fichier = f.get('photo');
-		if (fichier instanceof File && fichier.size > TAILLE_PHOTO_MAX) return fail(400, { ...saisie, message: 'Photo trop lourde : 200 Ko au plus.' });
+		if (fichier instanceof File && fichier.size > TAILLE_PHOTO_MAX) return fail(400, { ...saisie, message: 'Photo trop lourde, 200 Ko au plus.' });
 		const photo = fichier instanceof File && fichier.size > 0 ? { type: fichier.type, donnees: new Uint8Array(await fichier.arrayBuffer()) } : null;
 		let id: number;
 		try {

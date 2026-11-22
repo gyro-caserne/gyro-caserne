@@ -236,7 +236,7 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 		...pourLete,
 		...(planning ? [{ texte: `Planning ${suivante} à préparer`, lien: `/planning/preparer?annee=${suivante}` }] : []),
 		...sansChef.map((e) => ({ texte: `${e.nom} sans chef de garde`, lien: '/nominations' })),
-		...sansTitulaire.map((r) => ({ texte: `${r.nom} : aucun titulaire`, lien: '/nominations' })),
+		...sansTitulaire.map((r) => ({ texte: `${r.nom} sans titulaire`, lien: '/nominations' })),
 		...(fiches > 0 ? [{ texte: `${fiches} ${fiches > 1 ? 'fiches' : 'fiche'} à compléter (grade ou date d’entrée manquants)`, lien: '/agents?filtre=a-completer' }] : [])
 	];
 }

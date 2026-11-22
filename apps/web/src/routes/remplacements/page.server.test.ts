@@ -32,7 +32,7 @@ describe('/remplacements', () => {
 		expect(pourBruno.onglet).toBe('pour-moi');
 		expect(pourBruno.pourMoi).toHaveLength(1);
 		const id = pourBruno.pourMoi[0].id;
-		expect(await envoyer(actions, 'accepter', locaux(jeu.base, jeu.bruno), [['id', String(id)]])).toEqual({ succes: expect.stringContaining('c’est conclu') });
+		expect(await envoyer(actions, 'accepter', locaux(jeu.base, jeu.bruno), [['id', String(id)]])).toEqual({ succes: expect.stringContaining('C’est conclu') });
 		expect(await envoyer(actions, 'accepter', locaux(jeu.base, jeu.chef), [['id', String(id)]])).toMatchObject({ status: 400 });
 
 		const vue = await charger(detail, locaux(jeu.base, jeu.alice), `/remplacements/${id}`, { id: String(id) });

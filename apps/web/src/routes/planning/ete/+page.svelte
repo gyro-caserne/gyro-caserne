@@ -95,16 +95,17 @@
 				{#if !reglage.publiee}<a class="lien-bouton" href={ici({ panneau: 'periode' })} data-sveltekit-reset="false">Modifier<span class="masque">{' '}la période</span></a>{/if}
 			</div>
 			{#if !e.ete}
-				<p class="doux">Proposé d’après le roulement : de la dernière relève de juin à la dernière d’août. Ouvrez la saisie pour que les agents donnent leurs vacances, dans Moi puis Mes vacances.</p>
+				<p class="doux">Proposé d’après le roulement, de la dernière relève de juin à la dernière d’août. Ouvrez la saisie pour que les agents donnent leurs vacances, dans Moi puis Mes vacances.</p>
 				{@render formulairePeriode('Ouvrir la saisie des vacances', 'principal')}
 			{:else if reglage.publiee}
-				<p class="doux">L’été est publié : sa période ne change plus.</p>
+				<p class="doux">L’été est publié. Sa période ne change plus.</p>
 			{:else}
 				<p class="doux">Rappel aux agents sans réponse un mois puis une semaine avant la date limite. Changer la période efface la répartition proposée.</p>
 			{/if}
 		{:else if data.etape === 'vacances'}
 			{#if !e.ete}
-				<p class="encadre">Ouvrez d’abord la saisie des vacances. <a href={vers('periode')}>Aller à la période</a></p>
+				<p class="encadre">Ouvrez d’abord la saisie des vacances.</p>
+				<div><a class="lien-secondaire" href={vers('periode')}>Aller à la période</a></div>
 			{:else}
 				{@render retour(['relancer'])}
 				<ul class="rangees" role="list">
@@ -129,7 +130,7 @@
 						{#if sansReponse.length && !e.ete.publiee}
 							<div class="relance">
 								{#if e.relanceeAujourdhui}
-									<p class="doux">Relancés aujourd’hui : prochaine relance possible demain.</p>
+									<p class="doux">Relancés aujourd’hui. Prochaine relance possible demain.</p>
 								{:else}
 									<form method="POST" action={action('relancer')} use:enhance={garder}>
 										<Bouton type="submit" variante="secondaire">Relancer {sansReponse.length === 1 ? 'le sans-réponse' : `les ${sansReponse.length} sans-réponse`}</Bouton>
@@ -150,19 +151,21 @@
 		{:else if data.etape === 'repartition'}
 			{@render retour(data.detail ? ['repartition'] : ['repartition', 'plage'])}
 			{#if !e.ete}
-				<p class="encadre">Ouvrez d’abord la saisie des vacances. <a href={vers('periode')}>Aller à la période</a></p>
+				<p class="encadre">Ouvrez d’abord la saisie des vacances.</p>
+				<div><a class="lien-secondaire" href={vers('periode')}>Aller à la période</a></div>
 			{:else if e.sansRoulement}
-				<p class="encadre">Réglez d’abord le roulement de {e.annee}. <a href="/planning/preparer?annee={e.annee}">Préparer {e.annee}</a></p>
+				<p class="encadre">Réglez d’abord le roulement de {e.annee}.</p>
+				<div><a class="lien-secondaire" href="/planning/preparer?annee={e.annee}">Préparer {e.annee}</a></div>
 			{:else if !e.proposee}
 				<p class="doux">Plage par plage : l’équipe de la semaine moins les agents en vacances ; si le FPT n’est pas armé, des renforts pris parmi les autres agents, ceux qui ont le moins été en renfort d’abord.</p>
 				<form method="POST" action={action('proposer')} use:enhance={garder}><Bouton type="submit">Proposer la répartition</Bouton></form>
 			{:else}
 				<div class="entete-liste">
-					<p class="doux">{e.ete.publiee ? 'Publiée : vos changements valent tout de suite, et seuls les agents touchés sont prévenus.' : 'Choisissez une semaine pour voir ses plages, puis une plage pour la modifier.'}</p>
+					<p class="doux">{e.ete.publiee ? 'Publiée. Vos changements valent tout de suite, et seuls les agents touchés sont prévenus.' : 'Choisissez une semaine pour voir ses plages, puis une plage pour la modifier.'}</p>
 					{#if !e.ete.publiee}
 						<details class="menu">
 							<summary>Plus d’actions</summary>
-							<a href={ici({ panneau: 'recalculer' })} data-sveltekit-reset="false">Recalculer la proposition…</a>
+							<a href={ici({ panneau: 'recalculer' })} data-sveltekit-reset="false">Recalculer la proposition</a>
 						</details>
 					{/if}
 				</div>
@@ -206,13 +209,14 @@
 			{:else if e.proposee}
 				<ul class="recap" role="list">
 					<li>{pluriel(e.semaines.length, 'semaine')}, {pluriel(e.semaines.reduce((n, s) => n + s.plages.length, 0), 'plage')}</li>
-					<li>{aRevoir === 0 ? 'FPT armé sur chaque plage' : `${pluriel(aRevoir, 'plage', 'plages')} où le FPT n’est pas armé`}{#if aRevoir}{'. '}<a href={vers('repartition')}>Revoir</a>{/if}</li>
-					{#if e.conflits.length}<li>{pluriel(e.conflits.length, 'remplacement à revoir', 'remplacements à revoir')}. <a href={vers('repartition')}>Revoir</a></li>{/if}
+					<li>{aRevoir === 0 ? 'FPT armé sur chaque plage' : `${pluriel(aRevoir, 'plage', 'plages')} où le FPT n’est pas armé`}{#if aRevoir}.<div><a class="lien-secondaire" href={vers('repartition')}>Revoir la répartition</a></div>{/if}</li>
+					{#if e.conflits.length}<li>{pluriel(e.conflits.length, 'remplacement à revoir', 'remplacements à revoir')}.<div><a class="lien-secondaire" href={vers('repartition')}>Revoir la répartition</a></div></li>{/if}
 					<li>{pluriel(sansReponse.length, 'agent sans réponse', 'agents sans réponse')} (comptés disponibles)</li>
 				</ul>
 				<p class="doux">À la publication, le planning, l’agenda et les remplacements suivent la répartition ; les renforts et les agents retirés sont prévenus.</p>
 			{:else}
-				<p class="encadre">Proposez d’abord la répartition. <a href={vers('repartition')}>Aller à la répartition</a></p>
+				<p class="encadre">Proposez d’abord la répartition.</p>
+				<div><a class="lien-secondaire" href={vers('repartition')}>Aller à la répartition</a></div>
 			{/if}
 		{/if}
 	</section>
@@ -224,7 +228,7 @@
 
 	<!-- Le bouton de publication vit à la dernière étape ; avant, « Publier › » y conduit. -->
 	{#if data.etape === 'publier' && e.proposee && !e.ete?.publiee}
-		<BarreActions message={aRevoir ? `${pluriel(aRevoir, 'plage', 'plages')} sans FPT armé : vous pouvez publier quand même.` : ''}>
+		<BarreActions message={aRevoir ? `${pluriel(aRevoir, 'plage', 'plages')} sans FPT armé. Vous pouvez publier quand même.` : ''}>
 			<form method="POST" action={action('publier')}><Bouton type="submit">Publier l’été {e.annee}</Bouton></form>
 		</BarreActions>
 	{/if}
@@ -233,7 +237,7 @@
 {#if data.panneau === 'periode' && !reglage.publiee}
 	<Panneau titre="Période de l’été" fermer={ici()}>
 		<form method="POST" action={action('regler')} use:enhance={fermer} class="formulaire">
-			<p class="doux">En semaines d’astreinte entières : de la première relève à la dernière.</p>
+			<p class="doux">En semaines d’astreinte entières, de la première relève à la dernière.</p>
 			<label>Première relève <input type="date" name="debut" required value={reglage.debut} /></label>
 			<label>Dernière relève <input type="date" name="fin" required value={derniereReleve} /></label>
 			<label>Vacances à donner avant le <input type="date" name="dateLimite" required value={reglage.dateLimite} /></label>

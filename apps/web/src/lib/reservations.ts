@@ -63,13 +63,13 @@ export function disponibilite(r: Pick<Ressource, 'nom' | 'forme' | 'stock' | 'ge
 		if (!moment.test(v.debut) || !moment.test(v.fin) || v.fin <= v.debut) return null;
 		if (v.debut < maintenant.slice(0, 16)) return { ton: 'danger', texte: 'Ce début est déjà passé.' };
 		return prises.some((p) => chevauche(p, v, 'creneau'))
-			? { ton: 'alerte', texte: `Créneau déjà demandé : votre demande attendra la décision de ${r.gestionnaire.nom}.` }
-			: { ton: 'ok', texte: 'Libre : la réservation est acceptée dès l’envoi.' };
+			? { ton: 'alerte', texte: `Créneau déjà demandé. Votre demande attendra la décision de ${r.gestionnaire.nom}.` }
+			: { ton: 'ok', texte: 'Libre. La réservation est acceptée dès l’envoi.' };
 	}
 	if (!jour.test(v.debut) || !jour.test(v.fin) || v.fin < v.debut || r.stock === null) return null;
 	if (v.debut < maintenant.slice(0, 10)) return { ton: 'danger', texte: 'Ce début est déjà passé.' };
 	const plusPris = restantParJour(r.stock, prises, v.debut, v.fin).reduce((a, b) => (b.restant < a.restant ? b : a));
 	const voulue = Number(v.quantite) || 1;
-	if (voulue > plusPris.restant) return { ton: 'danger', texte: plusPris.restant <= 0 ? `Plus rien de libre le ${jourCourt(plusPris.jour)}` : `Pas assez : il en reste ${plusPris.restant} le ${jourCourt(plusPris.jour)}` };
-	return { ton: 'ok', texte: plusPris.restant === r.stock ? `Disponible : ${r.stock} sur ${r.stock} sur toute la période.` : `Disponible : il en reste au moins ${plusPris.restant} sur toute la période.` };
+	if (voulue > plusPris.restant) return { ton: 'danger', texte: plusPris.restant <= 0 ? `Plus rien de libre le ${jourCourt(plusPris.jour)}` : `Pas assez. Il en reste ${plusPris.restant} le ${jourCourt(plusPris.jour)}` };
+	return { ton: 'ok', texte: plusPris.restant === r.stock ? `Disponible, ${r.stock} sur ${r.stock} sur toute la période.` : `Disponible, il en reste au moins ${plusPris.restant} sur toute la période.` };
 }

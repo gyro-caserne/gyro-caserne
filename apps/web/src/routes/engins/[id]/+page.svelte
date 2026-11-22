@@ -38,7 +38,8 @@
 					{/each}
 				</ul>
 			{:else}
-				<p>Ses anomalies sont closes : la remise en service attend la décision du référent engins ou d’un chef.{#if data.aRemettre}{' '}<a href="/engins/anomalies/{data.aRemettre}">Voir l’anomalie et remettre en service</a>{/if}</p>
+				<p>Ses anomalies sont closes. La remise en service attend la décision du référent engins ou d’un chef.</p>
+				{#if data.aRemettre}<div><a class="lien-secondaire" href="/engins/anomalies/{data.aRemettre}">Voir l’anomalie et remettre en service</a></div>{/if}
 			{/if}
 		</section>
 	{/if}

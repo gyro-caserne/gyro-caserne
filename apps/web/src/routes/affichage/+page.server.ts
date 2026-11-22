@@ -9,7 +9,7 @@ export const actions: Actions = {
 		const niveau = formulaire.get('niveau');
 		const theme = formulaire.get('theme');
 		if (!niveauConnu(niveau) || !themeConnu(theme)) {
-			return fail(400, { erreur: 'Choix inconnu : merci de choisir dans les listes proposées.' });
+			return fail(400, { erreur: 'Choix inconnu. Choisissez dans les listes proposées.' });
 		}
 		const options = { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax', httpOnly: true, secure: !dev } as const;
 		cookies.set('niveau', niveau, options);

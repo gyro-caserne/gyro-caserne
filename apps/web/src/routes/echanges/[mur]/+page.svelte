@@ -90,7 +90,7 @@
 		<span class="libelle">Publier dans {data.mur.nom}</span>
 	</a>
 {:else if data.mur.lectureSeule}
-	<p class="aide">Ce mur est en lecture seule : on n’y publie plus.</p>
+	<p class="aide">Ce mur est en lecture seule. On n’y publie plus.</p>
 {:else}
 	<p class="aide">Vous lisez ce mur ; seuls ses modérateurs y publient.</p>
 {/if}

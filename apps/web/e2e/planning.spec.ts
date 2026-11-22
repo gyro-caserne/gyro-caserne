@@ -57,7 +57,7 @@ test.describe('chef : préparer l’année', () => {
 		await sansViolation(page);
 		await page.keyboard.press('Escape');
 		await page.getByText('Plus d’actions').click();
-		await page.getByRole('link', { name: 'Recalculer la proposition…' }).click();
+		await page.getByRole('link', { name: 'Recalculer la proposition' }).click();
 		await expect(page.getByRole('dialog', { name: 'Recalculer la proposition ?' })).toBeVisible();
 		await page.getByRole('link', { name: 'Annuler' }).click();
 		await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -112,7 +112,7 @@ test.describe('chef : préparer l’année', () => {
 		await expect(page.getByRole('heading', { level: 1, name: `Préparer ${annee}` })).toBeVisible();
 		await expect(page.getByText('Publiée', { exact: true })).toBeVisible();
 		await expect(page.getByText('Étape 1 sur 5')).toBeVisible();
-		await expect(page.getByText('Année publiée : le roulement ne change plus.')).toBeVisible();
+		await expect(page.getByText('Année publiée. Le roulement ne change plus.')).toBeVisible();
 		await sansViolation(page);
 
 		for (const etape of ['Fêtes', 'Repères', 'Vérifier et publier']) {

@@ -64,7 +64,7 @@ describe('préparer l’année', () => {
 	it('le compromis est dit clairement ; aucun sans compromis', () => {
 		const fetes = (noel: object, nouvelAn: object, memeSemaine = false) => ({ noel: { dansLeTour: true, ...noel }, nouvelAn: { dansLeTour: true, ...nouvelAn }, compromis: true, memeSemaine, deSuite: [] });
 		expect(texteCompromis(proposition().fetes as never, equipes)).toBeNull();
-		expect(texteCompromis(fetes({ equipeId: 2, attendues: [2] }, { equipeId: 1, dansLeTour: false, attendues: [2] }) as never, equipes)).toBe('Impossible de respecter le tour des deux fêtes : c’est à Équipe 2 de tenir Noël et le Nouvel An, et une équipe ne tient pas les deux. Compromis : Noël pour Équipe 2, Nouvel An pour Équipe 1.');
-		expect(texteCompromis(fetes({ equipeId: 1, attendues: [1] }, { equipeId: 1, dansLeTour: false, attendues: [2] }, true) as never, equipes)).toBe('Impossible de respecter le tour des deux fêtes : elles tombent dans la même semaine, et c’est à Équipe 1 de tenir Noël, à Équipe 2 de tenir le Nouvel An. Compromis : Équipe 1 tient les deux.');
+		expect(texteCompromis(fetes({ equipeId: 2, attendues: [2] }, { equipeId: 1, dansLeTour: false, attendues: [2] }) as never, equipes)).toBe('Impossible de respecter le tour des deux fêtes. C’est à Équipe 2 de tenir Noël et le Nouvel An, et une équipe ne tient pas les deux. En compromis, Noël pour Équipe 2, Nouvel An pour Équipe 1.');
+		expect(texteCompromis(fetes({ equipeId: 1, attendues: [1] }, { equipeId: 1, dansLeTour: false, attendues: [2] }, true) as never, equipes)).toBe('Impossible de respecter le tour des deux fêtes. Elles tombent dans la même semaine, et c’est à Équipe 1 de tenir Noël, à Équipe 2 de tenir le Nouvel An. En compromis, Équipe 1 tient les deux.');
 	});
 });

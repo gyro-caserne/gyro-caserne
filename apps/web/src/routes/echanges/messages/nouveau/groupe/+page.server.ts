@@ -80,7 +80,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 // Les refus du socle, reliés à leur champ et dits simplement.
 const ERREURS: Record<string, [champ: string, texte: string]> = {
 	'Nom du groupe vide': ['nom', 'Donnez un nom au groupe.'],
-	'Nom du groupe trop long': ['nom', 'Nom trop long : 60 caractères au plus.'],
+	'Nom du groupe trop long': ['nom', 'Nom trop long, 60 caractères au plus.'],
 	'Icône inconnue': ['icone', 'Choisissez une icône de la liste.'],
 	'Choisissez au moins une personne': ['membres', 'Choisissez au moins une personne.'],
 	'60 membres au plus': ['membres', '60 membres au plus, vous compris.'],

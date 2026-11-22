@@ -37,7 +37,7 @@ describe('page « Mes réservations »', () => {
 	it('?annuler=<id> : la confirmation dans la carte ; après une réservation, la phrase de réussite', () => {
 		const page = html({ aVenir: [res({})], confirmer: 1, reservee: 'attente' });
 		expect(page).toMatch(/Annuler cette réservation \?[\s\S]*?<form[^>]*method="POST"[^>]*action="\?\/annuler"[\s\S]*?name="id" value="1"/);
-		expect(page).toMatch(/role="status"[^>]*>[\s\S]*?Demande envoyée : vous serez prévenu de la réponse\./);
-		expect(html({ reservee: 'acceptee' })).toContain('Réservation acceptée : elle est à vous.');
+		expect(page).toMatch(/role="status"[^>]*>[\s\S]*?Demande envoyée\. Vous serez prévenu de la réponse\./);
+		expect(html({ reservee: 'acceptee' })).toContain('Réservation acceptée. Elle est à vous.');
 	});
 });

@@ -91,10 +91,10 @@ describe('réserver', () => {
 		const { base, alice, remi, bancs } = await preparer();
 		expect(await reserver(base, alice, bancs, { debut: '2026-11-12', fin: '2026-11-14', quantite: 5 }, maintenant)).toMatchObject({ etat: 'attente' });
 		await reserver(base, remi, bancs, { debut: '2026-11-13', fin: '2026-11-13', quantite: 4 }, maintenant);
-		await expect(reserver(base, alice, bancs, { debut: '2026-11-11', fin: '2026-11-14', quantite: 4 }, maintenant)).rejects.toThrow(new DonneeInvalide('Bancs : il en reste 3 le 13 nov.'));
-		await expect(reserver(base, alice, bancs, { debut: '2026-11-13', fin: '2026-11-13', quantite: 13 }, maintenant)).rejects.toThrow('Bancs : il en reste 3 le 13 nov.');
+		await expect(reserver(base, alice, bancs, { debut: '2026-11-11', fin: '2026-11-14', quantite: 4 }, maintenant)).rejects.toThrow(new DonneeInvalide('Bancs, il en reste 3 le 13 nov.'));
+		await expect(reserver(base, alice, bancs, { debut: '2026-11-13', fin: '2026-11-13', quantite: 13 }, maintenant)).rejects.toThrow('Bancs, il en reste 3 le 13 nov.');
 		await reserver(base, alice, bancs, { debut: '2026-11-13', fin: '2026-11-13', quantite: 3 }, maintenant);
-		await expect(reserver(base, alice, bancs, { debut: '2026-11-13', fin: '2026-11-13', quantite: 1 }, maintenant)).rejects.toThrow('Bancs : il n’en reste plus le 13 nov.');
+		await expect(reserver(base, alice, bancs, { debut: '2026-11-13', fin: '2026-11-13', quantite: 1 }, maintenant)).rejects.toThrow('Bancs, il n’en reste plus le 13 nov.');
 	});
 
 	it('période invalide, trop longue, passée ou trop lointaine ; quantité ; textes trop longs', async () => {
@@ -184,7 +184,7 @@ describe('trancher', () => {
 		const { id: b2 } = await reserver(base, alice, bancs, { debut: '2026-11-12', fin: '2026-11-12', quantite: 4 }, maintenant);
 		await accepter(base, romain, b1, maintenant);
 		await modifierRessource(base, romain, bancs, { nom: 'Bancs', stock: 10, icone: 'groupe' }, maintenant);
-		await expect(accepter(base, romain, b2, maintenant)).rejects.toThrow(new DonneeInvalide('Bancs : il n’en reste que 2 le 12 nov.'));
+		await expect(accepter(base, romain, b2, maintenant)).rejects.toThrow(new DonneeInvalide('Bancs, il n’en reste que 2 le 12 nov.'));
 		expect(await etat(base, b1)).toMatchObject({ etat: 'acceptee' });
 	});
 
@@ -226,7 +226,7 @@ describe('annuler', () => {
 		const { base, alice, remi, bancs, vl } = await preparer();
 		const { id } = await reserver(base, alice, bancs, { debut: '2026-11-03', fin: '2026-11-04', quantite: 1 }, maintenant);
 		await expect(annuler(base, remi, id, null, maintenant)).rejects.toBeInstanceOf(RefusDroit);
-		await expect(annuler(base, alice, id, null, '2026-11-03T08:00')).rejects.toThrow(new DonneeInvalide('Déjà commencée : demandez à qui gère la ressource'));
+		await expect(annuler(base, alice, id, null, '2026-11-03T08:00')).rejects.toThrow(new DonneeInvalide('Déjà commencée. Demandez à qui gère la ressource'));
 		await annuler(base, alice, id, null, '2026-11-02T23:00');
 		expect(await etat(base, id)).toMatchObject({ etat: 'annulee', trancheePar: `personne:${alice.id}` });
 		await expect(annuler(base, alice, id, null, maintenant)).rejects.toThrow(new DonneeInvalide('Cette réservation est déjà terminée ou annulée'));
@@ -505,8 +505,8 @@ describe('après la revue', () => {
 		const { id: b } = await reserver(base, alice, bancs, { debut: '2026-11-12', fin: '2026-11-12', quantite: 4 }, maintenant);
 		await accepter(base, romain, a, maintenant);
 		await modifierRessource(base, romain, bancs, { nom: 'Bancs', stock: 8, icone: 'groupe' }, maintenant);
-		await expect(accepter(base, romain, b, maintenant)).rejects.toThrow(new DonneeInvalide('Bancs : il n’en reste plus le 12 nov.'));
-		await expect(modifierRessource(base, romain, bancs, { nom: 'Bancs', stock: 7, icone: 'groupe' }, maintenant)).rejects.toThrow(new DonneeInvalide('Déjà 8 promis le 12 nov. : annulez d’abord des réservations'));
+		await expect(accepter(base, romain, b, maintenant)).rejects.toThrow(new DonneeInvalide('Bancs, il n’en reste plus le 12 nov.'));
+		await expect(modifierRessource(base, romain, bancs, { nom: 'Bancs', stock: 7, icone: 'groupe' }, maintenant)).rejects.toThrow(new DonneeInvalide('Déjà 8 promis le 12 nov., annulez d’abord des réservations'));
 		// Une réservation passée ne compte pas.
 		await base.update(reservation).set({ debut: '2026-10-12', fin: '2026-10-12' }).where(eq(reservation.id, a));
 		await modifierRessource(base, romain, bancs, { nom: 'Bancs', stock: 2, icone: 'groupe' }, maintenant);

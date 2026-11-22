@@ -363,7 +363,7 @@
 							{/key}
 						{/if}
 						<Champ id="debut" name="debut" type="date" libelle="Début" requis valeur={saisie('debut', aujourdhuiIso)} erreur={erreursNomination.debut} />
-						<Champ id="fin" name="fin" type="date" libelle="Fin" aide="Facultative : sans date, le rôle dure jusqu'à ce qu'on le termine." valeur={saisie('fin', '')} erreur={erreursNomination.fin} />
+						<Champ id="fin" name="fin" type="date" libelle="Fin" aide="Facultative. Sans date, le rôle dure jusqu'à ce qu'on le termine." valeur={saisie('fin', '')} erreur={erreursNomination.fin} />
 						<Bouton type="submit" desactive={envoi === 'attribuer'}>Attribuer</Bouton>
 					</form>
 				{/if}
@@ -397,7 +397,7 @@
 						<h3>Ajouter ou corriger une aptitude</h3>
 						<Choix id="aptitude" name="aptitudeId" libelle="Aptitude" valeur={String(data.aptitudesDuCentre[0]!.id)} options={data.aptitudesDuCentre.map((a) => ({ valeur: String(a.id), libelle: a.nom }))} />
 						<Champ id="obtenue" name="obtenueLe" type="date" libelle="Obtenue le" requis valeur={aujourdhuiIso} />
-						<Champ id="expire" name="expireLe" type="date" libelle="Expire le" aide="Facultative : sans date, l’aptitude vaut jusqu’à ce qu’on la retire." />
+						<Champ id="expire" name="expireLe" type="date" libelle="Expire le" aide="Facultative. Sans date, l’aptitude vaut jusqu’à ce qu’on la retire." />
 						<Bouton type="submit">Enregistrer l’aptitude</Bouton>
 					</form>
 				{/if}

@@ -19,7 +19,7 @@ describe('textes des remplacements', () => {
 
 	it('frise : refusée, annulée, expirée s’arrêtent là', () => {
 		expect(lire(v({ etat: 'refusee', cible: bruno }))).toEqual(['Envoyée (fait)', 'Refusée par Bruno Test (arret)']);
-		expect(lire(v({ etat: 'refusee', cible: bruno, gestes: { ouvrir: true } as VueDemande['gestes'] }))).toEqual(['Envoyée (fait)', 'Refusée par Bruno Test : vous pouvez l’ouvrir à tous (en-cours)']);
+		expect(lire(v({ etat: 'refusee', cible: bruno, gestes: { ouvrir: true } as VueDemande['gestes'] }))).toEqual(['Envoyée (fait)', 'Refusée par Bruno Test, vous pouvez l’ouvrir à tous (en-cours)']);
 		expect(lire(v({ etat: 'annulee' }))).toEqual(['Envoyée (fait)', 'Annulée (arret)']);
 		expect(lire(v({ etat: 'expiree', genre: 'echange', cible: bruno }))).toEqual(['Proposée (fait)', 'Expirée (arret)']);
 	});
@@ -27,7 +27,7 @@ describe('textes des remplacements', () => {
 	it('remplacement court : conclu sans validation du chef, même s’il manque une aptitude ; refusé après coup, le motif le dit', () => {
 		expect(lire(v({ court: true, etat: 'conclue', remplacant: bruno, manque: ['CA1'] }))).toEqual(['Envoyée (fait)', 'Acceptée par Bruno Test (fait)', 'Conclue (fait)']);
 		expect(lire(v({ court: true, etat: 'annulee', remplacant: bruno, motif: 'Refusé par le chef de garde' }))).toEqual(['Envoyée (fait)', 'Acceptée par Bruno Test (fait)', 'Refusé par le chef de garde (arret)']);
-		expect(suite(v({ court: true, etat: 'conclue', remplacant: bruno, manque: ['CA1'], gestes: { refuserApresCoup: true } as VueDemande['gestes'] }))).toBe('Il manque CA1 au remplaçant : le chef de garde peut refuser jusqu’au début.');
+		expect(suite(v({ court: true, etat: 'conclue', remplacant: bruno, manque: ['CA1'], gestes: { refuserApresCoup: true } as VueDemande['gestes'] }))).toBe('Il manque CA1 au remplaçant. Le chef de garde peut refuser jusqu’au début.');
 		expect(suite(v({ court: true, etat: 'conclue', remplacant: bruno, manque: ['CA1'], gestes: { refuserApresCoup: false } as VueDemande['gestes'] }))).toBeNull();
 	});
 });

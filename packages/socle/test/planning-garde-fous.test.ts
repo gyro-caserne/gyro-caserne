@@ -32,7 +32,7 @@ const avisDe = async (base: Awaited<ReturnType<typeof jeu>>['base'], id: number)
 describe('changer l’équipe d’une semaine', () => {
 	it('une semaine commencée ou passée ne change plus, l’année publiée ; une semaine à venir, si', async () => {
 		const { base, chef, apres } = await jeu();
-		await expect(changerSemaines(base, chef, 2027, { [S]: apres }, '2027-07-12T10:00', reglage)).rejects.toThrow(new DonneeInvalide('Semaine du vendredi 9 juillet commencée : son équipe ne change plus'));
+		await expect(changerSemaines(base, chef, 2027, { [S]: apres }, '2027-07-12T10:00', reglage)).rejects.toThrow(new DonneeInvalide('Semaine du vendredi 9 juillet commencée. Son équipe ne change plus'));
 		await expect(changerSemaines(base, chef, 2027, { '2027-07-02': apres }, '2027-07-12T10:00', reglage)).rejects.toThrow(DonneeInvalide);
 		await changerSemaines(base, chef, 2027, { [S]: apres }, '2027-07-08T10:00', reglage);
 	});
@@ -118,7 +118,7 @@ describe('changer une semaine par le fichier', () => {
 		const nom = `Équipe ${ids.indexOf(apres) + 1}`;
 		const d = await donneesFichierPlanning(base, chef, 2027, '2027-07-12T10:00', reglage);
 		const apercu = await apercuPlanning(base, chef, 2027, relu(d, changer(nom)), '2027-07-12T10:00', reglage);
-		expect(apercu.erreurs).toEqual([{ feuille: 'Semaines', ligne: expect.any(Number), message: 'Semaine du vendredi 9 juillet commencée : son équipe ne change plus' }]);
+		expect(apercu.erreurs).toEqual([{ feuille: 'Semaines', ligne: expect.any(Number), message: 'Semaine du vendredi 9 juillet commencée. Son équipe ne change plus' }]);
 	});
 
 	it('appliqué sur une année publiée : les deux équipes sont prévenues', async () => {

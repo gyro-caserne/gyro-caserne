@@ -104,7 +104,7 @@ describe('Préparer l’année en cinq étapes', () => {
 	it('année publiée : le roulement ne se déplace plus, l’étape 5 change une semaine', () => {
 		const html = page({ preparation: preparation({ publiee: '2026-11-01T10:00' }) });
 		expect(html).not.toContain('name="deplacer"');
-		expect(html).toContain('Année publiée : le roulement ne change plus.');
+		expect(html).toContain('Année publiée. Le roulement ne change plus.');
 	});
 
 	it('année publiée : avant de changer une semaine, les remplacements touchés et qui sera prévenu ; commencée, elle ne change plus', () => {
@@ -117,7 +117,7 @@ describe('Préparer l’année en cinq étapes', () => {
 		expect(html).toContain('Les agents des deux équipes et les personnes de ces remplacements seront prévenus.');
 		expect(html.indexOf('remplacements touchés')).toBeLessThan(html.indexOf('name="semaine-2027-01-01"'));
 		const commencee = page({ etape: 'publier', preparation: publiee, semaine: '2027-01-01', semaineTouche: { commencee: true, remplacements: [] } });
-		expect(commencee).toContain('Semaine commencée : son équipe ne change plus.');
+		expect(commencee).toContain('Semaine commencée. Son équipe ne change plus.');
 		expect(commencee).not.toContain('name="semaine-2027-01-01"');
 	});
 

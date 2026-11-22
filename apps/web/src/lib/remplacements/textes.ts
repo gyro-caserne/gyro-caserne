@@ -32,10 +32,10 @@ export function titreDemande(v: VueDemande): string {
 
 // Ce qui reste à faire, dit en clair.
 export function suite(v: VueDemande): string | null {
-	if (v.etat === 'a_valider') return `Le chef de garde doit valider : il manque ${v.manque.join(', ')} au remplaçant.`;
-	if (v.court && v.manque.length > 0 && v.gestes.refuserApresCoup) return `Il manque ${v.manque.join(', ')} au remplaçant : le chef de garde peut refuser jusqu’au début.`;
-	if (v.etat === 'refusee' && v.moi === 'demandeur') return v.gestes.ouvrir ? 'Refusée : vous pouvez l’ouvrir à tous les disponibles.' : 'Refusée.';
-	if (v.etat === 'expiree') return 'Personne n’a été trouvé à temps : le titulaire reste responsable.';
+	if (v.etat === 'a_valider') return `Il manque ${v.manque.join(', ')} au remplaçant. Le chef de garde doit valider.`;
+	if (v.court && v.manque.length > 0 && v.gestes.refuserApresCoup) return `Il manque ${v.manque.join(', ')} au remplaçant. Le chef de garde peut refuser jusqu’au début.`;
+	if (v.etat === 'refusee' && v.moi === 'demandeur') return v.gestes.ouvrir ? 'Refusée. Vous pouvez l’ouvrir à tous les disponibles.' : 'Refusée.';
+	if (v.etat === 'expiree') return 'Personne n’a été trouvé à temps. Le titulaire reste responsable.';
 	return null;
 }
 
@@ -50,7 +50,7 @@ export function frise(v: VueDemande): Pas[] {
 	// Refusée par le collègue visé : le demandeur peut encore l'ouvrir à tous, elle n'est pas finie.
 	if (v.etat === 'refusee') {
 		const par = qui ? `Refusée par ${nom(qui)}` : 'Refusée';
-		return [...pas, v.gestes.ouvrir ? { libelle: `${par} : vous pouvez l’ouvrir à tous`, etat: 'en-cours' } : { libelle: par, etat: 'arret' }];
+		return [...pas, v.gestes.ouvrir ? { libelle: `${par}, vous pouvez l’ouvrir à tous`, etat: 'en-cours' } : { libelle: par, etat: 'arret' }];
 	}
 	pas.push(acceptee ? { libelle: `Acceptée par ${nom(v.remplacant)}`, etat: 'fait' } : { libelle: qui && v.cible ? `En attente de ${nom(qui)}` : 'En attente d’un collègue', etat: v.etat === 'attente' ? 'en-cours' : 'a-venir' });
 	// Un court refusé après coup : le motif dit par qui.

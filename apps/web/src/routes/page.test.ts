@@ -386,7 +386,7 @@ describe('accueil', () => {
 			expect(h).toMatch(/role="group"[^>]*aria-labelledby="reponse-2"/);
 			// L'événement porte son sondage : une seule fois, sous « Événements ».
 			expect(h.match(/href="\/echanges\/centre\/3"/g)).toHaveLength(2);
-			expect(h).toMatch(/<a[^>]*href="\/echanges\/centre\/3"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Sondage ouvert : votez sur la publication<span class="masque[^"]*"> : Repas<\/span>/);
+			expect(h).toMatch(/<a[^>]*href="\/echanges\/centre\/3"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Voter au sondage<span class="masque[^"]*"> de Repas<\/span>/);
 			const sondages = h.slice(h.indexOf('Sondages ouverts'));
 			expect(sondages).not.toContain('/echanges/centre/3');
 		});

@@ -159,7 +159,7 @@ describe('page des notifications', () => {
 		});
 		expect(page).not.toContain('?/retirer');
 		expect(page).toContain('?/classer');
-		expect(page).toContain('Ce message n’est plus dans la conversation : il ne reste qu’à classer le signalement.');
+		expect(page).toContain('Ce message n’est plus dans la conversation. Il ne reste qu’à classer le signalement.');
 		expect(page).toContain('Sans texte');
 	});
 

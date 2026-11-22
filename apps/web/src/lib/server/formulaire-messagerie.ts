@@ -35,7 +35,7 @@ const DONNEES: Record<string, string> = {
 	'Cette personne n’est pas dans l’annuaire': 'Cette personne n’est plus dans l’annuaire.',
 	'4 photos au plus': '4 photos au plus.',
 	'Photo JPEG ou WebP seulement': 'Les photos doivent être en JPEG ou WebP.',
-	'Photo trop lourde (200 Ko au plus)': 'Photo trop lourde : 200 Ko au plus.',
+	'Photo trop lourde (200 Ko au plus)': 'Photo trop lourde, 200 Ko au plus.',
 	'Réaction inconnue': 'Choisissez une des six réactions.',
 	'Pas de réaction sur ce message': 'Ce message ne prend pas de réaction.',
 	'Modifiable 15 minutes après l’envoi': 'Un message se modifie dans les 15 minutes après l’envoi.',
@@ -73,12 +73,12 @@ const entier = (f: FormData, cle: string) => {
 export async function actionEnvoyer(locals: App.Locals, request: Request, cible: { conversation: number } | { personne: number }) {
 	const acteur = exigerActeur(locals);
 	const js = avecJavaScript(request);
-	if (envoiTropLourd(request)) return fail<ReponseMessage>(413, { cible: 'envoyer', message: `Envoi trop lourd : 4 photos de 200 Ko au plus.${js ? '' : ' Sans JavaScript, réduisez vos photos avant de les envoyer.'}` });
+	if (envoiTropLourd(request)) return fail<ReponseMessage>(413, { cible: 'envoyer', message: `Envoi trop lourd, 4 photos de 200 Ko au plus.${js ? '' : ' Sans JavaScript, réduisez vos photos avant de les envoyer.'}` });
 	const f = await request.formData();
 	const valeurs = { texte: texte(f, 'texte'), reponseA: texte(f, 'reponseA') };
 	const fichiers = f.getAll('photos').filter((v): v is File => typeof v !== 'string' && v.size > 0);
 	if (fichiers.some((p) => p.size > TAILLE_PHOTO_MAX))
-		return fail<ReponseMessage>(400, { cible: 'envoyer', message: `Photo trop lourde : 200 Ko au plus.${js ? '' : ' Sans JavaScript, les photos ne sont pas réduites : réduisez-les avant de les envoyer.'}`, valeurs });
+		return fail<ReponseMessage>(400, { cible: 'envoyer', message: `Photo trop lourde, 200 Ko au plus.${js ? '' : ' Sans JavaScript, les photos ne sont pas réduites. Réduisez-les avant de les envoyer.'}`, valeurs });
 	const reponseA = valeurs.reponseA ? (entier(f, 'reponseA') ?? -1) : undefined;
 	let envoi: { conversation: number; message: number };
 	try {

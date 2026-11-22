@@ -387,7 +387,7 @@ export async function anomaliesADecider(base: Base, maintenant: string, reglage:
 		const n = signalees.length;
 		items.push({ texte: `${n} ${n > 1 ? 'anomalies signalées' : 'anomalie signalée'} à prendre en charge : ${noms.join(', ')}`, lien: '/engins/anomalies' });
 	}
-	for (const e of indisponibles) if (e.derniere !== null) items.push({ texte: `${e.nom} indisponible, anomalie close : remettre en service ?`, lien: `/engins/anomalies/${e.derniere}` });
+	for (const e of indisponibles) if (e.derniere !== null) items.push({ texte: `${e.nom} indisponible, anomalie close. Remettre en service ?`, lien: `/engins/anomalies/${e.derniere}` });
 	return { equipeId: items.length ? await equipeAstreinte(base, maintenant, reglage) : null, items, roles: traitent.map((t) => t.id) };
 }
 

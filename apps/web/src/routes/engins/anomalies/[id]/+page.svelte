@@ -138,7 +138,7 @@
 					{@render message('prendre')}
 					{@render message('verifiee')}
 					{#if PANNEAUX.some(peut)}<div class="gestes">
-						{#each PANNEAUX.filter(peut) as cle (cle)}<a class="lien-secondaire" href={adresse(cle)} data-sveltekit-noscroll data-sveltekit-reset="false">{TITRES[cle]}…</a>{/each}
+						{#each PANNEAUX.filter(peut) as cle (cle)}<a class="lien-secondaire" href={adresse(cle)} data-sveltekit-noscroll data-sveltekit-reset="false">{TITRES[cle]}</a>{/each}
 					</div>{/if}
 				{:else if !a.close}
 					<p class="doux">{a.prisePar ? `Prise en charge par ${a.prisePar}.` : 'En attente d’une prise en charge.'}</p>

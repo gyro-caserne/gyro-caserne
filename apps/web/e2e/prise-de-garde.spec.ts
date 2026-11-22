@@ -24,7 +24,7 @@ test.describe('prise de garde', () => {
 		await page.goto('/engins/2/prise');
 		await page.waitForLoadState('networkidle');
 		// Un essai précédent a pu laisser un brouillon.
-		const abandon = page.getByText('Abandonner la prise…');
+		const abandon = page.getByText('Abandonner la prise');
 		if (await abandon.count()) {
 			await abandon.click();
 			await page.getByRole('button', { name: 'Oui, abandonner' }).click();
@@ -99,7 +99,7 @@ test.describe('prise de garde', () => {
 		const ailleurs = await page.context().newPage();
 		await ailleurs.goto('/engins/2/prise');
 		await ailleurs.waitForLoadState('networkidle');
-		await ailleurs.getByText('Abandonner la prise…').click();
+		await ailleurs.getByText('Abandonner la prise').click();
 		await ailleurs.getByRole('button', { name: 'Oui, abandonner' }).click();
 		await expect(ailleurs.getByText('Commencée par')).toBeHidden();
 		await ailleurs.close();
@@ -156,7 +156,7 @@ test.describe('prise validée', () => {
 		// Rouverte : la trace sous la plaque, les zones vues gardées, plus d'abandon.
 		await expect(page.locator('.bande')).toContainText('Rouverte par Test Fictif');
 		await expect(page.locator('.bande')).toContainText('Motif : Radio oubliée');
-		await expect(page.getByText('Abandonner la prise…')).toBeHidden();
+		await expect(page.getByText('Abandonner la prise')).toBeHidden();
 		await expect(valider).not.toHaveAttribute('aria-disabled');
 		await sansViolation(page);
 		await valider.click();

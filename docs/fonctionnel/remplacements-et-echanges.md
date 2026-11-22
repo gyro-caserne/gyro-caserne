@@ -29,7 +29,7 @@ Planning → « Remplacements » (avec le nombre de demandes à traiter). Quatre
 
 Chaque ligne a son icône à l'encre (horloge, calendrier, flèches d'échange, casque), décorative : le texte porte le sens.
 
-Les liens précis vont droit au parcours : une semaine ou un jour de la vue Semaine, une semaine de la vue Année (parcours des gardes, semaine ouverte, jour pré-choisi), « Je ne peux pas : échanger ma place » sous la prochaine manœuvre du Planning. Chaque parcours ramène au choix par son retour « ‹ Me faire remplacer » (celui lancé depuis une manœuvre du Planning ramène au Planning).
+Les liens précis vont droit au parcours : une semaine ou un jour de la vue Semaine, une semaine de la vue Année (parcours des gardes, semaine ouverte, jour pré-choisi), « Échanger ma place » sous la prochaine manœuvre du Planning. Chaque parcours ramène au choix par son retour « ‹ Me faire remplacer » (celui lancé depuis une manœuvre du Planning ramène au Planning).
 
 ## Le déroulé
 
@@ -45,7 +45,7 @@ Pour être remplacé **2 ou 3 h** pendant son astreinte du jour, pour une raison
 - « Me faire remplacer » → « Quelques heures aujourd'hui » (proposé seulement le jour de l'astreinte). L'heure de début au quart d'heure, dans la liste du téléphone, puis 2 h ou 3 h. La plage tient dans une seule tranche de son astreinte du jour ; elle peut commencer alors que l'astreinte a commencé, mais pas dans le passé.
 - Toujours **ouverte à tous les disponibles**, comme une demande ouverte (ceux qui ont ses aptitudes contrôlées en tête). Pas de collègue ciblé, pas d'échange.
 - **Conclu dès qu'un collègue accepte** ; le premier l'emporte. Pas de validation avant.
-- S'il manque au remplaçant une aptitude contrôlée du demandeur, le chef de garde reçoit une **urgence** (« Marc Petit remplace Julie Martin lundi 9 novembre, de 20 h à 22 h · il lui manque CA1 ») et peut refuser. Sinon, il est simplement informé.
+- S'il manque au remplaçant une aptitude contrôlée du demandeur, le chef de garde reçoit une **urgence** (« Marc Petit remplace Julie Martin lundi 9 novembre, de 20 h à 22 h, il lui manque CA1 ») et peut refuser. Sinon, il est simplement informé.
 - **Refuser ce remplaçant** : le demandeur, ou le chef de garde si une aptitude manque, **jusqu'au début** de la plage, avec confirmation. Le titulaire reste d'astreinte ; le remplaçant (et le demandeur, si c'est le chef) le savent par une urgence. La demande est close (« Annulée », motif « Refusé par… ») et ne repart pas d'elle-même.
 - Le chef de garde apprend aussi le refus du demandeur (en urgence s'il manquait une aptitude). Un court conclu ne s'**annule** pas : on refuse le remplaçant.
 - **Désistement** du remplaçant avant le début : le titulaire le sait par une urgence, et la demande repart vers les disponibles, comme une demande ouverte.

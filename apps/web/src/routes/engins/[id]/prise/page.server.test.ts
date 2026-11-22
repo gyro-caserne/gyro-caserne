@@ -130,6 +130,6 @@ describe('/engins/[id]/prise', () => {
 		await agir('commencer', locaux(base, alice), vsav, []);
 		const [p] = await base.select().from(priseGarde);
 		expect(await agir('geste', locaux(base, alice), vsav, [['prise', String(p!.id)], ['quoi', 'nimporte']])).toMatchObject({ status: 400 });
-		expect(await agir('geste', locaux(base, alice), vsav, [['prise', String(p!.id)], ['quoi', 'ecart'], ['photo', jpeg(300 * 1024)]])).toMatchObject({ status: 400, data: { message: 'Photo trop lourde : 200 Ko au plus.' } });
+		expect(await agir('geste', locaux(base, alice), vsav, [['prise', String(p!.id)], ['quoi', 'ecart'], ['photo', jpeg(300 * 1024)]])).toMatchObject({ status: 400, data: { message: 'Photo trop lourde, 200 Ko au plus.' } });
 	});
 });

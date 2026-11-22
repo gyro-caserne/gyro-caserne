@@ -100,7 +100,7 @@ export async function enregistrerArmement(base: Base, acteur: Acteur, r: Reglage
 	const engins = ENGINS_PAR_DEFAUT.map((defaut) => {
 		const e = r.engins.find((x) => x.nom === defaut.nom) ?? defaut;
 		const postes = Object.fromEntries(POSTES.map((p) => [p, e.postes[p]])) as Postes;
-		if (!POSTES.every((p) => Number.isInteger(postes[p]) && postes[p] >= 0) || places(postes).length > POSTES_MAX || places(postes).length === 0) throw new DonneeInvalide(`${defaut.nom} : de 1 à ${POSTES_MAX} postes`);
+		if (!POSTES.every((p) => Number.isInteger(postes[p]) && postes[p] >= 0) || places(postes).length > POSTES_MAX || places(postes).length === 0) throw new DonneeInvalide(`${defaut.nom}, de 1 à ${POSTES_MAX} postes`);
 		return { nom: defaut.nom, postes };
 	});
 	const niveaux = Object.fromEntries(NIVEAUX.map((n) => [n, r.niveaux[n] ?? null])) as ReglageArmement['niveaux'];

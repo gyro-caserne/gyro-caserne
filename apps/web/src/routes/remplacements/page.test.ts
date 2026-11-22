@@ -68,7 +68,7 @@ describe('page Remplacements', () => {
 		const v = demande({ etat: 'a_valider', moi: 'valideur', remplacant: { id: 2, prenom: 'Bruno', nom: 'Test' }, manque: ['CA1'], gestes: { ...gestes, valider: true, annuler: true } });
 		const html = page({ aValider: [v], avecValider: true, onglet: 'a-valider' });
 		expect(html).toContain('Bruno Test remplace Alice Test');
-		expect(html).toContain('il manque CA1 au remplaçant');
+		expect(html).toContain('Il manque CA1 au remplaçant');
 		expect(html).toMatch(/action="\?\/valider"/);
 		expect(html).toMatch(/action="\?\/refuserValidation"[\s\S]*?Motif \(facultatif\)/);
 	});

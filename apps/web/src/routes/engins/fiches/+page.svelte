@@ -28,7 +28,7 @@
 		<div class="cote">
 			<section class="panneau" aria-labelledby="titre-type">
 				<h2 id="titre-type">Nouveau type d’engin</h2>
-				<p class="doux">Pour un type que le centre n’avait pas (CCF, VLHR…) : sa fiche commence vide.</p>
+				<p class="doux">Pour un type que le centre n’avait pas (CCF, VLHR…). Sa fiche commence vide.</p>
 				<form method="POST" action="?/nouveauType" use:enhance class="formulaire">
 					<Champ id="nom-type" name="nom" libelle="Type" aide="Court, comme sur l’engin : « CCF »." requis maxlength={20} valeur={form?.nom ?? ''} erreur={form?.message} />
 					<div><Bouton type="submit">Créer le type</Bouton></div>

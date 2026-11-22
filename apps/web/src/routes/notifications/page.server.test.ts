@@ -111,6 +111,6 @@ describe('signalements dans /notifications', () => {
 		await supprimerMessage(base, base.photos, bruno, grave.message, '2026-10-29T10:06');
 		const [s] = (await charger(locaux(base, chef))).signalements;
 		expect(s.retirable).toBe(false);
-		expect(await agir('retirer', locaux(base, chef), s.id)).toMatchObject({ status: 400, data: { message: 'Ce message n’est plus dans la conversation : classez le signalement.' } });
+		expect(await agir('retirer', locaux(base, chef), s.id)).toMatchObject({ status: 400, data: { message: 'Ce message n’est plus dans la conversation. Classez le signalement.' } });
 	});
 });

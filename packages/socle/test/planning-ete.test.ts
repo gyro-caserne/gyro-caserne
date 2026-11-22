@@ -111,7 +111,7 @@ describe('Mes vacances', () => {
 			[bruno, 'rappel'],
 			[bruno, 'rappel']
 		]);
-		expect(avis[0]!.texte).toBe('Donnez vos vacances d’été avant le 15/05/2027 : vos dates, ou « disponible tout l’été ».');
+		expect(avis[0]!.texte).toBe('Donnez vos vacances d’été avant le 15/05/2027, ou dites que vous êtes disponible tout l’été.');
 		const fil = await filDeNotifications(base, a(bruno), '2027-05-09T08:00');
 		expect(fil.nonLues).toBe(2);
 		expect(fil.lignes[0]).toMatchObject({ type: 'ete', titre: 'Vos vacances d’été', url: '/moi/vacances' });

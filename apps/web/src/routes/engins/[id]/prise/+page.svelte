@@ -6,6 +6,7 @@
 	import type { ElementFiche, VuePrise, ZoneFiche } from '@gyro-caserne/socle';
 	import { dateCourte, etatPrise, GENRES, heureCourte, jourHeure, texteEcart, texteEtape, texteReleve } from '#lib/engins/textes.ts';
 	import { reduirePhoto } from '#lib/murs/reduire-photo.ts';
+	import { deNom } from '#lib/murs/quand.ts';
 	import { pluriel } from '#lib/pluriel.ts';
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import ChampPhoto from '#lib/ui/ChampPhoto.svelte';
@@ -67,7 +68,14 @@
 	const autres = $derived(data.agents.filter((a) => !a.astreinte));
 	const coche = (id: number) => s?.participants.includes(id) ?? false;
 	// Participants : une rangée en tête, qui ouvre le panneau (`?participants`).
-	const noms = $derived(data.agents.filter((a) => coche(a.id)).map((a) => (a.id === data.moi ? 'vous' : a.nom)));
+	// « La prise sera à votre nom. », « … au nom de Julie Martin et de Marc Petit. », « … à votre nom et à celui de Marc Petit. »
+	const auNomDe = $derived.by(() => {
+		const choisis = data.agents.filter((a) => coche(a.id));
+		const autres = choisis.filter((a) => a.id !== data.moi).map((a) => deNom(a.nom));
+		const liste = autres.length > 1 ? `${autres.slice(0, -1).join(', ')} et ${autres.at(-1)}` : (autres[0] ?? '');
+		if (!autres.length) return 'La prise sera à votre nom.';
+		return choisis.length > autres.length ? `La prise sera à votre nom et à celui ${liste}.` : `La prise sera au nom ${liste}.`;
+	});
 	const resumeParticipants = $derived.by(() => {
 		const avecMoi = data.moi != null && coche(data.moi);
 		const autresCoches = (s?.participants.length ?? 0) - (avecMoi ? 1 : 0);
@@ -225,7 +233,7 @@
 					<summary>Plus</summary>
 					<form method="POST" action="?/rouvrir" use:enhance class="formulaire">
 						<input type="hidden" name="prise" value={p.id} />
-						<p>La prise repasse en cours : les zones vues restent, les écarts se corrigent, puis elle se valide de nouveau.</p>
+						<p>La prise repasse en cours. Les zones vues restent, les écarts se corrigent, puis elle se valide de nouveau.</p>
 						<div class="champ">
 							<label for="motif-rouvrir">Motif</label>
 							<textarea id="motif-rouvrir" name="motif" maxlength="200" rows="2" required>{pour('rouvrir')?.motif ?? ''}</textarea>
@@ -313,7 +321,7 @@
 							<input type="hidden" name="quoi" value="zone" />
 							<input type="hidden" name="zone" value={zoneFaite.ref} />
 							<input type="hidden" name="cible" value="zone:{zoneFaite.ref}" />
-							<p class="ok">{@render marque()} {zoneFaite.nom} : tout est complet.</p>
+							<p class="ok">{@render marque()} {zoneFaite.nom}, tout est complet.</p>
 							<button type="submit" class="petit" name="vue" value="0">Annuler<span class="masque">{' '}: {zoneFaite.nom} à revoir</span></button>
 						</form>
 					{/if}
@@ -361,7 +369,7 @@
 									<div class="encadre">
 										{@render signale(o)}
 										{#if s?.retrouves.includes(o.id)}
-											<p class="ok">Retrouvé : le signalement sera clos à la validation.</p>
+											<p class="ok">Retrouvé, le signalement sera clos à la validation.</p>
 										{:else if data.peutFaire}
 											<p>Retrouvé ou réparé ?</p>
 										{/if}
@@ -440,9 +448,10 @@
 							{nbEcarts ? `${pluriel(nbEcarts, 'écart deviendra', 'écarts deviendront')} ${nbEcarts > 1 ? 'des anomalies suivies' : 'une anomalie suivie'}.` : 'Aucun écart.'}
 						{/if}
 						{#if nbRetrouves}{pluriel(nbRetrouves, 'signalement retrouvé sera clos', 'signalements retrouvés seront clos')}.{/if}
-						L’engin reste disponible : seuls le référent engins et les chefs décident d’une indisponibilité.
+						L’engin reste disponible. Seuls le référent engins et les chefs décident d’une indisponibilité.
 					</p>
-					<p class="valider-participants">La prise sera au nom de : <strong>{noms.join(', ') || 'vous'}</strong>. <a href="?participants" data-sveltekit-noscroll>Modifier les participants</a></p>
+					<p>{auNomDe}</p>
+					<div><a class="lien-secondaire" href="?participants" data-sveltekit-noscroll>Modifier les participants</a></div>
 					<form method="POST" action="?/valider" use:enhance>
 						<input type="hidden" name="prise" value={p.id} />
 						<Bouton type="submit">Valider la prise</Bouton>
@@ -458,7 +467,7 @@
 
 		{#if p && data.peutFaire && !rouverte}
 			<details class="abandon repli" open={pour('abandonner')?.message !== undefined}>
-				<summary>Abandonner la prise…</summary>
+				<summary>Abandonner la prise</summary>
 				<form method="POST" action="?/abandonner" use:enhance class="formulaire">
 					<input type="hidden" name="prise" value={p.id} />
 					<p>Le brouillon et ses photos seront effacés.</p>
@@ -792,9 +801,6 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--espace-12);
-	}
-	.valider-participants a {
-		color: inherit;
 	}
 	.pastilles {
 		display: flex;

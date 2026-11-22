@@ -18,8 +18,8 @@
 	let situation = $state<SituationEngin>(untrack(() => valeurs.situation));
 	const SITUATIONS: { valeur: SituationEngin; titre: string; texte: string }[] = $derived([
 		{ valeur: 'centre', titre: 'Au centre', texte: 'Un engin du centre.' },
-		{ valeur: 'prete', titre: 'Prêté au centre', texte: 'Prêté par un autre centre, le temps d’une réparation : il a sa fiche et sa prise de garde.' },
-		...(existant ? [{ valeur: 'parti' as const, titre: 'Parti', texte: 'Il quitte le centre (rendu, réformé, réaffecté) : il sort de la liste, son historique reste.' }] : [])
+		{ valeur: 'prete', titre: 'Prêté au centre', texte: 'Prêté par un autre centre, le temps d’une réparation. Il a sa fiche et sa prise de garde.' },
+		...(existant ? [{ valeur: 'parti' as const, titre: 'Parti', texte: 'Il quitte le centre (rendu, réformé, réaffecté). Il sort de la liste, son historique reste.' }] : [])
 	]);
 </script>
 

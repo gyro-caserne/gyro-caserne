@@ -53,6 +53,6 @@ describe('/planning/ete', () => {
 		expect(await envoyerEte('ajuster', l, [['debut', premiere!.debut], ['personne', String(alice.id)], ['present', 'oui']], q)).toEqual({ cible: 'plage', succes: 'Agent ajouté.' });
 		expect(await envoyerEte('publier', l, [], q)).toMatchObject({ cible: 'publier', succes: expect.any(String) });
 		expect((await base.select().from(ete))[0]!.publieeLe).not.toBeNull();
-		expect(await envoyerEte('proposer', l, [], q)).toMatchObject({ status: 400, data: { message: 'L’été est déjà publié : ajustez plutôt plage par plage.' } });
+		expect(await envoyerEte('proposer', l, [], q)).toMatchObject({ status: 400, data: { message: 'L’été est déjà publié. Ajustez plutôt plage par plage.' } });
 	});
 });

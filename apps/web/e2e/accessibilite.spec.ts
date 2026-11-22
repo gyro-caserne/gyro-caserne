@@ -1165,7 +1165,7 @@ test.describe('anomalie', () => {
 		await page.waitForLoadState('networkidle');
 		await expect(page.locator('textarea, input[name="texte"]')).toHaveCount(0);
 
-		const attente = page.getByRole('link', { name: 'Mettre en attente…' });
+		const attente = page.getByRole('link', { name: 'Mettre en attente' });
 		await attente.focus();
 		await page.keyboard.press('Enter');
 		const panneau = page.getByRole('dialog', { name: 'Mettre en attente' });
@@ -1176,7 +1176,7 @@ test.describe('anomalie', () => {
 		await expect(panneau).toHaveCount(0);
 		await expect(attente).toBeFocused();
 
-		await page.getByRole('link', { name: 'Réparée…' }).click();
+		await page.getByRole('link', { name: 'Réparée' }).click();
 		const reparee = page.getByRole('dialog', { name: 'Réparée' });
 		await reparee.getByLabel(/^Ce qui a été fait/).fill('Vis resserrée');
 		await sansViolation(page);
@@ -1454,7 +1454,7 @@ test.describe('fichier de l’effectif', () => {
 			await dialogue.dismiss();
 		});
 		await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Caserne' }).click();
-		await expect.poll(() => question).toBe("L'import est en cours : quitter l'arrêtera. Quitter quand même ?");
+		await expect.poll(() => question).toBe("L'import est en cours. Quitter l'arrêtera. Quitter quand même ?");
 		await expect(page).toHaveURL(/\/agents\/fichier$/);
 		await expect(page.getByRole('heading', { level: 2, name: 'Application en cours' })).toBeVisible();
 

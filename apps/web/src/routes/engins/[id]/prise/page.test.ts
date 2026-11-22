@@ -75,7 +75,7 @@ describe('/engins/[id]/prise', () => {
 		expect(page).toMatch(/href="\?zone=2#titre-zone"[^>]*aria-current="true"/);
 		expect(page).toContain('Lances');
 		expect(page).not.toContain('Essai radio');
-		expect(page).toMatch(/name="zone" value="1"[\s\S]*?Cabine : tout est complet[\s\S]*?name="vue" value="0"[\s\S]*?Annuler/);
+		expect(page).toMatch(/name="zone" value="1"[\s\S]*?Cabine, tout est complet[\s\S]*?name="vue" value="0"[\s\S]*?Annuler/);
 		expect(page).toMatch(/href="\?zone=1#titre-zone"[^>]*class="vue[\s\S]*?Tout est complet/);
 	});
 
@@ -183,15 +183,27 @@ describe('/engins/[id]/prise', () => {
 	it('« Annuler » vient après le titre de la zone, où se pose le focus', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
 		const page = html(data({ zones: [1] }), { cible: 'zone:1', zone: null, zoneFaite: 1, succes: 'Zone complète.' });
-		expect(page).toMatch(/id="titre-zone"[\s\S]*?Cabine : tout est complet[\s\S]*?Annuler[\s\S]*?Lances/);
+		expect(page).toMatch(/id="titre-zone"[\s\S]*?Cabine, tout est complet[\s\S]*?Annuler[\s\S]*?Lances/);
 	});
 
 	it('les participants : une rangée en tête (« vous + 2 »), rappelés à la validation ; pas de liste à plat', () => {
 		adresse.url = new URL('http://x/engins/1/prise');
 		const page = html(data());
 		expect(page).toMatch(/href="\?participants"[\s\S]*?Participants :<\/span> <strong>vous \+ 2<\/strong>/);
-		expect(html(data({ zones: [1, 2] }))).toMatch(/La prise sera au nom de : <strong>Mila Clément, vous, Élodie Chef-de-Garde<\/strong>/);
+		expect(html(data({ zones: [1, 2] }))).toMatch(/<p[^>]*>La prise sera à votre nom et à celui de Mila Clément et d’Élodie Chef-de-Garde\.<\/p>/);
 		expect(page).not.toContain('name="participant"');
+	});
+
+	it('le bloc Valider : des phrases, puis « Modifier les participants » en bouton secondaire sur sa ligne, et « Abandonner la prise » sans points de suspension', () => {
+		adresse.url = new URL('http://x/engins/1/prise');
+		const pret = html(data({ zones: [1, 2] }));
+		const bloc = pret.slice(pret.indexOf('id="valider"'), pret.indexOf('action="?/valider"'));
+		expect(bloc).toContain('L’engin reste disponible. Seuls le référent engins et les chefs décident d’une indisponibilité.');
+		expect(bloc).toMatch(/<\/p> <div[^>]*><a class="lien-secondaire[^"]*" href="\?participants"[^>]*>Modifier les participants<\/a><\/div>/);
+		expect(bloc).not.toMatch(/:\s*(<[^>]+>)*\s*vous/);
+		expect(html(data({ zones: [1, 2], participants: [1] }))).toMatch(/<p[^>]*>La prise sera à votre nom\.<\/p>/);
+		expect(html(data({ zones: [1, 2], participants: [2, 9] }))).toMatch(/<p[^>]*>La prise sera au nom de Mila Clément et d’Élodie Chef-de-Garde\.<\/p>/);
+		expect(pret).toMatch(/<summary[^>]*>Abandonner la prise<\/summary>/);
 	});
 
 	it('le panneau : l’équipe d’astreinte d’abord, une recherche, les cochés en pastilles ; sans JavaScript, tous les agents', () => {

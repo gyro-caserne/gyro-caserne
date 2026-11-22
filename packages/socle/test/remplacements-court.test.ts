@@ -293,7 +293,7 @@ describe('remplacement court : revue', () => {
 		const { base, alice, chloe, elodie } = await jeu();
 		const id = await demanderRemplacementCourt(base, alice, plage, maintenant, reglage);
 		await accepterDemande(base, chloe, id, maintenant, reglage);
-		await expect(annulerDemande(base, elodie, id, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Un remplacement court conclu ne s’annule pas : refusez le remplaçant'));
+		await expect(annulerDemande(base, elodie, id, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Un remplacement court conclu ne s’annule pas. Refusez le remplaçant'));
 		expect((await demandeVue(base, elodie, id, maintenant, reglage)).demande!.gestes.annuler).toBe(false);
 		// En attente, le chef peut toujours l'annuler.
 		const autre = await demanderRemplacementCourt(base, alice, { debut: '2026-11-09T23:00', duree: 2 }, maintenant, reglage);

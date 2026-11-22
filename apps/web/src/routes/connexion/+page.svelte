@@ -59,7 +59,7 @@
 		</form>
 		<a class="changer" href="/connexion">Changer d’adresse</a>
 	{:else}
-		<p class="phrase">Pas de mot de passe : recevez un lien de connexion par courriel.</p>
+		<p class="phrase">Pas de mot de passe. Recevez un lien de connexion par courriel.</p>
 		<form method="post" action="?/envoyer" class="carte">
 			<Champ id="email" name="email" type="email" libelle="Adresse e-mail" autocomplete="email" requis />
 			<Bouton type="submit">Recevoir un lien de connexion</Bouton>

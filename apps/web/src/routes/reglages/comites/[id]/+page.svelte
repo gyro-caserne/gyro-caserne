@@ -77,7 +77,7 @@
 	{/if}
 {:else}
 	{@render retour('dissoudre')}
-	<p class="aide">Ce comité est dissous : il ne se modifie plus.</p>
+	<p class="aide">Ce comité est dissous. Il ne se modifie plus.</p>
 {/if}
 
 <style>

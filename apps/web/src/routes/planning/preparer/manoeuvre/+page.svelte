@@ -13,7 +13,7 @@
 </svelte:head>
 
 <div class="page">
-	<EnTetePage titre={m ? 'Modifier la manœuvre' : 'Nouvelle manœuvre'} phrase={m?.publiee ? 'Déjà annoncée : la publication sera mise à jour et les convoqués prévenus.' : 'Elle sera annoncée sur « Le centre » deux semaines avant.'} retour={{ href: retourHref, libelle: 'Préparer l’année' }} />
+	<EnTetePage titre={m ? 'Modifier la manœuvre' : 'Nouvelle manœuvre'} phrase={m?.publiee ? 'Déjà annoncée. La publication sera mise à jour et les convoqués prévenus.' : 'Elle sera annoncée sur « Le centre » deux semaines avant.'} retour={{ href: retourHref, libelle: 'Préparer l’année' }} />
 	<FormulaireManoeuvre manoeuvre={m} equipes={data.equipes} {form} />
 </div>
 

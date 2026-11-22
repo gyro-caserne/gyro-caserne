@@ -279,7 +279,7 @@ export async function reserver(base: Base, acteur: Acteur, id: number, d: Demand
 			.from(reservation)
 			.where(and(eq(reservation.ressourceId, id), enCoursDeDemande, dansLaPeriode(p.debut, p.fin)));
 		const m = manque(r, prises, p, quantite);
-		if (m) throw new DonneeInvalide(m.restant === 0 ? `${r.nom} : il n’en reste plus le ${jourCourt(m.jour)}` : `${r.nom} : il en reste ${m.restant} le ${jourCourt(m.jour)}`);
+		if (m) throw new DonneeInvalide(m.restant === 0 ? `${r.nom}, il n’en reste plus le ${jourCourt(m.jour)}` : `${r.nom}, il en reste ${m.restant} le ${jourCourt(m.jour)}`);
 	}
 	// Créneau : libre ou pris se décide à l'écriture même, pour que deux demandes simultanées ne soient pas toutes deux acceptées.
 	const chevauchement = sql`exists (select 1 from reservation x where x.ressource_id = ${id} and x.etat in ('attente', 'acceptee') and x.debut < ${p.fin} and ${p.debut} < x.fin)`;
@@ -364,7 +364,7 @@ export async function accepter(base: Base, acteur: Acteur, id: number, maintenan
 	const enConflit = ecartees.map((a) => a.id);
 	if (l.forme === 'jours') {
 		const m = manque({ nom: l.ressourceNom, stock: l.stock }, autres, l, l.quantite);
-		if (m) throw new DonneeInvalide(m.restant === 0 ? `${l.ressourceNom} : il n’en reste plus le ${jourCourt(m.jour)}` : `${l.ressourceNom} : il n’en reste que ${m.restant} le ${jourCourt(m.jour)}`);
+		if (m) throw new DonneeInvalide(m.restant === 0 ? `${l.ressourceNom}, il n’en reste plus le ${jourCourt(m.jour)}` : `${l.ressourceNom}, il n’en reste que ${m.restant} le ${jourCourt(m.jour)}`);
 	}
 	const qui = tranchee(acteur, maintenant);
 	await base.batch([
@@ -401,7 +401,7 @@ export async function annuler(base: Base, acteur: Acteur, id: number, mot: strin
 	if (!mienne && l.jeGere !== 1) throw new RefusDroit('RESERVER', { type: 'ressource', id: l.ressourceId }, 'Ce n’est pas votre réservation');
 	if (!active(l.etat) || l.fin < maintenant.slice(0, l.fin.length)) throw new DonneeInvalide('Cette réservation est déjà terminée ou annulée');
 	const parLeDemandeur = mienne && !commencee(l.debut, maintenant);
-	if (!parLeDemandeur && l.jeGere !== 1) throw new DonneeInvalide('Déjà commencée : demandez à qui gère la ressource');
+	if (!parLeDemandeur && l.jeGere !== 1) throw new DonneeInvalide('Déjà commencée. Demandez à qui gère la ressource');
 	const qui = tranchee(acteur, maintenant);
 	const motif = parLeDemandeur ? null : texteFacultatif(mot, 'Mot', 200);
 	await base.batch([
@@ -530,7 +530,7 @@ async function exigerStockSuffisant(base: Base, id: number, stock: number, aujou
 	if (acceptees.length === 0) return;
 	const dernier = acceptees.reduce((a, b) => (b.fin > a ? b.fin : a), aujourdhui);
 	const plusPris = restantParJour(0, acceptees, aujourdhui, dernier).reduce((a, b) => (b.restant < a.restant ? b : a));
-	if (-plusPris.restant > stock) throw new DonneeInvalide(`Déjà ${-plusPris.restant} promis le ${jourCourt(plusPris.jour)} : annulez d’abord des réservations`);
+	if (-plusPris.restant > stock) throw new DonneeInvalide(`Déjà ${-plusPris.restant} promis le ${jourCourt(plusPris.jour)}, annulez d’abord des réservations`);
 }
 
 // Nom, icône et, pour une ressource prise par jours, le stock.

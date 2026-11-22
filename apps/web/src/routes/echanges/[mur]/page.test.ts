@@ -153,7 +153,7 @@ describe('page d’un mur', () => {
 		const comite = html({ mur: { ...mur, cle: 'comite:1', nom: 'Comité du centre', type: 'comite' }, audience: 0 });
 		expect(comite).toMatch(/<h1[^>]*>Comité du centre<\/h1>/);
 		expect(comite).not.toContain('class="phrase"');
-		expect(comite).toContain('Aucun membre pour l’instant : visible par le chef et l’adjoint');
+		expect(comite).toContain('Aucun membre pour l’instant. Visible par le chef et l’adjoint');
 		expect(comite).not.toContain('0 membres');
 	});
 

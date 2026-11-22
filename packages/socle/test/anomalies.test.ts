@@ -347,7 +347,7 @@ describe('la liste et « À décider »', () => {
 		expect(accueil.contenu).toMatchObject({ aDecider: [{ texte: '1 anomalie signalée à prendre en charge : VTU', lien: '/engins/anomalies' }] });
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'indisponible' }, QUAND, REGLAGE_ANOMALIES);
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'reparee', texte: '' }, QUAND, REGLAGE_ANOMALIES);
-		expect((await anomaliesADecider(j.base, QUAND, reglage, [])).items).toEqual([{ texte: 'VTU indisponible, anomalie close : remettre en service ?', lien: `/engins/anomalies/${id}` }]);
+		expect((await anomaliesADecider(j.base, QUAND, reglage, [])).items).toEqual([{ texte: 'VTU indisponible, anomalie close. Remettre en service ?', lien: `/engins/anomalies/${id}` }]);
 		// L'agent n'a rien à décider.
 		expect((await accueilDe(j.base, j.alice, null, '2026-10-30', QUAND, reglage)).casquettes.every((c) => c.compte === 0)).toBe(true);
 	});

@@ -84,7 +84,7 @@
 	{/if}
 
 	{#if data.mur.lectureSeule}
-		<p class="doux">Ce mur est en lecture seule : on n’y commente plus.</p>
+		<p class="doux">Ce mur est en lecture seule. On n’y commente plus.</p>
 	{:else if p.commentairesFermes}
 		<p class="doux">Les commentaires sont fermés.</p>
 	{:else}

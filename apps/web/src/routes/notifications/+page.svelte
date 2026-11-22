@@ -93,7 +93,7 @@
 {#if data.aValider > 0 || (data.remplacementsAValider ?? 0) > 0}
 	<ListeRangees titre="À trancher">
 		{#if (data.remplacementsAValider ?? 0) > 0}
-			<li><Rangee href="/remplacements?onglet=a-valider" titre="{pluriel(data.remplacementsAValider ?? 0, 'remplacement')} à valider" sous="Une aptitude contrôlée manque au remplaçant : à vous de trancher." alerte /></li>
+			<li><Rangee href="/remplacements?onglet=a-valider" titre="{pluriel(data.remplacementsAValider ?? 0, 'remplacement')} à valider" sous="Une aptitude contrôlée manque au remplaçant. À vous de trancher." alerte /></li>
 		{/if}
 		{#if data.aValider > 0}
 			<li><Rangee href="/reservations/a-valider" titre="{pluriel(data.aValider, 'demande')} de réservation à valider" sous="Accepter ou refuser, d’un geste." alerte /></li>
@@ -118,11 +118,11 @@
 						</div>
 					{/if}
 					<p class="doux">Signalé par {nom(s.par)}, {jourEtHeure(s.le)}</p>
-					{#if !s.retirable}<p class="note">Ce message n’est plus dans la conversation : il ne reste qu’à classer le signalement.</p>{/if}
+					{#if !s.retirable}<p class="note">Ce message n’est plus dans la conversation. Il ne reste qu’à classer le signalement.</p>{/if}
 					{#if s.retirable && data.confirmer === s.id}
 						<div class="confirmer-ici">
 							<h3>Retirer ce message ?</h3>
-							<p>Il disparaît pour tous les membres : « Message retiré par la modération » reste à sa place. Le signalement est classé.</p>
+							<p>Il disparaît pour tous les membres, et « Message retiré par la modération » reste à sa place. Le signalement est classé.</p>
 							<div class="choix">
 								<a class="bouton secondaire" href="/notifications">Annuler</a>
 								<form method="POST" action="?/retirer" use:enhance={apres}>
@@ -234,7 +234,7 @@
 		<form method="POST" action="?/retirer" use:enhance={apres}>
 			<input type="hidden" name="id" value={s.id} />
 			<h2 id="confirmation-titre">Retirer ce message ?</h2>
-			<p id="confirmation-texte">Il disparaît pour tous les membres : « Message retiré par la modération » reste à sa place. Le signalement est classé.</p>
+			<p id="confirmation-texte">Il disparaît pour tous les membres, et « Message retiré par la modération » reste à sa place. Le signalement est classé.</p>
 			<div class="choix">
 				<!-- svelte-ignore a11y_autofocus -->
 				<button type="button" class="secondaire" autofocus onclick={fermer}>Annuler</button>

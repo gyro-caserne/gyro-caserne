@@ -85,7 +85,7 @@ export function texteCompromis(f: PropositionAnnee['fetes'], equipes: EquipePlan
 	const nA = noms(f.nouvelAn.attendues);
 	const tenue = (id: number | null) => nomEquipe(equipes, id);
 	const debut = 'Impossible de respecter le tour des deux fêtes';
-	if (f.memeSemaine) return `${debut} : elles tombent dans la même semaine, et c’est à ${nN} de tenir Noël, à ${nA} de tenir le Nouvel An. Compromis : ${tenue(f.noel.equipeId)} tient les deux.`;
+	if (f.memeSemaine) return `${debut}. Elles tombent dans la même semaine, et c’est à ${nN} de tenir Noël, à ${nA} de tenir le Nouvel An. En compromis, ${tenue(f.noel.equipeId)} tient les deux.`;
 	const qui = nN === nA ? `c’est à ${nN} de tenir Noël et le Nouvel An, et une équipe ne tient pas les deux` : `c’est à ${nN} de tenir Noël, à ${nA} de tenir le Nouvel An`;
-	return `${debut} : ${qui}. Compromis : Noël pour ${tenue(f.noel.equipeId)}, Nouvel An pour ${tenue(f.nouvelAn.equipeId)}.`;
+	return `${debut}. ${qui.charAt(0).toUpperCase()}${qui.slice(1)}. En compromis, Noël pour ${tenue(f.noel.equipeId)}, Nouvel An pour ${tenue(f.nouvelAn.equipeId)}.`;
 }

@@ -122,7 +122,7 @@ describe('page Réglages', () => {
 		expect(jauge(Math.round(2.34 * MO), false)).toContain('>2,3 Mo sur 500 Mo<');
 		const pleine = jauge(400 * MO, true);
 		expect(pleine).toMatch(/class="rangee[^"]*alerte/);
-		expect(pleine).toContain('400 Mo sur 500 Mo. La base des photos est presque pleine : il faudra choisir entre l’offre payante (5 $/mois) ou un stockage R2.');
+		expect(pleine).toContain('400 Mo sur 500 Mo. La base des photos est presque pleine. Il faudra choisir entre l’offre payante (5 $/mois) ou un stockage R2.');
 		expect(html(Page, { data: { ...data, photos: null } })).not.toContain('>Photos<');
 	});
 

@@ -29,14 +29,14 @@ export const actions: Actions = {
 	regler: async ({ locals, request, url }) => {
 		const f = await request.formData();
 		const d = { debut: champ(f, 'debut'), fin: champ(f, 'fin'), dateLimite: champ(f, 'dateLimite') };
-		return agir(locals, 'regler', 'Été enregistré : les agents peuvent donner leurs vacances.', (m) => reglerEte(locals.base, locals.acteur!, anneeDe(url), d, m, centre.astreinte));
+		return agir(locals, 'regler', 'Été enregistré. Les agents peuvent donner leurs vacances.', (m) => reglerEte(locals.base, locals.acteur!, anneeDe(url), d, m, centre.astreinte));
 	},
 	proposer: async ({ locals, url }) => {
 		connecte(locals);
 		try {
 			const { impossibles } = await proposerEte(locals.base, locals.acteur!, anneeDe(url), maintenantParis(), centre.astreinte);
 			const n = impossibles.length;
-			return { cible: 'repartition', succes: n === 0 ? 'Répartition proposée : le FPT est armé sur chaque plage.' : `Répartition proposée ; ${n === 1 ? 'une plage reste impossible' : `${n} plages restent impossibles`}.` };
+			return { cible: 'repartition', succes: n === 0 ? 'Répartition proposée. Le FPT est armé sur chaque plage.' : `Répartition proposée ; ${n === 1 ? 'une plage reste impossible' : `${n} plages restent impossibles`}.` };
 		} catch (erreur) {
 			return echecPlanning(erreur, 'repartition');
 		}
@@ -55,5 +55,5 @@ export const actions: Actions = {
 			return echecPlanning(erreur, 'relancer');
 		}
 	},
-	publier: async ({ locals, url }) => agir(locals, 'publier', 'L’été est publié : le planning de chacun le suit.', (m) => publierEte(locals.base, locals.acteur!, anneeDe(url), m, centre.astreinte))
+	publier: async ({ locals, url }) => agir(locals, 'publier', 'L’été est publié. Le planning de chacun le suit.', (m) => publierEte(locals.base, locals.acteur!, anneeDe(url), m, centre.astreinte))
 };

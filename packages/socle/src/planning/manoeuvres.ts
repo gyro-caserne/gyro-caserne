@@ -58,7 +58,7 @@ export function colonnesPublication(m: Pick<Manoeuvre, 'debut' | 'fin' | 'theme'
 	};
 }
 
-const pdj = (m: Pick<Manoeuvre, 'petitDejeuner'>) => (m.petitDejeuner === 1 ? ' Petit-déjeuner : répondez au sondage avant vendredi 18 h.' : '');
+const pdj = (m: Pick<Manoeuvre, 'petitDejeuner'>) => (m.petitDejeuner === 1 ? ' Pour le petit-déjeuner, répondez au sondage avant vendredi 18 h.' : '');
 
 // Chaque matin (voir planifie.ts) : annonce les manœuvres à 14 jours ou moins, relance le mercredi d'avant.
 // Seulement les années publiées ; une manœuvre annulée ou commencée n'est plus traitée. `choix` : ceux du petit-déjeuner, réglés par le centre.

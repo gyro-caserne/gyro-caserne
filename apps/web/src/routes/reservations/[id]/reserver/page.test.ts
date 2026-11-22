@@ -21,7 +21,7 @@ describe('page « Réserver »', () => {
 		expect(page).toMatch(champ(['type="date"', 'name="fin"', 'value="2026-11-05"']));
 		expect(page).toMatch(champ(['type="number"', 'name="quantite"', 'value="1"']));
 		expect(page).toMatch(/<textarea[^>]*name="mot"/);
-		expect(page).toMatch(/role="status"[^>]*>[\s\S]*?Disponible : 12 sur 12 sur toute la période\./);
+		expect(page).toMatch(/role="status"[^>]*>[\s\S]*?Disponible, 12 sur 12 sur toute la période\./);
 		expect(page).toMatch(/<button[^>]*type="submit"[^>]*>(?:<!--[^>]*-->)*Demander/);
 		expect(page).not.toContain('name="nom"');
 		expect(page).toMatch(/href="\/reservations\/2"/);

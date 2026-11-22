@@ -104,7 +104,7 @@
 	<p class="masque" role="alert">{echec}</p>
 
 	{#if !p.publiee}
-		<Vide titre="Le planning {p.annee} n’est pas encore publié." texte="Le chef de centre le prépare : il apparaîtra ici dès sa publication, avec vos semaines d’astreinte et les manœuvres." />
+		<Vide titre="Le planning {p.annee} n’est pas encore publié." texte="Le chef de centre le prépare. Il apparaîtra ici dès sa publication, avec vos semaines d’astreinte et les manœuvres." />
 		<nav class="annees" aria-label="Années">
 			<a href="?annee={p.annee - 1}">‹ {p.annee - 1}</a>
 			<a href="?annee={p.annee + 1}">{p.annee + 1} ›</a>
@@ -164,10 +164,10 @@
 											</div>
 										</form>
 									{:else}
-										<span class="note">Annoncée deux semaines avant : vous pourrez répondre ici.</span>
+										<span class="note">Annoncée deux semaines avant. Vous pourrez répondre ici.</span>
 									{/if}
 									{#if manoeuvre.convocation !== 'tous' && !manoeuvre.enCours}
-										<a class="echanger" href="/remplacements/manoeuvre?mienne={manoeuvre.id}&depuis=planning">Je ne peux pas : échanger ma place<span class="masque">{` à « ${manoeuvre.theme} »`}</span></a>
+										<a class="echanger" href="/remplacements/manoeuvre?mienne={manoeuvre.id}&depuis=planning">Échanger ma place<span class="masque">{` à « ${manoeuvre.theme} »`}</span></a>
 									{/if}
 								</Rangee>
 							</li>

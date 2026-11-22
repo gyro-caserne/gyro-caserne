@@ -59,7 +59,7 @@
 			}
 		};
 	};
-	const annonce = $derived(form ? (ajout ? 'Personne n’a été ajouté : corrigez les erreurs.' : 'Le groupe n’a pas été créé : corrigez les erreurs.') : '');
+	const annonce = $derived(form ? (ajout ? 'Personne n’a été ajouté. Corrigez les erreurs.' : 'Le groupe n’a pas été créé. Corrigez les erreurs.') : '');
 </script>
 
 <svelte:head>

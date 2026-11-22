@@ -99,11 +99,11 @@ test.describe('connecté', () => {
 		const formulaire = page.locator('form[action="?/publier"]');
 		await formulaire.getByLabel('Votre message', { exact: true }).fill('Message à ne pas perdre');
 		await formulaire.getByRole('button', { name: /^Publier/ }).click();
-		await expect(page.getByText('votre envoi n’est peut-être pas passé')).toBeVisible();
+		await expect(page.getByText('Votre envoi n’est peut-être pas passé')).toBeVisible();
 		await expect(formulaire.getByLabel('Votre message', { exact: true })).toHaveValue('Message à ne pas perdre');
 		expect(envois).toBe(1);
 		await page.getByRole('button', { name: 'Fermer' }).click();
-		await expect(page.getByText('votre envoi n’est peut-être pas passé')).toHaveCount(0);
+		await expect(page.getByText('Votre envoi n’est peut-être pas passé')).toHaveCount(0);
 	});
 });
 

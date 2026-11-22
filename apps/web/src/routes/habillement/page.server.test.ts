@@ -75,11 +75,11 @@ describe('/habillement/[id]', () => {
 		expect(await geste(referent, id, [['quoi', 'question'], ['texte', '']])).toMatchObject({ status: 400, data: { quoi: 'question', message: 'Écrivez votre message.' } });
 		await geste(referent, id, [['quoi', 'question'], ['texte', 'Quelle taille ?']]);
 		await geste(alice, id, [['quoi', 'repondre'], ['texte', '43']]);
-		expect(await geste(referent, id, [['quoi', 'traiter'], ['issue', 'refus'], ['texte', '']])).toMatchObject({ status: 400, data: { message: 'Expliquez le refus en un mot : l’agent le lira.' } });
+		expect(await geste(referent, id, [['quoi', 'traiter'], ['issue', 'refus'], ['texte', '']])).toMatchObject({ status: 400, data: { message: 'Expliquez le refus en un mot. L’agent le lira.' } });
 		await geste(referent, id, [['quoi', 'traiter'], ['issue', 'stock'], ['texte', '']]);
 		await geste(referent, id, [['quoi', 'livrer'], ['recuperation', 'autre'], ['texte', 'Au bureau du chef']]);
 		expect((await ouvrir(alice, id)).demande).toMatchObject({ etape: 'livree', livraison: 'Au bureau du chef' });
-		expect(await geste(alice, id, [['quoi', 'annuler']])).toMatchObject({ status: 400, data: { message: 'Ce geste n’est plus possible : la demande a avancé.' } });
+		expect(await geste(alice, id, [['quoi', 'annuler']])).toMatchObject({ status: 400, data: { message: 'Ce geste n’est plus possible. La demande a avancé.' } });
 		expect(await geste(alice, id, [['quoi', 'nimporte']])).toMatchObject({ status: 400, data: { quoi: null } });
 		await expect(geste({ type: 'personne', id: 9999 }, id, [['quoi', 'prendre']])).rejects.toMatchObject({ status: 404 });
 	});

@@ -40,14 +40,14 @@ export const manquants = (manque: Poste[]) => [...new Set(manque)].map((x) => {
 });
 const comptes = (manque: Poste[]) => [...new Set(manque)].map((x) => compte(manque.filter((y) => y === x).length, x));
 
-// « FPT armé : oui » ; « FPT armé : non, manque CA tout engins, 2 agents ».
+// « FPT armé » ; « FPT non armé, il manque CA tout engins, 2 agents ».
 export function texteArme(arme: boolean, manque: Poste[]): string {
-	return arme ? 'FPT armé : oui' : `FPT armé : non, manque ${comptes(manque).join(', ')}`;
+	return arme ? 'FPT armé' : `FPT non armé, il manque ${comptes(manque).join(', ')}`;
 }
 
-// « Il manque : 1 CE » ; « Il manque : 1 CA tout engins, 2 agents ».
+// « Il manque 1 CE » ; « Il manque 1 CA tout engins, 2 agents ».
 export function texteIlManque(manque: Poste[]): string {
-	return `Il manque : ${manquants(manque).join(', ')}`;
+	return `Il manque ${manquants(manque).join(', ')}`;
 }
 
 // « Du ven. 25 juin au jeu. 2 sept., vacances à donner avant le 15 mai » ; `fin` : la relève qui suit la dernière semaine.

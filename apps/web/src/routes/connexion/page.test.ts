@@ -9,7 +9,7 @@ const envoye = (plus: object = {}) => ({ envoye: true, email: 'claire@exemple.fr
 describe('page de connexion', () => {
 	it('une phrase, un champ, un bouton', () => {
 		const page = html(null);
-		expect(page).toContain('recevez un lien de connexion par courriel');
+		expect(page).toContain('Recevez un lien de connexion par courriel');
 		expect(page).toMatch(/<form[^>]*action="\?\/envoyer"/);
 		expect(page).toMatch(/<input[^>]*type="email"/);
 		expect(page).toMatch(/<button[^>]*type="submit"[^>]*>[^<]*?(<!---->)?Recevoir un lien de connexion/);

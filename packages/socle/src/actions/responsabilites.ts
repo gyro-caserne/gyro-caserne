@@ -222,7 +222,7 @@ export async function modifierResponsabilite(
 			.select({ n: count() })
 			.from(attribution)
 			.where(and(eq(attribution.responsabiliteId, id), or(isNull(attribution.fin), gte(attribution.fin, aujourdhui))));
-		if (n > 0) throw new DonneeInvalide('Portée verrouillée : la responsabilité est tenue');
+		if (n > 0) throw new DonneeInvalide('Portée verrouillée, la responsabilité est tenue');
 		changes.typePerimetre = portee;
 		noms.push('portee');
 	}
@@ -240,7 +240,7 @@ export async function modifierResponsabilite(
 		if ([...ajoutes, ...retires.map((l) => l.droit)].some(estDroitPouvoir) && !(await geresLePouvoir(base, acteur, aujourdhui))) {
 			throw new RefusDroit('GERER_ACCES', { type: 'centre' }, DONNER_POUVOIR);
 		}
-		if (retires.some((l) => l.verrouille === 1)) throw new DonneeInvalide('Droit verrouillé : impossible de le retirer');
+		if (retires.some((l) => l.verrouille === 1)) throw new DonneeInvalide('Droit verrouillé, impossible de le retirer');
 		if (ajoutes.length > 0 || retires.length > 0) noms.push('droits');
 	}
 	// Après le contrôle du pouvoir. Seul ce qui change est vérifié : un rôle ancien qui a déjà un tel droit se modifie pour le reste.

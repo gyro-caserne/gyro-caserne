@@ -17,8 +17,8 @@ describe('phraseAudience', () => {
 		expect(phraseAudience('comite', 'Sport', 5)).toBe('Visible par les 5 membres du comité Sport, le chef et l’adjoint');
 	});
 	it('sans membre : le dit, au lieu de « les 0 membres »', () => {
-		expect(phraseAudience('comite', 'Comité du centre', 0)).toBe('Aucun membre pour l’instant : visible par le chef et l’adjoint');
-		expect(phraseAudience('equipe', 'Équipe 3', 0)).toBe('Aucun membre pour l’instant : visible par le chef et l’adjoint');
+		expect(phraseAudience('comite', 'Comité du centre', 0)).toBe('Aucun membre pour l’instant. Visible par le chef et l’adjoint');
+		expect(phraseAudience('equipe', 'Équipe 3', 0)).toBe('Aucun membre pour l’instant. Visible par le chef et l’adjoint');
 	});
 });
 

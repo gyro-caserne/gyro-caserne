@@ -254,10 +254,10 @@ describe('onglet Planning', () => {
 		expect(page({ maintenant: '2026-11-09T10:00' })).toContain('jour=2026-11-09');
 	});
 
-	it('À venir : « Je ne peux pas : échanger ma place » sur une manœuvre d’équipe, pas sur une manœuvre de tout le centre', () => {
+	it('À venir : « Échanger ma place » sur une manœuvre d’équipe, pas sur une manœuvre de tout le centre', () => {
 		expect(page({})).toContain('href="/remplacements/manoeuvre?mienne=1&amp;depuis=planning"');
 		const tous = { ...publiee, prochaine: { ...publiee.prochaine, manoeuvre: { ...manoeuvre, convocation: 'tous', reponse: null, enCours: false } } };
-		expect(page({ planning: tous })).not.toContain('échanger ma place');
+		expect(page({ planning: tous })).not.toContain('Échanger ma place');
 	});
 
 	it('À venir : une manœuvre commencée reste, « En cours » écrit, sans réponse ni échange', () => {

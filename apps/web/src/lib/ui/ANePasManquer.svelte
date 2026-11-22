@@ -75,7 +75,7 @@
 						</form>
 					{/if}
 					{#if e.sondage}<a class="lien" href={lien(e)}
-							><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d={DESSINS.sondage} /></svg>Sondage ouvert : votez sur la publication<span class="masque">{` : ${e.titre}`}</span></a>{/if}
+							><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d={DESSINS.sondage} /></svg>Voter au sondage<span class="masque">{` de ${e.titre}`}</span></a>{/if}
 					{@render echec(e.id)}
 				</Rangee>
 			</li>

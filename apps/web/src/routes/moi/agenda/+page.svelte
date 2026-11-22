@@ -45,7 +45,7 @@
 				<Bouton variante="secondaire" onclick={copier}>Copier le lien</Bouton>
 			</div>
 			<div role="status">
-				{#if copie === 'ok'}<p class="succes">Lien copié : collez-le dans votre agenda.</p>{:else if copie === 'echec'}<p class="succes">Copie impossible ici : le lien est sélectionné ci-dessous, copiez-le à la main.</p>{/if}
+				{#if copie === 'ok'}<p class="succes">Lien copié. Collez-le dans votre agenda.</p>{:else if copie === 'echec'}<p class="succes">Copie impossible ici. Le lien est sélectionné ci-dessous, copiez-le à la main.</p>{/if}
 			</div>
 			<label for="lien">Votre lien personnel</label>
 			<input id="lien" type="text" readonly value={data.lien} onfocus={(e) => e.currentTarget.select()} />
@@ -83,9 +83,9 @@
 		<section class="carte" aria-labelledby="changer">
 			<h2 id="changer">Bon à savoir</h2>
 			<p>L’agenda peut mettre quelques heures à se mettre à jour ; l’appli est toujours à jour.</p>
-			<p class="avertissement">Ce lien est personnel : ne le partagez pas. Quiconque l’a peut lire votre planning.</p>
+			<p class="avertissement">Ce lien est personnel. Ne le partagez pas. Quiconque l’a peut lire votre planning.</p>
 			<p>Lien perdu ou partagé ? Le changer arrête l’ancien tout de suite ; il faudra ajouter le nouveau dans votre agenda.</p>
-			<div role="status">{#if form?.change}<p class="succes">Nouveau lien créé : ajoutez-le dans votre agenda et retirez l’ancien.</p>{/if}</div>
+			<div role="status">{#if form?.change}<p class="succes">Nouveau lien créé. Ajoutez-le dans votre agenda et retirez l’ancien.</p>{/if}</div>
 			<form method="POST" action="?/changer"><Bouton type="submit" variante="secondaire">Changer le lien</Bouton></form>
 		</section>
 	{/if}

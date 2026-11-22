@@ -70,7 +70,7 @@
 				<p>Elle s’ouvre d’un geste depuis l’écran d’accueil, en plein écran, avec le nombre de notifications sur son icône.</p>
 			{:else if choix === 'installee'}
 				<h2 id={id}>L’appli est installée</h2>
-				<p>Gyro Caserne est sur cet appareil : ouvrez-la depuis son icône.</p>
+				<p>Gyro Caserne est sur cet appareil. Ouvrez-la depuis son icône.</p>
 			{:else}
 				<h2 id={id}>Installer depuis le navigateur</h2>
 				<p>Dans le menu du navigateur, choisissez <strong>Installer l’appli</strong> ou <strong>Ajouter à l’écran d’accueil</strong>.</p>

@@ -281,7 +281,7 @@ async function accepterManoeuvre(base: Base, d: LigneDemande, moi: number, ctx: 
 	]);
 	const [apres] = await base.select({ etat: demandeRemplacement.etat, remplacantId: demandeRemplacement.remplacantId }).from(demandeRemplacement).where(eq(demandeRemplacement.id, d.id));
 	if (apres?.etat !== 'attente' && apres?.remplacantId !== moi) throw dejaTraitee();
-	if (apres?.etat !== 'conclue') throw new DonneeInvalide('Échange impossible : une convocation a changé, réessayez');
+	if (apres?.etat !== 'conclue') throw new DonneeInvalide('Échange impossible, une convocation a changé. Réessayez');
 	return 'conclue';
 }
 
@@ -325,7 +325,7 @@ export async function accepterDemande(base: Base, acteur: Acteur, id: number, ma
 		const periodesCible = periodesDe(d.periodesCible);
 		const siennes = mesTranches(ctx, moi).flatMap((s) => s.tranches);
 		const encoreSiennes = periodesCible.every((p) => siennes.some((t) => t.debut === p.debut && t.fin === p.fin && !t.prise));
-		if (!encoreSiennes || !disponible(ctx, moi, periodes, id) || !disponible(ctx, d.demandeurId, periodesCible, id)) throw new DonneeInvalide('Échange impossible : l’un de vous n’est plus libre');
+		if (!encoreSiennes || !disponible(ctx, moi, periodes, id) || !disponible(ctx, d.demandeurId, periodesCible, id)) throw new DonneeInvalide('Échange impossible, l’un de vous n’est plus libre');
 		manquantes = [...new Set([...manque(ctx, d.demandeurId, moi, date), ...manque(ctx, moi, d.demandeurId, periodesCible[0]!.debut.slice(0, 10))])];
 	} else {
 		if (d.genre !== 'remplacement') throw new DonneeInvalide('Demande inconnue');
@@ -542,12 +542,12 @@ export async function annulerDemande(base: Base, acteur: Acteur, id: number, mai
 	const { d, ctx } = await lireDemande(base, id, maintenant, reglage);
 	const parLeDemandeur = d.demandeurId === moi && ['attente', 'refusee'].includes(d.etat);
 	if (!parLeDemandeur) {
-		if (d.demandeurId === moi && ['a_valider', 'conclue'].includes(d.etat)) throw new DonneeInvalide('Déjà acceptée : demandez au remplaçant de se désister');
+		if (d.demandeurId === moi && ['a_valider', 'conclue'].includes(d.etat)) throw new DonneeInvalide('Déjà acceptée. Demandez au remplaçant de se désister');
 		exigerValideur(ctx, d, moi);
 	}
 	if (!['attente', 'refusee', 'a_valider', 'conclue'].includes(d.etat)) throw dejaTraitee();
 	if (d.genre === 'manoeuvre' && d.etat === 'conclue') throw new DonneeInvalide('Un échange de manœuvre conclu ne s’annule pas');
-	if (d.court === 1 && d.etat === 'conclue') throw new DonneeInvalide('Un remplacement court conclu ne s’annule pas : refusez le remplaçant');
+	if (d.court === 1 && d.etat === 'conclue') throw new DonneeInvalide('Un remplacement court conclu ne s’annule pas. Refusez le remplaçant');
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
 	const prevenus = [...new Set([...(parLeDemandeur ? [] : [d.demandeurId]), ...(d.remplacantId !== null && ['a_valider', 'conclue'].includes(d.etat) ? [d.remplacantId] : []), ...(d.cibleId !== null && d.etat === 'attente' ? [d.cibleId] : [])])].filter((x) => x !== moi);
 	await base.batch([

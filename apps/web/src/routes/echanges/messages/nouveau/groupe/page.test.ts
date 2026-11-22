@@ -92,7 +92,7 @@ describe('nouveau groupe : le nom et l’icône', () => {
 		// Le lien qui permet de corriger porte l'erreur, et c'est lui qui prend le focus.
 		expect(page).toMatch(/<a[^>]*class="modifier[^"]*"[^>]*aria-describedby="rappel-erreur"|<a[^>]*aria-describedby="rappel-erreur"[^>]*class="modifier[^"]*"/);
 		expect([...page.matchAll(/<input[^>]*type="hidden"[^>]*name="membres"[^>]*value="(\d+)"/g)].map((m) => m[1])).toEqual(['6']);
-		expect(page).toMatch(/role="alert"[^>]*>Le groupe n’a pas été créé : corrigez les erreurs\./);
+		expect(page).toMatch(/role="alert"[^>]*>Le groupe n’a pas été créé. Corrigez les erreurs\./);
 	});
 });
 

@@ -53,9 +53,9 @@ describe('disponibilité affichée dans « Réserver »', () => {
 	const vl = { nom: 'VL', forme: 'creneau', stock: null, gestionnaire: { nom: 'Référent engins' } } as never;
 	const prises = [{ debut: '2026-11-12', fin: '2026-11-14', quantite: 9, etat: 'acceptee' }];
 	it('matériel', () => {
-		expect(disponibilite(bancs, prises, { debut: '2026-11-10', fin: '2026-11-11', quantite: '12' })).toEqual({ ton: 'ok', texte: 'Disponible : 12 sur 12 sur toute la période.' });
-		expect(disponibilite(bancs, prises, { debut: '2026-11-10', fin: '2026-11-12', quantite: '3' })).toEqual({ ton: 'ok', texte: 'Disponible : il en reste au moins 3 sur toute la période.' });
-		expect(disponibilite(bancs, prises, { debut: '2026-11-10', fin: '2026-11-12', quantite: '4' })).toEqual({ ton: 'danger', texte: 'Pas assez : il en reste 3 le 12 nov.' });
+		expect(disponibilite(bancs, prises, { debut: '2026-11-10', fin: '2026-11-11', quantite: '12' })).toEqual({ ton: 'ok', texte: 'Disponible, 12 sur 12 sur toute la période.' });
+		expect(disponibilite(bancs, prises, { debut: '2026-11-10', fin: '2026-11-12', quantite: '3' })).toEqual({ ton: 'ok', texte: 'Disponible, il en reste au moins 3 sur toute la période.' });
+		expect(disponibilite(bancs, prises, { debut: '2026-11-10', fin: '2026-11-12', quantite: '4' })).toEqual({ ton: 'danger', texte: 'Pas assez. Il en reste 3 le 12 nov.' });
 		expect(disponibilite(bancs, prises, { debut: '2026-11-12', fin: '2026-11-10', quantite: '1' })).toBeNull();
 		expect(disponibilite(bancs, prises, { debut: '', fin: '', quantite: '1' })).toBeNull();
 	});
@@ -67,8 +67,8 @@ describe('disponibilité affichée dans « Réserver »', () => {
 
 	it('créneau', () => {
 		const pris = [{ debut: '2026-11-07T09:00', fin: '2026-11-07T12:00', quantite: 1, etat: 'acceptee' }];
-		expect(disponibilite(vl, pris, { debut: '2026-11-07T12:00', fin: '2026-11-07T14:00', quantite: '1' })).toEqual({ ton: 'ok', texte: 'Libre : la réservation est acceptée dès l’envoi.' });
-		expect(disponibilite(vl, pris, { debut: '2026-11-07T11:00', fin: '2026-11-07T14:00', quantite: '1' })).toEqual({ ton: 'alerte', texte: 'Créneau déjà demandé : votre demande attendra la décision de Référent engins.' });
+		expect(disponibilite(vl, pris, { debut: '2026-11-07T12:00', fin: '2026-11-07T14:00', quantite: '1' })).toEqual({ ton: 'ok', texte: 'Libre. La réservation est acceptée dès l’envoi.' });
+		expect(disponibilite(vl, pris, { debut: '2026-11-07T11:00', fin: '2026-11-07T14:00', quantite: '1' })).toEqual({ ton: 'alerte', texte: 'Créneau déjà demandé. Votre demande attendra la décision de Référent engins.' });
 		expect(disponibilite(vl, pris, { debut: '2026-11-07T14:00', fin: '2026-11-07T11:00', quantite: '1' })).toBeNull();
 	});
 });

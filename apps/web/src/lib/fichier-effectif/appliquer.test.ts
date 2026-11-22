@@ -6,7 +6,7 @@ const ajouter = (ligne: number): Operation => ({ ligne, type: 'ajouter', donnees
 const attribuer = (ligne: number): Operation => ({ ligne, type: 'attribuer', personne: { ligne }, responsabiliteId: 5, perimetre: { type: 'centre' } });
 const depart = (personneId: number): Operation => ({ ligne: 0, type: 'statut', personneId, statut: 'parti' });
 const modifier = (ligne: number, personneId: number): Operation => ({ ligne, type: 'modifier', personneId, champs: { prenom: 'X' } });
-const PERDUE = 'Connexion perdue : cette opération a peut-être été appliquée. Réexportez pour vérifier.';
+const PERDUE = 'Connexion perdue. Cette opération a peut-être été appliquée. Réexportez pour vérifier.';
 
 describe('appliquerTout', () => {
 	it('envoie les opérations une à une, avec les agents créés par les lignes précédentes', async () => {

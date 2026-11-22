@@ -97,7 +97,7 @@ describe('l’été publié', () => {
 		expect((await astreinteDe(base, a(p.bruno), `${ETE}T10:00`, reglage))!.equipe.nom).toBe('Groupe B');
 		expect((await astreinteDe(base, a(p.bruno), '2027-03-01T10:00', reglage))!.equipe.nom).toBe('Équipe 2');
 		const avis = await base.select().from(avisEte);
-		expect(avis.find((x) => x.personneId === p.alice)?.texte).toBe('Planning d’été : vous êtes en renfort du Groupe B la semaine du vendredi 25 juin.');
+		expect(avis.find((x) => x.personneId === p.alice)?.texte).toBe('Dans le planning d’été, vous êtes en renfort du Groupe B la semaine du vendredi 25 juin.');
 		expect(nomDe(await planningDe(base, a(p.alice), 2027, maintenant, reglage), ETE)).toBe('Groupe B');
 		const lien = await monLienAgenda(base, a(p.bruno), maintenant);
 		const ics = await agendaDe(base, lien, maintenant, reglage);

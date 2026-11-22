@@ -247,7 +247,7 @@
 								<summary>Changer les dates</summary>
 								<div class="dates">
 									<Champ id="debut-{id}" name="debut" type="date" libelle="Début" requis valeur={saisie(cible, 'debut', data.aujourdhui)} erreur={erreurs.debut} />
-									<Champ id="fin-{id}" name="fin" type="date" libelle="Fin" aide="Facultative : sans date, le rôle dure jusqu'à ce qu'on le termine." valeur={saisie(cible, 'fin', '')} erreur={erreurs.fin} />
+									<Champ id="fin-{id}" name="fin" type="date" libelle="Fin" aide="Facultative. Sans date, le rôle dure jusqu'à ce qu'on le termine." valeur={saisie(cible, 'fin', '')} erreur={erreurs.fin} />
 								</div>
 							</details>
 							<div class="boutons">

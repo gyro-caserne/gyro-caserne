@@ -58,15 +58,15 @@
 			.filter(Boolean)
 			.join(' et ')
 	);
-	const phraseChef = $derived(chef ? `${chef.charAt(0).toUpperCase()}${chef.slice(1)} : votre chef de garde devra valider.` : echange || cible ? 'Votre chef de garde sera informé quand il aura accepté.' : informe);
+	const phraseChef = $derived(chef ? `${chef.charAt(0).toUpperCase()}${chef.slice(1)}. Votre chef de garde devra valider.` : echange || cible ? 'Votre chef de garde sera informé quand il aura accepté.' : informe);
 	// Ouverte à tous sans aucun collègue libre : personne ne la recevrait.
 	const personne = $derived(!echange && !cible && data.candidats.length === 0);
 	const recap = $derived.by(() => {
 		const miennes = phrasePeriodes(data.choisies);
-		if (echange && data.avec) return [`Vous proposez à ${nom(data.avec)} d’échanger : vous lui donnez ${miennes}, ${data.avec.prenom} vous donne ${phrasePeriodes(data.choisiesAvec)}.`, `${data.avec.prenom} doit accepter.`, phraseChef];
+		if (echange && data.avec) return [`Vous proposez à ${nom(data.avec)} d’échanger. Vous lui donnez ${miennes}, et ${data.avec.prenom} vous donne ${phrasePeriodes(data.choisiesAvec)}.`, `${data.avec.prenom} doit accepter.`, phraseChef];
 		if (cible) return [`Vous demandez à ${nom(cible)} de vous remplacer ${miennes}.`, `${cible.prenom} doit accepter.`, phraseChef];
 		const n = data.candidats.length;
-		if (n === 0) return [`Vous voulez être remplacé ${miennes}.`, 'Aucun collègue n’est libre sur ces périodes pour l’instant : personne ne recevrait la demande.', 'Prévenez directement votre chef de garde.'];
+		if (n === 0) return [`Vous voulez être remplacé ${miennes}.`, 'Aucun collègue n’est libre sur ces périodes pour l’instant. Personne ne recevrait la demande.', 'Prévenez directement votre chef de garde.'];
 		return [`Vous demandez à être remplacé ${miennes}.`, `${pluriel(n, 'collègue disponible est prévenu', 'collègues disponibles sont prévenus')}.`, informe];
 	});
 	const message = $derived(form?.message ?? data.message ?? '');

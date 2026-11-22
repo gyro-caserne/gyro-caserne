@@ -8,10 +8,10 @@ describe('tableau de l’été', () => {
 	});
 
 	it('FPT armé, en texte ; ce qui manque, compté', () => {
-		expect(texteArme(true, [])).toBe('FPT armé : oui');
-		expect(texteArme(false, ['ca2', 'agent', 'agent'])).toBe('FPT armé : non, manque CA tout engins, 2 agents');
-		expect(texteIlManque(['ce'])).toBe('Il manque : 1 CE');
-		expect(texteIlManque(['ca2', 'agent', 'agent'])).toBe('Il manque : 1 CA tout engins, 2 agents');
+		expect(texteArme(true, [])).toBe('FPT armé');
+		expect(texteArme(false, ['ca2', 'agent', 'agent'])).toBe('FPT non armé, il manque CA tout engins, 2 agents');
+		expect(texteIlManque(['ce'])).toBe('Il manque 1 CE');
+		expect(texteIlManque(['ca2', 'agent', 'agent'])).toBe('Il manque 1 CA tout engins, 2 agents');
 	});
 
 	it('la période en une phrase', () => {

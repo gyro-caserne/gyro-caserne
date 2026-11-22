@@ -56,7 +56,8 @@
 {/snippet}
 
 {#snippet sansRoulement()}
-	<p class="encadre">Réglez d’abord le roulement : cette étape en dépend. <a href={vers('roulement')}>Aller au roulement</a></p>
+	<p class="encadre">Réglez d’abord le roulement. Cette étape en dépend.</p>
+	<div><a class="lien-secondaire" href={vers('roulement')}>Aller au roulement</a></div>
 {/snippet}
 
 {#snippet statut()}
@@ -102,10 +103,10 @@
 		{@render retour('proposition')}
 
 		{#if data.etape === 'roulement'}
-			<p class="doux">L’ordre des équipes, semaine après semaine. La première semaine commence le {jourLong(data.apercu[0]?.debut ?? `${p.annee}-01-01`)}.{p.ordre.length ? '' : ' Ordre proposé d’après la référence du centre : validez-le ou changez-le.'}</p>
+			<p class="doux">L’ordre des équipes, semaine après semaine. La première semaine commence le {jourLong(data.apercu[0]?.debut ?? `${p.annee}-01-01`)}.{p.ordre.length ? '' : ' Ordre proposé d’après la référence du centre. Validez-le ou changez-le.'}</p>
 			{@render retour('roulement')}
 			{#if p.publiee}
-				<p class="encadre">Année publiée : le roulement ne change plus. Pour changer l’équipe d’une semaine, passez par « <a href={vers('publier')}>Vérifier et publier</a> ».</p>
+				<p class="encadre">Année publiée. Le roulement ne change plus. Pour changer l’équipe d’une semaine, passez par « <a href={vers('publier')}>Vérifier et publier</a> ».</p>
 				<ol role="list" class="ordre">
 					{#each ordre as id, i (id)}
 						{@const e = equipe(id)}
@@ -176,7 +177,7 @@
 											<a class="lien-secondaire" href={ici()} data-sveltekit-reset="false">Non merci</a>
 										</form>
 									{:else}
-										<p>Aucune semaine à échanger : changez l’équipe d’une semaine à l’étape « Vérifier et publier ».</p>
+										<p>Aucune semaine à échanger. Changez l’équipe d’une semaine à l’étape « Vérifier et publier ».</p>
 									{/if}
 								</div>
 							{/if}
@@ -333,7 +334,7 @@
 		{@const touche = data.semaineTouche}
 		<p class="doux">Du {jourLong(semaineOuverte.debut)} au {jourLong(finDeSemaine(semaineOuverte.debut))}. Aujourd’hui : {actuelle.nom}.</p>
 		{#if touche?.commencee}
-			<p class="encadre">Semaine commencée : son équipe ne change plus.</p>
+			<p class="encadre">Semaine commencée. Son équipe ne change plus.</p>
 		{:else}
 			{#if touche}
 				{#if touche.remplacements.length}

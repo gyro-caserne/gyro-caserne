@@ -19,7 +19,7 @@ C'est la ressource qui dit qui la gère (un rôle ou un comité) : le référent
 
 ## Les règles
 
-- **Stock** : une demande de matériel est refusée à la saisie si elle dépasse ce qui reste sur l'un des jours demandés. Les demandes en attente comptent déjà. Le message dit combien il en reste (« Bancs : il en reste 3 le 13 nov. »).
+- **Stock** : une demande de matériel est refusée à la saisie si elle dépasse ce qui reste sur l'un des jours demandés. Les demandes en attente comptent déjà. Le message dit combien il en reste (« Bancs, il en reste 3 le 13 nov. »).
 - **États** : en attente → acceptée ou refusée (motif facultatif). Le demandeur annule tant que la période n'a pas commencé ; qui gère annule une réservation acceptée, avec un mot au demandeur.
 - **Conflit VL** : accepter une demande qui chevauche une réservation acceptée oblige à choisir : « Garder cette demande » annule l'autre, « Garder l'autre » refuse la demande. Le demandeur écarté est prévenu.
 - **Retirer du matériel** : plus aucune demande ; ses réservations à venir sont annulées, leurs demandeurs prévenus.

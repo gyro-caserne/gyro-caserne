@@ -116,6 +116,23 @@ export function textesSvelte(source: string): Texte[] {
 	return textes;
 }
 
+// Le balisage brut d'un fichier Svelte, ligne par ligne, sans <script>, <style> ni commentaires.
+export const balisage = (source: string): Texte[] =>
+	source
+		.replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>|<!--[\s\S]*?-->/g, (b) => b.replace(/[^\n]/g, ' '))
+		.split('\n')
+		.map((texte, n) => ({ texte, ligne: n + 1 }));
+
+// Ce que le balisage ne doit pas contenir : un bouton ou un lien qui finit par « … » ; « au nom de : vous » ;
+// un lien collé derrière la fin d'une phrase (une action va sur sa ligne, en bouton secondaire).
+const BALISAGE: [RegExp, string][] = [
+	[/…['"`]?\s*\}?\s*(<\/span>\s*)?<\/(a|button|summary|Bouton)>/, 'points de suspension dans un bouton ou un lien'],
+	[/\bde\s?:\s|:\s+vous\b/, 'deux-points devant un nom'],
+	[/[.!?](\s|\{'\s*'\}|&nbsp;)*<a\s/, 'lien collé derrière une phrase'],
+];
+export const fautesBalisage = (fichier: string, lignes: Texte[]): string[] =>
+	lignes.flatMap(({ texte, ligne }) => BALISAGE.filter(([motif]) => motif.test(texte)).map(([, nom]) => `${fichier}:${ligne} ${nom} : ${texte.trim().slice(0, 80)}`));
+
 export function fautes(fichier: string, textes: Texte[]): string[] {
 	return textes.flatMap(({ texte, ligne }) => SEPARATEURS.filter(([motif]) => motif.test(texte)).map(([, nom]) => `${fichier}:${ligne} ${nom} : ${texte.trim().slice(0, 80)}`));
 }
@@ -127,7 +144,8 @@ const produits = (dossier: string) => tous(dossier).filter((f) => /\.(ts|svelte)
 function relevees(f: string): string[] {
 	const source = readFileSync(f, 'utf8');
 	const nom = relative(join(appli, '../../..'), f);
-	return fautes(nom, f.endsWith('.svelte') ? textesSvelte(source) : chaines(source));
+	if (!f.endsWith('.svelte')) return fautes(nom, chaines(source));
+	return [...fautes(nom, textesSvelte(source)), ...fautesBalisage(nom, balisage(source))];
 }
 
 describe('textes visibles', () => {
@@ -140,6 +158,17 @@ describe('textes visibles', () => {
 		const svelte = "<script>\n\t// Exemple : « A · B »\n\tconst s = `${a} — ${b}`;\n</script>\n\n<!-- a · b -->\n<p>{nom} · {date}</p>\n<p>{a || b}</p>\n{#snippet s(x: string | null)}{/snippet}<p>{x ? 'a · b' : ''}</p>\n<style>\n\t.a::after { content: '·'; }\n</style>";
 		expect(fautes('exemple.svelte', textesSvelte(svelte))).toEqual(['exemple.svelte:3 tiret cadratin : —', 'exemple.svelte:7 point médian : <p> · </p>', 'exemple.svelte:9 point médian : a · b']);
 		expect(fautes('exemple.ts', chaines("const t = (a: 'x' | 'y') => a; // a → b\nconst u = 'Radio | essai';"))).toEqual(['exemple.ts:2 barre : Radio | essai']);
+	});
+
+	it('la garde attrape aussi « … » dans un bouton, « au nom de : vous » et un lien collé derrière une phrase', () => {
+		const svelte = "<script>const t = 'Voir. <a href=x>';</script>\n<summary>Abandonner la prise…</summary>\n<a href=\"?x\">{TITRES[cle]}…</a>\n<p>La prise sera au nom de : <strong>{noms}</strong>.</p>\n<p>Responsable : vous</p>\n<p>Réglez le roulement. <a href=\"/r\">Aller au roulement</a></p>\n<p>Pour ajuster, passez par <a href=\"/agents\">Agents</a>.</p>\n<!-- Fin. <a href=x> -->";
+		expect(fautesBalisage('exemple.svelte', balisage(svelte)).map((f) => f.split(' : ')[0])).toEqual([
+			'exemple.svelte:2 points de suspension dans un bouton ou un lien',
+			'exemple.svelte:3 points de suspension dans un bouton ou un lien',
+			'exemple.svelte:4 deux-points devant un nom',
+			'exemple.svelte:5 deux-points devant un nom',
+			'exemple.svelte:6 lien collé derrière une phrase'
+		]);
 	});
 
 	it('aucun texte visible de l’appli ni du socle ne sépare ses infos par « · », « — », « → » ou « | »', () => {

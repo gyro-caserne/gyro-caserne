@@ -43,7 +43,7 @@ const PHRASES: Record<string, string> = {
 	'Réservé aux animateurs du groupe': 'Seuls les animateurs du groupe peuvent faire cela.',
 	'Ce n’est pas un groupe': 'Ce n’est pas un groupe.',
 	'Nom du groupe vide': 'Donnez un nom au groupe.',
-	'Nom du groupe trop long': 'Nom trop long : 60 caractères au plus.',
+	'Nom du groupe trop long': 'Nom trop long, 60 caractères au plus.',
 	'Pour partir, quittez le groupe': 'Pour partir, quittez le groupe.',
 	'Pas membre du groupe': 'Cette personne ne fait plus partie du groupe.',
 	'Membre invalide': 'Cette personne ne fait plus partie du groupe.',

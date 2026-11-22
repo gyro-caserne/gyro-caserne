@@ -19,7 +19,7 @@ describe('aperçu du fichier du planning', () => {
 	});
 
 	it('après l’import, ce que voient les agents, selon que l’année est publiée ou non', () => {
-		expect(apresImport(true)).toBe('Année publiée : les agents voient déjà les changements ; les convoqués des manœuvres annoncées sont prévenus.');
-		expect(apresImport(false)).toBe('Année en brouillon : les agents ne voient rien avant la publication, à l’étape « Vérifier et publier ».');
+		expect(apresImport(true)).toBe('Année publiée. Les agents voient déjà les changements ; les convoqués des manœuvres annoncées sont prévenus.');
+		expect(apresImport(false)).toBe('Année en brouillon. Les agents ne voient rien avant la publication, à l’étape « Vérifier et publier ».');
 	});
 });

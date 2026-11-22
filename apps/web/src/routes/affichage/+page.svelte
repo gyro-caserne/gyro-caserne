@@ -5,7 +5,7 @@
 	let { data, form } = $props();
 
 	const niveaux = [
-		{ valeur: 'sobre', nom: 'Sobre', phrase: 'Sérieux : ni humour ni mouvement.' },
+		{ valeur: 'sobre', nom: 'Sobre', phrase: 'Sérieux, sans humour ni mouvement.' },
 		{ valeur: 'equilibre', nom: 'Équilibré', phrase: 'Un peu de couleur et de légèreté.' },
 		{ valeur: 'vivant', nom: 'Vivant', phrase: 'Toute la bonne humeur de la caserne.' }
 	];

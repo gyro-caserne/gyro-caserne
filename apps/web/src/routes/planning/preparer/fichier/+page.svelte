@@ -27,9 +27,9 @@
 
 	async function demander<T>(url: string, init?: RequestInit): Promise<T> {
 		const reponse = await fetch(url, init).catch(() => {
-			throw new Error('Connexion perdue : réessayez.');
+			throw new Error('Connexion perdue. Réessayez.');
 		});
-		if (reponse.redirected) throw new Error("Vous n'êtes plus connecté : rechargez la page.");
+		if (reponse.redirected) throw new Error("Vous n'êtes plus connecté. Rechargez la page.");
 		const corps = (await reponse.json().catch(() => null)) as { message?: string } | null;
 		if (!reponse.ok || corps === null) throw new Error(corps?.message ?? 'Réponse inattendue du serveur');
 		return corps as T;
@@ -171,7 +171,7 @@
 				{#if apercu.erreurs.length}
 					<section>
 						<h3>{pluriel(apercu.erreurs.length, 'erreur', 'erreurs')}</h3>
-						<p class="note">Corrigez le fichier, puis importez-le de nouveau : rien n’est appliqué tant qu’il reste une erreur.</p>
+						<p class="note">Corrigez le fichier, puis importez-le de nouveau. Rien n’est appliqué tant qu’il reste une erreur.</p>
 						<ul class="erreurs">
 							{#each apercu.erreurs as e, i (i)}<li>{e.feuille}, ligne {e.ligne} : {e.message}</li>{/each}
 						</ul>
