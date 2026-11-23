@@ -22,6 +22,7 @@
 		...(data.anomalies === null || data.anomalies === undefined ? [] : [{ href: '/engins/anomalies', titre: 'Anomalies', texte: 'Ce qui est signalé sur les engins, jusqu’à la réparation', valeur: data.anomalies ? pluriel(data.anomalies, 'ouverte', 'ouvertes') : 'Aucune ouverte' }]),
 		{ href: '/reservations', titre: 'Réservations', texte: 'La VL et le matériel de l’amicale' },
 		// Comme « Comités et référents » : pour les agents du centre, pas pour le compte de la réserve citoyenne.
+		// « Faire une demande », le référent habillement déjà choisi.
 		...(data.comites ? [{ href: '/habillement', titre: 'Habillement', texte: 'Demander une tenue, suivre ses demandes' }] : []),
 		// Aux autres référents (pharmacie, matériel) : de même.
 		...(data.comites ? [{ href: '/demandes', titre: 'Faire une demande', texte: 'Aux référents, et suivre ses demandes' }] : [])

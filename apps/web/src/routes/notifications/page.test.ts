@@ -120,10 +120,9 @@ describe('page des notifications', () => {
 		expect(page).toContain(ICONES_ROLES.outils);
 	});
 
-	it('un avis d’habillement : vers la demande, avec la veste, son titre et son texte', () => {
-		const page = html({ nonLues: 1, lignes: [{ id: 6, type: 'habillement', titre: 'Question sur votre demande', texte: 'Rémi Fictif : Quelle taille ?', url: '/habillement/2', creeLe: '2026-11-08T10:00', lue: false }] });
-		expect(page).toContain(`href="${ouvre('habillement', 6, '/habillement/2')}"`);
-		expect(page).toContain('M9 3l3 3 3-3 5 3-2 5h-2v10H8V11H6L4 6z');
+	it('un avis d’habillement repris : une demande comme les autres, vers sa nouvelle adresse', () => {
+		const page = html({ nonLues: 1, lignes: [{ id: 6, type: 'demande', titre: 'Question sur votre demande', texte: 'Rémi Fictif : Quelle taille ?', url: '/demandes/2', creeLe: '2026-11-08T10:00', lue: false }] });
+		expect(page).toContain(`href="${ouvre('demande', 6, '/demandes/2')}"`);
 		expect(page).toMatch(/<a[^>]*>[\s\S]*?Non lu, [\s\S]*?Question sur votre demande[\s\S]*?Rémi Fictif : Quelle taille \?/);
 	});
 

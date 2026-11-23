@@ -484,7 +484,7 @@ describe('direction B', () => {
 	});
 
 	it('un suivi ne ressemble pas à des boutons radio', () => {
-		expect(style('routes/habillement/[id]/+page.svelte')).toMatch(/\.puce \{[^}]*width: 12px;[^}]*height: 12px;/);
+		expect(style('routes/demandes/[id]/+page.svelte')).toMatch(/\.puce \{[^}]*width: 12px;[^}]*height: 12px;/);
 	});
 
 	it('Comités et référents : les lignes d’un comité restent alignées', () => {

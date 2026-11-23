@@ -283,7 +283,7 @@
 						/>
 						{#if versExterieur}
 							<div class="passage">
-								<p id="passage-avertissement"><strong>{ceQuIlQuitte}</strong> Ses remplacements, échanges, réservations et demandes d’habillement en cours sont annulés, et {fiche.prenom} sort des groupes de messagerie. Sa fiche et ses conversations à deux restent.</p>
+								<p id="passage-avertissement"><strong>{ceQuIlQuitte}</strong> Ses remplacements, échanges et réservations sont annulés, comme ses demandes pas encore avancées, et {fiche.prenom} sort des groupes de messagerie. Sa fiche et ses conversations à deux restent.</p>
 								<label>
 									<input
 										type="checkbox"

@@ -53,7 +53,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		comitesChoix: await comitesChoix(base),
 		raison: raison(role),
 		// Le bloc « Demandes » : un rôle qui peut en recevoir, ou qui en reçoit encore.
-		demandesPossibles: role.demandes !== null || recoitPossible({ typePerimetre: role.portee, systeme: role.systeme, archiveeLe: role.archiveeLe }, role.droits.map((d) => d.droit)),
+		demandesPossibles: role.demandes !== null || recoitPossible({ typePerimetre: role.portee, systeme: role.systeme, archiveeLe: role.archiveeLe }),
 		droitsMetier: DROITS.filter((d) => !estDroitPouvoir(d) && !estSansEffet(d)),
 		droitsPouvoir: DROITS.filter(estDroitPouvoir)
 	};

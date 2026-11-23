@@ -68,6 +68,7 @@ export { abandonnerPrise, appliquerGestePrise, commencerPrise, demanderReouvertu
 export {
 	DERNIERE_PAR_DEFAUT,
 	demanderAuReferent,
+	demandeReprise,
 	demandesDuRole,
 	effacerVieillesDemandesReferents,
 	chargerHabillementFictif,
@@ -86,6 +87,7 @@ export {
 	peutReglerDemandes,
 	recoitPossible,
 	reglerDemandes,
+	roleDeLHabillement,
 	rolesQuiRecoivent,
 	type DemandeReferentListee,
 	type EtatDemandeReferent,

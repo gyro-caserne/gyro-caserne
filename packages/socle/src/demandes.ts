@@ -652,3 +652,23 @@ export async function chargerHabillementFictif(base: Base, maintenant: string, r
 		if (p.fil.length) await base.insert(filDemandeReferent).values(p.fil.map((f) => ({ demandeId: d!.id, quoi: f.quoi, etape: f.etape ?? null, nomEtape: f.etape ? nomEtape(f.etape, role!.demandes) : null, texte: f.texte ?? null, par: f.par, le: maintenant })));
 	}
 }
+
+// L'ancienne entrée de l'habillement (décision 0044) ------------------------------------------------------------------------------
+
+// Le rôle qui reçoit les demandes d'habillement : celui qui en porte le droit et reçoit des demandes, le natif d'abord ; nul sans lui.
+// Une requête.
+export async function roleDeLHabillement(base: Base): Promise<number | null> {
+	const [r] = await base
+		.select({ id: responsabilite.id })
+		.from(responsabilite)
+		.where(and(isNotNull(responsabilite.demandes), isNull(responsabilite.archiveeLe), isNull(responsabilite.systeme), sql`exists (select 1 from responsabilite_droit d where d.responsabilite_id = ${responsabilite.id} and d.droit = 'GERER_HABILLEMENT')`))
+		.orderBy(desc(sql`${responsabilite.nom} = 'Référent habillement'`), asc(responsabilite.id))
+		.limit(1);
+	return r?.id ?? null;
+}
+
+// Une demande d'habillement reprise, par son ancien numéro ; nul si on ne la retrouve pas. Une requête.
+export async function demandeReprise(base: Base, habillementId: number): Promise<number | null> {
+	const [d] = await base.select({ id: demandeReferent.id }).from(demandeReferent).where(eq(demandeReferent.habillementId, habillementId));
+	return d?.id ?? null;
+}
