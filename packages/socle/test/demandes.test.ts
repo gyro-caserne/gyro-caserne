@@ -13,7 +13,7 @@ import {
 	pageDesDemandes,
 	reglerDemandes,
 	rolesQuiRecoivent,
-	type EtatDemande
+	type EtatDemandeReferent
 } from '../src/demandes.ts';
 import { accueilDe } from '../src/casquettes.ts';
 import { courrielsDeDemande } from '../src/courriels.ts';
@@ -123,7 +123,7 @@ describe('l’e-mail d’une nouvelle demande', () => {
 
 describe('gestes permis (sans base)', () => {
 	const ordre = ['ea', 'eb'];
-	const d = (etape: string, prisePar: number | null = null, question: EtatDemande['question'] = null): EtatDemande => ({ etape, question, demandeur: 1, prisePar });
+	const d = (etape: string, prisePar: number | null = null, question: EtatDemandeReferent['question'] = null): EtatDemandeReferent => ({ etape, question, demandeur: 1, prisePar });
 	const agent = { moi: 1, gere: false };
 	const referent = { moi: 2, gere: true };
 	const collegue = { moi: 3, gere: true };

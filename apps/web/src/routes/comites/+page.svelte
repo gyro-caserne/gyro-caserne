@@ -43,18 +43,24 @@
 	</ListeRangees>
 {/snippet}
 
+<!-- Un rôle qui reçoit des demandes : « Demander » mène à la nouvelle demande, ce rôle choisi. -->
+{#snippet demander(id: number, titre: string)}
+	<a class="lien-secondaire ecrire" href="/demandes?role={id}">Demander<span class="masque">{` au rôle ${titre}`}</span></a>
+{/snippet}
+
 <!-- Un titulaire : « Écrire » à droite ; plusieurs : un « Écrire à … » par titulaire, sous les noms. -->
-{#snippet role(titre: string, titulaires: Titulaire[], icone?: NomIcone)}
+{#snippet role(titre: string, titulaires: Titulaire[], icone?: NomIcone, demande?: number)}
 	{@const ecrits = titulaires.filter((t) => t.ecrire)}
 	{#snippet sousNoms()}{@render noms(titulaires)}{/snippet}
 	<li>
-		{#if titulaires.length > 1 && ecrits.length > 0}
+		{#if titulaires.length > 1 && (ecrits.length > 0 || demande)}
 			<Rangee {icone} {titre} sousContenu={sousNoms}>
+				{#if demande}{@render demander(demande, titre)}{/if}
 				{#each ecrits as t (t.id)}{@render ecrire(t, true)}{/each}
 			</Rangee>
 		{:else}
 			<Rangee {icone} {titre} sousContenu={sousNoms}>
-				{#snippet droite()}{#if ecrits[0]}{@render ecrire(ecrits[0])}{/if}{/snippet}
+				{#snippet droite()}{#if demande}{@render demander(demande, titre)}{/if}{#if ecrits[0]}{@render ecrire(ecrits[0])}{/if}{/snippet}
 			</Rangee>
 		{/if}
 	</li>
@@ -107,7 +113,7 @@
 					{#each fonctionsEquipe as r (r.id)}{@render parEquipe(r)}{/each}
 					{#if data.fonctions.length > 0}
 						<ListeRangees titre="Autres fonctions" niveau={3}>
-							{#each data.fonctions as r (r.id)}{@render role(r.nom, r.titulaires, r.icone)}{/each}
+							{#each data.fonctions as r (r.id)}{@render role(r.nom, r.titulaires, r.icone, data.peutDemander && r.demandes ? r.id : undefined)}{/each}
 						</ListeRangees>
 					{/if}
 				</section>
@@ -117,7 +123,7 @@
 					<h2 id="titre-missions" class="titre-section">Missions</h2>
 					{#if data.missions.length > 0}
 						<ListeRangees>
-							{#each data.missions as r (r.id)}{@render role(r.nom, r.titulaires, r.icone)}{/each}
+							{#each data.missions as r (r.id)}{@render role(r.nom, r.titulaires, r.icone, data.peutDemander && r.demandes ? r.id : undefined)}{/each}
 						</ListeRangees>
 					{/if}
 					{#each missionsEquipe as r (r.id)}{@render parEquipe(r)}{/each}

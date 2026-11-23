@@ -88,7 +88,7 @@ export {
 	reglerDemandes,
 	rolesQuiRecoivent,
 	type DemandeReferentListee,
-	type EtatDemande,
+	type EtatDemandeReferent,
 	type GesteDemande,
 	type LigneFilDemandeReferent,
 	type QuoiGesteDemande,

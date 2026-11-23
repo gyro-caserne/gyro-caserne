@@ -147,4 +147,13 @@ describe('/comites', () => {
 		expect(html({ peutNominations: true, peutReglages: true })).toMatch(/<a[^>]*href="\/nominations"[^>]*>Gérer<span class="masque"> les nominations<\/span><\/a>/);
 		expect(html({ peutReglages: true })).toMatch(/<a[^>]*href="\/reglages"[^>]*>Gérer<span class="masque"> les réglages du centre<\/span><\/a>/);
 	});
+
+	it('« Demander » sur la ligne d’un rôle qui reçoit des demandes, pour un agent ; jamais pour le super administrateur', () => {
+		const missions = [{ id: 6, nom: 'Référent pharmacie', icone: 'croix', titulaires: [{ id: 8, nom: 'Denis Roux', grade: null, ecrire: true }], demandes: true }, { id: 11, nom: 'Référent sport', icone: 'sport', titulaires: [], demandes: false }];
+		const page = html({ missions, peutDemander: true });
+		expect(page).toContain('href="/demandes?role=6"');
+		expect(page).toContain('au rôle Référent pharmacie');
+		expect(page).not.toContain('href="/demandes?role=11"');
+		expect(html({ missions, peutDemander: false })).not.toContain('/demandes?role=');
+	});
 });

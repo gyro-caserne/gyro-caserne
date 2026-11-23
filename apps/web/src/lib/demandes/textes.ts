@@ -12,3 +12,44 @@ const PHRASES_REGLAGE: Record<string, string> = {
 	'Ce rôle ne reçoit pas de demandes': 'Ce rôle ne peut pas recevoir de demandes.'
 };
 export const phraseReglage = (message: string) => PHRASES_REGLAGE[message] ?? 'Le réglage n’a pas pu être enregistré.';
+
+type Ton = 'ok' | 'info' | 'alerte' | 'danger' | 'neutre';
+
+// Où en est une demande, en un ou deux mots et un ton (la pastille dit le mot : jamais la couleur seule). Une question en attente
+// passe avant l'étape, la réponse arrivée aussi, pour qui la suit.
+export function etatDemandeReferent(d: { etape: string; nomEtape: string; question: 'posee' | 'repondue' | null }): { texte: string; ton: Ton } {
+	if (d.etape === 'faite') return { texte: d.nomEtape, ton: 'ok' };
+	if (d.etape === 'refusee') return { texte: 'Refusée', ton: 'danger' };
+	if (d.etape === 'annulee') return { texte: 'Annulée', ton: 'neutre' };
+	if (d.question === 'posee') return { texte: 'Question posée', ton: 'alerte' };
+	if (d.question === 'repondue') return { texte: 'Réponse reçue', ton: 'alerte' };
+	if (d.etape === 'demandee') return { texte: 'Demandée', ton: 'alerte' };
+	return { texte: d.nomEtape, ton: 'info' };
+}
+
+// Les lignes du fil ; une étape atteinte se dit par son nom.
+const TEXTES_FIL: Record<string, string> = {
+	prise: 'Prise en compte',
+	reprise: 'Reprise en main',
+	question: 'Question',
+	reponse: 'Réponse',
+	precision: 'Précision',
+	refus: 'Refusée',
+	annulation: 'Annulée'
+};
+export const texteDuFil = (f: { quoi: string; etape: string | null }) => (f.quoi === 'etape' || f.quoi === 'fin' ? (f.etape ?? 'Étape') : (TEXTES_FIL[f.quoi] ?? f.quoi));
+
+// Les messages du socle sur une demande et ses gestes.
+const PHRASES: Record<string, string> = {
+	'Demande vide': 'Décrivez votre besoin, ce qu’il vous faut et pourquoi.',
+	'Demande trop longue': 'La demande est trop longue (500 caractères au plus).',
+	'Réservé aux agents du centre': 'Les demandes sont réservées aux agents du centre.',
+	'Ce rôle ne reçoit pas de demandes': 'Choisissez à qui adresser la demande.',
+	'Message vide': 'Écrivez votre message.',
+	'Texte trop long': 'Le message est trop long (500 caractères au plus).',
+	'Refus sans explication': 'Expliquez le refus en un mot. L’agent le lira.',
+	'Étape impossible': 'Choisissez une étape placée après l’étape actuelle.',
+	'Geste impossible': 'Ce geste n’est plus possible. La demande a avancé.',
+	'Demande changée entre-temps': 'La demande vient de changer. Elle est rechargée, refaites votre geste.'
+};
+export const phraseDemande = (message: string) => PHRASES[message] ?? 'Ce geste n’a pas pu être enregistré.';

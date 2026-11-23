@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Base } from './base.ts';
 import { tenuesValides } from './casquettes.ts';
 import { exigerDate } from './dates.ts';
@@ -14,13 +14,16 @@ import { comite, equipe, grade, personne, profil, responsabilite, ressource } fr
 // `grade` : le libellé de son grade, pour l'insigne à côté du nom (null sans grade).
 export type Titulaire = { id: number; nom: string; grade: string | null; ecrire: boolean };
 type Nature = 'fonction' | 'mission';
-export type RoleTenu = { id: number; nom: string; icone: NomIcone; titulaires: Titulaire[] };
+// `demandes` : le rôle reçoit des demandes ; on peut lui en faire une depuis sa ligne.
+export type RoleTenu = { id: number; nom: string; icone: NomIcone; titulaires: Titulaire[]; demandes: boolean };
 export type QuiFaitQuoi = {
 	comites: { id: number; nom: string; icone: NomIcone; mur: boolean; membres: (Titulaire & { roles: string[] })[]; ressources: { id: number; nom: string; icone: NomIcone }[] }[];
 	commandement: RoleTenu[];
 	equipes: { id: number; nom: string; systeme: string | null; nature: Nature; parEquipe: { equipe: string; titulaires: Titulaire[] }[] }[];
 	fonctions: RoleTenu[];
 	missions: RoleTenu[];
+	// L'acteur peut faire une demande (un agent, pas le super administrateur).
+	peutDemander: boolean;
 };
 
 // « Rapporteur de comité » se lit « Rapporteur » sous le nom du comité.
@@ -34,7 +37,7 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 		...lecturesAgents(base, aujourdhui),
 		base.select({ id: comite.id, nom: comite.nom, theme: comite.theme, icone: comite.icone }).from(comite).where(isNull(comite.dissousLe)).orderBy(asc(comite.nom)),
 		base
-			.select({ id: responsabilite.id, nom: responsabilite.nom, portee: responsabilite.typePerimetre, nature: responsabilite.nature, systeme: responsabilite.systeme, icone: responsabilite.icone, modele: responsabilite.modele })
+			.select({ id: responsabilite.id, nom: responsabilite.nom, portee: responsabilite.typePerimetre, nature: responsabilite.nature, systeme: responsabilite.systeme, icone: responsabilite.icone, modele: responsabilite.modele, demandes: sql<number>`${responsabilite.demandes} is not null`.as('demandes') })
 			.from(responsabilite)
 			.where(isNull(responsabilite.archiveeLe))
 			.orderBy(asc(responsabilite.nom)),
@@ -63,7 +66,7 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 	const valides = tenuesValides(tenues).filter((t) => nomDe.has(t.personneId));
 	const titulaires = (garde: (t: (typeof valides)[number]) => boolean) =>
 		[...new Set(valides.filter(garde).map((t) => t.personneId))].sort((x, y) => ordre.get(x)! - ordre.get(y)!).map(titulaire);
-	const roleTenu = (r: (typeof roles)[number]): RoleTenu => ({ id: r.id, nom: r.nom, icone: iconeDuRole(r), titulaires: titulaires((t) => t.responsabiliteId === r.id) });
+	const roleTenu = (r: (typeof roles)[number]): RoleTenu => ({ id: r.id, nom: r.nom, icone: iconeDuRole(r), titulaires: titulaires((t) => t.responsabiliteId === r.id), demandes: Boolean(r.demandes) });
 
 	return {
 		comites: comites.map((c) => {
@@ -99,7 +102,8 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 			})),
 		// Les autres rôles du centre, rangés selon leur nature.
 		fonctions: roles.filter((r) => r.portee === 'centre' && r.systeme === null && r.nature === 'fonction').map(roleTenu),
-		missions: roles.filter((r) => r.portee === 'centre' && r.systeme === null && r.nature === 'mission').map(roleTenu)
+		missions: roles.filter((r) => r.portee === 'centre' && r.systeme === null && r.nature === 'mission').map(roleTenu),
+		peutDemander: moi !== null
 	};
 }
 

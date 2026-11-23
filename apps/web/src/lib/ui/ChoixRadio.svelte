@@ -1,7 +1,11 @@
 <script lang="ts">
+	import IconeRole from './IconeRole.svelte';
+	import type { IconeRole as NomIcone } from './icones-roles.ts';
+
 	// Un choix unique à portée de doigt : boutons radio natifs (clavier et lecteur d'écran), sans liste déroulante.
 	// « pastilles » pour des libellés courts, « tuiles » en deux colonnes avec une précision, « rangees » l'une sous l'autre.
-	type Option = { valeur: string; libelle: string; sous?: string; teinte?: { fond: string; encre: string; trait: string } };
+	// `icone` : l'icône d'un rôle devant le libellé (décorative, le libellé suffit).
+	type Option = { valeur: string; libelle: string; sous?: string; icone?: NomIcone; teinte?: { fond: string; encre: string; trait: string } };
 	let {
 		id,
 		legende,
@@ -21,6 +25,7 @@
 		{#each options as o (o.valeur)}
 			<label class="option" style:--choix-fond={o.teinte?.fond} style:--choix-encre={o.teinte?.encre} style:--choix-trait={o.teinte?.trait}>
 				<input type="radio" {name} value={o.valeur} bind:group={valeur} required={requis} />
+				{#if o.icone}<IconeRole icone={o.icone} taille={28} />{/if}
 				<span class="textes"><span class="nom">{o.libelle}</span>{#if o.sous}<span class="sous">{o.sous}</span>{/if}</span>
 			</label>
 		{/each}

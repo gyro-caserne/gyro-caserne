@@ -239,7 +239,7 @@ export type GesteDemande =
 	| { quoi: 'refuser'; texte: string }
 	| { quoi: 'annuler' };
 export type QuoiGesteDemande = GesteDemande['quoi'];
-export type EtatDemande = { etape: string; question: QuestionDemande | null; demandeur: number; prisePar: number | null };
+export type EtatDemandeReferent = { etape: string; question: QuestionDemande | null; demandeur: number; prisePar: number | null };
 
 // Le rang d'une étape dans l'ordre du moment : Demandée, Prise en compte, les intermédiaires, la dernière.
 function rang(etape: string, ordre: string[]): number {
@@ -253,7 +253,7 @@ function rang(etape: string, ordre: string[]): number {
 // L'agent : répondre ou préciser tant qu'elle n'est pas finie, l'annuler tant qu'elle n'a pas dépassé « Prise en compte ».
 // Qui gère : la prendre en compte (ou, d'emblée, questionner, avancer, refuser), la reprendre à un collègue ; celui qui la suit :
 // poser une question (une à la fois), l'avancer, la refuser.
-export function gestesDemande(d: EtatDemande, ordre: string[], qui: { moi: number | null; gere: boolean }): { gestes: QuoiGesteDemande[]; vers: string[] } {
+export function gestesDemande(d: EtatDemandeReferent, ordre: string[], qui: { moi: number | null; gere: boolean }): { gestes: QuoiGesteDemande[]; vers: string[] } {
 	if (qui.moi === null || FINIES_DEMANDE.includes(d.etape)) return { gestes: [], vers: [] };
 	const gestes: QuoiGesteDemande[] = [];
 	let avance = false;
