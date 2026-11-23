@@ -41,23 +41,9 @@ export async function listerProfils(base: Base, acteur: Acteur, aujourdhui: stri
 	}));
 }
 
+// Les droits seuls (même geste que l'écran, sans murs).
 export async function modifierDroitsProfil(base: Base, acteur: Acteur, profilId: number, droits: Droit[], aujourdhui: string): Promise<void> {
-	await exiger(base, acteur, aujourdhui);
-	const apres = exigerDroits(droits);
-	if (apres.some(estDroitPouvoir)) throw new DonneeInvalide('Un profil ne donne pas de droit de pouvoir');
-	const [ligne] = await base.select({ id: profil.id }).from(profil).where(eq(profil.id, profilId));
-	if (!ligne) throw new DonneeInvalide('Profil inconnu');
-
-	const avant = [...new Set((await base.select({ droit: profilDroit.droit }).from(profilDroit).where(surLeCentre(profilId))).map((l) => l.droit))];
-	const ajoutes = apres.filter((d) => !avant.includes(d));
-	const retires = avant.filter((d) => !apres.includes(d));
-	if (ajoutes.length === 0 && retires.length === 0) return;
-
-	await base.batch([
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_droits_profil', cibleType: 'profil', cibleId: profilId, details: { droits: { avant: [...avant].sort(), apres: [...apres].sort() } } }, aujourdhui),
-		...(retires.length > 0 ? [base.delete(profilDroit).where(and(surLeCentre(profilId), inArray(profilDroit.droit, retires)))] : []),
-		...(ajoutes.length > 0 ? [base.insert(profilDroit).values(ajoutes.map((droit) => ({ profilId, droit, perimetreType: 'centre' as const, perimetreId: null })))] : [])
-	]);
+	if (!(await enregistrerProfil(base, acteur, profilId, { droits: () => droits }, aujourdhui))) throw new DonneeInvalide('Profil inconnu');
 }
 
 async function exigerNomLibre(base: Base, nom: string, sauf?: number) {
@@ -120,16 +106,20 @@ export async function enregistrerProfil(
 	base: Base,
 	acteur: Acteur,
 	id: number,
-	choix: { droits: (avant: Droit[]) => Droit[]; murs?: Record<string, NiveauOuvert> },
+	choix: { droits: (avant: Droit[]) => Droit[]; murs?: Record<string, NiveauOuvert>; seulExterieur?: boolean },
 	aujourdhui: string
-): Promise<{ nom: string }> {
+): Promise<{ nom: string } | null> {
 	await exiger(base, acteur, aujourdhui);
 	const [[ligne], comites, lus] = await base.batch([
 		base.select().from(profil).where(eq(profil.id, id)),
 		base.select({ id: comite.id }).from(comite).where(isNull(comite.dissousLe)),
 		base.select({ droit: profilDroit.droit }).from(profilDroit).where(surLeCentre(id))
 	]);
-	if (!ligne) throw new DonneeInvalide('Profil inconnu');
+	if (!ligne) return null;
+	// Pour un profil d'agent, l'écran envoie aussi ses murs : ils sont ignorés ; le geste « murs seuls » les refuse.
+	if (choix.seulExterieur && ligne.typePersonne !== 'exterieur') throw new DonneeInvalide('Seul un profil extérieur reçoit des murs ouverts');
+	// Tout est validé avant d'écrire : un mur ou un droit refusé n'enregistre rien.
+	const murs = choix.murs && ligne.typePersonne === 'exterieur' ? murOuvertsValides(choix.murs, new Set(comites.map((c) => `comite:${c.id}`))) : null;
 	const avant = [...new Set(lus.map((l) => l.droit))] as Droit[];
 	const apres = exigerDroits(choix.droits(avant));
 	if (apres.some(estDroitPouvoir)) throw new DonneeInvalide('Un profil ne donne pas de droit de pouvoir');
@@ -137,9 +127,7 @@ export async function enregistrerProfil(
 	const retires = avant.filter((d) => !apres.includes(d));
 
 	const ecritures = [];
-	if (choix.murs && ligne.typePersonne === 'exterieur') {
-		const enCours = new Set(comites.map((c) => `comite:${c.id}`));
-		const murs = murOuvertsValides(choix.murs, enCours);
+	if (murs) {
 		const avantMurs = lireMursOuverts(ligne.mursOuverts);
 		if (!memesMurs(avantMurs, murs))
 			ecritures.push(
@@ -169,24 +157,8 @@ function murOuvertsValides(ouverts: Record<string, NiveauOuvert>, enCours: Set<s
 
 const memesMurs = (a: Record<string, string>, b: Record<string, string>) => Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, v]) => b[k] === v);
 
-// Les murs ouverts à un profil extérieur : Le centre, Vie du centre, des comités en cours ; chacun en lecture ou en écriture.
+// Les murs ouverts à un profil extérieur seuls : Le centre, Vie du centre, des comités en cours ; chacun en lecture ou en écriture.
 // Un mur absent n'est pas ouvert.
 export async function modifierMursOuverts(base: Base, acteur: Acteur, id: number, ouverts: Record<string, NiveauOuvert>, aujourdhui: string): Promise<void> {
-	await exiger(base, acteur, aujourdhui);
-	const ligne = await profilConnu(base, id);
-	if (ligne.typePersonne !== 'exterieur') throw new DonneeInvalide('Seul un profil extérieur reçoit des murs ouverts');
-	const enCours = new Set((await base.select({ id: comite.id }).from(comite).where(isNull(comite.dissousLe))).map((c) => `comite:${c.id}`));
-	const apres: Record<string, NiveauOuvert> = {};
-	for (const [cle, niveau] of Object.entries(ouverts)) {
-		if (!estCleOuvrable(cle) || (cle.startsWith('comite:') && !enCours.has(cle))) throw new DonneeInvalide('Mur inconnu');
-		if (!(NIVEAUX_OUVERTS as readonly string[]).includes(niveau)) throw new DonneeInvalide('Niveau inconnu');
-		apres[cle] = niveau;
-	}
-	const avant = lireMursOuverts(ligne.mursOuverts);
-	const pareil = (a: Record<string, string>, b: Record<string, string>) => Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, v]) => b[k] === v);
-	if (pareil(avant, apres)) return;
-	await base.batch([
-		base.update(profil).set({ mursOuverts: JSON.stringify(apres) }).where(eq(profil.id, id)),
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_murs_ouverts', cibleType: 'profil', cibleId: id, details: { murs: { avant, apres } } }, aujourdhui)
-	]);
+	if (!(await enregistrerProfil(base, acteur, id, { droits: (avant) => avant, murs: ouverts, seulExterieur: true }, aujourdhui))) throw new DonneeInvalide('Profil inconnu');
 }

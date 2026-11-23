@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
 import { attribuer } from '../src/actions/attributions.ts';
-import { creerProfil, listerProfils, modifierDroitsProfil, modifierMursOuverts, renommerProfil, supprimerProfil } from '../src/actions/profils.ts';
+import { creerProfil, enregistrerProfil, listerProfils, modifierDroitsProfil, modifierMursOuverts, renommerProfil, supprimerProfil } from '../src/actions/profils.ts';
 import { aLeDroit, type Acteur } from '../src/droits.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
@@ -183,5 +183,37 @@ describe('modifierMursOuverts', () => {
 		await base.update(comite).set({ dissousLe: '2026-10-01' }).where(eq(comite.id, amicale!.id));
 		await expect(modifierMursOuverts(base, chef, id, { [`comite:${amicale!.id}`]: 'lecture' }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Mur inconnu'));
 		await expect(modifierMursOuverts(base, referent, id, { vie: 'lecture' }, aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
+	});
+});
+
+describe('enregistrerProfil (l’écran en un geste)', () => {
+	it('droits et murs ensemble ; rien d’écrit si rien ne change ; un mur fermé de nouveau', async () => {
+		const { base, chef } = await jeu();
+		const id = await creerProfil(base, chef, { nom: 'Retraité', typePersonne: 'exterieur' }, aujourdhui);
+		await enregistrerProfil(base, chef, id, { droits: () => ['RESERVER'], murs: { vie: 'lecture' } }, aujourdhui);
+		const lignes = async () => (await base.select().from(journal)).filter((l) => l.action === 'modifier_murs_ouverts' || l.action === 'modifier_droits_profil').length;
+		expect(await lignes()).toBe(2);
+		await enregistrerProfil(base, chef, id, { droits: (avant) => avant, murs: { vie: 'lecture' } }, aujourdhui);
+		expect(await lignes()).toBe(2);
+		await enregistrerProfil(base, chef, id, { droits: (avant) => avant, murs: {} }, aujourdhui);
+		expect(JSON.parse((await base.select().from(profil).where(eq(profil.id, id)))[0]!.mursOuverts)).toEqual({});
+		expect(await lignes()).toBe(3);
+	});
+
+	it('profil agent : les murs envoyés sont ignorés, même invalides', async () => {
+		const { base, chef, agent } = await jeu();
+		await enregistrerProfil(base, chef, agent.id, { droits: (avant) => avant, murs: { 'equipe:1': 'lecture' } }, aujourdhui);
+		expect((await base.select().from(profil).where(eq(profil.id, agent.id)))[0]!.mursOuverts).toBe('{}');
+		expect(await base.select().from(journal).where(eq(journal.action, 'modifier_murs_ouverts'))).toHaveLength(0);
+	});
+
+	it('tout ou rien : un mur refusé n’écrit aucun droit, un droit de pouvoir n’écrit aucun mur ; profil inconnu : null', async () => {
+		const { base, chef, droitsDuProfil } = await jeu();
+		const id = await creerProfil(base, chef, { nom: 'Retraité', typePersonne: 'exterieur' }, aujourdhui);
+		await expect(enregistrerProfil(base, chef, id, { droits: () => ['RESERVER'], murs: { 'equipe:1': 'lecture' } }, aujourdhui)).rejects.toThrow('Mur inconnu');
+		expect(await droitsDuProfil(id)).toEqual([]);
+		await expect(enregistrerProfil(base, chef, id, { droits: () => ['GERER_ACCES'], murs: { vie: 'lecture' } }, aujourdhui)).rejects.toThrow(DonneeInvalide);
+		expect((await base.select().from(profil).where(eq(profil.id, id)))[0]!.mursOuverts).toBe('{}');
+		expect(await enregistrerProfil(base, chef, 9999, { droits: () => [] }, aujourdhui)).toBeNull();
 	});
 });

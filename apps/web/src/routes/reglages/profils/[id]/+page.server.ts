@@ -35,12 +35,12 @@ export const actions: Actions = {
 		for (const [cle, valeur] of formulaire.entries())
 			if (cle.startsWith('mur-') && valeur !== '0') murs[cle.slice('mur-'.length)] = (valeur === '1' ? 'lecture' : valeur === '2' ? 'ecriture' : String(valeur)) as NiveauOuvert;
 		try {
-			const { nom } = await enregistrerProfil(base, acteur, id, { droits: (avant) => appliquerNiveaux(avant, niveauxChoisis(formulaire)), murs }, aujourdhuiParis());
-			return { cible, succes: `Le profil « ${nom} » est enregistré.` } satisfies Reponse;
+			const fait = await enregistrerProfil(base, acteur, id, { droits: (avant) => appliquerNiveaux(avant, niveauxChoisis(formulaire)), murs }, aujourdhuiParis());
+			if (!fait) error(404, 'Profil introuvable');
+			return { cible, succes: `Le profil « ${fait.nom} » est enregistré.` } satisfies Reponse;
 		} catch (erreur) {
 			// Pas le droit de régler les profils : la page entière est refusée, comme à l'affichage.
 			if (erreur instanceof RefusDroit) error(403, 'Accès réservé au chef de centre, à son adjoint et au super administrateur');
-			if (erreur instanceof Error && erreur.message === 'Profil inconnu') error(404, 'Profil introuvable');
 			return echec(erreur, cible);
 		}
 	},

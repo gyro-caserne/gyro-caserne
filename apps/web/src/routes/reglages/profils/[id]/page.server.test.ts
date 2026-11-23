@@ -14,6 +14,7 @@ describe('page d’un profil', () => {
 			await expect(envoyer(actions, 'default', locaux(base, acteur), [['niveau-stock', '1']], { id: String(profilAgent.id) })).rejects.toMatchObject({ status: 403 });
 		}
 		await expect(charger(load, locaux(base, super_), { id: '999' })).rejects.toMatchObject({ status: 404 });
+		await expect(envoyer(actions, 'default', locaux(base, super_), [['niveau-stock', '1']], { id: '999' })).rejects.toMatchObject({ status: 404 });
 	});
 
 	it('montre le profil et ses droits', async () => {
