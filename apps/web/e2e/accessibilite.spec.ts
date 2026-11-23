@@ -720,7 +720,7 @@ test.describe('échanges', () => {
 		await expect(page.getByRole('heading', { name: 'Raccourcis' })).toBeVisible();
 		await page.getByRole('link', { name: 'Toutes les demandes', exact: true }).click();
 		await expect(page).toHaveURL(/\/demandes\/role\/\d+$/);
-		await page.getByRole('link', { name: /Rangers, taille 43/ }).first().click();
+		await page.getByRole('link', { name: /Rangers, taille 43/ }).filter({ hasText: 'Bruno Petit' }).click();
 		await expect(page).toHaveURL(/\/demandes\/\d+$/);
 		await page.goto(`${page.url()}?panneau=avancer`);
 		const avancer = page.getByRole('dialog', { name: 'Faire avancer' });

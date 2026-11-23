@@ -158,9 +158,8 @@ describe('migrations 0036 et 0037 : les demandes d’habillement passent dans le
 		const sqlite = baseAvant();
 		migrer(sqlite);
 		const lignes = tout(sqlite, comptage) as { quoi: string; avant: number; apres: number }[];
-		expect(lignes.map((l) => l.quoi)).toEqual(['demandee', 'prise', 'question', 'stock', 'commande', 'livree', 'refusee', 'annulee', 'fil', 'avis non lus']);
-		expect(lignes.map((l) => [l.quoi, l.avant])).toEqual([['demandee', 1], ['prise', 2], ['question', 1], ['stock', 1], ['commande', 1], ['livree', 1], ['refusee', 1], ['annulee', 1], ['fil', 16], ['avis non lus', 3]]);
-		for (const l of lignes) expect(l.apres, l.quoi).toBe(l.avant);
+		expect(lignes.map((l) => [l.quoi, l.avant])).toEqual([['demandee', 1], ['prise', 2], ['question', 1], ['stock', 1], ['commande', 1], ['traitee sans issue', 0], ['livree', 1], ['refusee', 1], ['annulee', 1], ['fil', 16], ['avis non lus', 3]]);
+		for (const l of lignes) expect(l.apres, l.quoi).toBe(l.quoi === 'traitee sans issue' ? null : l.avant);
 	});
 
 	it('rejouée, ne duplique rien, même après un geste sur une demande reprise', () => {
@@ -176,6 +175,31 @@ describe('migrations 0036 et 0037 : les demandes d’habillement passent dans le
 		const sqlite = baseAvant();
 		migrer(sqlite);
 		sqlite.exec(`UPDATE responsabilite SET demandes = '{"etapes":[],"derniere":"Remise"}' WHERE id = 2`);
+		const une = etat(sqlite);
+		jouer(sqlite, texteDe('0037_'));
+		expect(etat(sqlite)).toEqual(une);
+	});
+
+	it('parmi les rôles qui portent le droit, prend celui qui a un titulaire en cours', () => {
+		const sqlite = baseAvant();
+		sqlite.exec(`
+			INSERT INTO responsabilite (id, nom, nature, type_perimetre) VALUES (6, 'Tenues du centre', 'mission', 'centre');
+			INSERT INTO responsabilite_droit (responsabilite_id, droit) VALUES (6, 'GERER_HABILLEMENT');
+			INSERT INTO attribution (personne_id, responsabilite_id, perimetre_type, debut, saisie_par, saisie_le) VALUES (2, 6, 'centre', '2026-01-01', 'super:a@b.fr', '2026-01-01');
+		`);
+		migrer(sqlite);
+		const e = etat(sqlite);
+		expect(e.roles.filter((r) => r.demandes === REGLAGE).map((r) => r.id)).toEqual([6]);
+		expect(e.demandes.filter((d) => d.responsabilite_id === 6)).toHaveLength(9);
+	});
+
+	it('sans demande d’habillement : le rôle est réglé, et une relance après un changement de réglage n’en règle pas un second', () => {
+		const sqlite = baseAvant();
+		sqlite.exec('DELETE FROM avis_habillement; DELETE FROM fil_habillement; DELETE FROM demande_habillement;');
+		migrer(sqlite);
+		expect(etat(sqlite).roles.find((r) => r.id === 2)?.demandes).toBe(REGLAGE);
+		expect(etat(sqlite).journal).toEqual([]);
+		sqlite.exec(`UPDATE responsabilite SET demandes = NULL, demandes_gardees = '${REGLAGE}' WHERE id = 2`);
 		const une = etat(sqlite);
 		jouer(sqlite, texteDe('0037_'));
 		expect(etat(sqlite)).toEqual(une);

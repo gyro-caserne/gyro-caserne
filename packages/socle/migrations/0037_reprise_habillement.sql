@@ -1,19 +1,23 @@
 -- Écrite à la main (décision 0044). Les demandes d'habillement passent dans les demandes aux référents.
 -- Elle ne fait qu'ajouter : les tables de l'habillement ne sont ni modifiées ni supprimées. Rejouée, elle ne duplique rien.
 -- Le rôle cible : de portée centre, hors rôles système, non archivé, sans autre réglage de demandes ; d'abord celui qui porte
--- GERER_HABILLEMENT (le natif « Référent habillement » en premier), à défaut un rôle créé à partir du modèle. Sans rôle cible,
--- rien n'est recopié, et la ligne du journal le dit.
--- 1. Le réglage du rôle : En stock, Commandée au SDIS, puis Livrée. Jamais une fois la reprise faite (un autre rôle).
+-- GERER_HABILLEMENT, et parmi eux celui qui a un titulaire en cours, puis le natif « Référent habillement » ; à défaut un rôle
+-- créé à partir du modèle. Sans rôle cible, rien n'est recopié, et la ligne du journal le dit.
+-- 1. Le réglage du rôle : En stock, Commandée au SDIS, puis Livrée. Jamais si un rôle a déjà ce réglage, même décoché, ou
+-- si la reprise est faite : une relance ne règle pas un second rôle.
 UPDATE `responsabilite`
 SET `demandes` = '{"etapes":[{"id":"estock","nom":"En stock"},{"id":"ecommande","nom":"Commandée au SDIS"}],"derniere":"Livrée"}'
 WHERE `demandes` IS NULL
 	AND NOT EXISTS (SELECT 1 FROM `demande_referent` WHERE `habillement_id` IS NOT NULL)
+	AND NOT EXISTS (SELECT 1 FROM `responsabilite` WHERE `demandes` LIKE '%"id":"estock"%' OR `demandes_gardees` LIKE '%"id":"estock"%')
 	AND `id` = (
 		SELECT r.`id` FROM `responsabilite` r
 		WHERE r.`type_perimetre` = 'centre' AND r.`systeme` IS NULL AND r.`archivee_le` IS NULL
 			AND (r.`demandes` IS NULL OR r.`demandes` = '{"etapes":[{"id":"estock","nom":"En stock"},{"id":"ecommande","nom":"Commandée au SDIS"}],"derniere":"Livrée"}')
 			AND (r.`modele` = 'referent_habillement' OR EXISTS (SELECT 1 FROM `responsabilite_droit` x WHERE x.`responsabilite_id` = r.`id` AND x.`droit` = 'GERER_HABILLEMENT'))
-		ORDER BY EXISTS (SELECT 1 FROM `responsabilite_droit` x WHERE x.`responsabilite_id` = r.`id` AND x.`droit` = 'GERER_HABILLEMENT') DESC, r.`nom` = 'Référent habillement' DESC, r.`id`
+		ORDER BY EXISTS (SELECT 1 FROM `responsabilite_droit` x WHERE x.`responsabilite_id` = r.`id` AND x.`droit` = 'GERER_HABILLEMENT') DESC,
+			EXISTS (SELECT 1 FROM `attribution` a WHERE a.`responsabilite_id` = r.`id` AND a.`perimetre_type` = 'centre' AND a.`debut` <= date('now') AND (a.`fin` IS NULL OR a.`fin` >= date('now'))) DESC,
+			r.`nom` = 'Référent habillement' DESC, r.`id`
 		LIMIT 1
 	);
 --> statement-breakpoint
@@ -51,7 +55,9 @@ JOIN `responsabilite` c ON c.`demandes` = '{"etapes":[{"id":"estock","nom":"En s
 		WHERE r.`type_perimetre` = 'centre' AND r.`systeme` IS NULL AND r.`archivee_le` IS NULL
 			AND (r.`demandes` IS NULL OR r.`demandes` = '{"etapes":[{"id":"estock","nom":"En stock"},{"id":"ecommande","nom":"Commandée au SDIS"}],"derniere":"Livrée"}')
 			AND (r.`modele` = 'referent_habillement' OR EXISTS (SELECT 1 FROM `responsabilite_droit` x WHERE x.`responsabilite_id` = r.`id` AND x.`droit` = 'GERER_HABILLEMENT'))
-		ORDER BY EXISTS (SELECT 1 FROM `responsabilite_droit` x WHERE x.`responsabilite_id` = r.`id` AND x.`droit` = 'GERER_HABILLEMENT') DESC, r.`nom` = 'Référent habillement' DESC, r.`id`
+		ORDER BY EXISTS (SELECT 1 FROM `responsabilite_droit` x WHERE x.`responsabilite_id` = r.`id` AND x.`droit` = 'GERER_HABILLEMENT') DESC,
+			EXISTS (SELECT 1 FROM `attribution` a WHERE a.`responsabilite_id` = r.`id` AND a.`perimetre_type` = 'centre' AND a.`debut` <= date('now') AND (a.`fin` IS NULL OR a.`fin` >= date('now'))) DESC,
+			r.`nom` = 'Référent habillement' DESC, r.`id`
 		LIMIT 1
 	)
 WHERE NOT EXISTS (SELECT 1 FROM `demande_referent` x WHERE x.`habillement_id` = h.`id`)

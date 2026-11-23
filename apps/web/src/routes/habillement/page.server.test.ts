@@ -23,6 +23,15 @@ describe('/habillement, l’ancienne entrée', () => {
 		expect(await vers((load as any)({ locals: locaux(base, alice) }))).toBe('/demandes');
 	});
 
+	it('le rôle de la reprise d’abord, même sans le droit ; sinon celui qui a les étapes de l’habillement', async () => {
+		const { base, alice } = await preparer();
+		const [natif] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
+		const [tenues] = await base.insert(responsabilite).values({ nom: 'Tenues', nature: 'mission', typePerimetre: 'centre', modele: 'referent_habillement', demandes: { etapes: [], derniere: 'Faite' } }).returning();
+		expect(await vers((load as any)({ locals: locaux(base, alice) }))).toBe(`/demandes?role=${natif!.id}`);
+		await base.insert(demandeReferent).values({ responsabiliteId: tenues!.id, demandeurId: alice.id, texte: 'Veste', creeLe: '2026-11-01T10:00', majLe: '2026-11-01T10:00', habillementId: 3 });
+		expect(await vers((load as any)({ locals: locaux(base, alice) }))).toBe(`/demandes?role=${tenues!.id}`);
+	});
+
 	it('une ancienne adresse de demande mène à la demande reprise, sinon à « Mes demandes »', async () => {
 		const { base, alice } = await preparer();
 		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
