@@ -14,10 +14,10 @@ describe('MODELES', () => {
 
 	it('donne les modèles attendus', () => {
 		const de = (id: string) => MODELES.find((m) => m.id === id);
-		expect(de('referent_materiel')).toEqual({ id: 'referent_materiel', nom: 'Référent matériel', nature: 'mission', portee: 'centre', icone: 'camion', droits: ['TRAITER_ANOMALIE', 'GERER_FICHES'], demandes: true });
-		expect(de('referent_pharmacie')).toMatchObject({ nature: 'mission', portee: 'centre', icone: 'croix', droits: ['GERER_STOCK'], demandes: true });
+		expect(de('referent_materiel')).toEqual({ id: 'referent_materiel', nom: 'Référent matériel', nature: 'mission', portee: 'centre', icone: 'camion', droits: ['TRAITER_ANOMALIE', 'GERER_FICHES'], demandes: { etapes: [], derniere: 'Faite' } });
+		expect(de('referent_pharmacie')).toMatchObject({ nature: 'mission', portee: 'centre', icone: 'croix', droits: ['GERER_STOCK'], demandes: { etapes: [], derniere: 'Faite' } });
 		expect(de('referent_technique')).toMatchObject({ nature: 'fonction', portee: 'centre', icone: 'cle', droits: ['GERER_LISTES', 'GERER_COMITES'] });
-		expect(de('referent_habillement')).toEqual({ id: 'referent_habillement', nom: 'Référent habillement', nature: 'mission', portee: 'centre', icone: 'veste', droits: ['GERER_HABILLEMENT'] });
+		expect(de('referent_habillement')).toEqual({ id: 'referent_habillement', nom: 'Référent habillement', nature: 'mission', portee: 'centre', icone: 'veste', droits: ['GERER_HABILLEMENT'], demandes: { etapes: [{ id: 'estock', nom: 'En stock' }, { id: 'ecommande', nom: 'Commandée au SDIS' }], derniere: 'Livrée' } });
 		expect(de('membre_comite')).toMatchObject({ nature: 'mission', portee: 'comite', icone: 'groupe', droits: [] });
 		expect(de('rapporteur_comite')).toMatchObject({ nature: 'mission', portee: 'comite', icone: 'livre', droits: ['ATTRIBUER_RESPONSABILITE'] });
 		expect(de('vierge')).toMatchObject({ nom: 'Vierge', nature: 'mission', portee: 'centre', icone: 'outil', droits: [] });

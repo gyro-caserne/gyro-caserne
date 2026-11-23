@@ -995,6 +995,7 @@ export const avisAnomalie = sqliteTable(
 	(t) => [index('avis_anomalie_personne').on(t.personneId, t.lueLe)]
 );
 
+// Ancienne, ne plus écrire : reprise dans demande_referent (migration 0037, décision 0044), supprimée dans un lot à part.
 // Habillement : une demande de tenue, en texte libre. `prisePar` : le référent qui s'en occupe ; `livraison` : où la récupérer ;
 // `finLe` : refusée, livrée ou annulée (la conservation compte de là).
 export const demandeHabillement = sqliteTable(
@@ -1022,6 +1023,7 @@ export const demandeHabillement = sqliteTable(
 	]
 );
 
+// Ancienne, ne plus écrire : reprise dans fil_demande_referent (migration 0037).
 // Le fil d'une demande : questions, réponses et précisions, changements d'étape, reprises ; dans l'ordre.
 export const filHabillement = sqliteTable(
 	'fil_habillement',
@@ -1130,6 +1132,7 @@ export const avisNomination = sqliteTable(
 	(t) => [index('avis_nomination_personne').on(t.personneId, t.lueLe)]
 );
 
+// Ancienne, ne plus écrire : les avis non lus sont repris dans avis_demande_referent (migration 0037).
 // La cloche de l'habillement : nouvelle demande, question, réponse, changement d'étape.
 export const avisHabillement = sqliteTable(
 	'avis_habillement',

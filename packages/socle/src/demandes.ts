@@ -3,14 +3,13 @@ import { instruction, type Base } from './base.ts';
 import { enCours, exigerDate, exigerDateHeure } from './dates.ts';
 import { aLeDroit, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
-import { peutDemander } from './habillement.ts';
 import { ligneJournalSi } from './journal.ts';
 import { STATUTS_AVEC_ACCES, type FilDemande, type QuestionDemande, type ReglageDemandes } from './listes.ts';
 import { mettreEnFile } from './notifications.ts';
-import { attribution, avisDemandeReferent, demandeReferent, filDemandeReferent, personne, responsabilite, responsabiliteDroit } from './schema.ts';
+import { attribution, avisDemandeReferent, demandeReferent, filDemandeReferent, personne, profil, responsabilite } from './schema.ts';
 
-// Demandes aux référents : un rôle de centre qui « reçoit des demandes » (pharmacie, matériel…) les suit comme l'habillement,
-// avec des étapes intermédiaires réglées sur le rôle. L'habillement garde son propre circuit (décision 0043).
+// Demandes aux référents : un rôle de centre qui « reçoit des demandes » (pharmacie, matériel, habillement…) les suit, avec des étapes
+// intermédiaires réglées sur le rôle (décisions 0043 et 0044).
 
 export const ETAPES_MAX = 6;
 export const NOM_ETAPE_MAX = 30;
@@ -21,9 +20,16 @@ const NOMS_FIXES = ['Demandée', 'Prise en compte', 'Refusée', 'Annulée'];
 const nomPropre = (v: unknown) => (typeof v === 'string' ? v.trim().replace(/\s+/g, ' ') : '');
 const nouvelId = () => `e${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
 
-// Un rôle peut recevoir des demandes : de portée centre, ni système, ni archivé, ni chargé de l'habillement (avant C2).
-export function recoitPossible(r: { typePerimetre: string; systeme: string | null; archiveeLe: string | null }, droits: string[]): boolean {
-	return r.typePerimetre === 'centre' && r.systeme === null && r.archiveeLe === null && !droits.includes('GERER_HABILLEMENT');
+// Un rôle peut recevoir des demandes : de portée centre, ni système, ni archivé.
+export function recoitPossible(r: { typePerimetre: string; systeme: string | null; archiveeLe: string | null }): boolean {
+	return r.typePerimetre === 'centre' && r.systeme === null && r.archiveeLe === null;
+}
+
+// Un agent du centre : une personne qui a accès, pas le compte partagé d'un extérieur. Le super administrateur ne demande pas.
+export async function peutDemander(base: Base, acteur: Acteur): Promise<boolean> {
+	if (acteur.type !== 'personne') return false;
+	const [fiche] = await base.select({ statut: personne.statut, type: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, acteur.id));
+	return !!fiche && (STATUTS_AVEC_ACCES as readonly string[]).includes(fiche.statut) && fiche.type !== 'exterieur';
 }
 
 // Qui règle : qui gère les rôles, le chef de centre et l'adjoint (tout), ou un titulaire en cours d'un rôle qui reçoit déjà
@@ -58,29 +64,25 @@ function reglageVerifie(actuel: ReglageDemandes | null, demande: { etapes: { id?
 // Au journal. Une lecture, puis l'écriture (plus les droits).
 export async function reglerDemandes(base: Base, acteur: Acteur, roleId: number, reglage: { etapes: { id?: string; nom: string }[]; derniere: string } | null, maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
-	const [[role], droits, occupees] = await base.batch([
-		base.select().from(responsabilite).where(eq(responsabilite.id, roleId)),
-		base.select({ droit: responsabiliteDroit.droit }).from(responsabiliteDroit).where(eq(responsabiliteDroit.responsabiliteId, roleId)),
-		lectureOccupees(base, roleId)
-	]);
+	const [[role], occupees] = await base.batch([base.select().from(responsabilite).where(eq(responsabilite.id, roleId)), lectureOccupees(base, roleId)]);
 	if (!role) throw new DonneeInvalide('Responsabilité inconnue');
 	const qui = await peutReglerDemandes(base, acteur, roleId, role.demandes !== null, aujourdhui);
 	if (qui === null || (qui === 'etapes' && (reglage === null || role.demandes === null))) throw new RefusDroit('GERER_LISTES', { type: 'centre' }, 'Réservé à qui gère les rôles et aux titulaires du rôle');
-	const { ecritures, verifier } = ecrituresReglage(base, acteur, { ...role, droits: droits.map((d) => d.droit) }, occupees, reglage, maintenant);
+	const { ecritures, verifier } = ecrituresReglage(base, acteur, role, occupees, reglage, maintenant);
 	verifier(await base.batch(ecritures));
 }
 
 // Les étapes où se trouvent les demandes en cours d'un rôle. À placer dans un batch.
 export const lectureOccupees = (base: Base, roleId: number) => base.selectDistinct({ etape: demandeReferent.etape }).from(demandeReferent).where(and(eq(demandeReferent.responsabiliteId, roleId), isNull(demandeReferent.finLe)));
 
-type RoleARegler = { id: number; typePerimetre: string; systeme: string | null; archiveeLe: string | null; demandes: ReglageDemandes | null; demandesGardees: ReglageDemandes | null; droits: string[] };
+type RoleARegler = { id: number; typePerimetre: string; systeme: string | null; archiveeLe: string | null; demandes: ReglageDemandes | null; demandesGardees: ReglageDemandes | null };
 
 // Le réglage vérifié et ses écritures, à placer dans un batch (seules ou avec celles d'une modification du rôle : `role` porte
-// alors sa portée et ses droits d'après) ; `verifier` lit les résultats du batch, depuis l'index `debut` de ces écritures.
+// alors sa portée d'après) ; `verifier` lit les résultats du batch, depuis l'index `debut` de ces écritures.
 // Les droits de l'acteur sont vérifiés par l'appelant.
 export function ecrituresReglage(base: Base, acteur: Acteur, role: RoleARegler, occupees: { etape: string }[], reglage: { etapes: { id?: string; nom: string }[]; derniere: string } | null, maintenant: string, debut = 0) {
 	const roleId = role.id;
-	if (reglage !== null && !recoitPossible(role, role.droits)) throw new DonneeInvalide('Ce rôle ne reçoit pas de demandes');
+	if (reglage !== null && !recoitPossible(role)) throw new DonneeInvalide('Ce rôle ne reçoit pas de demandes');
 	const actuel = role.demandes;
 	let nouveau: ReglageDemandes | null = null;
 	let retirees: string[] = [];
@@ -618,4 +620,35 @@ export function demandesADecider(lignes: ADeciderLu[], roles: Set<number>): Map<
 	}
 	for (const l of lignes.filter((x) => x.etape !== 'demandee')) ajouter(cleDe(l.roleId), { texte: `Réponse ${de(nomDe(l))} à lire (${extraitDemandeReferent(l.texte, 60)})`, lien: lienDemande(l.id) });
 	return parCasquette;
+}
+
+// Données fictives (préprod, développement local) ------------------------------------------------------------------------------------
+
+type DemandeFictive = { demandeur: number; texte: string; etape: string; question?: QuestionDemande; mot?: string; fil: { quoi: FilDemande; etape?: string; texte?: string; par: number }[] };
+
+// Quelques demandes d'habillement à différentes étapes, au rôle réglé pour l'habillement (En stock, Commandée au SDIS), suivies
+// par `referent`. Relançable, sans doublon. Rien si le rôle n'a pas ce réglage.
+export async function chargerHabillementFictif(base: Base, maintenant: string, roleId: number, referent: number, demandeurs: number[]): Promise<void> {
+	exigerDateHeure(maintenant, 'Date');
+	const [a, b = a, c = a] = demandeurs;
+	const [role] = await base.select({ demandes: responsabilite.demandes }).from(responsabilite).where(eq(responsabilite.id, roleId));
+	const ids = role?.demandes?.etapes.map((e) => e.id) ?? [];
+	if (a === undefined || !ids.includes('estock') || !ids.includes('ecommande')) return;
+	const prevues: DemandeFictive[] = [
+		{ demandeur: a, texte: 'Veste textile en L, la mienne est déchirée à la manche.', etape: 'demandee', fil: [] },
+		{ demandeur: b!, texte: 'Rangers, taille 43.', etape: 'prise', question: 'posee', fil: [{ quoi: 'prise', par: referent }, { quoi: 'question', texte: 'Montantes ou basses ?', par: referent }] },
+		{ demandeur: c!, texte: 'Pantalon F1 en 42, le mien est trop usé aux genoux.', etape: 'ecommande', fil: [{ quoi: 'prise', par: referent }, { quoi: 'etape', etape: 'ecommande', par: referent }] },
+		{ demandeur: a, texte: 'Gants d’intervention, taille 9.', etape: 'faite', mot: 'Dans votre casier', fil: [{ quoi: 'prise', par: referent }, { quoi: 'etape', etape: 'estock', par: referent }, { quoi: 'fin', etape: 'faite', texte: 'Dans votre casier', par: referent }] }
+	];
+	const deja = await base.select({ texte: demandeReferent.texte, demandeur: demandeReferent.demandeurId }).from(demandeReferent).where(eq(demandeReferent.responsabiliteId, roleId));
+	for (const p of prevues) {
+		// Déjà là pour l'un des demandeurs : la répartition change quand l'un d'eux manque, la demande n'est pas refaite.
+		if (deja.some((d) => d.texte === p.texte && demandeurs.includes(d.demandeur))) continue;
+		const finie = FINIES_DEMANDE.includes(p.etape);
+		const [d] = await base
+			.insert(demandeReferent)
+			.values({ responsabiliteId: roleId, demandeurId: p.demandeur, texte: p.texte, etape: p.etape, question: p.question ?? null, prisePar: p.fil.length ? referent : null, mot: p.mot ?? null, creeLe: maintenant, majLe: maintenant, finLe: finie ? maintenant : null })
+			.returning({ id: demandeReferent.id });
+		if (p.fil.length) await base.insert(filDemandeReferent).values(p.fil.map((f) => ({ demandeId: d!.id, quoi: f.quoi, etape: f.etape ?? null, nomEtape: f.etape ? nomEtape(f.etape, role!.demandes) : null, texte: f.texte ?? null, par: f.par, le: maintenant })));
+	}
 }

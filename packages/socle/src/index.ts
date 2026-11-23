@@ -18,7 +18,7 @@ export { estGestionnaire, ficheAgent, FILTRES_GESTION, listeGestion, vueEffectif
 export { creerComite, dissoudreComite, listerComites, modifierComite } from './actions/comites.ts';
 export { archiverResponsabilite, creerResponsabilite, listerResponsabilites, modifierResponsabilite, type Attributeur } from './actions/responsabilites.ts';
 export { iconeDuComite, iconeDuRole, NOMS_ICONES, type NomIcone } from './icones.ts';
-export { MODELES, type Modele } from './modeles.ts';
+export { MODELES, REGLAGE_HABILLEMENT, type Modele } from './modeles.ts';
 export { creerProfil, enregistrerProfil, listerProfils, modifierDroitsProfil, modifierMursOuverts, renommerProfil, supprimerProfil } from './actions/profils.ts';
 export { accueilDe, aDecider, casquettesDe, type Accueil, type ADecider, type Casquette, type ContenuCasquette } from './casquettes.ts';
 export { apercusDesMurs, type Apercu as ApercuMur } from './apercus.ts';
@@ -65,13 +65,12 @@ export { FICHES_PAR_DEFAUT } from './fiches-de-depart.ts';
 export { apercuFiches, appliquerFiches, donneesFichierFiches, ENTETES_FICHES, type ApercuFiches, type ChangementsFiche, type DonneesFichierFiches, type FichierFichesLu } from './fichier-fiches.ts';
 export { anomaliesADecider, bloquanteClose, chargerAnomaliesFictives, etapesDu, gesteAnomalie, gestesPermis, libelleEtape, LIBELLES_ETAPE, LIBELLES_MOTIF, LIMITES_ANOMALIE, lireAnomalie, listerAnomalies, REGLAGE_ANOMALIES, signalerAnomalie, traiteLesAnomalies, type AnomalieListee, type EtapeHistorique, type EtatAnomalie, type GesteAnomalie, type QuoiGeste, type SignalementAnomalie, type VueAnomalie } from './anomalies.ts';
 export { abandonnerPrise, appliquerGestePrise, commencerPrise, demanderReouverture, equipeAstreinte, gestePrise, modifierParticipantsPrise, rouvrirPrise, historiquePrises, lienPriseOuvert, LIMITES_PRISE, lirePrise, lirePriseFaite, peutFairePrise, photoAnomalie, premierGestePrise, prisesDeLaReleve, prisesEnRetard, releveDe, SAISIE_VIDE, validerPrise, type AgentPrise, type AnomaliePropre, type AnomalieVue, type Ecart, type GestesValidee, type TracesVues, type GestePrise, type PriseDeLaReleve, type PriseFaite, type PriseHistorique, type PriseVue, type Releve, type Saisie, type VuePrise } from './prises.ts';
-export { chargerHabillementFictif, demanderTenue, effacerVieillesDemandes, extraitDemande, FINIES, gereHabillement, gesteHabillement, gestesHabillement, LIMITE_HABILLEMENT, lireDemande, mesDemandes, toutesLesDemandes, type DemandeListee, type EtatDemandeHabillement, type GesteHabillement, type LigneFilDemande, type QuoiGesteHabillement, type VueDemandeHabillement } from './habillement.ts';
-export { peutDemander } from './habillement.ts';
 export {
 	DERNIERE_PAR_DEFAUT,
 	demanderAuReferent,
 	demandesDuRole,
 	effacerVieillesDemandesReferents,
+	chargerHabillementFictif,
 	ETAPES_MAX,
 	extraitDemandeReferent,
 	FINIES_DEMANDE,
@@ -83,6 +82,7 @@ export {
 	NOM_ETAPE_MAX,
 	nomEtape,
 	pageDesDemandes,
+	peutDemander,
 	peutReglerDemandes,
 	recoitPossible,
 	reglerDemandes,

@@ -71,7 +71,7 @@ describe('passage d’un agent à un profil extérieur', () => {
 		expect((await base.select().from(personne).where(eq(personne.id, paul)))[0]!.effaceLe).toBeNull();
 	});
 
-	it('remplacements, réservations, demandes d’habillement et demandes aux référents en cours annulés', async () => {
+	it('remplacements, réservations et demandes aux référents en cours annulés ; l’ancienne table de l’habillement n’est pas touchée', async () => {
 		const { base, chef, chefId, paul, retraite, e1, passer } = await jeu();
 		const [d] = await base.insert(demandeRemplacement).values({ genre: 'remplacement', demandeurId: paul, equipeId: e1.id, debut: '2026-11-02T20:00', etat: 'attente', creeLe: '2026-10-20T10:00' }).returning();
 		const [vl] = await base.select().from(ressource);
@@ -87,7 +87,7 @@ describe('passage d’un agent à un profil extérieur', () => {
 		expect((await base.select().from(demandeReferent).where(eq(demandeReferent.id, loin!.id)))[0]).toMatchObject({ etape: 'e12345678', finLe: null });
 		expect((await base.select().from(demandeRemplacement).where(eq(demandeRemplacement.id, d!.id)))[0]!.etat).toBe('annulee');
 		expect((await base.select().from(reservation).where(eq(reservation.id, r!.id)))[0]!.etat).toBe('annulee');
-		expect((await base.select().from(demandeHabillement).where(eq(demandeHabillement.id, h!.id)))[0]).toMatchObject({ etape: 'annulee', finLe: maintenant });
+		expect((await base.select().from(demandeHabillement).where(eq(demandeHabillement.id, h!.id)))[0]).toMatchObject({ etape: 'demandee', finLe: null });
 	});
 
 	it('retiré des groupes d’agents ; ses conversations à deux restent', async () => {
