@@ -5,7 +5,7 @@
 ## Ce qui change
 
 - **Caserne → Habillement** ouvre « Faire une demande », le référent habillement déjà choisi.
-- Le rôle « Référent habillement » reçoit des demandes, avec deux étapes intermédiaires, **En stock** et **Commandée au SDIS**, et une dernière étape, **Livrée**. Le référent saute l'une des deux selon le cas. Ces étapes se règlent comme pour tout rôle (Réglages → Rôles).
+- Le rôle « Référent habillement » reçoit des demandes, sans droit propre, avec deux étapes intermédiaires, **En stock** et **Commandée au SDIS**, et une dernière étape, **Livrée**. Le référent saute l'une des deux selon le cas. Ces étapes se règlent comme pour tout rôle (Réglages → Rôles).
 - Le chef de centre et l'adjoint agissent toujours, et reçoivent les demandes quand le rôle n'a aucun titulaire.
 - Les anciennes adresses (`/habillement/12`, dans une notification ou le suivi du centre) mènent à la demande reprise, sinon à « Mes demandes ».
 
@@ -24,7 +24,7 @@ Toutes les demandes d'habillement sont recopiées avec leur fil, leurs dates, le
 | Refusée | Refusée, avec le mot du refus |
 | Annulée | Annulée |
 
-Les anciennes tables restent intactes et ne servent plus. Leur suppression viendra dans un lot à part, au moins une semaine plus tard, avec l'accord du porteur.
+Il n'y avait pas de vraie demande en production : à la demande du porteur, les anciennes tables et le droit « Gérer l'habillement » sont supprimés dans le même lot, juste après la reprise (décision 0044).
 
 ## Exemple
 

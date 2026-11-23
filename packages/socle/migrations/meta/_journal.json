@@ -267,6 +267,13 @@
       "when": 1795408615433,
       "tag": "0037_reprise_habillement",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1795419488897,
+      "tag": "0038_suppression_habillement",
+      "breakpoints": true
     }
   ]
 }

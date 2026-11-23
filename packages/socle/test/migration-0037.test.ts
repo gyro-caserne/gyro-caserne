@@ -3,12 +3,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 const dossier = new URL('../migrations/', import.meta.url);
-const migrations = readdirSync(dossier).filter((f) => f.endsWith('.sql')).sort();
+// Jusqu'à 0037 seulement : 0038 supprime les anciennes tables (migration-0038.test.ts).
+const migrations = readdirSync(dossier).filter((f) => f.endsWith('.sql') && f < '0038_').sort();
 const texteDe = (prefixe: string) => readFileSync(new URL(migrations.find((f) => f.startsWith(prefixe))!, dossier), 'utf8');
 const jouer = (sqlite: DatabaseSync, texte: string) => {
 	for (const i of texte.split('--> statement-breakpoint')) sqlite.exec(i);
 };
-const comptage = readFileSync(new URL('../../../docs/technique/comptage-reprise-habillement.sql', import.meta.url), 'utf8');
 const REGLAGE = '{"etapes":[{"id":"estock","nom":"En stock"},{"id":"ecommande","nom":"Commandée au SDIS"}],"derniere":"Livrée"}';
 
 // Une base d'avant la reprise : le chef (1), le référent habillement (2), Alice (3) et Bruno (4) ; une demande d'habillement
@@ -152,14 +152,6 @@ describe('migrations 0036 et 0037 : les demandes d’habillement passent dans le
 		]);
 
 		expect(e.journal).toEqual([{ acteur: 'migration', action: 'reprendre_habillement', cible_type: 'responsabilite', cible_id: 2, details: '{"demandes":9,"recopiees":9,"fil":16,"avis":3}' }]);
-	});
-
-	it('donne les mêmes nombres avant et après, état par état, à la requête de comptage', () => {
-		const sqlite = baseAvant();
-		migrer(sqlite);
-		const lignes = tout(sqlite, comptage) as { quoi: string; avant: number; apres: number }[];
-		expect(lignes.map((l) => [l.quoi, l.avant])).toEqual([['demandee', 1], ['prise', 2], ['question', 1], ['stock', 1], ['commande', 1], ['traitee sans issue', 0], ['livree', 1], ['refusee', 1], ['annulee', 1], ['fil', 16], ['avis non lus', 3]]);
-		for (const l of lignes) expect(l.apres, l.quoi).toBe(l.quoi === 'traitee sans issue' ? null : l.avant);
 	});
 
 	it('rejouée, ne duplique rien, même après un geste sur une demande reprise', () => {

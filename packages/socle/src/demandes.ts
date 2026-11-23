@@ -655,17 +655,17 @@ export async function chargerHabillementFictif(base: Base, maintenant: string, r
 
 // L'ancienne entrée de l'habillement (décision 0044) ------------------------------------------------------------------------------
 
-// Le rôle qui reçoit les demandes d'habillement, comme l'a choisi la reprise (migration 0037) : celui qui en a reçu, sinon celui qui a
-// les étapes de l'habillement, sinon celui qui porte le droit ou vient du modèle ; nul sans lui. Une requête.
+// Le rôle qui reçoit les demandes d'habillement : celui qui en a reçu par la reprise (migration 0037), sinon celui qui a les étapes de
+// l'habillement, sinon celui qui vient du modèle ou porte le nom ; nul sans lui. Une requête.
 export async function roleDeLHabillement(base: Base): Promise<number | null> {
-	const droit = sql`exists (select 1 from responsabilite_droit d where d.responsabilite_id = ${responsabilite.id} and d.droit = 'GERER_HABILLEMENT')`;
 	const etapes = sql`${responsabilite.demandes} like '%"id":"estock"%'`;
 	const repris = sql`exists (select 1 from demande_referent x where x.responsabilite_id = ${responsabilite.id} and x.habillement_id is not null)`;
+	const nom = sql`${responsabilite.nom} = 'Référent habillement'`;
 	const [r] = await base
 		.select({ id: responsabilite.id })
 		.from(responsabilite)
-		.where(and(isNotNull(responsabilite.demandes), isNull(responsabilite.archiveeLe), isNull(responsabilite.systeme), or(repris, etapes, droit, eq(responsabilite.modele, 'referent_habillement'))))
-		.orderBy(desc(repris), desc(etapes), desc(droit), desc(sql`${responsabilite.nom} = 'Référent habillement'`), asc(responsabilite.id))
+		.where(and(isNotNull(responsabilite.demandes), isNull(responsabilite.archiveeLe), isNull(responsabilite.systeme), or(repris, etapes, nom, eq(responsabilite.modele, 'referent_habillement'))))
+		.orderBy(desc(repris), desc(etapes), desc(nom), asc(responsabilite.id))
 		.limit(1);
 	return r?.id ?? null;
 }

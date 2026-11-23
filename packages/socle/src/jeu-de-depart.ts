@@ -38,7 +38,7 @@ export const GRADES_DE_DEPART = [
 
 export const NOM_COMITE_CENTRE = 'Comité du centre';
 
-const DROITS_CHEF_CENTRE: Droit[] = ['GERER_LISTES', 'GERER_ACCES', 'GERER_COMITES', 'GERER_PLANNING', 'ATTRIBUER_RESPONSABILITE', 'TRAITER_ANOMALIE', 'GERER_FICHES', 'GERER_STOCK', 'GERER_HABILLEMENT', 'MODERER_MESSAGERIE'];
+const DROITS_CHEF_CENTRE: Droit[] = ['GERER_LISTES', 'GERER_ACCES', 'GERER_COMITES', 'GERER_PLANNING', 'ATTRIBUER_RESPONSABILITE', 'TRAITER_ANOMALIE', 'GERER_FICHES', 'GERER_STOCK', 'MODERER_MESSAGERIE'];
 
 const RESPONSABILITES: {
 	nom: string;
@@ -68,7 +68,7 @@ const RESPONSABILITES: {
 	{ nom: 'Référent engins', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: ['TRAITER_ANOMALIE', 'GERER_FICHES'], demandes: SANS_ETAPE },
 	{ nom: 'Référent pharmacie', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: ['GERER_STOCK'], demandes: SANS_ETAPE },
 	// La migration 0022 l'ajoute aux bases déjà remplies, et la 0037 le règle.
-	{ nom: 'Référent habillement', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: ['GERER_HABILLEMENT'], demandes: REGLAGE_HABILLEMENT },
+	{ nom: 'Référent habillement', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: [], demandes: REGLAGE_HABILLEMENT },
 	// Attribué par le chef de centre. La migration 0001 l'ajoute aux bases déjà remplies.
 	{ nom: 'Référent technique', nature: 'fonction', typePerimetre: 'centre', parComiteCentre: false, verrouilles: false, droits: ['GERER_LISTES', 'GERER_COMITES'] }
 ];

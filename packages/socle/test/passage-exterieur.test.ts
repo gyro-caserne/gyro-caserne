@@ -13,7 +13,6 @@ import {
 	attribution,
 	comite,
 	conversation,
-	demandeHabillement,
 	demandeReferent,
 	filDemandeReferent,
 	demandeRemplacement,
@@ -71,12 +70,11 @@ describe('passage d’un agent à un profil extérieur', () => {
 		expect((await base.select().from(personne).where(eq(personne.id, paul)))[0]!.effaceLe).toBeNull();
 	});
 
-	it('remplacements, réservations et demandes aux référents en cours annulés ; l’ancienne table de l’habillement n’est pas touchée', async () => {
+	it('remplacements, réservations et demandes aux référents en cours annulés', async () => {
 		const { base, chef, chefId, paul, retraite, e1, passer } = await jeu();
 		const [d] = await base.insert(demandeRemplacement).values({ genre: 'remplacement', demandeurId: paul, equipeId: e1.id, debut: '2026-11-02T20:00', etat: 'attente', creeLe: '2026-10-20T10:00' }).returning();
 		const [vl] = await base.select().from(ressource);
 		const [r] = await base.insert(reservation).values({ ressourceId: vl!.id, personneId: paul, debut: '2026-11-03T09:00', fin: '2026-11-03T12:00', quantite: 1, etat: 'acceptee', creeLe: '2026-10-20T10:00' }).returning();
-		const [h] = await base.insert(demandeHabillement).values({ demandeurId: paul, texte: 'Veste', creeLe: '2026-10-20T10:00', majLe: '2026-10-20T10:00' }).returning();
 		// Une demande à un référent : annulée tant qu'elle n'a pas dépassé « Prise en compte » ; plus loin, le référent la finit.
 		const [pharmacie] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent pharmacie'));
 		const [dr] = await base.insert(demandeReferent).values({ responsabiliteId: pharmacie!.id, demandeurId: paul, texte: 'Compresses', etape: 'prise', creeLe: '2026-10-20T10:00', majLe: '2026-10-20T10:00' }).returning();
@@ -87,7 +85,6 @@ describe('passage d’un agent à un profil extérieur', () => {
 		expect((await base.select().from(demandeReferent).where(eq(demandeReferent.id, loin!.id)))[0]).toMatchObject({ etape: 'e12345678', finLe: null });
 		expect((await base.select().from(demandeRemplacement).where(eq(demandeRemplacement.id, d!.id)))[0]!.etat).toBe('annulee');
 		expect((await base.select().from(reservation).where(eq(reservation.id, r!.id)))[0]!.etat).toBe('annulee');
-		expect((await base.select().from(demandeHabillement).where(eq(demandeHabillement.id, h!.id)))[0]).toMatchObject({ etape: 'demandee', finLe: null });
 	});
 
 	it('retiré des groupes d’agents ; ses conversations à deux restent', async () => {

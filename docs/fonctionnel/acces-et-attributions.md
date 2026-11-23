@@ -57,7 +57,6 @@ La liste range les rôles par thème : « Chef de centre et adjoint », « Chefs
 | Planning et gardes | Rien de plus · Valider les remplacements · Gérer le planning |
 | Engins et anomalies | Rien de plus · Gérer (traiter les anomalies, fiches de prise de garde) |
 | Stock et pharmacie | Rien de plus · Gérer |
-| Habillement | Rien de plus · Gérer |
 | Réservations | Rien · Réserver · Gérer |
 | Messagerie | Rien de plus · Modérer |
 
@@ -73,7 +72,7 @@ Les droits d'administration (gérer les accès, les comités, les responsabilit�
 
 La nature ne change aucun droit.
 
-**Les modèles** (« Nouveau rôle ») sont fixés par l'appli : Référent matériel (Engins : Gérer), Référent pharmacie (Stock : Gérer), Référent habillement (Habillement : Gérer), Référent technique (gérer les responsabilités et les comités), Membre de comité, Rapporteur de comité (nommer, dans son comité), Vierge (aucun droit). Le rôle créé en reprend les droits ; le formulaire est prérempli avec le nom, la nature, la portée et l'icône du modèle, qui se changent, comme qui attribue. Un modèle qui porte un droit d'administration (Référent technique, Rapporteur de comité) porte « Réservé au chef de centre, à son adjoint et au super administrateur » pour les autres, sans pouvoir être choisi.
+**Les modèles** (« Nouveau rôle ») sont fixés par l'appli : Référent matériel (Engins : Gérer), Référent pharmacie (Stock : Gérer), Référent habillement (aucun droit, reçoit les demandes de tenue), Référent technique (gérer les responsabilités et les comités), Membre de comité, Rapporteur de comité (nommer, dans son comité), Vierge (aucun droit). Le rôle créé en reprend les droits ; le formulaire est prérempli avec le nom, la nature, la portée et l'icône du modèle, qui se changent, comme qui attribue. Un modèle qui porte un droit d'administration (Référent technique, Rapporteur de comité) porte « Réservé au chef de centre, à son adjoint et au super administrateur » pour les autres, sans pouvoir être choisi.
 
 Exemple : le chef de centre crée « Référent pharmacie 2 » depuis le modèle « Référent pharmacie ». Il met « Stock et pharmacie » à « Rien de plus » : le rôle devient « Personnalisé ». Il se ravise : « Revenir au modèle » remet « Gérer », la pastille disparaît, il enregistre.
 

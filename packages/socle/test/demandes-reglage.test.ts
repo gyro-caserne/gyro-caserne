@@ -113,10 +113,9 @@ describe('régler les demandes d’un rôle', () => {
 		expect(JSON.parse((await j.base.select().from(journal).where(eq(journal.action, 'regler_demandes'))).at(-1)!.details)).toEqual({ recoit: false });
 	});
 
-	it('un rôle qui reçoit des demandes peut prendre le droit de l’habillement, pas une autre portée', async () => {
+	it('un rôle qui reçoit des demandes ne prend pas une autre portée', async () => {
 		const j = await jeu();
 		await reglerDemandes(j.base, j.claire, j.pharmacie, { etapes: [], derniere: 'Faite' }, QUAND);
-		await modifierResponsabilite(j.base, j.claire, j.pharmacie, { droits: ['GERER_STOCK', 'GERER_HABILLEMENT'] }, AUJOURDHUI);
 		await j.base.delete(attribution).where(eq(attribution.personneId, j.ids.paul));
 		await expect(modifierResponsabilite(j.base, j.claire, j.pharmacie, { portee: 'equipe', droits: [] }, AUJOURDHUI)).rejects.toThrow('Ce rôle reçoit des demandes');
 		// Le reste se modifie comme avant.
@@ -196,14 +195,14 @@ describe('un seul enregistrement de la page du rôle', () => {
 		expect(await j.base.select().from(journal).where(eq(journal.action, 'regler_demandes'))).toHaveLength(n);
 	});
 
-	it('décocher et changer de portée dans le même envoi ; cocher en ajoutant le droit de l’habillement est permis', async () => {
+	it('décocher et changer de portée dans le même envoi ; cocher et changer les droits ensemble', async () => {
 		const j = await jeu();
 		await j.base.delete(attribution).where(eq(attribution.personneId, j.ids.paul));
 		await modifierResponsabilite(j.base, j.claire, j.pharmacie, { portee: 'equipe', droits: [], demandes: null }, AUJOURDHUI, QUAND);
 		expect(await j.lire()).toBeNull();
 		const engins = (await j.role('Référent engins')).id;
 		await reglerDemandes(j.base, j.claire, engins, null, QUAND);
-		await modifierResponsabilite(j.base, j.claire, engins, { droits: ['TRAITER_ANOMALIE', 'GERER_FICHES', 'GERER_HABILLEMENT'], demandes: { etapes: [], derniere: 'Faite' } }, AUJOURDHUI, QUAND);
+		await modifierResponsabilite(j.base, j.claire, engins, { droits: ['TRAITER_ANOMALIE'], demandes: { etapes: [], derniere: 'Faite' } }, AUJOURDHUI, QUAND);
 		expect((await j.base.select().from(responsabilite).where(eq(responsabilite.id, engins)))[0]!.demandes).toEqual({ etapes: [], derniere: 'Faite' });
 	});
 });

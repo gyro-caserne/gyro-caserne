@@ -19,7 +19,6 @@ describe('listes fermées', () => {
 			'TRAITER_ANOMALIE',
 			'GERER_FICHES',
 			'GERER_STOCK',
-			'GERER_HABILLEMENT',
 			'GERER_PLANNING',
 			'VALIDER_REMPLACEMENT',
 			'VOIR_MOTIFS_ABSENCE',

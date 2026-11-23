@@ -81,26 +81,7 @@ async function lancer() {
 		attendre: () => new Promise((r) => setTimeout(r, 10_000))
 	});
 	for (const message of messages) console.log(message);
-	comptageRepriseHabillement(appli, config);
 	if (!ok) process.exit(1);
-}
-
-// Reprise de l'habillement (migrations 0036 et 0037) : les nombres avant et après, état par état, au journal du déploiement.
-// Des nombres seulement ; un échec n'arrête rien. À retirer avec le lot qui supprimera les tables de l'habillement.
-function comptageRepriseHabillement(appli: string, config: string) {
-	try {
-		const sortie = execFileSync('pnpm', ['exec', 'wrangler', 'd1', 'execute', 'BASE', '--remote', '--json', '--config', config, '--file', '../../docs/technique/comptage-reprise-habillement.sql'], {
-			cwd: appli,
-			encoding: 'utf8',
-			stdio: ['ignore', 'pipe', 'ignore'],
-			env: { ...process.env, WRANGLER_SEND_METRICS: 'false' }
-		});
-		const lignes = (JSON.parse(sortie) as { results: { quoi: unknown; avant: unknown; apres: unknown }[] }[])[0]!.results;
-		console.log('Reprise de l’habillement, avant et après :');
-		for (const l of lignes) if (typeof l.avant === 'number' && (l.apres === null || typeof l.apres === 'number')) console.log(`  ${String(l.quoi)} : ${l.avant}, ${l.apres ?? 'aucun'}`);
-	} catch {
-		console.log('::warning::Comptage de la reprise de l’habillement impossible, le déploiement continue.');
-	}
 }
 
 if (import.meta.main) await lancer();
