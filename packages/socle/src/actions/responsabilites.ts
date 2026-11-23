@@ -2,7 +2,7 @@ import { and, count, countDistinct, eq, gte, isNull, lte, notInArray, or, sql } 
 import type { Base } from '../base.ts';
 import { exigerDate } from '../dates.ts';
 import { aLeDroit, type Acteur } from '../droits.ts';
-import { aDesDemandesEnCours, DERNIERE_PAR_DEFAUT } from '../demandes.ts';
+import { aDesDemandesEnCours, DERNIERE_PAR_DEFAUT, ecrituresReglage, lectureOccupees } from '../demandes.ts';
 import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
 import { finirOuSupprimer } from '../fin-de-periode.ts';
 import { NOMS_ICONES, type NomIcone } from '../icones.ts';
@@ -189,8 +189,10 @@ export async function modifierResponsabilite(
 	base: Base,
 	acteur: Acteur,
 	id: number,
-	champs: Partial<{ nom: string; nature: Nature; portee: Portee; attributeur: Attributeur; droits: Droit[]; icone: string }>,
-	aujourdhui: string
+	// `demandes` : le réglage des demandes (demandes.ts), enregistré dans le même batch ; `null` décoche ; absent, il ne change pas.
+	champs: Partial<{ nom: string; nature: Nature; portee: Portee; attributeur: Attributeur; droits: Droit[]; icone: string; demandes: { etapes: { id?: string; nom: string }[]; derniere: string } | null }>,
+	aujourdhui: string,
+	maintenant = `${aujourdhui}T00:00`
 ): Promise<void> {
 	await exiger(base, acteur, aujourdhui);
 	const ligne = await responsabiliteConnue(base, id);
@@ -250,14 +252,22 @@ export async function modifierResponsabilite(
 		if (ajoutes.length > 0 || retires.length > 0) noms.push('droits');
 	}
 	// Un rôle qui reçoit des demandes reste de portée centre, sans le droit de l'habillement (un seul circuit, avant C2).
-	if (ligne.demandes !== null && (portee !== 'centre' || ajoutes.includes('GERER_HABILLEMENT'))) throw new DonneeInvalide('Ce rôle reçoit des demandes');
+	const reglage = champs.demandes;
+	const recevra = reglage === undefined ? ligne.demandes !== null : reglage !== null;
+	if (recevra && ligne.demandes !== null && (portee !== 'centre' || ajoutes.includes('GERER_HABILLEMENT'))) throw new DonneeInvalide('Ce rôle reçoit des demandes');
 	// Après le contrôle du pouvoir. Seul ce qui change est vérifié : un rôle ancien qui a déjà un tel droit se modifie pour le reste.
 	exigerPorteeDesDroits(portee, portee !== ligne.typePerimetre ? apres : ajoutes);
-	if (noms.length === 0) return;
+	// Le réglage des demandes, s'il change : une lecture de plus (les étapes occupées), ses écritures dans le même batch.
+	const changeDemandes = reglage !== undefined && JSON.stringify(reglage) !== JSON.stringify(ligne.demandes);
+	const demandes = changeDemandes
+		? ecrituresReglage(base, acteur, { ...ligne, typePerimetre: portee, droits: apres }, await lectureOccupees(base, id), reglage, maintenant)
+		: null;
+	if (noms.length === 0 && !demandes) return;
 
-	await base.batch([
+	const resultats = await base.batch([
+		...(demandes?.ecritures ?? []),
 		// Les noms des champs ; pour les droits, avant et après (ce ne sont pas des données personnelles).
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_responsabilite', cibleType: 'responsabilite', cibleId: id, details: { champs: noms, ...(noms.includes('droits') ? { droits: { avant: [...avant].sort(), apres: [...apres].sort() } } : {}) } }, aujourdhui),
+		...(noms.length > 0 ? [ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_responsabilite', cibleType: 'responsabilite', cibleId: id, details: { champs: noms, ...(noms.includes('droits') ? { droits: { avant: [...avant].sort(), apres: [...apres].sort() } } : {}) } }, aujourdhui)] : []),
 		...(Object.keys(changes).length > 0 ? [base.update(responsabilite).set(changes).where(eq(responsabilite.id, id))] : []),
 		...(noms.includes('droits')
 			? [
@@ -267,7 +277,8 @@ export async function modifierResponsabilite(
 					...(ajoutes.length > 0 ? [base.insert(responsabiliteDroit).values(ajoutes.map((droit) => ({ responsabiliteId: id, droit })))] : [])
 				]
 			: [])
-	]);
+	] as unknown as Parameters<typeof base.batch>[0]);
+	demandes?.verifier(resultats);
 }
 
 export async function archiverResponsabilite(base: Base, acteur: Acteur, id: number, aujourdhui: string): Promise<void> {

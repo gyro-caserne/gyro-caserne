@@ -13,6 +13,7 @@ const PHRASES_REGLAGE: Record<string, string> = {
 	'Demande changée entre-temps': 'Le réglage ou une demande vient de changer. Rechargez la page, puis refaites votre geste.'
 };
 export const phraseReglage = (message: string) => PHRASES_REGLAGE[message] ?? 'Le réglage n’a pas pu être enregistré.';
+export const estMessageReglage = (message: string) => Object.hasOwn(PHRASES_REGLAGE, message);
 
 type Ton = 'ok' | 'info' | 'alerte' | 'danger' | 'neutre';
 
@@ -54,3 +55,13 @@ const PHRASES: Record<string, string> = {
 	'Demande changée entre-temps': 'La demande vient de changer. Elle est rechargée, refaites votre geste.'
 };
 export const phraseDemande = (message: string) => PHRASES[message] ?? 'Ce geste n’a pas pu être enregistré.';
+
+// Le titre d'une demande : son texte sur une ligne, coupé à la fin d'un mot autour de `max` caractères, avec « … » comme les
+// autres titres coupés (habillement). Le texte complet reste dans le fil.
+export function titreDeDemande(texte: string, max = 60): string {
+	const ligne = texte.replace(/\s+/g, ' ').trim();
+	if (ligne.length <= max) return ligne;
+	const coupe = ligne.slice(0, max + 1);
+	const fin = coupe.lastIndexOf(' ');
+	return `${(fin > max / 2 ? coupe.slice(0, fin) : ligne.slice(0, max)).replace(/[\s,;:.!?-]+$/, '')}…`;
+}

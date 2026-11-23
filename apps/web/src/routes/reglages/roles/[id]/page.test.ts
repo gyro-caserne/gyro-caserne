@@ -205,17 +205,23 @@ describe('page d’un rôle', () => {
 
 	it('« Demandes » : la case et les étapes, chacune avec ses gestes ; absent d’un rôle qui ne peut pas en recevoir', () => {
 		const reglage = { etapes: [{ id: 'ea', nom: 'Commandée' }, { id: 'eb', nom: 'Reçue' }], derniere: 'Livrée' };
-		const page = html({ role: role({ demandes: reglage }), demandesPossibles: true });
+		const page = html({ role: role({ demandes: reglage, demandesGardees: null }), demandesPossibles: true });
 		expect(page).toMatch(/<summary[^>]*>Demandes<\/summary>/);
 		expect(page).toContain('Reçoit des demandes');
 		expect(page).toMatch(/value="Commandée"/);
 		expect(page).toMatch(/value="Livrée"/);
-		expect(page).toContain('value="descendre:ea"');
-		expect(page).not.toContain('value="monter:ea"');
-		expect(page).toContain('value="monter:eb"');
-		expect(page).toContain('value="retirer:eb"');
+		expect(page).toContain('value="descendre:0"');
+		expect(page).not.toContain('value="monter:0"');
+		expect(page).toContain('value="monter:1"');
+		expect(page).toMatch(/formaction="\?\/apercu"[^>]*value="retirer:1"|value="retirer:1"[^>]*formaction/);
 		expect(page).toContain('Ajouter l’étape');
-		expect(html({ role: role({ demandes: null }), demandesPossibles: true })).not.toContain('Enregistrer les étapes');
+		// Un seul bouton pour la page : le réglage part avec « Enregistrer ».
+		expect(page).not.toContain('Enregistrer les étapes');
+		const formulaire = page.slice(page.indexOf('action="?/enregistrer"'), page.indexOf('</form>', page.indexOf('action="?/enregistrer"')));
+		expect(formulaire).toContain('name="derniere"');
+		expect(formulaire).toMatch(/>(<!---->)?Enregistrer(<!---->)?<\/button>/);
+		// La saisie renvoyée par le serveur s'affiche à la place du réglage enregistré.
+		expect(html({ role: role({ demandes: reglage, demandesGardees: null }), demandesPossibles: true }, { cible: 'role', demandes: { recoit: true, etapes: [{ nom: 'Rangée' }], derniere: 'Remise' } })).toMatch(/value="Rangée"[\s\S]*value="Remise"/);
 		expect(html({ role: role({ demandes: null }), demandesPossibles: false })).not.toMatch(/>Demandes<\/summary>/);
 	});
 });

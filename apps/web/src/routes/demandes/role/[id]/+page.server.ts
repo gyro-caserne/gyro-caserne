@@ -2,7 +2,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { demandesDuRole, iconeDuRole, peutReglerDemandes, RefusDroit } from '@gyro-caserne/socle';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import { idDe } from '#lib/server/engins.ts';
-import { actionReglage } from '#lib/server/reglage-demandes.ts';
+import { actionReglage, apercuReglage } from '#lib/server/reglage-demandes.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 async function lireRole(locals: App.Locals, brut: string) {
@@ -30,5 +30,10 @@ export const actions: Actions = {
 	demandes: async ({ locals, params, request }) => {
 		const { role } = await lireRole(locals, params.id);
 		return actionReglage(locals, role.id, role.demandes, await request.formData());
+	},
+	// Monter, descendre, retirer, ajouter : la saisie revient changée, rien n'est enregistré.
+	apercu: async ({ locals, params, request }) => {
+		const { role } = await lireRole(locals, params.id);
+		return apercuReglage(await request.formData(), role.demandes);
 	}
 };

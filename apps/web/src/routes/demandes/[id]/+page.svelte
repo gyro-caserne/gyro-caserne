@@ -3,9 +3,9 @@
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { extraitDemandeReferent, LIMITE_DEMANDE, type QuoiGesteDemande, type VueDemandeReferent } from '@gyro-caserne/socle';
+	import { LIMITE_DEMANDE, type QuoiGesteDemande, type VueDemandeReferent } from '@gyro-caserne/socle';
 	import { dateCourte, heureCourte } from '#lib/engins/textes.ts';
-	import { etatDemandeReferent, texteDuFil } from '#lib/demandes/textes.ts';
+	import { etatDemandeReferent, texteDuFil, titreDeDemande } from '#lib/demandes/textes.ts';
 	import Panneau from '#lib/planning/Panneau.svelte';
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import Carte from '#lib/ui/Carte.svelte';
@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head>
-	<title>{extraitDemandeReferent(d.texte, 40)}</title>
+	<title>{titreDeDemande(d.texte, 40)}</title>
 </svelte:head>
 
 {#snippet erreur(quoi: string)}
@@ -89,7 +89,7 @@
 {/snippet}
 
 <div class="page">
-	<EnTetePage titre={extraitDemandeReferent(d.texte, 60)} phrase={d.sienne ? d.role : `Demandée par ${d.demandeur} (${d.role})`} retour={d.sienne ? { href: '/demandes', libelle: 'Faire une demande' } : { href: `/demandes/role/${d.roleId}`, libelle: 'Demandes reçues' }}>
+	<EnTetePage titre={titreDeDemande(d.texte)} phrase={d.sienne ? d.role : `Demandée par ${d.demandeur} (${d.role})`} retour={d.sienne ? { href: '/demandes', libelle: 'Faire une demande' } : { href: `/demandes/role/${d.roleId}`, libelle: 'Demandes reçues' }}>
 		{#snippet tete()}<IconeRole icone={d.icone} taille={40} />{/snippet}
 	</EnTetePage>
 

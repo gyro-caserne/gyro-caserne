@@ -61,14 +61,27 @@ export async function reglerDemandes(base: Base, acteur: Acteur, roleId: number,
 	const [[role], droits, occupees] = await base.batch([
 		base.select().from(responsabilite).where(eq(responsabilite.id, roleId)),
 		base.select({ droit: responsabiliteDroit.droit }).from(responsabiliteDroit).where(eq(responsabiliteDroit.responsabiliteId, roleId)),
-		base.selectDistinct({ etape: demandeReferent.etape }).from(demandeReferent).where(and(eq(demandeReferent.responsabiliteId, roleId), isNull(demandeReferent.finLe)))
+		lectureOccupees(base, roleId)
 	]);
 	if (!role) throw new DonneeInvalide('Responsabilité inconnue');
-	if (!recoitPossible(role, droits.map((d) => d.droit))) throw new DonneeInvalide('Ce rôle ne reçoit pas de demandes');
-	const actuel = role.demandes;
-	const qui = await peutReglerDemandes(base, acteur, roleId, actuel !== null, aujourdhui);
-	if (qui === null || (qui === 'etapes' && (reglage === null || actuel === null))) throw new RefusDroit('GERER_LISTES', { type: 'centre' }, 'Réservé à qui gère les rôles et aux titulaires du rôle');
+	const qui = await peutReglerDemandes(base, acteur, roleId, role.demandes !== null, aujourdhui);
+	if (qui === null || (qui === 'etapes' && (reglage === null || role.demandes === null))) throw new RefusDroit('GERER_LISTES', { type: 'centre' }, 'Réservé à qui gère les rôles et aux titulaires du rôle');
+	const { ecritures, verifier } = ecrituresReglage(base, acteur, { ...role, droits: droits.map((d) => d.droit) }, occupees, reglage, maintenant);
+	verifier(await base.batch(ecritures));
+}
 
+// Les étapes où se trouvent les demandes en cours d'un rôle. À placer dans un batch.
+export const lectureOccupees = (base: Base, roleId: number) => base.selectDistinct({ etape: demandeReferent.etape }).from(demandeReferent).where(and(eq(demandeReferent.responsabiliteId, roleId), isNull(demandeReferent.finLe)));
+
+type RoleARegler = { id: number; typePerimetre: string; systeme: string | null; archiveeLe: string | null; demandes: ReglageDemandes | null; demandesGardees: ReglageDemandes | null; droits: string[] };
+
+// Le réglage vérifié et ses écritures, à placer dans un batch (seules ou avec celles d'une modification du rôle : `role` porte
+// alors sa portée et ses droits d'après) ; `verifier` lit les résultats du batch, depuis l'index `debut` de ces écritures.
+// Les droits de l'acteur sont vérifiés par l'appelant.
+export function ecrituresReglage(base: Base, acteur: Acteur, role: RoleARegler, occupees: { etape: string }[], reglage: { etapes: { id?: string; nom: string }[]; derniere: string } | null, maintenant: string, debut = 0) {
+	const roleId = role.id;
+	if (reglage !== null && !recoitPossible(role, role.droits)) throw new DonneeInvalide('Ce rôle ne reçoit pas de demandes');
+	const actuel = role.demandes;
 	let nouveau: ReglageDemandes | null = null;
 	let retirees: string[] = [];
 	if (reglage === null) {
@@ -92,7 +105,7 @@ export async function reglerDemandes(base: Base, acteur: Acteur, roleId: number,
 	// Une étape renommée : le fil des demandes du rôle suit son nouveau nom.
 	const renommees = (nouveau?.etapes ?? []).filter((e) => actuel?.etapes.some((x) => x.id === e.id && x.nom !== e.nom));
 	if (nouveau && actuel && nouveau.derniere !== actuel.derniere) renommees.push({ id: 'faite', nom: nouveau.derniere });
-	const ecrit = await base.batch([
+	const ecritures = [
 		base
 			.update(responsabilite)
 			.set(nouveau === null ? { demandes: null, demandesGardees: actuel } : { demandes: nouveau, demandesGardees: null })
@@ -105,8 +118,11 @@ export async function reglerDemandes(base: Base, acteur: Acteur, roleId: number,
 				.where(and(eq(filDemandeReferent.etape, e.id), inArray(filDemandeReferent.demandeId, base.select({ id: demandeReferent.id }).from(demandeReferent).where(eq(demandeReferent.responsabiliteId, roleId))), jeton))
 		),
 		ligneJournalSi(base, { acteur: acteur.type === 'super' ? `super:${acteur.email}` : `personne:${acteur.id}`, action: 'regler_demandes', cibleType: 'responsabilite', cibleId: roleId, details: nouveau ? { recoit: true, etapes: nouveau.etapes.map((e) => e.nom), derniere: nouveau.derniere } : { recoit: false } }, maintenant, jeton)
-	]);
-	if ((ecrit[0] as unknown[]).length === 0) throw new DonneeInvalide('Demande changée entre-temps');
+	] as const;
+	const verifier = (resultats: readonly unknown[]) => {
+		if ((resultats[debut] as unknown[]).length === 0) throw new DonneeInvalide('Demande changée entre-temps');
+	};
+	return { ecritures, verifier };
 }
 
 // Des demandes en cours pour ce rôle (archiver est alors refusé). Une requête.

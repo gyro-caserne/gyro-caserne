@@ -3,6 +3,7 @@
 	import { dateCourte } from '#lib/engins/textes.ts';
 	import ReglageEtapes from '#lib/demandes/ReglageEtapes.svelte';
 	import { etatDemandeReferent } from '#lib/demandes/textes.ts';
+	import Bouton from '#lib/ui/Bouton.svelte';
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import ListeRangees from '#lib/ui/ListeRangees.svelte';
@@ -16,7 +17,7 @@
 		form
 	}: {
 		data: { role: { id: number; nom: string; icone: NomIcone; demandes: ReglageDemandes | null }; titulaire: boolean; sansTitulaire: boolean; enCours: DemandeReferentListee[]; terminees: DemandeReferentListee[]; regler: 'tout' | 'etapes' | null };
-		form: { cible?: string; succes?: string; message?: string } | null;
+		form: { cible?: string; succes?: string; message?: string; demandes?: { recoit: boolean; etapes: { id?: string; nom: string }[]; derniere: string } } | null;
 	} = $props();
 	// Le demandeur, puis qui la suit (ou la date de fin).
 	const sousLigne = (d: DemandeReferentListee) => [d.demandeur, d.finLe ? `finie le ${dateCourte(d.finLe)}` : d.prisePar ? `suivie par ${d.prisePar}` : `le ${dateCourte(d.creeLe)}`].join(', ');
@@ -60,9 +61,12 @@
 		<!-- Ouvert après chaque envoi : chaque geste recharge la page. -->
 		<details class="plus" {...form?.cible === 'demandes' ? { open: true } : {}}>
 			<summary>Régler les étapes</summary>
-			<div class="reglage">
-				<ReglageEtapes reglage={data.role.demandes} peutCocher={false} action="?/demandes" {form} />
-			</div>
+			<form method="POST" action="?/demandes" class="reglage">
+				<div role="alert">{#if form?.message}<p class="echec">{form.message}</p>{/if}</div>
+				<div role="status">{#if form?.succes}<p class="succes">{form.succes}</p>{/if}</div>
+				<ReglageEtapes saisie={form?.demandes ?? { recoit: true, etapes: data.role.demandes.etapes, derniere: data.role.demandes.derniere }} peutCocher={false} apercu="?/apercu" />
+				<div><Bouton type="submit">Enregistrer les étapes</Bouton></div>
+			</form>
 		</details>
 	{/if}
 </div>
@@ -79,7 +83,21 @@
 		color: var(--doux);
 	}
 	.reglage {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-16);
 		padding-top: var(--espace-16);
+	}
+	.echec,
+	.succes {
+		margin: 0;
+		padding: var(--espace-12) var(--espace-16);
+		border-radius: var(--rayon-petit);
+		border: 2px solid var(--accent);
+		font-weight: 600;
+	}
+	.succes {
+		border-color: var(--ok);
 	}
 	@media (min-width: 1024px) {
 		.colonnes {

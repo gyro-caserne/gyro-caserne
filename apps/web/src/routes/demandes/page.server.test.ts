@@ -52,12 +52,16 @@ describe('/demandes', () => {
 		await expect(liste(alice)).rejects.toMatchObject({ status: 403 });
 	});
 
-	it('le titulaire règle les étapes depuis la liste de son rôle, sans pouvoir décocher', async () => {
+	it('le titulaire règle les étapes depuis la liste de son rôle : l’aperçu ne change rien, « Enregistrer les étapes » enregistre ; il ne décoche pas', async () => {
 		const { base, referent, pharmacie } = await jeu();
-		const agir = async (corps: [string, string][]) => (actionsRole.demandes as any)({ locals: locaux(base, referent), params: { id: String(pharmacie) }, request: await requeteFormulaire(corps) });
-		expect(await agir([['geste', 'ajouter'], ['nouvelle', 'Reçue']])).toMatchObject({ cible: 'demandes', succes: 'Étape ajoutée.' });
-		expect((await base.select().from(responsabilite).where(eq(responsabilite.id, pharmacie)))[0]!.demandes!.etapes.map((e) => e.nom)).toEqual(['Commandée', 'Reçue']);
-		expect(await agir([['geste', 'basculer']])).toMatchObject({ status: 403 });
+		const agir = async (nom: 'demandes' | 'apercu', corps: [string, string][]) => (actionsRole[nom] as any)({ locals: locaux(base, referent), params: { id: String(pharmacie) }, request: await requeteFormulaire(corps) });
+		const etapes = async () => (await base.select().from(responsabilite).where(eq(responsabilite.id, pharmacie)))[0]!.demandes;
+		const [commandee] = (await etapes())!.etapes;
+		expect(await agir('apercu', [['demandes', '1'], ['etape-id', commandee!.id], ['etape-nom', 'Commandée'], ['derniere', 'Livrée'], ['nouvelle', 'Reçue'], ['geste', 'ajouter']])).toMatchObject({ cible: 'demandes', demandes: { etapes: [{ nom: 'Commandée' }, { nom: 'Reçue' }] } });
+		expect((await etapes())!.etapes.map((e) => e.nom)).toEqual(['Commandée']);
+		expect(await agir('demandes', [['demandes', '1'], ['etape-id', commandee!.id], ['etape-nom', 'Commandée'], ['etape-id', ''], ['etape-nom', 'Reçue'], ['derniere', 'Livrée']])).toMatchObject({ cible: 'demandes', succes: 'Étapes enregistrées.' });
+		expect((await etapes())!.etapes.map((e) => e.nom)).toEqual(['Commandée', 'Reçue']);
+		expect(await agir('demandes', [['demandes', '1'], ['case-demandes', '1'], ['derniere', 'Livrée']])).toMatchObject({ status: 403 });
 	});
 });
 
