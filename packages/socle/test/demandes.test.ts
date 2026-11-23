@@ -15,8 +15,10 @@ import {
 	rolesQuiRecoivent,
 	type EtatDemande
 } from '../src/demandes.ts';
+import { accueilDe } from '../src/casquettes.ts';
+import { courrielsDeDemande } from '../src/courriels.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
-import { enTeteDe, filDeNotifications, marquerLue, toutMarquerLu } from '../src/notifications.ts';
+import { couper, enTeteDe, filDeNotifications, marquerLue, toutMarquerLu } from '../src/notifications.ts';
 import { abonnementPush, attribution, avisDemandeReferent, demandeReferent, envoiPush, filDemandeReferent, journal, personne, profil, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
@@ -101,6 +103,21 @@ describe('faire une demande', () => {
 		await j.demander(j.ids.alice, 'Lampe frontale', await j.role('Référent engins'));
 		expect((await mesDemandesReferents(j.base, j.qui(j.ids.alice))).enCours.map((d) => [d.texte, d.role]).sort()).toEqual([['Compresses', 'Référent pharmacie'], ['Lampe frontale', 'Référent engins']]);
 		expect((await rolesQuiRecoivent(j.base)).map((r) => r.nom)).toEqual(['Référent engins', 'Référent pharmacie']);
+	});
+});
+
+describe('l’e-mail d’une nouvelle demande', () => {
+	it('à ceux qui la reçoivent en notification, sauf s’ils l’ont coupé ; pas pour la suite', async () => {
+		const j = await jeu();
+		const id = await j.demander(j.ids.alice, 'Compresses');
+		const titre = 'Nouvelle demande d’Alice Fictif';
+		expect(await courrielsDeDemande(j.base, { genre: 'demande', id })).toEqual([
+			{ a: 'paul@exemple.fr', titre, texte: 'Compresses (Référent pharmacie)', url: `/demandes/${id}` },
+			{ a: 'pia@exemple.fr', titre, texte: 'Compresses (Référent pharmacie)', url: `/demandes/${id}` }
+		]);
+		await couper(j.base, j.qui(j.ids.pia), 'courriel', true, QUAND);
+		await j.geste(j.ids.paul, id, { quoi: 'question', texte: 'Taille ?' });
+		expect((await courrielsDeDemande(j.base, { genre: 'demande', id })).map((c) => c.a)).toEqual(['paul@exemple.fr']);
 	});
 });
 
@@ -349,6 +366,60 @@ describe('la page des demandes', () => {
 		expect(alice.enCours.map((d) => d.texte)).toEqual(['Compresses stériles']);
 		expect((await page(j.ids.paul)).recus).toMatchObject([{ id: j.pharmacie, nom: 'Référent pharmacie', enCours: 1 }]);
 		expect((await page(j.ids.claire)).recus.map((r) => [r.nom, r.enCours])).toEqual([['Référent engins', 0], ['Référent pharmacie', 1]]);
+	});
+});
+
+describe('l’accueil', () => {
+	const reglage = centreExemple.astreinte;
+	const accueil = (j: Awaited<ReturnType<typeof jeu>>, qui: number, casquette: string | null = null) => accueilDe(j.base, j.qui(qui), casquette, '2026-11-23', PLUS_TARD, reglage);
+
+	it('la casquette du rôle : les demandes à prendre en compte et celles qu’on suit dont la réponse est arrivée, et le lien vers toutes', async () => {
+		const j = await jeu();
+		const a = await j.demander(j.ids.alice, 'Compresses');
+		const cle = `role:${j.pharmacie}`;
+		let paul = await accueil(j, j.ids.paul, cle);
+		expect(paul.contenu).toMatchObject({ type: 'role', aDecider: [{ texte: 'Demande d’Alice Fictif à prendre en compte', lien: `/demandes/${a}` }], liens: [{ texte: 'Toutes les demandes', lien: `/demandes/role/${j.pharmacie}` }] });
+		expect(paul.casquettes.find((c) => c.id === cle)!.compte).toBe(1);
+		await j.demander(j.ids.bob, 'Sérum');
+		expect((await accueil(j, j.ids.paul, cle)).contenu).toMatchObject({ aDecider: [{ texte: '2 demandes à prendre en compte', lien: `/demandes/role/${j.pharmacie}` }] });
+		// Prise par Paul : elle sort de chez Pia, reste chez Paul à traiter ; la question posée l'en retire jusqu'à la réponse.
+		await j.geste(j.ids.paul, a, { quoi: 'prendre' });
+		expect((await accueil(j, j.ids.pia, cle)).contenu).toMatchObject({ aDecider: [{ texte: 'Demande de Bob Fictif à prendre en compte' }] });
+		paul = await accueil(j, j.ids.paul, cle);
+		expect(paul.contenu).toMatchObject({ aDecider: [{ texte: 'Demande de Bob Fictif à prendre en compte' }, { texte: 'Demande d’Alice Fictif à traiter (Compresses)', lien: `/demandes/${a}` }] });
+		await j.geste(j.ids.paul, a, { quoi: 'avancer', vers: j.commandee, texte: '' });
+		await j.geste(j.ids.paul, a, { quoi: 'question', texte: 'Quelle taille ?' });
+		expect((await accueil(j, j.ids.paul, cle)).contenu).toMatchObject({ aDecider: [{ texte: 'Demande de Bob Fictif à prendre en compte' }] });
+		await j.geste(j.ids.alice, a, { quoi: 'repondre', texte: '10 x 10' });
+		expect((await accueil(j, j.ids.paul, cle)).contenu).toMatchObject({ aDecider: [{}, { texte: 'Réponse d’Alice Fictif à lire (Compresses)', lien: `/demandes/${a}` }] });
+		// La cheffe n'en voit rien : le rôle a ses titulaires.
+		const claire = await accueil(j, j.ids.claire, 'centre');
+		expect(JSON.stringify(claire.contenu)).not.toContain('/demandes/');
+	});
+
+	it('rôle sans titulaire : dans « Le centre » de la cheffe et de l’adjoint ; et ce qu’ils suivent eux-mêmes', async () => {
+		const j = await jeu({ titulaires: false });
+		const a = await j.demander(j.ids.alice, 'Compresses');
+		for (const qui of [j.ids.claire, j.ids.adam]) expect((await accueil(j, qui, 'centre')).contenu).toMatchObject({ type: 'centre', aDecider: expect.arrayContaining([{ texte: 'Demande d’Alice Fictif à prendre en compte (Référent pharmacie)', lien: `/demandes/${a}` }]) });
+		await j.geste(j.ids.claire, a, { quoi: 'prendre' });
+		const claire = (await accueil(j, j.ids.claire, 'centre')).contenu as { aDecider: { texte: string }[] };
+		expect(claire.aDecider.map((x) => x.texte)).toContain('Demande d’Alice Fictif à traiter (Compresses)');
+		expect(((await accueil(j, j.ids.adam, 'centre')).contenu as { aDecider: { texte: string }[] }).aDecider.map((x) => x.texte).join()).not.toContain('Alice');
+	});
+
+	it('un agent sans casquette de demandes : rien de plus, et pas une requête de plus', async () => {
+		const j = await jeu();
+		await j.demander(j.ids.alice);
+		const avant = j.base.requetes;
+		const bob = await accueil(j, j.ids.bob);
+		expect(JSON.stringify(bob)).not.toContain('/demandes');
+		const lues = j.base.requetes - avant;
+		// Le même accueil sans aucune demande en base : autant de requêtes.
+		await j.base.delete(avisDemandeReferent);
+		await j.base.delete(demandeReferent);
+		const ensuite = j.base.requetes;
+		await accueil(j, j.ids.bob);
+		expect(j.base.requetes - ensuite).toBe(lues);
 	});
 });
 

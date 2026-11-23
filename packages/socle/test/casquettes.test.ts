@@ -249,7 +249,13 @@ describe('accueilDe', () => {
 		const id = await nouvelle('Bruno');
 		await nommer(id, role('Référent engins'), { type: 'centre' });
 		await nommer(id, role('Référent technique'), { type: 'centre' });
-		expect((await accueilDe(base, acteur(id), `role:${role('Référent engins')}`, aujourdhui, `${aujourdhui}T00:00`, centreExemple.astreinte)).contenu).toEqual({ type: 'role', permet: ['Gérer les engins et les anomalies.'], aDecider: [] });
+		expect((await accueilDe(base, acteur(id), `role:${role('Référent engins')}`, aujourdhui, `${aujourdhui}T00:00`, centreExemple.astreinte)).contenu).toEqual({
+			type: 'role',
+			permet: ['Gérer les engins et les anomalies.'],
+			aDecider: [],
+			// Le référent engins reçoit des demandes (jeu de départ).
+			liens: [{ texte: 'Toutes les demandes', lien: `/demandes/role/${role('Référent engins')}` }]
+		});
 		expect((await accueilDe(base, acteur(id), `role:${role('Référent technique')}`, aujourdhui, `${aujourdhui}T00:00`, centreExemple.astreinte)).contenu).toEqual({
 			type: 'role',
 			permet: ['Gérer les comités.', 'Gérer les responsabilités.'],

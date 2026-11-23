@@ -511,3 +511,50 @@ export async function effacerVieillesDemandesReferents(base: Base, avant: string
 	const vieilles = base.select({ id: demandeReferent.id }).from(demandeReferent).where(lt(demandeReferent.finLe, avant));
 	await base.batch([base.delete(filDemandeReferent).where(inArray(filDemandeReferent.demandeId, vieilles)), base.delete(demandeReferent).where(lt(demandeReferent.finLe, avant))]);
 }
+
+// L'accueil -------------------------------------------------------------------------------------------------------------------------
+
+// Ce que `moi` a à décider, lu dans le batch de l'accueil (aucune requête de plus) : les demandes à prendre en compte de ses rôles,
+// ou, s'il est chef de centre ou adjoint, celles des rôles sans titulaire ; et celles qu'il suit, prises sans suite ou dont la réponse
+// est arrivée. Pour qui n'a rien de cela, la lecture ne rend rien.
+export function lectureDemandesADecider(base: Base, moi: number, aujourdhui: string) {
+	const enCoursA = sql`a.debut <= ${aujourdhui} and (a.fin is null or a.fin >= ${aujourdhui})`;
+	const statuts = sql.raw(STATUTS_AVEC_ACCES.map((s) => `'${s}'`).join(', '));
+	const mesRoles = sql`(select a.responsabilite_id from attribution a where a.personne_id = ${moi} and a.perimetre_type = 'centre' and ${enCoursA})`;
+	const chef = sql`exists (select 1 from attribution a join responsabilite r on r.id = a.responsabilite_id where a.personne_id = ${moi} and a.perimetre_type = 'centre' and r.systeme in ('chef_centre', 'chef_centre_adjoint') and ${enCoursA})`;
+	const sansTitulaire = sql<number>`not exists (select 1 from attribution a join personne p on p.id = a.personne_id where a.responsabilite_id = ${demandeReferent.responsabiliteId} and a.perimetre_type = 'centre' and p.statut in (${statuts}) and ${enCoursA})`;
+	return base
+		.select({ id: demandeReferent.id, texte: demandeReferent.texte, roleId: demandeReferent.responsabiliteId, etape: demandeReferent.etape, question: demandeReferent.question, prisePar: demandeReferent.prisePar, prenom: personne.prenom, nom: personne.nom, role: sql<string>`${responsabilite.nom}`.as('role_nom') })
+		.from(demandeReferent)
+		.innerJoin(personne, eq(personne.id, demandeReferent.demandeurId))
+		.innerJoin(responsabilite, eq(responsabilite.id, demandeReferent.responsabiliteId))
+		.where(
+			and(
+				isNull(demandeReferent.finLe),
+				or(
+					and(eq(demandeReferent.etape, 'demandee'), or(inArray(demandeReferent.responsabiliteId, mesRoles), and(chef, sansTitulaire))),
+					and(eq(demandeReferent.prisePar, moi), or(and(eq(demandeReferent.etape, 'prise'), isNull(demandeReferent.question)), eq(demandeReferent.question, 'repondue')))
+				)
+			)
+		)
+		.orderBy(asc(demandeReferent.id));
+}
+type ADeciderLu = { id: number; texte: string; roleId: number; etape: string; question: QuestionDemande | null; prisePar: number | null; prenom: string; nom: string; role: string };
+
+// Rangées par casquette : `role:<id>` pour un rôle tenu (`roles`), sinon « centre ». Les nouvelles d'abord, groupées par rôle.
+export function demandesADecider(lignes: ADeciderLu[], roles: Set<number>): Map<string, { texte: string; lien: string }[]> {
+	const parCasquette = new Map<string, { texte: string; lien: string }[]>();
+	const ajouter = (cle: string, item: { texte: string; lien: string }) => parCasquette.set(cle, [...(parCasquette.get(cle) ?? []), item]);
+	const cleDe = (roleId: number) => (roles.has(roleId) ? `role:${roleId}` : 'centre');
+	const nouvelles = lignes.filter((l) => l.etape === 'demandee');
+	for (const roleId of [...new Set(nouvelles.map((l) => l.roleId))]) {
+		const n = nouvelles.filter((l) => l.roleId === roleId);
+		const cle = cleDe(roleId);
+		const precision = cle === 'centre' ? ` (${n[0]!.role})` : '';
+		if (n.length === 1) ajouter(cle, { texte: `Demande ${de(nomDe(n[0]))} à prendre en compte${precision}`, lien: lienDemande(n[0]!.id) });
+		else ajouter(cle, { texte: `${n.length} demandes à prendre en compte${precision}`, lien: `/demandes/role/${roleId}` });
+	}
+	for (const l of lignes.filter((x) => x.etape !== 'demandee'))
+		ajouter(cleDe(l.roleId), { texte: `${l.question === 'repondue' ? 'Réponse' : 'Demande'} ${de(nomDe(l))} ${l.question === 'repondue' ? 'à lire' : 'à traiter'} (${extraitDemandeReferent(l.texte, 60)})`, lien: lienDemande(l.id) });
+	return parCasquette;
+}
