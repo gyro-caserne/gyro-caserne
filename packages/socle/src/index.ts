@@ -67,4 +67,31 @@ export { anomaliesADecider, bloquanteClose, chargerAnomaliesFictives, etapesDu, 
 export { abandonnerPrise, appliquerGestePrise, commencerPrise, demanderReouverture, equipeAstreinte, gestePrise, modifierParticipantsPrise, rouvrirPrise, historiquePrises, lienPriseOuvert, LIMITES_PRISE, lirePrise, lirePriseFaite, peutFairePrise, photoAnomalie, premierGestePrise, prisesDeLaReleve, prisesEnRetard, releveDe, SAISIE_VIDE, validerPrise, type AgentPrise, type AnomaliePropre, type AnomalieVue, type Ecart, type GestesValidee, type TracesVues, type GestePrise, type PriseDeLaReleve, type PriseFaite, type PriseHistorique, type PriseVue, type Releve, type Saisie, type VuePrise } from './prises.ts';
 export { chargerHabillementFictif, demanderTenue, effacerVieillesDemandes, extraitDemande, FINIES, gereHabillement, gesteHabillement, gestesHabillement, LIMITE_HABILLEMENT, lireDemande, mesDemandes, toutesLesDemandes, type DemandeListee, type EtatDemandeHabillement, type GesteHabillement, type LigneFilDemande, type QuoiGesteHabillement, type VueDemandeHabillement } from './habillement.ts';
 export { peutDemander } from './habillement.ts';
-export { DERNIERE_PAR_DEFAUT, ETAPES_MAX, NOM_ETAPE_MAX, peutReglerDemandes, recoitPossible, reglerDemandes } from './demandes.ts';
+export {
+	DERNIERE_PAR_DEFAUT,
+	demanderAuReferent,
+	demandesDuRole,
+	effacerVieillesDemandesReferents,
+	ETAPES_MAX,
+	extraitDemandeReferent,
+	FINIES_DEMANDE,
+	gesteDemande,
+	gestesDemande,
+	LIMITE_DEMANDE,
+	lireDemandeReferent,
+	mesDemandesReferents,
+	NOM_ETAPE_MAX,
+	nomEtape,
+	pageDesDemandes,
+	peutReglerDemandes,
+	recoitPossible,
+	reglerDemandes,
+	rolesQuiRecoivent,
+	type DemandeReferentListee,
+	type EtatDemande,
+	type GesteDemande,
+	type LigneFilDemandeReferent,
+	type QuoiGesteDemande,
+	type RoleRecu,
+	type VueDemandeReferent
+} from './demandes.ts';

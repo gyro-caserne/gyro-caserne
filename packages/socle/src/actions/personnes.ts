@@ -10,6 +10,7 @@ import { ligneJournal } from '../journal.ts';
 import { STATUTS_AVEC_ACCES, STATUTS_OPERATIONNELS, type StatutOperationnel } from '../listes.ts';
 import { departDesGroupes } from '../messagerie.ts';
 import { effacerNotificationsDe } from '../notifications.ts';
+import { annulerDemandesAuPassage } from '../demandes.ts';
 import { FINIES } from '../habillement.ts';
 import { annulerAuDepart } from '../reservations.ts';
 import { remplacementsAuDepart } from '../remplacements/depart.ts';
@@ -264,7 +265,7 @@ export async function modifierFiche(
 }
 
 // Un agent qui passe à un profil extérieur (un retraité) quitte ce qu'un départ lui fait quitter : son équipe et ses rôles (finis la veille),
-// ses groupes de messagerie, ses remplacements et échanges, ses réservations et ses demandes d'habillement en cours. Contrairement à un
+// ses groupes de messagerie, ses remplacements et échanges, ses réservations et ses demandes d'habillement en cours, et ses demandes aux référents pas encore avancées. Contrairement à un
 // départ, sa fiche, ses notifications et ses conversations à deux restent, et il n'est jamais effacé. Le chef de centre et l'adjoint, non.
 async function passageExterieur(base: Base, acteur: Acteur, fiche: typeof personne.$inferSelect, aujourdhui: string, passage?: { basePhotos: BasePhotos; maintenant: string }) {
 	const [ancien] = fiche.profilId === null ? [] : await base.select({ type: profil.typePersonne }).from(profil).where(eq(profil.id, fiche.profilId));
@@ -290,7 +291,9 @@ async function passageExterieur(base: Base, acteur: Acteur, fiche: typeof person
 					.from(demandeHabillement)
 					.where(enCoursHabillement)
 			),
-			base.update(demandeHabillement).set({ etape: 'annulee', finLe: maintenant, majLe: maintenant }).where(enCoursHabillement)
+			base.update(demandeHabillement).set({ etape: 'annulee', finLe: maintenant, majLe: maintenant }).where(enCoursHabillement),
+			// Ses demandes aux référents qui n'ont pas dépassé « Prise en compte » ; plus loin, le référent les finit.
+			...annulerDemandesAuPassage(base, fiche.id, maintenant)
 		],
 		photos: groupes.photos
 	};

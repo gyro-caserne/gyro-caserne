@@ -1,4 +1,4 @@
-import { creerBaseD1, creerBasePhotos, effacerAgentsPartis, equipeSansChefDemain, effacerAnciens, effacerSouhaitsPasses, effacerVieillesDemandes, effacerPhotosOrphelines, effacerVieillesNotifications, effacerVieillesPublications, effacerVieillesReservations, fileDEnvoisVide, mettreAJourReleves, planningDuMatin, rappelsEte, remplacementsDuMoment, resumeErreur } from '@gyro-caserne/socle';
+import { creerBaseD1, creerBasePhotos, effacerAgentsPartis, equipeSansChefDemain, effacerAnciens, effacerSouhaitsPasses, effacerVieillesDemandes, effacerVieillesDemandesReferents, effacerPhotosOrphelines, effacerVieillesNotifications, effacerVieillesPublications, effacerVieillesReservations, fileDEnvoisVide, mettreAJourReleves, planningDuMatin, rappelsEte, remplacementsDuMoment, resumeErreur } from '@gyro-caserne/socle';
 import { aujourdhuiParis, maintenantParis } from './lib/aujourdhui.ts';
 import { envoyerLot } from './lib/server/envoi-push.ts';
 import { clesVapid, type EnvVapid } from './lib/server/webpush.ts';
@@ -87,6 +87,8 @@ export function avecPlanifie<K extends { fetch: unknown }>(kit: K, centre: { con
 					effacerSouhaitsPasses(base, aujourdhuiParis(quand)),
 					effacerVieillesReservations(base, reservations),
 					effacerVieillesDemandes(base, habillement),
+					// Les demandes aux référents finies, de même.
+					effacerVieillesDemandesReferents(base, habillement),
 					// Les adresses des super administrateurs (séparées par des virgules) : leur compte n'est jamais touché.
 					effacerAgentsPartis(base, limiteDeConservation(quand, CONSERVATION_PARTIS_MOIS), aujourdhuiParis(quand), (env.SUPER_ADMINS ?? '').split(',').map((a) => a.trim()).filter(Boolean)),
 					// Les octets de PHOTOS que plus rien ne référence (un effacement raté) : une tranche par nuit.

@@ -1072,7 +1072,7 @@ export const demandeReferent = sqliteTable(
 );
 
 // Le fil d'une demande : questions, réponses, précisions, changements d'étape, reprises ; dans l'ordre. `etape` : l'étape atteinte
-// (`quoi` = « etape »), et `nomEtape` son nom à ce moment, pour une étape retirée depuis.
+// (« etape », « fin »), et `nomEtape` son nom, suivi quand l'étape est renommée et gardé quand elle est retirée.
 export const filDemandeReferent = sqliteTable(
 	'fil_demande_referent',
 	{

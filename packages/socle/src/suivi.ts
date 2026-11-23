@@ -91,6 +91,10 @@ const PAR_SUJET = {
 	traiter_habillement: (c) => (c.nom ? `a traité la demande d’habillement ${deAgent(c)}` : 'a traité une demande d’habillement'),
 	refuser_habillement: (c) => (c.nom ? `a refusé la demande d’habillement ${deAgent(c)}` : 'a refusé une demande d’habillement'),
 	livrer_habillement: (c) => (c.nom ? `a livré la tenue ${deAgent(c)}` : 'a livré une tenue'),
+	prendre_demande: (c) => (c.nom ? `a pris en compte la demande ${deAgent(c)}` : 'a pris en compte une demande'),
+	avancer_demande: (c) => (c.nom ? `a fait avancer la demande ${deAgent(c)}` : 'a fait avancer une demande'),
+	finir_demande: (c) => (c.nom ? `a fini la demande ${deAgent(c)}` : 'a fini une demande'),
+	refuser_demande: (c) => (c.nom ? `a refusé la demande ${deAgent(c)}` : 'a refusé une demande'),
 	signaler_anomalie: (c) => nomme(c, 'a signalé une anomalie :'),
 	rendre_indisponible: (c) => (c.nom ? `a rendu indisponible ${c.nom}` : 'a rendu un engin indisponible'),
 	remettre_en_service: (c) => (c.nom ? `a remis en service ${c.nom}` : 'a remis un engin en service'),
@@ -159,6 +163,7 @@ const cibleSql = sql<string | null>`case "journal"."cible_type"
 	when 'aptitude' then (select a.nom from aptitude a where a.id = "journal"."cible_id")
 	when 'demande_remplacement' then (select p.prenom || ' ' || p.nom from demande_remplacement d join personne p on p.id = d.demandeur_id where d.id = "journal"."cible_id")
 	when 'demande_habillement' then (select p.prenom || ' ' || p.nom from demande_habillement d join personne p on p.id = d.demandeur_id where d.id = "journal"."cible_id")
+	when 'demande_referent' then (select p.prenom || ' ' || p.nom from demande_referent d join personne p on p.id = d.demandeur_id where d.id = "journal"."cible_id")
 	when 'equipe' then (select e.nom from equipe e where e.id = "journal"."cible_id")
 	when 'anomalie' then (select a.libelle || ' (' || e.nom || ')' from anomalie a join engin e on e.id = a.engin_id where a.id = "journal"."cible_id")
 	when 'fete_centre' then (select f.nom from fete_centre f where f.id = "journal"."cible_id")
@@ -198,6 +203,8 @@ function lienDe(l: { action: string; cibleType: string; cibleId: number | null; 
 			return id === null ? '/remplacements' : `/remplacements/${id}`;
 		case 'demande_habillement':
 			return id === null ? '/habillement' : `/habillement/${id}`;
+		case 'demande_referent':
+			return id === null ? '/demandes' : `/demandes/${id}`;
 		case 'anomalie':
 			return id === null ? '/engins/anomalies' : `/engins/anomalies/${id}`;
 		case 'centre':
