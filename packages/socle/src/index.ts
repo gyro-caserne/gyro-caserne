@@ -19,7 +19,7 @@ export { creerComite, dissoudreComite, listerComites, modifierComite } from './a
 export { archiverResponsabilite, creerResponsabilite, listerResponsabilites, modifierResponsabilite, type Attributeur } from './actions/responsabilites.ts';
 export { iconeDuComite, iconeDuRole, NOMS_ICONES, type NomIcone } from './icones.ts';
 export { MODELES, type Modele } from './modeles.ts';
-export { creerProfil, listerProfils, modifierDroitsProfil, modifierMursOuverts, renommerProfil, supprimerProfil } from './actions/profils.ts';
+export { creerProfil, enregistrerProfil, listerProfils, modifierDroitsProfil, modifierMursOuverts, renommerProfil, supprimerProfil } from './actions/profils.ts';
 export { accueilDe, aDecider, casquettesDe, type Accueil, type ADecider, type Casquette, type ContenuCasquette } from './casquettes.ts';
 export { apercusDesMurs, type Apercu as ApercuMur } from './apercus.ts';
 export { ouvreQuiFaitQuoi, quiFaitQuoi, type QuiFaitQuoi, type RoleTenu } from './qui-fait-quoi.ts';
