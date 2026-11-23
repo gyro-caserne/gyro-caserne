@@ -51,6 +51,16 @@ describe('page d’un profil', () => {
 		expect(await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['mur-equipe:1', '1']], params)).toMatchObject({ status: 400 });
 	});
 
+	it('enregistrer reste léger : droits lus une fois, une lecture groupée, une écriture groupée (coupure en préprod le 23/11)', async () => {
+		const { base, chef } = await preparer();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
+		const avant = base.requetes;
+		const r = await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['niveau-planning', '1'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], { id: String(reserve!.id) });
+		expect(r).toMatchObject({ succes: expect.any(String) });
+		expect(base.requetes - avant).toBeLessThanOrEqual(5);
+	});
+
 	it('profil agent : les murs envoyés ne sont pas lus, les droits s’enregistrent', async () => {
 		const { base, chef, profilAgent } = await preparer();
 		expect(await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['mur-vie', '1']], { id: String(profilAgent.id) })).toMatchObject({ succes: expect.any(String) });

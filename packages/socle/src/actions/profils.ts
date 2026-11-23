@@ -114,6 +114,61 @@ export async function supprimerProfil(base: Base, acteur: Acteur, id: number, au
 	]);
 }
 
+// L'écran d'un profil en un geste : ses droits (calculés depuis ceux d'avant) et, pour un extérieur, ses murs ouverts.
+// Une lecture groupée, une écriture groupée : l'enregistrement en trois temps a été coupé en préprod (limite de calcul).
+export async function enregistrerProfil(
+	base: Base,
+	acteur: Acteur,
+	id: number,
+	choix: { droits: (avant: Droit[]) => Droit[]; murs?: Record<string, NiveauOuvert> },
+	aujourdhui: string
+): Promise<{ nom: string }> {
+	await exiger(base, acteur, aujourdhui);
+	const [[ligne], comites, lus] = await base.batch([
+		base.select().from(profil).where(eq(profil.id, id)),
+		base.select({ id: comite.id }).from(comite).where(isNull(comite.dissousLe)),
+		base.select({ droit: profilDroit.droit }).from(profilDroit).where(surLeCentre(id))
+	]);
+	if (!ligne) throw new DonneeInvalide('Profil inconnu');
+	const avant = [...new Set(lus.map((l) => l.droit))] as Droit[];
+	const apres = exigerDroits(choix.droits(avant));
+	if (apres.some(estDroitPouvoir)) throw new DonneeInvalide('Un profil ne donne pas de droit de pouvoir');
+	const ajoutes = apres.filter((d) => !avant.includes(d));
+	const retires = avant.filter((d) => !apres.includes(d));
+
+	const ecritures = [];
+	if (choix.murs && ligne.typePersonne === 'exterieur') {
+		const enCours = new Set(comites.map((c) => `comite:${c.id}`));
+		const murs = murOuvertsValides(choix.murs, enCours);
+		const avantMurs = lireMursOuverts(ligne.mursOuverts);
+		if (!memesMurs(avantMurs, murs))
+			ecritures.push(
+				base.update(profil).set({ mursOuverts: JSON.stringify(murs) }).where(eq(profil.id, id)),
+				ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_murs_ouverts', cibleType: 'profil', cibleId: id, details: { murs: { avant: avantMurs, apres: murs } } }, aujourdhui)
+			);
+	}
+	if (ajoutes.length > 0 || retires.length > 0)
+		ecritures.push(
+			ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_droits_profil', cibleType: 'profil', cibleId: id, details: { droits: { avant: [...avant].sort(), apres: [...apres].sort() } } }, aujourdhui),
+			...(retires.length > 0 ? [base.delete(profilDroit).where(and(surLeCentre(id), inArray(profilDroit.droit, retires)))] : []),
+			...(ajoutes.length > 0 ? [base.insert(profilDroit).values(ajoutes.map((droit) => ({ profilId: id, droit, perimetreType: 'centre' as const, perimetreId: null })))] : [])
+		);
+	if (ecritures.length > 0) await base.batch(ecritures as [(typeof ecritures)[number], ...typeof ecritures]);
+	return { nom: ligne.nom };
+}
+
+function murOuvertsValides(ouverts: Record<string, NiveauOuvert>, enCours: Set<string>): Record<string, NiveauOuvert> {
+	const murs: Record<string, NiveauOuvert> = {};
+	for (const [cle, niveau] of Object.entries(ouverts)) {
+		if (!estCleOuvrable(cle) || (cle.startsWith('comite:') && !enCours.has(cle))) throw new DonneeInvalide('Mur inconnu');
+		if (!(NIVEAUX_OUVERTS as readonly string[]).includes(niveau)) throw new DonneeInvalide('Niveau inconnu');
+		murs[cle] = niveau;
+	}
+	return murs;
+}
+
+const memesMurs = (a: Record<string, string>, b: Record<string, string>) => Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([k, v]) => b[k] === v);
+
 // Les murs ouverts à un profil extérieur : Le centre, Vie du centre, des comités en cours ; chacun en lecture ou en écriture.
 // Un mur absent n'est pas ouvert.
 export async function modifierMursOuverts(base: Base, acteur: Acteur, id: number, ouverts: Record<string, NiveauOuvert>, aujourdhui: string): Promise<void> {
