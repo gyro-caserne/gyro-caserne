@@ -206,4 +206,36 @@ describe('page d’un rôle', () => {
 		const sys = await resp('Chef de garde');
 		expect(await agir('archiver', locaux(base, referent), sys.id, [['confirmation', 'oui']])).toMatchObject({ status: 400, data: { message: expect.stringContaining('système') } });
 	});
+
+	it('« Demandes » : un seul « Enregistrer » pour les droits et le réglage ; monter, retirer, ajouter gardent toute la saisie sans rien enregistrer', async () => {
+		const { base, chef, resp } = await preparer();
+		const pharma = await resp('Référent pharmacie');
+		const lire = async () => (await base.select().from(responsabilite).where(eq(responsabilite.id, pharma.id)))[0]!.demandes;
+		const bloc = (etapes: [string, string][], recoit = true, derniere = 'Livrée'): [string, string][] => [['demandes', '1'], ['case-demandes', '1'], ...(recoit ? ([['recoit', '1']] as [string, string][]) : []), ...etapes.flatMap(([id, nom]): [string, string][] => [['etape-id', id], ['etape-nom', nom]]), ['derniere', derniere]];
+		expect((await charger(load, locaux(base, chef), { id: String(pharma.id) })).demandesPossibles).toBe(true);
+		// Ajouter : la page revient avec la nouvelle étape et le nom saisi ; rien n'est écrit.
+		const apercu = await agir('apercu', locaux(base, chef), pharma.id, [...fiche('Pharmacie du centre'), ['niveau-engins', '1'], ...bloc([]), ['nouvelle', 'Commandée'], ['geste', 'ajouter']]);
+		expect(apercu).toMatchObject({ cible: 'role', valeurs: { nom: 'Pharmacie du centre', niveaux: { engins: '1' } }, demandes: { recoit: true, etapes: [{ nom: 'Commandée' }], derniere: 'Livrée' } });
+		expect(await lire()).toEqual({ etapes: [], derniere: 'Faite' });
+		expect((await resp('Référent pharmacie')).nom).toBe('Référent pharmacie');
+		// Monter sur une saisie : l'ordre change, les noms saisis restent.
+		expect(await agir('apercu', locaux(base, chef), pharma.id, [...fiche('Référent pharmacie'), ...bloc([['', 'Commandée'], ['', 'Reçue']]), ['geste', 'monter:1']])).toMatchObject({ demandes: { etapes: [{ nom: 'Reçue' }, { nom: 'Commandée' }] } });
+		// Enregistrer : le nom et le réglage ensemble.
+		expect(await agir('enregistrer', locaux(base, chef), pharma.id, [...fiche('Pharmacie du centre'), ...bloc([['', 'Reçue'], ['', 'Commandée']])])).toMatchObject({ cible: 'role', succes: expect.any(String) });
+		const r = await lire();
+		expect(r).toMatchObject({ etapes: [{ nom: 'Reçue' }, { nom: 'Commandée' }], derniere: 'Livrée' });
+		// Un refus du réglage : ses mots, et la saisie revient.
+		const refus = await agir('enregistrer', locaux(base, chef), pharma.id, [...fiche('Pharmacie du centre'), ...bloc([[r!.etapes[0]!.id, 'commandée'], [r!.etapes[1]!.id, 'Commandée']])]);
+		expect(refus).toMatchObject({ status: 400, data: { cible: 'role', message: expect.stringContaining('nom différent'), demandes: { etapes: [{ nom: 'commandée' }, { nom: 'Commandée' }] } } });
+		// Décocher : enregistré avec le reste.
+		await agir('enregistrer', locaux(base, chef), pharma.id, [...fiche('Pharmacie du centre'), ...bloc([], false)]);
+		expect(await lire()).toBeNull();
+	});
+
+	it('« Demandes » : pas pour un rôle système ni pour le référent habillement', async () => {
+		const { base, chef, resp } = await preparer();
+		for (const nom of ['Chef de garde', 'Référent habillement']) expect((await charger(load, locaux(base, chef), { id: String((await resp(nom)).id) })).demandesPossibles).toBe(false);
+		const r = await agir('enregistrer', locaux(base, chef), (await resp('Référent habillement')).id, [...fiche('Référent habillement'), ['demandes', '1'], ['case-demandes', '1'], ['recoit', '1'], ['derniere', 'Faite']]);
+		expect(r).toMatchObject({ status: 400, data: { message: 'Ce rôle ne peut pas recevoir de demandes.' } });
+	});
 });

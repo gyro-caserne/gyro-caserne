@@ -11,6 +11,7 @@
 	import Groupe from '#lib/ui/Groupe.svelte';
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import Pastille from '#lib/ui/Pastille.svelte';
+	import ReglageEtapes from '#lib/demandes/ReglageEtapes.svelte';
 	import ChoixIcone from '../../ChoixIcone.svelte';
 	import Domaines from '../../Domaines.svelte';
 	import { NATURES, optionsAttributeur, PORTEES, quiAttribue, valeurAttributeur } from '../../roles.ts';
@@ -73,6 +74,10 @@
 	}
 
 	const concerne = (cible: string) => form?.cible === cible;
+	// Le réglage des demandes : la saisie renvoyée par le serveur (aperçu ou refus), sinon celui du rôle (ou celui gardé au décochage).
+	const saisieDemandes = $derived(
+		form?.demandes ?? { recoit: role.demandes !== null, etapes: (role.demandes ?? role.demandesGardees)?.etapes ?? [], derniere: (role.demandes ?? role.demandesGardees)?.derniere ?? 'Faite' }
+	);
 	// Un bloc s'ouvre seulement s'il est visé ; sinon aucun attribut open n'est posé, et l'hydratation ne referme pas ce que l'agent a ouvert.
 	const ouvert = (cible: string) => (concerne(cible) && !form?.succes ? { open: true } : {});
 	const erreurs = (cible: string): Record<string, string> => (concerne(cible) ? (form?.erreurs ?? {}) : {});
@@ -157,6 +162,14 @@
 				<ChoixIcone valeur={(saisis?.icone as ReturnType<typeof iconeDuRole> | undefined) ?? iconeDuRole(role)} erreur={erreurs('role').icone} />
 			</div>
 		</Groupe>
+
+		{#if data.demandesPossibles}
+			<!-- Enregistré avec le reste par « Enregistrer » ; ouvert quand la page revient avec sa saisie. -->
+			<details class="pli repli" {...form?.demandes ? { open: true } : {}}>
+				<summary>Demandes</summary>
+				<ReglageEtapes saisie={saisieDemandes} peutCocher apercu="?/apercu" />
+			</details>
+		{/if}
 
 		<BarreActions {message}>
 			<Bouton type="submit">Enregistrer</Bouton>

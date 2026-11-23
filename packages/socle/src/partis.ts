@@ -4,6 +4,7 @@ import { effacerLiensVers, normaliserAdresse } from './connexion.ts';
 import { exigerDate, exigerDateHeure } from './dates.ts';
 import { aLeDroit, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
+import { effacerDemandesDe } from './demandes.ts';
 import { ligneJournal } from './journal.ts';
 import { effacerNotificationsDe } from './notifications.ts';
 import { aptitudeAgent, cleAgenda, envoiLien, journal, personne, user, valeurChamp, visiteMur } from './schema.ts';
@@ -63,6 +64,8 @@ function effacement(base: Base, p: Partie, adresses: string[], acteur: string, a
 		base.delete(visiteMur).where(eq(visiteMur.personneId, p.id)),
 		// Déjà fait au départ ; refait : appareils (et envois en file), fil, avis, coupures.
 		...effacerNotificationsDe(base, p.id),
+		// Ses demandes aux référents et leur fil ; il ne suit plus celles des autres.
+		...effacerDemandesDe(base, p.id),
 		// Ses adresses dans le journal (ajout, changement d'adresse) ; les lignes restent.
 		base
 			.update(journal)

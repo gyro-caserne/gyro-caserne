@@ -1,5 +1,6 @@
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
+import { ICONES_ROLES } from '#lib/ui/icones-roles.ts';
 
 vi.mock('$app/forms', () => ({ enhance: () => ({}) }));
 const { default: Page } = await import('./+page.svelte');
@@ -110,6 +111,13 @@ describe('page des notifications', () => {
 		const page = html({ nonLues: 1, lignes: [{ id: 5, type: 'anomalie', titre: 'Treuil HS (VTU)', texte: 'Prise en charge par Rémi Fictif', url: '/engins/anomalies/3', creeLe: '2026-10-30T18:00', lue: false }] });
 		expect(page).toContain(`href="${ouvre('anomalie', 5, '/engins/anomalies/3')}"`);
 		expect(page).toMatch(/<a[^>]*>[\s\S]*?Non lu, [\s\S]*?Treuil HS \(VTU\)[\s\S]*?Prise en charge par Rémi Fictif/);
+	});
+
+	it('un avis de demande à un référent : vers la demande, avec la boîte à outils, son titre et son texte', () => {
+		const page = html({ nonLues: 1, lignes: [{ id: 7, type: 'demande', titre: 'Question de Paul Martin', texte: 'Quelle taille ?', url: '/demandes/3', creeLe: '2026-11-23T10:00', lue: false }] });
+		expect(page).toContain(`href="${ouvre('demande', 7, '/demandes/3')}"`);
+		expect(page).toContain('Question de Paul Martin');
+		expect(page).toContain(ICONES_ROLES.outils);
 	});
 
 	it('un avis d’habillement : vers la demande, avec la veste, son titre et son texte', () => {

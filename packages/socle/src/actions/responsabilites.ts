@@ -2,6 +2,7 @@ import { and, count, countDistinct, eq, gte, isNull, lte, notInArray, or, sql } 
 import type { Base } from '../base.ts';
 import { exigerDate } from '../dates.ts';
 import { aLeDroit, type Acteur } from '../droits.ts';
+import { aDesDemandesEnCours, DERNIERE_PAR_DEFAUT, ecrituresReglage, lectureOccupees } from '../demandes.ts';
 import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
 import { finirOuSupprimer } from '../fin-de-periode.ts';
 import { NOMS_ICONES, type NomIcone } from '../icones.ts';
@@ -142,6 +143,8 @@ export async function listerResponsabilites(base: Base, acteur: Acteur, aujourdh
 			archiveeLe: r.archiveeLe,
 			modele: r.modele,
 			icone: r.icone,
+			demandes: r.demandes,
+			demandesGardees: r.demandesGardees,
 			titulaires: titulaires.find((t) => t.id === r.id)?.n ?? 0,
 			protegee: !pouvoir && siens.some((d) => estDroitPouvoir(d.droit))
 		};
@@ -171,7 +174,10 @@ export async function creerResponsabilite(
 	// La nouvelle responsabilité, retrouvée par son nom (unique).
 	const idNouvelle = sql<number>`(SELECT ${responsabilite.id} FROM ${responsabilite} WHERE ${responsabilite.nom} = ${nom} ORDER BY ${responsabilite.id} DESC LIMIT 1)`;
 	const [lignes] = await base.batch([
-		base.insert(responsabilite).values({ nom, nature, typePerimetre: portee, comiteAttributeurId, modele: modele?.id ?? null, icone }).returning({ id: responsabilite.id }),
+		base
+			.insert(responsabilite)
+			.values({ nom, nature, typePerimetre: portee, comiteAttributeurId, modele: modele?.id ?? null, icone, demandes: modele?.demandes && portee === 'centre' && !droits.includes('GERER_HABILLEMENT') ? { etapes: [], derniere: DERNIERE_PAR_DEFAUT } : null })
+			.returning({ id: responsabilite.id }),
 		// L'ordre compte : le journal suit l'insertion, last_insert_rowid() est l'id de la responsabilité.
 		ligneJournal(base, { acteur: nomActeur(acteur), action: 'creer_responsabilite', cibleType: 'responsabilite', cibleId: sql`last_insert_rowid()`, details: { nom, nature, portee, attributeur: attributeurDe({ comiteAttributeurId, typePerimetre: portee }), droits, ...(modele ? { modele: modele.id } : {}), ...(icone ? { icone } : {}) } }, aujourdhui),
 		...(droits.length > 0 ? [base.insert(responsabiliteDroit).values(droits.map((droit) => ({ responsabiliteId: idNouvelle, droit })))] : [])
@@ -183,8 +189,10 @@ export async function modifierResponsabilite(
 	base: Base,
 	acteur: Acteur,
 	id: number,
-	champs: Partial<{ nom: string; nature: Nature; portee: Portee; attributeur: Attributeur; droits: Droit[]; icone: string }>,
-	aujourdhui: string
+	// `demandes` : le réglage des demandes (demandes.ts), enregistré dans le même batch ; `null` décoche ; absent, il ne change pas.
+	champs: Partial<{ nom: string; nature: Nature; portee: Portee; attributeur: Attributeur; droits: Droit[]; icone: string; demandes: { etapes: { id?: string; nom: string }[]; derniere: string } | null }>,
+	aujourdhui: string,
+	maintenant = `${aujourdhui}T00:00`
 ): Promise<void> {
 	await exiger(base, acteur, aujourdhui);
 	const ligne = await responsabiliteConnue(base, id);
@@ -243,13 +251,23 @@ export async function modifierResponsabilite(
 		if (retires.some((l) => l.verrouille === 1)) throw new DonneeInvalide('Droit verrouillé, impossible de le retirer');
 		if (ajoutes.length > 0 || retires.length > 0) noms.push('droits');
 	}
+	// Un rôle qui reçoit des demandes reste de portée centre, sans le droit de l'habillement (un seul circuit, avant C2).
+	const reglage = champs.demandes;
+	const recevra = reglage === undefined ? ligne.demandes !== null : reglage !== null;
+	if (recevra && ligne.demandes !== null && (portee !== 'centre' || ajoutes.includes('GERER_HABILLEMENT'))) throw new DonneeInvalide('Ce rôle reçoit des demandes');
 	// Après le contrôle du pouvoir. Seul ce qui change est vérifié : un rôle ancien qui a déjà un tel droit se modifie pour le reste.
 	exigerPorteeDesDroits(portee, portee !== ligne.typePerimetre ? apres : ajoutes);
-	if (noms.length === 0) return;
+	// Le réglage des demandes, s'il change : une lecture de plus (les étapes occupées), ses écritures dans le même batch.
+	const changeDemandes = reglage !== undefined && JSON.stringify(reglage) !== JSON.stringify(ligne.demandes);
+	const demandes = changeDemandes
+		? ecrituresReglage(base, acteur, { ...ligne, typePerimetre: portee, droits: apres }, await lectureOccupees(base, id), reglage, maintenant)
+		: null;
+	if (noms.length === 0 && !demandes) return;
 
-	await base.batch([
+	const resultats = await base.batch([
+		...(demandes?.ecritures ?? []),
 		// Les noms des champs ; pour les droits, avant et après (ce ne sont pas des données personnelles).
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_responsabilite', cibleType: 'responsabilite', cibleId: id, details: { champs: noms, ...(noms.includes('droits') ? { droits: { avant: [...avant].sort(), apres: [...apres].sort() } } : {}) } }, aujourdhui),
+		...(noms.length > 0 ? [ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_responsabilite', cibleType: 'responsabilite', cibleId: id, details: { champs: noms, ...(noms.includes('droits') ? { droits: { avant: [...avant].sort(), apres: [...apres].sort() } } : {}) } }, aujourdhui)] : []),
 		...(Object.keys(changes).length > 0 ? [base.update(responsabilite).set(changes).where(eq(responsabilite.id, id))] : []),
 		...(noms.includes('droits')
 			? [
@@ -259,7 +277,8 @@ export async function modifierResponsabilite(
 					...(ajoutes.length > 0 ? [base.insert(responsabiliteDroit).values(ajoutes.map((droit) => ({ responsabiliteId: id, droit })))] : [])
 				]
 			: [])
-	]);
+	] as unknown as Parameters<typeof base.batch>[0]);
+	demandes?.verifier(resultats);
 }
 
 export async function archiverResponsabilite(base: Base, acteur: Acteur, id: number, aujourdhui: string): Promise<void> {
@@ -268,6 +287,7 @@ export async function archiverResponsabilite(base: Base, acteur: Acteur, id: num
 	await exigerNonProtegee(base, acteur, id, aujourdhui);
 	if (ligne.systeme !== null) throw new DonneeInvalide('Une responsabilité système ne s’archive pas');
 	if (ligne.archiveeLe !== null) throw new DonneeInvalide('Responsabilité déjà archivée');
+	if (ligne.demandes !== null && (await aDesDemandesEnCours(base, id))) throw new DonneeInvalide('Demandes en cours');
 
 	const deLaResponsabilite = eq(attribution.responsabiliteId, id);
 	const [{ n }] = await base

@@ -3,6 +3,7 @@ import type { Centre } from '@gyro-caserne/centre';
 import type { Base } from './base.ts';
 import type { Droit, ResponsabiliteSysteme } from './listes.ts';
 import { APTITUDES_PAR_DEFAUT } from './aptitudes.ts';
+import { DERNIERE_PAR_DEFAUT } from './demandes.ts';
 import { FICHES_PAR_DEFAUT } from './fiches-de-depart.ts';
 import { aptitude, comite, equipe, ficheElement, ficheVersion, ficheZone, grade, profil, profilDroit, responsabilite, responsabiliteDroit, ressource, typeEngin } from './schema.ts';
 
@@ -47,6 +48,8 @@ const RESPONSABILITES: {
 	parComiteCentre: boolean;
 	verrouilles: boolean;
 	droits: Droit[];
+	// Reçoit des demandes (demandes.ts), sans étape intermédiaire.
+	demandes?: true;
 }[] = [
 	{
 		nom: 'Chef de centre',
@@ -62,8 +65,8 @@ const RESPONSABILITES: {
 	{ nom: 'Chef de garde', nature: 'fonction', systeme: 'chef_equipe', typePerimetre: 'equipe', parComiteCentre: true, verrouilles: true, droits: ['VALIDER_REMPLACEMENT', 'VOIR_MOTIFS_ABSENCE', 'TRAITER_ANOMALIE', 'GERER_FICHES'] },
 	{ nom: 'Membre de comité', nature: 'mission', typePerimetre: 'comite', parComiteCentre: false, verrouilles: false, droits: [] },
 	{ nom: 'Rapporteur de comité', nature: 'mission', typePerimetre: 'comite', parComiteCentre: false, verrouilles: false, droits: ['ATTRIBUER_RESPONSABILITE'] },
-	{ nom: 'Référent engins', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: ['TRAITER_ANOMALIE', 'GERER_FICHES'] },
-	{ nom: 'Référent pharmacie', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: ['GERER_STOCK'] },
+	{ nom: 'Référent engins', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: ['TRAITER_ANOMALIE', 'GERER_FICHES'], demandes: true },
+	{ nom: 'Référent pharmacie', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: ['GERER_STOCK'], demandes: true },
 	// La migration 0022 l'ajoute aux bases déjà remplies.
 	{ nom: 'Référent habillement', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: ['GERER_HABILLEMENT'] },
 	// Attribué par le chef de centre. La migration 0001 l'ajoute aux bases déjà remplies.
@@ -100,6 +103,7 @@ export async function chargerJeuDeDepart(base: Base, centre: Centre): Promise<vo
 				nature: r.nature,
 				typePerimetre: r.typePerimetre,
 				systeme: r.systeme ?? null,
+				demandes: r.demandes ? { etapes: [], derniere: DERNIERE_PAR_DEFAUT } : null,
 				comiteAttributeurId: r.parComiteCentre ? idComiteCentre : null
 			}))
 		),

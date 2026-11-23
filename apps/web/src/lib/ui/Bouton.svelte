@@ -6,11 +6,15 @@
 		variante = 'principal',
 		desactive = false,
 		onclick,
+		name,
+		value,
+		formaction,
 		children
-	}: { type?: 'button' | 'submit'; variante?: 'principal' | 'secondaire' | 'grave'; desactive?: boolean; onclick?: () => void; children: Snippet } = $props();
+	}: { type?: 'button' | 'submit'; variante?: 'principal' | 'secondaire' | 'grave'; desactive?: boolean; onclick?: () => void; name?: string; value?: string; formaction?: string; children: Snippet } = $props();
 </script>
 
-<button {type} class={variante} disabled={desactive} {onclick}>{@render children()}</button>
+<!-- `name` et `value` : le bouton d'envoi appuyé dit son geste au serveur, sans JavaScript ; `formaction` : il l'envoie à une autre action. -->
+<button {type} class={variante} disabled={desactive} {onclick} {name} {value} {formaction} formnovalidate={formaction ? true : undefined}>{@render children()}</button>
 
 <style>
 	button {

@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import {
 	archiverResponsabilite,
 	DonneeInvalide,
@@ -10,8 +10,12 @@ import {
 	listerResponsabilites,
 	MODELES,
 	modifierResponsabilite,
+	recoitPossible,
 	type Droit
 } from '@gyro-caserne/socle';
+import { estMessageReglage, phraseReglage } from '#lib/demandes/textes.ts';
+import { apercuReglage, reglageDeLaSaisie, saisieDuFormulaire } from '#lib/server/reglage-demandes.ts';
+import { maintenantParis } from '#lib/aujourdhui.ts';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import { appliquerNiveaux, DOMAINES, niveauxDe, type DomaineId } from '#lib/paquets.ts';
 import { accesReglages, attributeurDe, comitesChoix, echec, manque, niveauxChoisis, numero, texte, type Reponse, type Valeurs } from '#lib/server/formulaire-reglages.ts';
@@ -48,6 +52,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		modele: modele && { id: modele.id, nom: modele.nom, droits: modele.droits },
 		comitesChoix: await comitesChoix(base),
 		raison: raison(role),
+		// Le bloc « Demandes » : un rôle qui peut en recevoir, ou qui en reçoit encore.
+		demandesPossibles: role.demandes !== null || recoitPossible({ typePerimetre: role.portee, systeme: role.systeme, archiveeLe: role.archiveeLe }, role.droits.map((d) => d.droit)),
 		droitsMetier: DROITS.filter((d) => !estDroitPouvoir(d) && !estSansEffet(d)),
 		droitsPouvoir: DROITS.filter(estDroitPouvoir)
 	};
@@ -96,6 +102,8 @@ export const actions: Actions = {
 			droits = [...sansPouvoir(droits), ...pouvoirDe(cochees)];
 		}
 		const icone = iconeAEnregistrer(role, valeurs);
+		// Le réglage des demandes, s'il est dans la page : enregistré avec le reste, dans le même batch.
+		const saisie = formulaire.get('demandes') === '1' ? saisieDuFormulaire(formulaire, role.demandes, role.demandesGardees) : null;
 		try {
 			await modifierResponsabilite(
 				base,
@@ -107,12 +115,17 @@ export const actions: Actions = {
 					...(valeurs.portee ? { portee: valeurs.portee as Portee } : {}),
 					...(icone ? { icone } : {}),
 					attributeur: qui,
-					droits
+					droits,
+					...(saisie ? { demandes: reglageDeLaSaisie(saisie) } : {})
 				},
-				aujourdhui
+				aujourdhui,
+				maintenantParis()
 			);
 		} catch (erreur) {
-			return echec(erreur, cible, valeurs);
+			// Un refus du réglage des demandes se dit avec ses mots ; la saisie revient, rien n'est perdu.
+			if (erreur instanceof DonneeInvalide && estMessageReglage(erreur.message)) return fail(400, { cible, message: phraseReglage(erreur.message), valeurs, demandes: saisie });
+			const refus = echec(erreur, cible, valeurs);
+			return saisie ? fail(refus.status, { ...refus.data, demandes: saisie }) : refus;
 		}
 		return { cible, succes: `Le rôle « ${(valeurs.nom ?? '').trim()} » est enregistré.` } satisfies Reponse;
 	},
@@ -165,6 +178,13 @@ export const actions: Actions = {
 			return echec(erreur, cible, { droits: envoyes });
 		}
 		return { cible, succes: 'Les droits sont enregistrés.' } satisfies Reponse;
+	},
+
+	// Monter, descendre, retirer ou ajouter une étape : la page revient avec toute la saisie (droits compris), rien n'est enregistré.
+	apercu: async ({ locals, params, request }) => {
+		const { role } = await lireRole(locals, params.id);
+		const formulaire = await request.formData();
+		return { cible: 'role', valeurs: valeursDe(formulaire), demandes: apercuReglage(formulaire, role.demandes, role.demandesGardees).demandes };
 	},
 
 	archiver: async ({ locals, params, request }) => {

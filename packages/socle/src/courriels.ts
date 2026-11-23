@@ -4,7 +4,7 @@ import { exigerDate } from './dates.ts';
 import { STATUTS_AVEC_ACCES } from './listes.ts';
 import { periodeCourte } from './reservations-calcul.ts';
 import { gestionnairesDe } from './reservations.ts';
-import { avisAnomalie, avisHabillement, coupure, personne, reservation, ressource } from './schema.ts';
+import { avisAnomalie, avisDemandeReferent, avisHabillement, coupure, personne, reservation, ressource } from './schema.ts';
 
 // L'e-mail d'une nouvelle demande adressée à un référent : à chacun de ceux qui l'ont reçue en notification (la ligne de leur cloche
 // en est la trace : mêmes destinataires, même titre, mêmes deux lignes), sauf s'ils ont coupé « courriel ». Une requête, lue après la réponse.
@@ -13,6 +13,8 @@ import { avisAnomalie, avisHabillement, coupure, personne, reservation, ressourc
 export type Courriel = { a: string; titre: string; texte: string; url: string };
 export type DemandeACourriel =
 	| { genre: 'habillement'; id: number }
+	// Une demande à un référent (demandes.ts).
+	| { genre: 'demande'; id: number }
 	| { genre: 'anomalie'; id: number }
 	// Les nouvelles anomalies d'une prise de garde validée : une ligne par destinataire, à l'heure de la validation.
 	| { genre: 'prise'; enginId: number; quand: string }
@@ -47,9 +49,10 @@ export async function courrielsDeDemande(base: Base, d: DemandeACourriel, aujour
 		const texte = [demandeur, ...(r.forme === 'jours' ? [String(r.quantite)] : []), periodeCourte(r.forme, r.debut, r.fin)].join(', ');
 		return gestionnaires.filter((g) => g.id !== r.personneId).map((g) => ({ a: g.a, titre: `Demande de réservation pour ${r.nom}`, texte, url: '/reservations/a-valider' }));
 	}
-	const t = d.genre === 'habillement' ? avisHabillement : avisAnomalie;
+	const t = d.genre === 'habillement' ? avisHabillement : d.genre === 'demande' ? avisDemandeReferent : avisAnomalie;
 	const quelles =
-		d.genre === 'habillement' ? and(eq(avisHabillement.url, `/habillement/${d.id}`), eq(avisHabillement.titre, 'Nouvelle demande d’habillement'))
+		d.genre === 'demande' ? and(eq(avisDemandeReferent.url, `/demandes/${d.id}`), like(avisDemandeReferent.titre, 'Nouvelle demande %'))
+		: d.genre === 'habillement' ? and(eq(avisHabillement.url, `/habillement/${d.id}`), eq(avisHabillement.titre, 'Nouvelle demande d’habillement'))
 		: d.genre === 'anomalie' ? and(eq(avisAnomalie.url, `/engins/anomalies/${d.id}`), like(avisAnomalie.titre, 'Anomalie signalée sur %'))
 		: and(eq(avisAnomalie.url, `/engins/anomalies?engin=${d.enginId}`), eq(avisAnomalie.creeLe, d.quand), like(avisAnomalie.titre, '%, prise de garde'));
 	return base

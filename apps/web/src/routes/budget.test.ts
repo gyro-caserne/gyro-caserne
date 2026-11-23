@@ -68,6 +68,9 @@ import { actions as actionsHabillement, load as pageHabillement } from './habill
 import { actions as actionsDemande, load as pageDemande } from './habillement/[id]/+page.server';
 import { load as toutesDemandes } from './habillement/toutes/+page.server';
 import { load as pageSuivi } from './suivi/+page.server';
+import { actions as actionsDemandes, load as pageDemandes } from './demandes/+page.server';
+import { actions as actionsDemandeRef, load as pageDemandeRef } from './demandes/[id]/+page.server';
+import { load as pageRole } from './demandes/role/[id]/+page.server';
 
 const datesSondage = (m: string) => ({ ouverture: m.slice(0, 16), cloture: septJoursPlusTard(m) });
 
@@ -410,6 +413,36 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 		expect(await compter(() => page(deLAgent))).toBeLessThanOrEqual(BUDGET);
 		expect(await compter(async () => { expect(await geste(locals, [['quoi', 'traiter'], ['issue', 'commande'], ['texte', '']])).toMatchObject({ succes: expect.any(String) }); await page(locals); })).toBeLessThanOrEqual(BUDGET);
 		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals }); expect((await (toutesDemandes as any)({ locals })).enCours.length).toBeGreaterThan(100); })).toBeLessThanOrEqual(BUDGET);
+		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals }); await (accueil as any)({ locals, url: new URL('http://x/') }); })).toBeLessThanOrEqual(BUDGET);
+	});
+
+	it('demandes aux référents : demander (150 agents), la page (30), une demande (40 lignes au fil), un geste, la liste du rôle (180), l’Accueil du référent et du chef', async () => {
+		const { base, locals, agent, compter } = await centreDe150();
+		const [pharmacie] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent pharmacie'));
+		const [referent] = await base.select().from(personne).where(eq(personne.email, 'agent1@exemple.fr'));
+		await base.insert(attribution).values({ personneId: referent!.id, responsabiliteId: pharmacie!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		const deLAgent = { ...locals, acteur: { type: 'personne' as const, id: agent.id } };
+		const duReferent = { ...locals, acteur: { type: 'personne' as const, id: referent!.id } };
+		const demander = async (l: unknown, texte: string) => (actionsDemandes.default as any)({ locals: l, request: await requeteFormulaire([['role', String(pharmacie!.id)], ['texte', texte]]), url: new URL('http://x/demandes') }).catch((r: { location?: string }) => r);
+		for (let i = 0; i < 29; i++) await demander(deLAgent, `Compresses ${i}`);
+		let fin: { location?: string } = {};
+		expect(await compter(async () => { fin = await demander(deLAgent, 'Sérum physiologique'); })).toBeLessThanOrEqual(BUDGET);
+		const params = { id: fin.location!.match(/\d+/)![0] };
+		const geste = async (l: unknown, champs: [string, string][]) => (actionsDemandeRef.default as any)({ locals: l, params, request: await requeteFormulaire(champs) });
+		await geste(duReferent, [['quoi', 'prendre']]);
+		for (let i = 0; i < 20; i++) {
+			await geste(duReferent, [['quoi', 'question'], ['texte', `Question ${i}`]]);
+			await geste(deLAgent, [['quoi', 'repondre'], ['texte', `Réponse ${i}`]]);
+		}
+		const autres = (await base.select({ id: personne.id }).from(personne)).filter((p) => p.id !== agent.id && p.id !== locals.acteur.id && p.id !== referent!.id);
+		for (const p of autres) await demander({ ...locals, acteur: { type: 'personne', id: p.id } }, 'Gants nitrile');
+		const url = new URL('http://x/demandes');
+		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals: deLAgent }); expect((await (pageDemandes as any)({ locals: deLAgent, url })).enCours).toHaveLength(30); })).toBeLessThanOrEqual(BUDGET);
+		const page = async (l: unknown) => { await (racine as any)({ depends: () => {}, locals: l }); expect((await (pageDemandeRef as any)({ locals: l, params, url: new URL('http://x/') })).demande.fil.length).toBeGreaterThanOrEqual(41); };
+		expect(await compter(() => page(deLAgent))).toBeLessThanOrEqual(BUDGET);
+		expect(await compter(async () => { expect(await geste(duReferent, [['quoi', 'avancer'], ['vers', 'faite'], ['texte', '']])).toMatchObject({ succes: expect.any(String) }); await page(duReferent); })).toBeLessThanOrEqual(BUDGET);
+		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals: duReferent }); expect((await (pageRole as any)({ locals: duReferent, params: { id: String(pharmacie!.id) } })).enCours.length).toBeGreaterThan(100); })).toBeLessThanOrEqual(BUDGET);
+		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals: duReferent }); await (accueil as any)({ locals: duReferent, url: new URL(`http://x/?casquette=role:${pharmacie!.id}`) }); })).toBeLessThanOrEqual(BUDGET);
 		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals }); await (accueil as any)({ locals, url: new URL('http://x/') }); })).toBeLessThanOrEqual(BUDGET);
 	});
 
