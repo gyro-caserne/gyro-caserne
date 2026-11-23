@@ -28,9 +28,9 @@
 					<input type="hidden" name="etape-id" value={e.id ?? ''} />
 					<Champ id="{id}-etape-{i}" name="etape-nom" libelle="Étape {i + 1}" requis maxlength={NOM_ETAPE_MAX} valeur={e.nom} />
 					<div class="gestes">
-						{#if i > 0}<Bouton type="submit" variante="secondaire" formaction={apercu} name="geste" value="monter:{i}">Monter<span class="masque"> {e.nom}</span></Bouton>{/if}
-						{#if i < saisie.etapes.length - 1}<Bouton type="submit" variante="secondaire" formaction={apercu} name="geste" value="descendre:{i}">Descendre<span class="masque"> {e.nom}</span></Bouton>{/if}
-						<Bouton type="submit" variante="secondaire" formaction={apercu} name="geste" value="retirer:{i}">Retirer<span class="masque"> {e.nom}</span></Bouton>
+						{#if i > 0}<Bouton type="submit" variante="secondaire" formaction={apercu} name="geste" value="monter:{i}">Monter<span class="masque">{` ${e.nom}`}</span></Bouton>{/if}
+						{#if i < saisie.etapes.length - 1}<Bouton type="submit" variante="secondaire" formaction={apercu} name="geste" value="descendre:{i}">Descendre<span class="masque">{` ${e.nom}`}</span></Bouton>{/if}
+						<Bouton type="submit" variante="secondaire" formaction={apercu} name="geste" value="retirer:{i}">Retirer<span class="masque">{` ${e.nom}`}</span></Bouton>
 					</div>
 				</li>
 			{/each}

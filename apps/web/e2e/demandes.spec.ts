@@ -52,6 +52,12 @@ async function blocDemandes(gestion: Page) {
 	return bloc;
 }
 
+// « Enregistrer », le seul bouton de la page du rôle : droits et réglage des demandes ensemble ; la réussite s'annonce en tête.
+async function enregistrer(gestion: Page) {
+	await gestion.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+	await expect(gestion.getByRole('status').filter({ hasText: 'Le rôle « Référent pharmacie » est enregistré.' })).toBeVisible();
+}
+
 test('demande à la pharmacie, de la question à la fin, sans violation', async ({ browser }, info) => {
 	test.skip(info.project.name !== 'telephone', 'Une fois suffit : les étapes réglées sont communes à toute la base.');
 	const etape = `Commandée ${marque()}`;
@@ -62,10 +68,13 @@ test('demande à la pharmacie, de la question à la fin, sans violation', async 
 	let bloc = await blocDemandes(gestion);
 	await expect(bloc.getByRole('switch', { name: 'Reçoit des demandes' })).toBeChecked();
 	await bloc.getByLabel('Nouvelle étape').fill(etape);
+	// « Ajouter l'étape » : la page revient, bloc ouvert, avec l'étape dans la saisie ; rien n'est encore enregistré.
 	await bloc.getByRole('button', { name: 'Ajouter l’étape' }).click();
-	// La page revient avec le bloc ouvert et sa réussite.
-	await expect(bloc.getByRole('status')).toHaveText('Étape ajoutée.');
+	await expect(bloc.getByRole('textbox', { name: /^Étape \d+$/ }).last()).toHaveValue(etape);
 	await sansViolation(gestion);
+	await enregistrer(gestion);
+	bloc = await blocDemandes(gestion);
+	await expect(bloc.getByRole('textbox', { name: /^Étape \d+$/ }).last()).toHaveValue(etape);
 
 	// L'agent demande, depuis Caserne.
 	const agent = await (await browser.newContext({ storageState: ETAT_CONNECTE })).newPage();
@@ -126,6 +135,7 @@ test('demande à la pharmacie, de la question à la fin, sans violation', async 
 	await expect(agent.getByRole('link', { name: new RegExp(texte) })).toContainText('Faite');
 	bloc = await blocDemandes(gestion);
 	await bloc.getByRole('button', { name: `Retirer ${etape}` }).click();
-	await expect(bloc.getByRole('status')).toHaveText('Étape retirée.');
+	await expect(bloc.getByRole('button', { name: `Retirer ${etape}` })).toHaveCount(0);
+	await enregistrer(gestion);
 	for (const p of [gestion, agent, referente]) await p.context().close();
 });

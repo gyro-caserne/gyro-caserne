@@ -215,6 +215,10 @@ describe('page d’un rôle', () => {
 		expect(page).toContain('value="monter:1"');
 		expect(page).toMatch(/formaction="\?\/apercu"[^>]*value="retirer:1"|value="retirer:1"[^>]*formaction/);
 		expect(page).toContain('Ajouter l’étape');
+		// Les noms que lit l'essai de bout en bout : le champ « Étape 2 », « Retirer Reçue », le seul bouton « Enregistrer ».
+		expect(page).toMatch(/<label for="[^"]+"[^>]*>Étape 2<\/label>/);
+		expect(page).toMatch(/>Retirer(<!---->)?<span class="masque[^"]*"> Reçue<\/span>/);
+		expect(page.match(/>(<!---->)?Enregistrer(<!---->)?<\/button>/g)).toHaveLength(1);
 		// Un seul bouton pour la page : le réglage part avec « Enregistrer ».
 		expect(page).not.toContain('Enregistrer les étapes');
 		const formulaire = page.slice(page.indexOf('action="?/enregistrer"'), page.indexOf('</form>', page.indexOf('action="?/enregistrer"')));
