@@ -1,5 +1,6 @@
 -- Reprise de l'habillement (migrations 0036 et 0037) : les nombres avant et après, état par état. Ne montre que des nombres.
--- À lancer en production juste après la mise en production :
+-- Lancé de lui-même par « base-en-ligne », juste après les migrations, en préprod comme en production (résultat dans le journal du déploiement).
+-- À retirer avec le lot qui supprimera les tables de l’habillement. À la main :
 -- wrangler d1 execute <base> --remote --config centres/<id>/wrangler.jsonc --file docs/technique/comptage-reprise-habillement.sql
 -- Une seule requête, sans UNION : D1 limite le nombre de termes d'un SELECT composé. « traitee sans issue » ne devrait jamais
 -- arriver (l'ancien code mettait toujours une issue) ; s'il y en a, elles sont reprises en « Prise en compte » : l'écart de « prise »
