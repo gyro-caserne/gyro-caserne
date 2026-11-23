@@ -50,6 +50,8 @@ Format d'une page :
 - [Comment gérer le matériel de mon comité ?](gerer-le-materiel-d-un-comite.md)
 - [Comment demander une tenue ?](demander-une-tenue.md)
 - [Comment traiter une demande d'habillement ?](traiter-une-demande-d-habillement.md)
+- [Comment faire une demande à un référent ?](faire-une-demande-a-un-referent.md)
+- [Comment régler les étapes de mon rôle ?](regler-les-etapes-de-mon-role.md)
 - [Comment me faire remplacer ?](me-faire-remplacer.md)
 - [Comment me faire remplacer quelques heures ?](me-faire-remplacer-quelques-heures.md)
 - [Comment accepter ou refuser un remplacement ?](repondre-a-une-demande-de-remplacement.md)

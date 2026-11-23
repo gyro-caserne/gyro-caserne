@@ -25,6 +25,8 @@ Chaque rôle montre ses titulaires du jour, ou « Personne pour l'instant ». Ch
 
 **« Écrire »**, à côté de chaque membre et de chaque titulaire, ouvre la conversation à deux avec la personne dans Messages (comme « Message » sur la fiche d'un agent). Il n'y est pas à côté de son propre nom, ni quand l'un des deux n'a pas la messagerie (le super administrateur, un agent dont le profil ne la donne pas). Un rôle à plusieurs titulaires montre un « Écrire à … » par titulaire.
 
+**« Demander »**, sur la ligne d'un rôle qui reçoit des demandes (pharmacie, matériel), ouvre la nouvelle demande, ce rôle déjà choisi ([demandes aux référents](demandes-aux-referents.md)). Pas pour le super administrateur.
+
 Sont comptés les agents qui ont accès à l'appli : ni partis, ni suspendus, ni comptes extérieurs (la réserve citoyenne), comme pour les murs. Un rôle nommé à l'avance n'apparaît qu'à sa date de début.
 
 ## Qui y entre
