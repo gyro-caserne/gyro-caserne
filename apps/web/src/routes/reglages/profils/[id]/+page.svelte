@@ -35,6 +35,12 @@
 		{ libelle: 'Lecture', phrase: 'Voir les publications et en être prévenu.' },
 		{ libelle: 'Écriture', phrase: cle === 'centre' ? 'Aussi commenter, voter et répondre.' : 'Aussi commenter, voter, répondre et publier.' }
 	];
+	// La ligne sous « Murs ouverts », replié : les murs ouverts par leur nom, ou aucun.
+	const resumeMurs = $derived.by(() => {
+		const noms = murs.filter((m) => niveauDe(m.cle) > 0).map((m) => m.nom);
+		if (noms.length === 0) return 'Aucun mur ouvert';
+		return noms.length === 1 ? `${noms[0]} ouvert` : `${noms.slice(0, -1).join(', ')} et ${noms.at(-1)} ouverts`;
+	});
 	const niveauDe = (cle: string) => Math.max(0, NIVEAUX.indexOf((data.profil.mursOuverts as Record<string, string>)[cle] ?? 'aucun'));
 </script>
 
@@ -59,11 +65,14 @@
 
 <p class="intro">Ce que ce profil donne à chaque personne qui l’a, domaine par domaine. Les droits de base (voir le planning, les engins…) ne se règlent pas ici.</p>
 
-<form method="POST" class="formulaire">
+<form method="POST" action="?/enregistrer" class="formulaire">
 	<Domaines droits={droits} bind:choix profil />
 	{#if exterieur}
-		<section class="carte" aria-labelledby="titre-murs">
-			<h2 id="titre-murs" class="titre-groupe">Murs ouverts</h2>
+		<details class="pli repli murs-pli">
+			<summary>
+				<span class="titre-pli">Murs ouverts</span>
+				<span class="resume">{resumeMurs}</span>
+			</summary>
 			<p class="aide">En lecture, on voit les publications et on en est prévenu. En écriture, on peut aussi commenter, voter, répondre et publier (sauf sur Le centre). Un comité ouvert en écriture donne la messagerie avec ses membres.</p>
 			<ul class="murs" role="list">
 				{#each murs as m (m.cle)}
@@ -73,7 +82,7 @@
 					</li>
 				{/each}
 			</ul>
-		</section>
+		</details>
 	{/if}
 	<BarreActions {message}>
 		<Bouton type="submit">Enregistrer</Bouton>
@@ -173,6 +182,22 @@
 		align-items: center;
 		font-weight: 600;
 		cursor: pointer;
+	}
+	.murs-pli > summary {
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: center;
+		padding: var(--espace-8) 0;
+	}
+	.titre-pli {
+		font: 700 var(--texte-18)/1.2 var(--police-titre);
+	}
+	.resume {
+		font-weight: 400;
+		color: var(--doux);
+	}
+	.murs-pli > .murs {
+		padding-bottom: var(--espace-16);
 	}
 	.pli .formulaire {
 		padding-bottom: var(--espace-16);

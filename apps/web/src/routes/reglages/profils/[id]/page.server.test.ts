@@ -11,10 +11,10 @@ describe('page d’un profil', () => {
 		const { base, referent, ordinaire, profilAgent } = await preparer();
 		for (const acteur of [referent, ordinaire]) {
 			await expect(charger(load, locaux(base, acteur), { id: String(profilAgent.id) })).rejects.toMatchObject({ status: 403 });
-			await expect(envoyer(actions, 'default', locaux(base, acteur), [['niveau-stock', '1']], { id: String(profilAgent.id) })).rejects.toMatchObject({ status: 403 });
+			await expect(envoyer(actions, 'enregistrer', locaux(base, acteur), [['niveau-stock', '1']], { id: String(profilAgent.id) })).rejects.toMatchObject({ status: 403 });
 		}
 		await expect(charger(load, locaux(base, super_), { id: '999' })).rejects.toMatchObject({ status: 404 });
-		await expect(envoyer(actions, 'default', locaux(base, super_), [['niveau-stock', '1']], { id: '999' })).rejects.toMatchObject({ status: 404 });
+		await expect(envoyer(actions, 'enregistrer', locaux(base, super_), [['niveau-stock', '1']], { id: '999' })).rejects.toMatchObject({ status: 404 });
 	});
 
 	it('montre le profil et ses droits', async () => {
@@ -25,7 +25,7 @@ describe('page d’un profil', () => {
 
 	it('enregistre un niveau sans toucher aux droits de base ni aux autres domaines', async () => {
 		const { base, chef, profilAgent, droitsProfil } = await preparer();
-		const r = await envoyer(actions, 'default', locaux(base, chef), [['niveau-planning', '1'], ['niveau-reservations', '1'], ['niveau-stock', 'sur_mesure']], { id: String(profilAgent.id) });
+		const r = await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-planning', '1'], ['niveau-reservations', '1'], ['niveau-stock', 'sur_mesure']], { id: String(profilAgent.id) });
 		expect(r).toMatchObject({ succes: expect.stringContaining('Agent') });
 		expect(await droitsProfil(profilAgent.id)).toEqual([...AGENT, 'VALIDER_REMPLACEMENT'].sort());
 	});
@@ -33,7 +33,7 @@ describe('page d’un profil', () => {
 	it('Réserve citoyenne : réserve d’office, et rien d’autre', async () => {
 		const { base, chef, droitsProfil } = await preparer();
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
-		await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1']], { id: String(reserve!.id) });
+		await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '1']], { id: String(reserve!.id) });
 		expect(await droitsProfil(reserve!.id)).toEqual(['RESERVER']);
 	});
 
@@ -42,14 +42,14 @@ describe('page d’un profil', () => {
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
 		const params = { id: String(reserve!.id) };
-		const r = await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['niveau-planning', '1'], ['mur-centre', '0'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], params);
+		const r = await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '1'], ['niveau-planning', '1'], ['mur-centre', '0'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], params);
 		expect(r).toMatchObject({ cible: 'profil', succes: 'Le profil « Réserve citoyenne » est enregistré.' });
 		expect((await charger(load, locaux(base, chef), params)).profil.mursOuverts).toEqual({ vie: 'lecture', [`comite:${amicale!.id}`]: 'ecriture' });
 		expect(await droitsProfil(reserve!.id)).toContain('VALIDER_REMPLACEMENT');
 		const actions_ = (await base.select().from(journal)).map((l) => l.action);
 		expect(actions_).toContain('modifier_murs_ouverts');
 		expect(actions_).toContain('modifier_droits_profil');
-		expect(await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['mur-equipe:1', '1']], params)).toMatchObject({ status: 400 });
+		expect(await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '1'], ['mur-equipe:1', '1']], params)).toMatchObject({ status: 400 });
 	});
 
 	it('enregistrer reste léger : droits lus une fois, une lecture groupée, une écriture groupée (coupure en préprod le 23/11)', async () => {
@@ -57,14 +57,14 @@ describe('page d’un profil', () => {
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
 		const avant = base.requetes;
-		const r = await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['niveau-planning', '1'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], { id: String(reserve!.id) });
+		const r = await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '1'], ['niveau-planning', '1'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], { id: String(reserve!.id) });
 		expect(r).toMatchObject({ succes: expect.any(String) });
 		expect(base.requetes - avant).toBeLessThanOrEqual(5);
 	});
 
 	it('profil agent : les murs envoyés ne sont pas lus, les droits s’enregistrent', async () => {
 		const { base, chef, profilAgent } = await preparer();
-		expect(await envoyer(actions, 'default', locaux(base, chef), [['niveau-reservations', '1'], ['mur-vie', '1']], { id: String(profilAgent.id) })).toMatchObject({ succes: expect.any(String) });
+		expect(await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '1'], ['mur-vie', '1']], { id: String(profilAgent.id) })).toMatchObject({ succes: expect.any(String) });
 	});
 
 	it('renommer, puis supprimer avec confirmation ; refusé tant que quelqu’un l’a', async () => {

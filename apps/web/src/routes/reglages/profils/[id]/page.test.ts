@@ -57,4 +57,12 @@ describe('page d’un profil', () => {
 		const page = html({ data: retraite, form: null });
 		expect(page).toMatch(/action="\?\/supprimer"[\s\S]*name="confirmation" value="oui"[\s\S]*class="grave[^"]*"[^>]*>(<!---->)?Supprimer le profil/);
 	});
+
+	it('murs ouverts repliés, avec les murs ouverts en résumé ; le formulaire vise l’action nommée', () => {
+		const page = html({ data: retraite, form: null });
+		expect(page).toMatch(/<details class="pli repli murs-pli[^"]*"/);
+		expect(page).toContain('Vie du centre et Retraités ouverts');
+		expect(page).toContain('action="?/enregistrer"');
+		expect(html({ data: { ...retraite, profil: { ...retraite.profil, mursOuverts: {} } }, form: null })).toContain('Aucun mur ouvert');
+	});
 });
