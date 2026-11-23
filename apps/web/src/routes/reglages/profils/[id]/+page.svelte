@@ -133,19 +133,8 @@
 	.formulaire > :global(button) {
 		align-self: flex-start;
 	}
-	h2 {
-		margin: 0;
-	}
 	.aide {
 		color: var(--doux);
-	}
-	.carte {
-		background: var(--surface);
-		border-radius: var(--rayon-grand);
-		padding: var(--espace-16);
-		display: flex;
-		flex-direction: column;
-		gap: var(--espace-12);
 	}
 	.murs {
 		list-style: none;
