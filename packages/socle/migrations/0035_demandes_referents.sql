@@ -48,4 +48,5 @@ CREATE TABLE `fil_demande_referent` (
 );
 --> statement-breakpoint
 CREATE INDEX `fil_demande_referent_demande` ON `fil_demande_referent` (`demande_id`);--> statement-breakpoint
-ALTER TABLE `responsabilite` ADD `demandes` text;
+ALTER TABLE `responsabilite` ADD `demandes` text;--> statement-breakpoint
+ALTER TABLE `responsabilite` ADD `demandes_gardees` text;

@@ -18,6 +18,8 @@ import {
 import { accueilDe } from '../src/casquettes.ts';
 import { courrielsDeDemande } from '../src/courriels.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
+import { changerStatut } from '../src/actions/personnes.ts';
+import { effacerAgentsPartis } from '../src/partis.ts';
 import { couper, enTeteDe, filDeNotifications, marquerLue, toutMarquerLu } from '../src/notifications.ts';
 import { abonnementPush, attribution, avisDemandeReferent, demandeReferent, envoiPush, filDemandeReferent, journal, personne, profil, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
@@ -288,7 +290,7 @@ describe('le suivi d’une demande', () => {
 		expect((await j.avis(j.ids.alice))).toHaveLength(1);
 	});
 
-	it('les décisions vont au journal : prise, étape, fin, refus ; pas les questions ni l’annulation', async () => {
+	it('au journal : prise, reprise, question, étape, fin, refus, annulation ; pas les réponses ni les précisions', async () => {
 		const j = await jeu();
 		await j.base.delete(journal);
 		const a = await j.demander(j.ids.alice);
@@ -304,9 +306,11 @@ describe('le suivi d’une demande', () => {
 		const lignes = await j.base.select().from(journal).orderBy(journal.id);
 		expect(lignes.map((l) => [l.action, l.cibleType, l.cibleId])).toEqual([
 			['prendre_demande', 'demande_referent', a],
+			['questionner_demande', 'demande_referent', a],
 			['avancer_demande', 'demande_referent', a],
 			['finir_demande', 'demande_referent', a],
-			['refuser_demande', 'demande_referent', b]
+			['refuser_demande', 'demande_referent', b],
+			['annuler_demande', 'demande_referent', c]
 		]);
 	});
 });
@@ -385,8 +389,9 @@ describe('l’accueil', () => {
 		// Prise par Paul : elle sort de chez Pia, reste chez Paul à traiter ; la question posée l'en retire jusqu'à la réponse.
 		await j.geste(j.ids.paul, a, { quoi: 'prendre' });
 		expect((await accueil(j, j.ids.pia, cle)).contenu).toMatchObject({ aDecider: [{ texte: 'Demande de Bob Fictif à prendre en compte' }] });
+		// Prise sans question : plus rien à décider, elle attend dans la liste du rôle.
 		paul = await accueil(j, j.ids.paul, cle);
-		expect(paul.contenu).toMatchObject({ aDecider: [{ texte: 'Demande de Bob Fictif à prendre en compte' }, { texte: 'Demande d’Alice Fictif à traiter (Compresses)', lien: `/demandes/${a}` }] });
+		expect(paul.contenu).toMatchObject({ aDecider: [{ texte: 'Demande de Bob Fictif à prendre en compte' }] });
 		await j.geste(j.ids.paul, a, { quoi: 'avancer', vers: j.commandee, texte: '' });
 		await j.geste(j.ids.paul, a, { quoi: 'question', texte: 'Quelle taille ?' });
 		expect((await accueil(j, j.ids.paul, cle)).contenu).toMatchObject({ aDecider: [{ texte: 'Demande de Bob Fictif à prendre en compte' }] });
@@ -402,8 +407,10 @@ describe('l’accueil', () => {
 		const a = await j.demander(j.ids.alice, 'Compresses');
 		for (const qui of [j.ids.claire, j.ids.adam]) expect((await accueil(j, qui, 'centre')).contenu).toMatchObject({ type: 'centre', aDecider: expect.arrayContaining([{ texte: 'Demande d’Alice Fictif à prendre en compte (Référent pharmacie)', lien: `/demandes/${a}` }]) });
 		await j.geste(j.ids.claire, a, { quoi: 'prendre' });
+		await j.geste(j.ids.claire, a, { quoi: 'question', texte: 'Quelle taille ?' });
+		await j.geste(j.ids.alice, a, { quoi: 'repondre', texte: '10' });
 		const claire = (await accueil(j, j.ids.claire, 'centre')).contenu as { aDecider: { texte: string }[] };
-		expect(claire.aDecider.map((x) => x.texte)).toContain('Demande d’Alice Fictif à traiter (Compresses)');
+		expect(claire.aDecider.map((x) => x.texte)).toContain('Réponse d’Alice Fictif à lire (Compresses)');
 		expect(((await accueil(j, j.ids.adam, 'centre')).contenu as { aDecider: { texte: string }[] }).aDecider.map((x) => x.texte).join()).not.toContain('Alice');
 	});
 
@@ -435,6 +442,61 @@ describe('la cloche', () => {
 		expect((await enTeteDe(j.base, j.qui(j.ids.paul), '2026-11-23', PLUS_TARD)).nonLues).toBe(0);
 		await toutMarquerLu(j.base, j.qui(j.ids.pia), PLUS_TARD);
 		expect((await j.avis(j.ids.pia))[0]!.lueLe).toBe(PLUS_TARD);
+	});
+});
+
+describe('corrections de la relecture', () => {
+	it('sans titulaire, une précision avant toute prise en compte va à la cheffe et à l’adjoint', async () => {
+		const j = await jeu({ titulaires: false });
+		const id = await j.demander(j.ids.alice);
+		await j.geste(j.ids.alice, id, { quoi: 'repondre', texte: 'Taille 10' });
+		expect((await j.avis(j.ids.claire)).map((a) => a.titre)).toEqual(['Nouvelle demande d’Alice Fictif', 'Précision d’Alice Fictif']);
+	});
+
+	it('un titulaire ne traite pas sa propre demande : elle va aux autres titulaires (seul, au chef et à l’adjoint)', async () => {
+		const j = await jeu();
+		const id = await j.demander(j.ids.paul, 'Gants');
+		expect((await lireDemandeReferent(j.base, j.qui(j.ids.paul), id, PLUS_TARD)).gestes).toEqual(['repondre', 'annuler']);
+		await expect(j.geste(j.ids.paul, id, { quoi: 'prendre' })).rejects.toThrow('Geste impossible');
+		expect((await accueilDe(j.base, j.qui(j.ids.paul), `role:${j.pharmacie}`, '2026-11-23', PLUS_TARD, centreExemple.astreinte)).contenu).toMatchObject({ aDecider: [] });
+		expect((await accueilDe(j.base, j.qui(j.ids.pia), `role:${j.pharmacie}`, '2026-11-23', PLUS_TARD, centreExemple.astreinte)).contenu).toMatchObject({ aDecider: [{ texte: 'Demande de Paul Fictif à prendre en compte' }] });
+		await j.geste(j.ids.pia, id, { quoi: 'prendre' });
+	});
+
+	it('refusée après une étape : le suivi sait jusqu’où elle est allée', async () => {
+		const j = await jeu();
+		const id = await j.demander(j.ids.alice);
+		await j.geste(j.ids.paul, id, { quoi: 'avancer', vers: j.commandee, texte: '' });
+		await j.geste(j.ids.paul, id, { quoi: 'refuser', texte: 'Rupture.' });
+		expect((await lireDemandeReferent(j.base, j.qui(j.ids.alice), id, PLUS_TARD)).franchie).toBe(2);
+		const b = await j.demander(j.ids.alice);
+		await j.geste(j.ids.alice, b, { quoi: 'annuler' });
+		expect((await lireDemandeReferent(j.base, j.qui(j.ids.alice), b, PLUS_TARD)).franchie).toBe(0);
+	});
+
+	it('au départ d’un agent, ses demandes pas encore avancées sont annulées au nom de qui fait le geste ; le suiveur est prévenu', async () => {
+		const j = await jeu();
+		const a = await j.demander(j.ids.alice, 'Compresses');
+		await j.geste(j.ids.paul, a, { quoi: 'prendre' });
+		const b = await j.demander(j.ids.alice, 'Sérum');
+		await j.geste(j.ids.paul, b, { quoi: 'avancer', vers: j.commandee, texte: '' });
+		await changerStatut(j.base, j.base.photos, j.qui(j.ids.claire), j.ids.alice, 'parti', PLUS_TARD);
+		expect(await j.demande(a)).toMatchObject({ etape: 'annulee', finLe: PLUS_TARD });
+		expect((await j.demande(b)).etape).toBe(j.commandee);
+		expect((await j.base.select().from(filDemandeReferent).where(eq(filDemandeReferent.demandeId, a))).at(-1)).toMatchObject({ quoi: 'annulation', par: j.ids.claire });
+		expect((await j.avis(j.ids.paul)).at(-1)).toMatchObject({ titre: 'Demande d’Alice Fictif annulée', texte: 'Compresses', url: `/demandes/${a}` });
+	});
+
+	it('effacer un agent parti qui a demandé et écrit dans un fil : ses demandes partent, il ne suit plus celles des autres', async () => {
+		const j = await jeu();
+		const a = await j.demander(j.ids.paul, 'Gants');
+		await j.geste(j.ids.paul, a, { quoi: 'repondre', texte: 'Taille M' });
+		const b = await j.demander(j.ids.alice, 'Compresses');
+		await j.geste(j.ids.paul, b, { quoi: 'question', texte: 'Combien ?' });
+		await j.base.update(personne).set({ statut: 'parti', partiLe: '2025-01-01' }).where(eq(personne.id, j.ids.paul));
+		expect(await effacerAgentsPartis(j.base, '2025-11-23', '2026-11-23', [])).toBe(1);
+		expect((await j.base.select().from(demandeReferent)).map((d) => [d.id, d.prisePar])).toEqual([[b, null]]);
+		expect((await j.base.select().from(filDemandeReferent)).map((f) => [f.demandeId, f.quoi])).toEqual([[b, 'question']]);
 	});
 });
 

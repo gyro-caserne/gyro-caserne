@@ -152,7 +152,7 @@ export async function ajouterPersonne(
 export async function changerStatut(base: Base, basePhotos: BasePhotos, acteur: Acteur, personneId: number, statut: StatutOperationnel, maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	if (!(STATUTS_OPERATIONNELS as readonly string[]).includes(statut)) throw new DonneeInvalide('Statut inconnu');
-	const [fiche] = await base.select({ id: personne.id, email: personne.email, profilId: personne.profilId, statut: personne.statut, effaceLe: personne.effaceLe }).from(personne).where(eq(personne.id, personneId));
+	const [fiche] = await base.select({ id: personne.id, email: personne.email, prenom: personne.prenom, nom: personne.nom, profilId: personne.profilId, statut: personne.statut, effaceLe: personne.effaceLe }).from(personne).where(eq(personne.id, personneId));
 	if (!fiche) throw new DonneeInvalide('Personne inconnue');
 	// Un agent effacé ne revient pas : s'il revient au centre, on lui refait une fiche.
 	if (fiche.effaceLe !== null) throw new DonneeInvalide('Agent effacé');
@@ -196,8 +196,8 @@ export async function changerStatut(base: Base, basePhotos: BasePhotos, acteur: 
 		...remplacements,
 		// Au départ, ses appareils, son fil et ses coupures de notifications.
 		...(statut === 'parti' ? [...effacerNotificationsDe(base, personneId), base.delete(cleAgenda).where(eq(cleAgenda.personneId, personneId))] : []),
-		// Au départ, ses réservations à venir sont annulées.
-		...(statut === 'parti' ? [annulerAuDepart(base, personneId, maintenant)] : [])
+		// Au départ, ses réservations à venir sont annulées, et ses demandes aux référents pas encore avancées.
+		...(statut === 'parti' ? [annulerAuDepart(base, personneId, maintenant), ...annulerDemandesAuPassage(base, personneId, acteur.type === 'personne' ? acteur.id : null, fiche, maintenant)] : [])
 	] as const;
 	// Sans accès, la personne est déconnectée tout de suite, et ses liens en attente ne valent plus rien.
 	if ((STATUTS_AVEC_ACCES as readonly string[]).includes(statut)) await base.batch(ecritures);
@@ -293,7 +293,7 @@ async function passageExterieur(base: Base, acteur: Acteur, fiche: typeof person
 			),
 			base.update(demandeHabillement).set({ etape: 'annulee', finLe: maintenant, majLe: maintenant }).where(enCoursHabillement),
 			// Ses demandes aux référents qui n'ont pas dépassé « Prise en compte » ; plus loin, le référent les finit.
-			...annulerDemandesAuPassage(base, fiche.id, maintenant)
+			...annulerDemandesAuPassage(base, fiche.id, acteur.type === 'personne' ? acteur.id : null, fiche, maintenant)
 		],
 		photos: groupes.photos
 	};

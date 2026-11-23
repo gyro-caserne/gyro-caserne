@@ -147,7 +147,9 @@ export const responsabilite = sqliteTable(
 		// Nom d'icône (icones.ts) ; nul : l'appli choisit.
 		icone: text('icone'),
 		// Reçoit des demandes (demandes.ts) : ses étapes intermédiaires et le nom de la dernière ; nul : n'en reçoit pas.
-		demandes: text('demandes', { mode: 'json' }).$type<ReglageDemandes>()
+		demandes: text('demandes', { mode: 'json' }).$type<ReglageDemandes>(),
+		// Le dernier réglage d'un rôle décoché, repris s'il est recoché.
+		demandesGardees: text('demandes_gardees', { mode: 'json' }).$type<ReglageDemandes>()
 	},
 	() => [
 		check('responsabilite_nature', checkDans('nature', NATURES_RESPONSABILITE)),

@@ -144,6 +144,7 @@ export async function listerResponsabilites(base: Base, acteur: Acteur, aujourdh
 			modele: r.modele,
 			icone: r.icone,
 			demandes: r.demandes,
+			demandesGardees: r.demandesGardees,
 			titulaires: titulaires.find((t) => t.id === r.id)?.n ?? 0,
 			protegee: !pouvoir && siens.some((d) => estDroitPouvoir(d.droit))
 		};

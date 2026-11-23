@@ -15,6 +15,7 @@ import {
 	conversation,
 	demandeHabillement,
 	demandeReferent,
+	filDemandeReferent,
 	demandeRemplacement,
 	equipe,
 	membreConversation,
@@ -71,7 +72,7 @@ describe('passage d’un agent à un profil extérieur', () => {
 	});
 
 	it('remplacements, réservations, demandes d’habillement et demandes aux référents en cours annulés', async () => {
-		const { base, chef, paul, retraite, e1, passer } = await jeu();
+		const { base, chef, chefId, paul, retraite, e1, passer } = await jeu();
 		const [d] = await base.insert(demandeRemplacement).values({ genre: 'remplacement', demandeurId: paul, equipeId: e1.id, debut: '2026-11-02T20:00', etat: 'attente', creeLe: '2026-10-20T10:00' }).returning();
 		const [vl] = await base.select().from(ressource);
 		const [r] = await base.insert(reservation).values({ ressourceId: vl!.id, personneId: paul, debut: '2026-11-03T09:00', fin: '2026-11-03T12:00', quantite: 1, etat: 'acceptee', creeLe: '2026-10-20T10:00' }).returning();
@@ -82,6 +83,7 @@ describe('passage d’un agent à un profil extérieur', () => {
 		const [loin] = await base.insert(demandeReferent).values({ responsabiliteId: pharmacie!.id, demandeurId: paul, texte: 'Sérum', etape: 'e12345678', creeLe: '2026-10-20T10:00', majLe: '2026-10-20T10:00' }).returning();
 		await passer(chef, paul, retraite.id);
 		expect((await base.select().from(demandeReferent).where(eq(demandeReferent.id, dr!.id)))[0]).toMatchObject({ etape: 'annulee', finLe: maintenant });
+		expect((await base.select().from(filDemandeReferent).where(eq(filDemandeReferent.demandeId, dr!.id)))[0]).toMatchObject({ quoi: 'annulation', par: chefId });
 		expect((await base.select().from(demandeReferent).where(eq(demandeReferent.id, loin!.id)))[0]).toMatchObject({ etape: 'e12345678', finLe: null });
 		expect((await base.select().from(demandeRemplacement).where(eq(demandeRemplacement.id, d!.id)))[0]!.etat).toBe('annulee');
 		expect((await base.select().from(reservation).where(eq(reservation.id, r!.id)))[0]!.etat).toBe('annulee');

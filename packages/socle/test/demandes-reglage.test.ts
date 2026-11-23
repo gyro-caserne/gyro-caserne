@@ -1,11 +1,11 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
 import { archiverResponsabilite, creerResponsabilite, modifierResponsabilite } from '../src/actions/responsabilites.ts';
 import type { Acteur } from '../src/droits.ts';
 import { reglerDemandes } from '../src/demandes.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
-import { attribution, demandeReferent, journal, personne, profil, responsabilite } from '../src/schema.ts';
+import { attribution, demandeReferent, journal, personne, profil, responsabilite, responsabiliteDroit } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
 const QUAND = '2026-11-23T10:00';
@@ -129,6 +129,41 @@ describe('régler les demandes d’un rôle', () => {
 		expect(await j.lire(id)).toEqual({ etapes: [], derniere: 'Faite' });
 		const autre = await creerResponsabilite(j.base, j.claire, { nom: 'Sport', nature: 'mission', portee: 'centre', attributeur: { type: 'chef_centre' }, droits: [], modele: 'vierge' }, AUJOURDHUI);
 		expect(await j.lire(autre)).toBeNull();
+	});
+});
+
+describe('corrections de la relecture', () => {
+	it('la cheffe règle les étapes même sans le droit de gérer les rôles', async () => {
+		const j = await jeu();
+		const chef = (await j.role('Chef de centre')).id;
+		await j.base.delete(responsabiliteDroit).where(and(eq(responsabiliteDroit.responsabiliteId, chef), eq(responsabiliteDroit.droit, 'GERER_LISTES')));
+		await reglerDemandes(j.base, j.claire, j.pharmacie, null, QUAND);
+		await reglerDemandes(j.base, j.claire, j.pharmacie, { etapes: [{ nom: 'Commandée' }], derniere: 'Faite' }, QUAND);
+		expect((await j.lire())!.etapes.map((e) => e.nom)).toEqual(['Commandée']);
+	});
+
+	it('décocher garde le réglage, recocher le reprend avec ses identifiants', async () => {
+		const j = await jeu();
+		await reglerDemandes(j.base, j.claire, j.pharmacie, { etapes: [{ nom: 'Commandée' }], derniere: 'Livrée' }, QUAND);
+		const avant = await j.lire();
+		await reglerDemandes(j.base, j.claire, j.pharmacie, null, QUAND);
+		expect(await j.lire()).toBeNull();
+		const [r] = await j.base.select().from(responsabilite).where(eq(responsabilite.id, j.pharmacie));
+		expect(r!.demandesGardees).toEqual(avant);
+		await reglerDemandes(j.base, j.claire, j.pharmacie, r!.demandesGardees, QUAND);
+		expect(await j.lire()).toEqual(avant);
+	});
+
+	it('deux réglages en même temps : un seul s’écrit, l’autre est refusé sans rien écrire', async () => {
+		const j = await jeu();
+		const resultats = await Promise.allSettled([
+			reglerDemandes(j.base, j.claire, j.pharmacie, { etapes: [{ nom: 'Commandée' }], derniere: 'Faite' }, QUAND),
+			reglerDemandes(j.base, j.tom, j.pharmacie, { etapes: [{ nom: 'Reçue' }], derniere: 'Faite' }, QUAND)
+		]);
+		expect(resultats.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+		expect(String((resultats.find((x) => x.status === 'rejected') as PromiseRejectedResult).reason)).toContain('Demande changée entre-temps');
+		expect((await j.lire())!.etapes).toHaveLength(1);
+		expect(await j.base.select().from(journal).where(eq(journal.action, 'regler_demandes'))).toHaveLength(1);
 	});
 });
 

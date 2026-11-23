@@ -1,10 +1,10 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
 import { instruction, type Base } from './base.ts';
 import { enCours, exigerDate, exigerDateHeure } from './dates.ts';
 import { aLeDroit, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import { peutDemander } from './habillement.ts';
-import { ligneJournal, ligneJournalSi } from './journal.ts';
+import { ligneJournalSi } from './journal.ts';
 import { STATUTS_AVEC_ACCES, type FilDemande, type QuestionDemande, type ReglageDemandes } from './listes.ts';
 import { mettreEnFile } from './notifications.ts';
 import { attribution, avisDemandeReferent, demandeReferent, filDemandeReferent, personne, responsabilite, responsabiliteDroit } from './schema.ts';
@@ -26,20 +26,13 @@ export function recoitPossible(r: { typePerimetre: string; systeme: string | nul
 	return r.typePerimetre === 'centre' && r.systeme === null && r.archiveeLe === null && !droits.includes('GERER_HABILLEMENT');
 }
 
-// Qui règle : qui gère les rôles (tout), ou un titulaire en cours d'un rôle qui reçoit déjà des demandes (ses étapes seulement).
+// Qui règle : qui gère les rôles, le chef de centre et l'adjoint (tout), ou un titulaire en cours d'un rôle qui reçoit déjà
+// des demandes (ses étapes seulement).
 export async function peutReglerDemandes(base: Base, acteur: Acteur, roleId: number, recoit: boolean, aujourdhui: string): Promise<'tout' | 'etapes' | null> {
 	if (acteur.type === 'super' || (await aLeDroit(base, acteur, 'GERER_LISTES', { type: 'centre' }, aujourdhui))) return 'tout';
-	if (!recoit) return null;
-	return (await estTitulaire(base, acteur.id, roleId, aujourdhui)) ? 'etapes' : null;
-}
-
-async function estTitulaire(base: Base, personneId: number, roleId: number, aujourdhui: string): Promise<boolean> {
-	const lignes = await base
-		.select({ debut: attribution.debut, fin: attribution.fin })
-		.from(attribution)
-		.innerJoin(personne, eq(personne.id, attribution.personneId))
-		.where(and(eq(attribution.personneId, personneId), eq(attribution.responsabiliteId, roleId), eq(attribution.perimetreType, 'centre'), sql`${personne.statut} in (select value from json_each(${JSON.stringify(STATUTS_AVEC_ACCES)}))`));
-	return lignes.some((l) => enCours(l.debut, l.fin, aujourdhui));
+	const g = gestionnairesDe(await lectureGestionnaires(base, roleId), aujourdhui);
+	if (g.chefs.includes(acteur.id)) return 'tout';
+	return recoit && g.titulaires.includes(acteur.id) ? 'etapes' : null;
 }
 
 // Le nouveau réglage, vérifié : chaque étape gardée par son identifiant, les nouvelles en reçoivent un.
@@ -77,26 +70,43 @@ export async function reglerDemandes(base: Base, acteur: Acteur, roleId: number,
 	if (qui === null || (qui === 'etapes' && (reglage === null || actuel === null))) throw new RefusDroit('GERER_LISTES', { type: 'centre' }, 'Réservé à qui gère les rôles et aux titulaires du rôle');
 
 	let nouveau: ReglageDemandes | null = null;
+	let retirees: string[] = [];
 	if (reglage === null) {
 		if (occupees.length > 0) throw new DonneeInvalide('Demandes en cours');
 	} else {
-		nouveau = reglageVerifie(actuel, reglage);
+		// Recoché : les étapes gardées au décochage gardent leurs identifiants.
+		nouveau = reglageVerifie(actuel ?? role.demandesGardees, reglage);
 		const gardees = new Set(nouveau.etapes.map((e) => e.id));
-		if (occupees.some((o) => actuel?.etapes.some((e) => e.id === o.etape) && !gardees.has(o.etape))) throw new DonneeInvalide('Étape occupée');
+		retirees = (actuel?.etapes ?? []).map((e) => e.id).filter((id) => !gardees.has(id));
+		if (occupees.some((o) => retirees.includes(o.etape))) throw new DonneeInvalide('Étape occupée');
 	}
+	// Gardé : rien n'est écrit si le réglage a changé entre-temps, ou si une demande en cours est arrivée à une étape retirée
+	// (à n'importe quelle étape, pour un décochage).
+	const enCoursLa = and(eq(demandeReferent.responsabiliteId, roleId), isNull(demandeReferent.finLe), nouveau === null ? undefined : inArray(demandeReferent.etape, retirees.length ? retirees : ['']));
+	const garde = and(
+		eq(responsabilite.id, roleId),
+		actuel === null ? isNull(responsabilite.demandes) : sql`${responsabilite.demandes} IS ${JSON.stringify(actuel)}`,
+		sql`NOT EXISTS (SELECT 1 FROM ${demandeReferent} WHERE ${enCoursLa})`
+	);
+	const jeton = sql`(SELECT ${responsabilite.demandes} FROM ${responsabilite} WHERE ${responsabilite.id} = ${roleId}) IS ${nouveau === null ? null : JSON.stringify(nouveau)}`;
 	// Une étape renommée : le fil des demandes du rôle suit son nouveau nom.
 	const renommees = (nouveau?.etapes ?? []).filter((e) => actuel?.etapes.some((x) => x.id === e.id && x.nom !== e.nom));
 	if (nouveau && actuel && nouveau.derniere !== actuel.derniere) renommees.push({ id: 'faite', nom: nouveau.derniere });
-	await base.batch([
-		base.update(responsabilite).set({ demandes: nouveau }).where(eq(responsabilite.id, roleId)),
+	const ecrit = await base.batch([
+		base
+			.update(responsabilite)
+			.set(nouveau === null ? { demandes: null, demandesGardees: actuel } : { demandes: nouveau, demandesGardees: null })
+			.where(garde)
+			.returning({ id: responsabilite.id }),
 		...renommees.map((e) =>
 			base
 				.update(filDemandeReferent)
 				.set({ nomEtape: e.nom })
-				.where(and(eq(filDemandeReferent.etape, e.id), inArray(filDemandeReferent.demandeId, base.select({ id: demandeReferent.id }).from(demandeReferent).where(eq(demandeReferent.responsabiliteId, roleId)))))
+				.where(and(eq(filDemandeReferent.etape, e.id), inArray(filDemandeReferent.demandeId, base.select({ id: demandeReferent.id }).from(demandeReferent).where(eq(demandeReferent.responsabiliteId, roleId))), jeton))
 		),
-		ligneJournal(base, { acteur: acteur.type === 'super' ? `super:${acteur.email}` : `personne:${acteur.id}`, action: 'regler_demandes', cibleType: 'responsabilite', cibleId: roleId, details: nouveau ? { recoit: true, etapes: nouveau.etapes.map((e) => e.nom), derniere: nouveau.derniere } : { recoit: false } }, maintenant)
+		ligneJournalSi(base, { acteur: acteur.type === 'super' ? `super:${acteur.email}` : `personne:${acteur.id}`, action: 'regler_demandes', cibleType: 'responsabilite', cibleId: roleId, details: nouveau ? { recoit: true, etapes: nouveau.etapes.map((e) => e.nom), derniere: nouveau.derniere } : { recoit: false } }, maintenant, jeton)
 	]);
+	if ((ecrit[0] as unknown[]).length === 0) throw new DonneeInvalide('Demande changée entre-temps');
 }
 
 // Des demandes en cours pour ce rôle (archiver est alors refusé). Une requête.
@@ -289,7 +299,8 @@ export async function gesteDemande(base: Base, acteur: Acteur, id: number, geste
 		lectureGestionnaires(base, sql`(SELECT ${demandeReferent.responsabiliteId} FROM ${demandeReferent} WHERE ${demandeReferent.id} = ${id})`)
 	]);
 	const g = gestionnairesDe(lignes, aujourdhui);
-	const gere = g.titulaires.includes(moi) || g.chefs.includes(moi);
+	// Un titulaire ne traite pas sa propre demande : les autres titulaires, ou le chef et l'adjoint, s'en chargent.
+	const gere = g.chefs.includes(moi) || (g.titulaires.includes(moi) && d?.demande.demandeurId !== moi);
 	if (!d || (d.demande.demandeurId !== moi && !gere)) throw new DonneeInvalide('Demande inconnue');
 	const a = d.demande;
 	const reglage = lireReglage(d.reglage);
@@ -336,11 +347,11 @@ export async function gesteDemande(base: Base, acteur: Acteur, id: number, geste
 		annulation: { titre: `Demande annulée par ${nom}`, texte: ex }
 	};
 	// Les décisions de qui gère vont au journal, donc au suivi du centre.
-	const JOURNAL: Partial<Record<FilDemande, string>> = { prise: 'prendre_demande', etape: 'avancer_demande', fin: 'finir_demande', refus: 'refuser_demande' };
+	const JOURNAL: Record<FilDemande, string | null> = { prise: 'prendre_demande', reprise: 'reprendre_demande', question: 'questionner_demande', reponse: null, precision: null, etape: 'avancer_demande', fin: 'finir_demande', refus: 'refuser_demande', annulation: 'annuler_demande' };
 	// L'agent apprend chaque étape et chaque question ; l'ancien suiveur, la reprise. Les réponses, précisions et annulations de l'agent
 	// vont à qui la suit ; tant que personne ne la suit, ses précisions vont aux titulaires (jamais au chef).
 	const deLAgent = quoi === 'reponse' || quoi === 'precision' || quoi === 'annulation';
-	const pourQui = quoi === 'reprise' ? (a.prisePar !== null ? [a.prisePar] : []) : !deLAgent ? [a.demandeurId] : a.prisePar !== null ? [a.prisePar] : quoi === 'annulation' ? [] : g.titulaires;
+	const pourQui = quoi === 'reprise' ? (a.prisePar !== null ? [a.prisePar] : []) : !deLAgent ? [a.demandeurId] : a.prisePar !== null ? [a.prisePar] : quoi === 'annulation' ? [] : destinataires(g, a.demandeurId);
 	// Un agent parti (ou effacé) n'est plus prévenu.
 	const prevenus = [...new Set(pourQui)].filter((x) => x !== moi && !(x === a.demandeurId && d.statut === 'parti'));
 
@@ -369,6 +380,8 @@ export type VueDemandeReferent = DemandeReferentListee & {
 	vers: { id: string; nom: string }[];
 	// Les étapes du suivi, dans l'ordre du moment : Demandée, Prise en compte, les intermédiaires, la dernière.
 	etapes: { id: string; nom: string }[];
+	// Le rang de la dernière étape franchie d'après le fil.
+	franchie: number;
 };
 
 const colonnes = {
@@ -460,7 +473,7 @@ export async function lireDemandeReferent(base: Base, acteur: Acteur, id: number
 			.innerJoin(responsabilite, eq(responsabilite.id, demandeReferent.responsabiliteId))
 			.where(eq(demandeReferent.id, id)),
 		base
-			.select({ quoi: filDemandeReferent.quoi, nomEtape: filDemandeReferent.nomEtape, texte: filDemandeReferent.texte, le: filDemandeReferent.le, par: filDemandeReferent.par, prenom: personne.prenom, nom: personne.nom })
+			.select({ quoi: filDemandeReferent.quoi, etape: filDemandeReferent.etape, nomEtape: filDemandeReferent.nomEtape, texte: filDemandeReferent.texte, le: filDemandeReferent.le, par: filDemandeReferent.par, prenom: personne.prenom, nom: personne.nom })
 			.from(filDemandeReferent)
 			.innerJoin(personne, eq(personne.id, filDemandeReferent.par))
 			.where(eq(filDemandeReferent.demandeId, id))
@@ -472,11 +485,14 @@ export async function lireDemandeReferent(base: Base, acteur: Acteur, id: number
 			.where(and(eq(avisDemandeReferent.personneId, moi ?? 0), eq(avisDemandeReferent.url, lienDemande(id)), isNull(avisDemandeReferent.lueLe)))
 	]);
 	const g = gestionnairesDe(lignes, aujourdhui);
-	const gere = moi !== null && (g.titulaires.includes(moi) || g.chefs.includes(moi));
+	const gere = moi !== null && (g.chefs.includes(moi) || (g.titulaires.includes(moi) && l?.demandeurId !== moi));
 	if (!l || (l.demandeurId !== moi && !gere && acteur.type !== 'super')) throw new DonneeInvalide('Demande inconnue');
 	const { demandeurId, priseParId, mot, icone, ...liste } = l;
 	const reglage = lireReglage(liste.reglage);
 	const ordre = reglage?.etapes ?? [];
+	const etapes = [{ id: 'demandee', nom: 'Demandée' }, { id: 'prise', nom: 'Prise en compte' }, ...ordre, { id: 'faite', nom: nomEtape('faite', reglage) }];
+	// La dernière étape franchie, d'après le fil (pour une demande refusée ou annulée) : 0 pour Demandée.
+	const franchie = Math.max(0, ...fil.map((f) => (f.quoi === 'etape' ? etapes.findIndex((e) => e.id === f.etape) : ['prise', 'reprise', 'question'].includes(f.quoi) ? 1 : 0)));
 	const permis = gestesDemande({ etape: l.etape, question: l.question, demandeur: demandeurId, prisePar: priseParId }, ordre.map((e) => e.id), { moi, gere });
 	return {
 		...vue(liste),
@@ -486,22 +502,51 @@ export async function lireDemandeReferent(base: Base, acteur: Acteur, id: number
 		fil: fil.map((f) => ({ quoi: f.quoi, etape: f.nomEtape, texte: f.texte, le: f.le, par: nomDe(f), deLAgent: f.par === demandeurId })),
 		gestes: permis.gestes,
 		vers: permis.vers.map((v) => ({ id: v, nom: nomEtape(v, reglage) })),
-		etapes: [{ id: 'demandee', nom: 'Demandée' }, { id: 'prise', nom: 'Prise en compte' }, ...ordre, { id: 'faite', nom: nomEtape('faite', reglage) }]
+		etapes,
+		franchie
 	};
 }
 
-// Un agent qui passe à un profil extérieur : ses demandes qui n'ont pas dépassé « Prise en compte » sont annulées (l'annulation au fil,
-// puis la demande close). Écritures à placer dans un batch.
-export function annulerDemandesAuPassage(base: Base, personneId: number, maintenant: string) {
+// Un agent qui part ou passe à un profil extérieur : ses demandes qui n'ont pas dépassé « Prise en compte » sont annulées, au nom
+// de qui fait le geste (`par`, une personne ; sinon l'agent lui-même). Qui les suivait est prévenu (cloche). Écritures à placer
+// dans un batch, dans cet ordre.
+export function annulerDemandesAuPassage(base: Base, personneId: number, par: number | null, agent: { prenom: string; nom: string }, maintenant: string) {
 	const annulables = and(eq(demandeReferent.demandeurId, personneId), inArray(demandeReferent.etape, ['demandee', 'prise']));
+	const signataire = par ?? personneId;
 	return [
+		base.insert(avisDemandeReferent).select(
+			base
+				.select({
+					id: sql<number | null>`null`.as('id'),
+					personneId: sql<number>`${demandeReferent.prisePar}`.as('personne_id'),
+					titre: sql<string>`${`Demande ${de(nomDe(agent))} annulée`}`.as('titre'),
+					texte: sql<string>`${demandeReferent.texte}`.as('texte'),
+					url: sql<string>`'/demandes/' || ${demandeReferent.id}`.as('url'),
+					creeLe: sql<string>`${maintenant}`.as('cree_le'),
+					lueLe: sql<string | null>`null`.as('lue_le')
+				})
+				.from(demandeReferent)
+				.where(and(annulables, isNotNull(demandeReferent.prisePar), ne(demandeReferent.prisePar, signataire)))
+		),
 		base.insert(filDemandeReferent).select(
 			base
-				.select({ id: sql<null>`null`.as('id'), demandeId: demandeReferent.id, quoi: sql<string>`'annulation'`.as('quoi'), etape: sql<null>`null`.as('etape'), nomEtape: sql<null>`null`.as('nom_etape'), texte: sql<null>`null`.as('texte'), par: sql<number>`${personneId}`.as('par'), le: sql<string>`${maintenant}`.as('le'), jeton: sql<null>`null`.as('jeton') })
+				.select({ id: sql<null>`null`.as('id'), demandeId: demandeReferent.id, quoi: sql<string>`'annulation'`.as('quoi'), etape: sql<null>`null`.as('etape'), nomEtape: sql<null>`null`.as('nom_etape'), texte: sql<null>`null`.as('texte'), par: sql<number>`${signataire}`.as('par'), le: sql<string>`${maintenant}`.as('le'), jeton: sql<null>`null`.as('jeton') })
 				.from(demandeReferent)
 				.where(annulables)
 		),
 		base.update(demandeReferent).set({ etape: 'annulee', question: null, finLe: maintenant, majLe: maintenant }).where(annulables)
+	] as const;
+}
+
+// L'effacement d'un agent parti (partis.ts) : ses demandes et leur fil ; il ne suit plus celles des autres. Ses lignes au fil
+// des autres demandes restent, sous « Ancien agent ». Écritures à placer dans un batch.
+export function effacerDemandesDe(base: Base, personneId: number) {
+	const siennes = base.select({ id: demandeReferent.id }).from(demandeReferent).where(eq(demandeReferent.demandeurId, personneId));
+	return [
+		base.delete(avisDemandeReferent).where(inArray(avisDemandeReferent.url, base.select({ url: sql<string>`'/demandes/' || ${demandeReferent.id}` }).from(demandeReferent).where(eq(demandeReferent.demandeurId, personneId)))),
+		base.delete(filDemandeReferent).where(inArray(filDemandeReferent.demandeId, siennes)),
+		base.delete(demandeReferent).where(eq(demandeReferent.demandeurId, personneId)),
+		base.update(demandeReferent).set({ prisePar: null }).where(eq(demandeReferent.prisePar, personneId))
 	] as const;
 }
 
@@ -532,8 +577,8 @@ export function lectureDemandesADecider(base: Base, moi: number, aujourdhui: str
 			and(
 				isNull(demandeReferent.finLe),
 				or(
-					and(eq(demandeReferent.etape, 'demandee'), or(inArray(demandeReferent.responsabiliteId, mesRoles), and(chef, sansTitulaire))),
-					and(eq(demandeReferent.prisePar, moi), or(and(eq(demandeReferent.etape, 'prise'), isNull(demandeReferent.question)), eq(demandeReferent.question, 'repondue')))
+					and(eq(demandeReferent.etape, 'demandee'), or(and(inArray(demandeReferent.responsabiliteId, mesRoles), ne(demandeReferent.demandeurId, moi)), and(chef, sansTitulaire))),
+					and(eq(demandeReferent.prisePar, moi), eq(demandeReferent.question, 'repondue'))
 				)
 			)
 		)
@@ -554,7 +599,6 @@ export function demandesADecider(lignes: ADeciderLu[], roles: Set<number>): Map<
 		if (n.length === 1) ajouter(cle, { texte: `Demande ${de(nomDe(n[0]))} à prendre en compte${precision}`, lien: lienDemande(n[0]!.id) });
 		else ajouter(cle, { texte: `${n.length} demandes à prendre en compte${precision}`, lien: `/demandes/role/${roleId}` });
 	}
-	for (const l of lignes.filter((x) => x.etape !== 'demandee'))
-		ajouter(cleDe(l.roleId), { texte: `${l.question === 'repondue' ? 'Réponse' : 'Demande'} ${de(nomDe(l))} ${l.question === 'repondue' ? 'à lire' : 'à traiter'} (${extraitDemandeReferent(l.texte, 60)})`, lien: lienDemande(l.id) });
+	for (const l of lignes.filter((x) => x.etape !== 'demandee')) ajouter(cleDe(l.roleId), { texte: `Réponse ${de(nomDe(l))} à lire (${extraitDemandeReferent(l.texte, 60)})`, lien: lienDemande(l.id) });
 	return parCasquette;
 }

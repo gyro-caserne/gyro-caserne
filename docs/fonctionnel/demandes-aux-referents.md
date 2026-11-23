@@ -12,9 +12,9 @@ Un agent demande ce qu'il lui faut à un référent, en texte libre, et suit sa 
 - **Reçoit des demandes** : une case, pour un rôle de tout le centre. Jamais un rôle système (chef de centre, adjoint, chef de garde), ni, avant C2, le rôle qui gère l'habillement.
 - **Étapes** : de 0 à 6 étapes intermédiaires, de 30 caractères au plus, qu'on ajoute, renomme, monte, descend ou retire. La **dernière étape** se renomme (« Faite » par défaut, par exemple « Livrée »).
 - **Étapes fixes** : « Demandée » et « Prise en compte » au début, « Refusée » et « Annulée » à la fin. Elles ne se renomment pas, et une étape réglée ne prend pas leur nom.
-- **Qui règle** : qui gère les rôles (le chef, l'adjoint, le référent technique) ; les titulaires en cours, seulement les étapes et la dernière.
-- **Garde-fous** : une étape où se trouve une demande en cours ne se retire pas (elle se renomme, et les demandes suivent le nouveau nom). Le rôle ne se décoche pas, et ne s'archive pas, tant que des demandes sont en cours.
-- **Journal** : chaque réglage y figure, et dans le suivi du centre.
+- **Qui règle** : le chef, l'adjoint et qui gère les rôles (le référent technique) ; les titulaires en cours, seulement les étapes et la dernière.
+- **Garde-fous** : une étape où se trouve une demande en cours ne se retire pas (elle se renomme, et les demandes suivent le nouveau nom). Le rôle ne se décoche pas, et ne s'archive pas, tant que des demandes sont en cours. Décoché, il garde son réglage : recoché, il le retrouve. Deux réglages au même moment : un seul s'écrit, l'autre est refusé.
+- **Journal** : chaque réglage y figure, et dans le suivi du centre, comme la prise en compte, la reprise, la question, chaque étape, la fin, le refus et l'annulation.
 - **Au départ** : rien n'est coché sur les rôles d'un centre déjà installé, le chef coche la pharmacie et le matériel. Un nouveau centre a le référent pharmacie et le référent engins cochés, sans étape intermédiaire ; de même pour un rôle créé à partir des modèles pharmacie et matériel.
 
 ## Le parcours d'une demande
@@ -32,7 +32,7 @@ Un agent demande ce qu'il lui faut à un référent, en texte libre, et suit sa 
 
 - **Demander** : tout agent connecté ; pas les extérieurs (retraités, réserve citoyenne), ni le super administrateur.
 - **Voir** : l'auteur, les titulaires en cours du rôle, le chef et l'adjoint (le super administrateur en lecture).
-- **Agir** : les titulaires en cours, le chef et l'adjoint, pour qu'une demande ne reste jamais bloquée. Un titulaire dont le rôle a pris fin ne voit plus et n'agit plus.
+- **Agir** : les titulaires en cours, le chef et l'adjoint, pour qu'une demande ne reste jamais bloquée. Un titulaire ne traite pas sa propre demande : les autres titulaires (seul, le chef et l'adjoint) s'en chargent. Un titulaire dont le rôle a pris fin ne voit plus et n'agit plus.
 - **Sans titulaire** : le chef et l'adjoint reçoivent les demandes du rôle.
 
 ## Notifications (cloche, téléphone, e-mail)
@@ -44,12 +44,12 @@ Un agent demande ce qu'il lui faut à un référent, en texte libre, et suit sa 
 ## Points d'entrée
 
 - **Caserne, Faire une demande** : la nouvelle demande, mes demandes (en cours, puis terminées), et les **demandes reçues** de mes rôles (tous les rôles pour le chef et l'adjoint), avec leur nombre en cours.
-- **Accueil, casquette du rôle** : dans « À décider », les demandes à prendre en compte, celles qu'on suit qui attendent, et celles dont la réponse est arrivée ; puis **Toutes les demandes**. Sans titulaire, la même chose dans « Le centre » du chef et de l'adjoint.
+- **Accueil, casquette du rôle** : dans « À décider », les demandes à prendre en compte et celles qu'on suit dont la réponse est arrivée ; puis **Toutes les demandes**. Sans titulaire, la même chose dans « Le centre » du chef et de l'adjoint.
 - **Comités et référents** : **Demander** sur la ligne d'un rôle qui reçoit des demandes.
 
 ## Conservation
 
-Une demande finie est effacée avec son fil 24 mois après sa fin, par la tâche de nuit, comme pour l'habillement. Un agent passé en retraité voit annulées ses demandes qui n'ont pas dépassé « Prise en compte ».
+Une demande finie est effacée avec son fil 24 mois après sa fin, par la tâche de nuit, comme pour l'habillement. Au départ d'un agent, ou à son passage en retraité, ses demandes qui n'ont pas dépassé « Prise en compte » sont annulées au nom de qui fait le geste, et qui les suivait est prévenu. À l'effacement d'un agent parti (12 mois après), ses demandes et leur fil sont effacés ; il ne suit plus celles des autres, et ses lignes au fil des autres restent sous « Ancien agent ».
 
 ## Exemple
 

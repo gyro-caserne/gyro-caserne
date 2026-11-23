@@ -23,8 +23,8 @@
 	const peut = (quoi: QuoiGesteDemande) => d.gestes.includes(quoi);
 	const etat = $derived(etatDemandeReferent(d));
 	const arretee = $derived(d.etape === 'refusee' || d.etape === 'annulee');
-	// Le rang de l'étape actuelle dans le suivi ; refusée ou annulée : ce qui s'est passé avant (prise en compte ou non).
-	const rang = $derived(arretee ? (d.prisePar ? 2 : 1) : d.etape === 'faite' ? d.etapes.length : Math.max(0, d.etapes.findIndex((e) => e.id === d.etape)));
+	// Le rang de l'étape actuelle dans le suivi ; refusée ou annulée : les étapes franchies d'après le fil.
+	const rang = $derived(arretee ? d.franchie + 1 : d.etape === 'faite' ? d.etapes.length : Math.max(0, d.etapes.findIndex((e) => e.id === d.etape)));
 	const etapeDe = (i: number) => (i < rang ? 'faite' : arretee ? 'a-venir' : i === rang ? 'en-cours' : 'a-venir');
 	const LUS: Record<string, string> = { faite: 'faite', 'en-cours': 'en cours', 'a-venir': 'à venir' };
 	const moment = (le: string) => `${dateCourte(le)}, ${heureCourte(le)}`;
@@ -107,7 +107,7 @@
 					{#each d.etapes as e, i (e.id)}
 						<li class={etapeDe(i)} aria-current={etapeDe(i) === 'en-cours' ? 'step' : undefined}>
 							<span class="puce" aria-hidden="true">{#if etapeDe(i) === 'faite'}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>{/if}</span>
-							<span>{e.nom}<span class="masque">{' '}: {LUS[etapeDe(i)]}</span></span>
+							<span>{e.nom}<span class="masque">{', '}{LUS[etapeDe(i)]}</span></span>
 						</li>
 					{/each}
 				</ol>

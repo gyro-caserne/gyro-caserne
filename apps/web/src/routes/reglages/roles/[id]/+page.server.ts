@@ -174,7 +174,7 @@ export const actions: Actions = {
 	// Reçoit des demandes, et ses étapes.
 	demandes: async ({ locals, params, request }) => {
 		const { role } = await lireRole(locals, params.id);
-		return actionReglage(locals, role.id, role.demandes, await request.formData());
+		return actionReglage(locals, role.id, role.demandes, await request.formData(), role.demandesGardees);
 	},
 
 	archiver: async ({ locals, params, request }) => {

@@ -103,7 +103,7 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 		// Les autres rôles du centre, rangés selon leur nature.
 		fonctions: roles.filter((r) => r.portee === 'centre' && r.systeme === null && r.nature === 'fonction').map(roleTenu),
 		missions: roles.filter((r) => r.portee === 'centre' && r.systeme === null && r.nature === 'mission').map(roleTenu),
-		peutDemander: moi !== null
+		peutDemander: moi !== null && moi.typePersonne !== 'exterieur'
 	};
 }
 

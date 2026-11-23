@@ -9,7 +9,8 @@ const PHRASES_REGLAGE: Record<string, string> = {
 	'Étape occupée': 'Une demande en cours se trouve à cette étape. Elle ne se retire qu’une fois cette demande avancée ou finie. Vous pouvez la renommer.',
 	'Étape inconnue': 'Une étape a changé entre-temps. Rechargez la page.',
 	'Demandes en cours': 'Des demandes sont en cours. Le rôle les reçoit jusqu’à ce qu’elles soient finies.',
-	'Ce rôle ne reçoit pas de demandes': 'Ce rôle ne peut pas recevoir de demandes.'
+	'Ce rôle ne reçoit pas de demandes': 'Ce rôle ne peut pas recevoir de demandes.',
+	'Demande changée entre-temps': 'Le réglage ou une demande vient de changer. Rechargez la page, puis refaites votre geste.'
 };
 export const phraseReglage = (message: string) => PHRASES_REGLAGE[message] ?? 'Le réglage n’a pas pu être enregistré.';
 

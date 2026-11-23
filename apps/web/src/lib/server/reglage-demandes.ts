@@ -32,14 +32,15 @@ const SUCCES: Record<string, string> = {
 };
 
 // L'action commune aux Réglages du rôle et à la liste du rôle (titulaires) : cocher ou décocher, ou régler les étapes.
-export async function actionReglage(locals: App.Locals, roleId: number, actuel: ReglageDemandes | null, f: FormData) {
+export async function actionReglage(locals: App.Locals, roleId: number, actuel: ReglageDemandes | null, f: FormData, gardees: ReglageDemandes | null = null) {
 	const { acteur, base } = locals;
 	const cible = 'demandes' as const;
 	const geste = String(f.get('geste') ?? '').split(':')[0]!;
 	let reglage: { etapes: Ligne[]; derniere: string } | null;
 	let succes: string;
 	if (geste === 'basculer') {
-		reglage = f.get('recoit') === '1' ? (actuel ?? { etapes: [], derniere: 'Faite' }) : null;
+		// Recoché : le réglage gardé au décochage revient.
+		reglage = f.get('recoit') === '1' ? (actuel ?? gardees ?? { etapes: [], derniere: 'Faite' }) : null;
 		succes = reglage ? 'Le rôle reçoit des demandes.' : 'Le rôle ne reçoit plus de demandes.';
 	} else {
 		reglage = etapesDuFormulaire(f, actuel);

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e3af6f49-c300-4a36-9304-3fff410372f9",
+  "id": "01a01b7c-85c4-47c2-817a-37a6ed80e3db",
   "prevId": "27341e29-3a90-4f73-9320-e82278609347",
   "tables": {
     "abonnement_push": {
@@ -5454,6 +5454,13 @@
         },
         "demandes": {
           "name": "demandes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "demandes_gardees": {
+          "name": "demandes_gardees",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
