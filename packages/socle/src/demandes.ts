@@ -237,7 +237,8 @@ export async function demanderAuReferent(base: Base, acteur: Acteur, roleId: num
 						mot: sql<null>`null`.as('mot'),
 						creeLe: sql<string>`${maintenant}`.as('cree_le'),
 						majLe: sql<string>`${maintenant}`.as('maj_le'),
-						finLe: sql<null>`null`.as('fin_le')
+						finLe: sql<null>`null`.as('fin_le'),
+						habillementId: sql<null>`null`.as('habillement_id')
 					})
 					.from(responsabilite)
 					.where(recoit)

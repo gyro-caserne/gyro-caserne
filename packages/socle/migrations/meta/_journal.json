@@ -253,6 +253,20 @@
       "when": 1795398825266,
       "tag": "0035_demandes_referents",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1795408602486,
+      "tag": "0036_habillement_dans_demandes",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1795408615433,
+      "tag": "0037_reprise_habillement",
+      "breakpoints": true
     }
   ]
 }

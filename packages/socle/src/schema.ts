@@ -1062,9 +1062,13 @@ export const demandeReferent = sqliteTable(
 		mot: text('mot'),
 		creeLe: text('cree_le').notNull(),
 		majLe: text('maj_le').notNull(),
-		finLe: text('fin_le')
+		finLe: text('fin_le'),
+		// Une demande d'habillement reprise (migration 0036) : son numéro d'origine, pour retrouver les anciennes adresses.
+		// Sans clé étrangère : l'ancienne table sera supprimée.
+		habillementId: integer('habillement_id')
 	},
 	(t) => [
+		uniqueIndex('demande_referent_habillement').on(t.habillementId),
 		index('demande_referent_demandeur').on(t.demandeurId),
 		index('demande_referent_role').on(t.responsabiliteId, t.finLe),
 		index('demande_referent_fin').on(t.finLe),
