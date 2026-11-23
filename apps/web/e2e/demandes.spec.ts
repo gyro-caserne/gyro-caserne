@@ -46,7 +46,7 @@ async function referentePharmacie(gestion: Page): Promise<string> {
 async function blocDemandes(gestion: Page) {
 	await gestion.goto('/reglages');
 	await gestion.getByRole('link', { name: /Référent pharmacie/ }).first().click();
-	await expect(gestion.getByRole('heading', { level: 1, name: 'Référent pharmacie' })).toBeVisible();
+	await expect(gestion.getByRole('heading', { level: 1, name: 'Référent pharmacie', exact: true })).toBeVisible();
 	const bloc = gestion.locator('details', { has: gestion.locator('summary', { hasText: /^Demandes$/ }) });
 	if (!(await bloc.getAttribute('open'))) await bloc.locator('summary').click();
 	return bloc;
@@ -81,7 +81,7 @@ test('demande à la pharmacie, de la question à la fin, sans violation', async 
 	await agent.goto('/caserne');
 	await agent.getByRole('link', { name: /^Faire une demande/ }).click();
 	await agent.waitForLoadState('networkidle');
-	await agent.getByRole('radio', { name: 'Référent pharmacie' }).check();
+	await agent.getByRole('radio', { name: 'Référent pharmacie', exact: true }).check();
 	await agent.getByLabel('Votre demande').fill(texte);
 	await sansViolation(agent);
 	await agent.getByRole('button', { name: 'Envoyer la demande' }).click();
