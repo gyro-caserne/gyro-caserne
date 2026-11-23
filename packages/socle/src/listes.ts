@@ -130,6 +130,17 @@ export type IssueHabillement = (typeof ISSUES_HABILLEMENT)[number];
 export const FIL_HABILLEMENT = ['prise', 'reprise', 'question', 'reponse', 'precision', 'stock', 'commande', 'refus', 'livraison', 'annulation'] as const;
 export type FilHabillement = (typeof FIL_HABILLEMENT)[number];
 
+// Demandes aux référents : les étapes fixes (les trois dernières la finissent) ; les étapes intermédiaires sont réglées sur le rôle,
+// repérées par un identifiant stable. Une question posée est un drapeau, pas une étape. Puis les lignes du fil.
+export const ETAPES_FIXES_DEMANDE = ['demandee', 'prise', 'faite', 'refusee', 'annulee'] as const;
+export type EtapeFixeDemande = (typeof ETAPES_FIXES_DEMANDE)[number];
+export const QUESTIONS_DEMANDE = ['posee', 'repondue'] as const;
+export type QuestionDemande = (typeof QUESTIONS_DEMANDE)[number];
+export const FIL_DEMANDE = ['prise', 'reprise', 'question', 'reponse', 'precision', 'etape', 'fin', 'refus', 'annulation'] as const;
+export type FilDemande = (typeof FIL_DEMANDE)[number];
+// Le réglage d'un rôle qui reçoit des demandes : ses étapes intermédiaires, dans l'ordre, et le nom de sa dernière étape.
+export type ReglageDemandes = { etapes: { id: string; nom: string }[]; derniere: string };
+
 export const RESPONSABILITES_SYSTEME = ['chef_centre', 'chef_centre_adjoint', 'chef_equipe'] as const;
 export type ResponsabiliteSysteme = (typeof RESPONSABILITES_SYSTEME)[number];
 

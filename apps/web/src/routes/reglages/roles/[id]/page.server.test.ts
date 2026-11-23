@@ -206,4 +206,32 @@ describe('page d’un rôle', () => {
 		const sys = await resp('Chef de garde');
 		expect(await agir('archiver', locaux(base, referent), sys.id, [['confirmation', 'oui']])).toMatchObject({ status: 400, data: { message: expect.stringContaining('système') } });
 	});
+
+	it('« Demandes » : la case, puis ajouter, renommer, déplacer, retirer les étapes ; une erreur dite clairement', async () => {
+		const { base, chef, resp } = await preparer();
+		const pharma = await resp('Référent pharmacie');
+		const lire = async () => (await resp('Référent pharmacie')).demandes;
+		const demandes = async (corps: [string, string][]) => agir('demandes', locaux(base, chef), pharma.id, corps);
+		expect((await charger(load, locaux(base, chef), { id: String(pharma.id) })).demandesPossibles).toBe(true);
+		expect(await demandes([['geste', 'basculer']])).toMatchObject({ cible: 'demandes', succes: 'Le rôle ne reçoit plus de demandes.' });
+		expect(await lire()).toBeNull();
+		expect(await demandes([['geste', 'basculer'], ['recoit', '1']])).toMatchObject({ succes: 'Le rôle reçoit des demandes.' });
+		await demandes([['geste', 'ajouter'], ['nouvelle', 'Commandée']]);
+		await demandes([['geste', 'ajouter'], ['nouvelle', 'Reçue']]);
+		const [a, b] = (await lire())!.etapes;
+		expect(await demandes([['geste', `monter:${b!.id}`]])).toMatchObject({ succes: 'Étape déplacée.' });
+		expect((await lire())!.etapes.map((e) => e.nom)).toEqual(['Reçue', 'Commandée']);
+		await demandes([['etape-id', b!.id], ['etape-nom', 'Arrivée'], ['etape-id', a!.id], ['etape-nom', 'Commandée'], ['derniere', 'Livrée'], ['geste', 'enregistrer']]);
+		expect(await lire()).toEqual({ etapes: [{ id: b!.id, nom: 'Arrivée' }, { id: a!.id, nom: 'Commandée' }], derniere: 'Livrée' });
+		await demandes([['geste', `retirer:${b!.id}`]]);
+		expect((await lire())!.etapes.map((e) => e.nom)).toEqual(['Commandée']);
+		expect(await demandes([['geste', 'ajouter'], ['nouvelle', 'commandée']])).toMatchObject({ status: 400, data: { cible: 'demandes', message: expect.stringContaining('nom différent') } });
+	});
+
+	it('« Demandes » : pas pour un rôle système ni pour le référent habillement', async () => {
+		const { base, chef, resp } = await preparer();
+		for (const nom of ['Chef de garde', 'Référent habillement']) expect((await charger(load, locaux(base, chef), { id: String((await resp(nom)).id) })).demandesPossibles).toBe(false);
+		const r = await agir('demandes', locaux(base, chef), (await resp('Référent habillement')).id, [['geste', 'basculer'], ['recoit', '1']]);
+		expect(r).toMatchObject({ status: 400, data: { message: 'Ce rôle ne peut pas recevoir de demandes.' } });
+	});
 });

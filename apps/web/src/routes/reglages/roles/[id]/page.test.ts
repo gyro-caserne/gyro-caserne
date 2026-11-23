@@ -202,4 +202,20 @@ describe('page d’un rôle', () => {
 		expect(page).toMatch(/<input type="radio" name="icone" value="camion" checked/);
 		expect(page).toContain('Camion');
 	});
+
+	it('« Demandes » : la case et les étapes, chacune avec ses gestes ; absent d’un rôle qui ne peut pas en recevoir', () => {
+		const reglage = { etapes: [{ id: 'ea', nom: 'Commandée' }, { id: 'eb', nom: 'Reçue' }], derniere: 'Livrée' };
+		const page = html({ role: role({ demandes: reglage }), demandesPossibles: true });
+		expect(page).toMatch(/<summary[^>]*>Demandes<\/summary>/);
+		expect(page).toContain('Reçoit des demandes');
+		expect(page).toMatch(/value="Commandée"/);
+		expect(page).toMatch(/value="Livrée"/);
+		expect(page).toContain('value="descendre:ea"');
+		expect(page).not.toContain('value="monter:ea"');
+		expect(page).toContain('value="monter:eb"');
+		expect(page).toContain('value="retirer:eb"');
+		expect(page).toContain('Ajouter l’étape');
+		expect(html({ role: role({ demandes: null }), demandesPossibles: true })).not.toContain('Enregistrer les étapes');
+		expect(html({ role: role({ demandes: null }), demandesPossibles: false })).not.toMatch(/>Demandes<\/summary>/);
+	});
 });

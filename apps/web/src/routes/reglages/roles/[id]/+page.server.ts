@@ -10,8 +10,10 @@ import {
 	listerResponsabilites,
 	MODELES,
 	modifierResponsabilite,
+	recoitPossible,
 	type Droit
 } from '@gyro-caserne/socle';
+import { actionReglage } from '#lib/server/reglage-demandes.ts';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import { appliquerNiveaux, DOMAINES, niveauxDe, type DomaineId } from '#lib/paquets.ts';
 import { accesReglages, attributeurDe, comitesChoix, echec, manque, niveauxChoisis, numero, texte, type Reponse, type Valeurs } from '#lib/server/formulaire-reglages.ts';
@@ -48,6 +50,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		modele: modele && { id: modele.id, nom: modele.nom, droits: modele.droits },
 		comitesChoix: await comitesChoix(base),
 		raison: raison(role),
+		// Le bloc « Demandes » : un rôle qui peut en recevoir, ou qui en reçoit encore.
+		demandesPossibles: role.demandes !== null || recoitPossible({ typePerimetre: role.portee, systeme: role.systeme, archiveeLe: role.archiveeLe }, role.droits.map((d) => d.droit)),
 		droitsMetier: DROITS.filter((d) => !estDroitPouvoir(d) && !estSansEffet(d)),
 		droitsPouvoir: DROITS.filter(estDroitPouvoir)
 	};
@@ -165,6 +169,12 @@ export const actions: Actions = {
 			return echec(erreur, cible, { droits: envoyes });
 		}
 		return { cible, succes: 'Les droits sont enregistrés.' } satisfies Reponse;
+	},
+
+	// Reçoit des demandes, et ses étapes.
+	demandes: async ({ locals, params, request }) => {
+		const { role } = await lireRole(locals, params.id);
+		return actionReglage(locals, role.id, role.demandes, await request.formData());
 	},
 
 	archiver: async ({ locals, params, request }) => {

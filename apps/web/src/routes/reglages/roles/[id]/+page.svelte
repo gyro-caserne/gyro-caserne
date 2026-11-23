@@ -11,6 +11,7 @@
 	import Groupe from '#lib/ui/Groupe.svelte';
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import Pastille from '#lib/ui/Pastille.svelte';
+	import ReglageEtapes from '#lib/demandes/ReglageEtapes.svelte';
 	import ChoixIcone from '../../ChoixIcone.svelte';
 	import Domaines from '../../Domaines.svelte';
 	import { NATURES, optionsAttributeur, PORTEES, quiAttribue, valeurAttributeur } from '../../roles.ts';
@@ -197,6 +198,14 @@
 		</form>
 	{/if}
 </details>
+
+{#if data.demandesPossibles && !lectureSeule}
+	<!-- Ouvert après chaque envoi : chaque geste recharge la page. -->
+	<details class="pli repli" {...concerne('demandes') ? { open: true } : {}}>
+		<summary>Demandes</summary>
+		<ReglageEtapes reglage={role.demandes} peutCocher action="?/demandes" {form} />
+	</details>
+{/if}
 
 {#if !lectureSeule}
 	<details class="pli repli" {...ouvert('archiver')}>

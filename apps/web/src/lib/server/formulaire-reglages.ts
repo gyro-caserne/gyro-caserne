@@ -80,6 +80,8 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Portée verrouillée, la responsabilité est tenue': { champ: 'portee', texte: 'La portée ne change pas tant que quelqu’un tient ou tiendra cette responsabilité.' },
 	'Droit verrouillé, impossible de le retirer': { champ: 'droits', texte: 'Un droit verrouillé ne se retire pas.' },
 	'Une responsabilité système ne s’archive pas': { texte: 'Une responsabilité système (chef de centre, adjoint, chef de garde) ne s’archive pas.' },
+	'Ce rôle reçoit des demandes': { texte: 'Ce rôle reçoit des demandes. Il reste de portée « Tout le centre » et ne prend pas le droit de gérer l’habillement.' },
+	'Demandes en cours': { texte: 'Des demandes adressées à ce rôle sont en cours. Il s’archive une fois qu’elles sont finies.' },
 	'Icône inconnue': { champ: 'icone', texte: 'Choisissez une icône de la liste.' },
 	'Modèle inconnu': { texte: 'Ce modèle n’existe pas. Choisissez-en un dans la liste.' },
 	'Profil inconnu': { texte: 'Ce profil n’existe pas.' },

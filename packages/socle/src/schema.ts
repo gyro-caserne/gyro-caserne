@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { AVIS_ETE, ETAPES_HABILLEMENT, FIL_HABILLEMENT, ISSUES_HABILLEMENT, AVIS_REMPLACEMENT, AVIS_RESERVATION, checkDans, ETATS_DEMANDE, ETATS_ENGIN, ETAPES_ANOMALIE, ETATS_PRISE, GENRES_DEMANDE, GENRES_ECART, MOTIFS_ATTENTE, SUIVIS_ANOMALIE, SITUATIONS_ENGIN, DROITS, ETATS_RESERVATION, FETES, FORMES_RESSOURCE, NATURES_RESPONSABILITE, REACTIONS, REPONSES_EVENEMENT, RESPONSABILITES_SYSTEME, STATUTS_OPERATIONNELS, SUPPRESSIONS_MESSAGE, TYPES_CONVERSATION, TYPES_PERIMETRE, TYPES_PERSONNE, TYPES_PHOTO, TYPES_PUBLICATION } from './listes.ts';
+import { AVIS_ETE, ETAPES_FIXES_DEMANDE, ETAPES_HABILLEMENT, FIL_DEMANDE, FIL_HABILLEMENT, QUESTIONS_DEMANDE, type ReglageDemandes, ISSUES_HABILLEMENT, AVIS_REMPLACEMENT, AVIS_RESERVATION, checkDans, ETATS_DEMANDE, ETATS_ENGIN, ETAPES_ANOMALIE, ETATS_PRISE, GENRES_DEMANDE, GENRES_ECART, MOTIFS_ATTENTE, SUIVIS_ANOMALIE, SITUATIONS_ENGIN, DROITS, ETATS_RESERVATION, FETES, FORMES_RESSOURCE, NATURES_RESPONSABILITE, REACTIONS, REPONSES_EVENEMENT, RESPONSABILITES_SYSTEME, STATUTS_OPERATIONNELS, SUPPRESSIONS_MESSAGE, TYPES_CONVERSATION, TYPES_PERIMETRE, TYPES_PERSONNE, TYPES_PHOTO, TYPES_PUBLICATION } from './listes.ts';
 
 export const profil = sqliteTable(
 	'profil',
@@ -145,7 +145,9 @@ export const responsabilite = sqliteTable(
 		// Identifiant du modèle d'origine (modeles.ts) d'un rôle créé par le centre ; nul pour un rôle natif (installé avec le centre).
 		modele: text('modele'),
 		// Nom d'icône (icones.ts) ; nul : l'appli choisit.
-		icone: text('icone')
+		icone: text('icone'),
+		// Reçoit des demandes (demandes.ts) : ses étapes intermédiaires et le nom de la dernière ; nul : n'en reçoit pas.
+		demandes: text('demandes', { mode: 'json' }).$type<ReglageDemandes>()
 	},
 	() => [
 		check('responsabilite_nature', checkDans('nature', NATURES_RESPONSABILITE)),
@@ -1036,6 +1038,75 @@ export const filHabillement = sqliteTable(
 		jeton: text('jeton')
 	},
 	(t) => [index('fil_habillement_demande').on(t.demandeId), check('fil_habillement_quoi', checkDans('quoi', FIL_HABILLEMENT))]
+);
+
+// Demandes aux référents : une demande en texte libre à un rôle qui en reçoit (`responsabilite.demandes`). `etape` : une étape fixe,
+// ou l'identifiant d'une étape intermédiaire du rôle ; `question` : posée, ou répondue (en attente du référent) ; `prisePar` : qui la suit ;
+// `mot` : le mot de fin (facultatif pour la dernière étape, obligatoire pour un refus) ; `finLe` : la conservation compte de là.
+export const demandeReferent = sqliteTable(
+	'demande_referent',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		responsabiliteId: integer('responsabilite_id')
+			.notNull()
+			.references(() => responsabilite.id),
+		demandeurId: integer('demandeur_id')
+			.notNull()
+			.references(() => personne.id),
+		texte: text('texte').notNull(),
+		etape: text('etape').notNull().default('demandee'),
+		question: text('question', { enum: QUESTIONS_DEMANDE }),
+		prisePar: integer('prise_par').references(() => personne.id),
+		mot: text('mot'),
+		creeLe: text('cree_le').notNull(),
+		majLe: text('maj_le').notNull(),
+		finLe: text('fin_le')
+	},
+	(t) => [
+		index('demande_referent_demandeur').on(t.demandeurId),
+		index('demande_referent_role').on(t.responsabiliteId, t.finLe),
+		index('demande_referent_fin').on(t.finLe),
+		check('demande_referent_etape', sql`${checkDans('etape', ETAPES_FIXES_DEMANDE)} OR ${sql.identifier('etape')} GLOB 'e?*'`),
+		check('demande_referent_question', sql`${sql.identifier('question')} IS NULL OR ${checkDans('question', QUESTIONS_DEMANDE)}`)
+	]
+);
+
+// Le fil d'une demande : questions, réponses, précisions, changements d'étape, reprises ; dans l'ordre. `etape` : l'étape atteinte
+// (`quoi` = « etape »), et `nomEtape` son nom à ce moment, pour une étape retirée depuis.
+export const filDemandeReferent = sqliteTable(
+	'fil_demande_referent',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		demandeId: integer('demande_id')
+			.notNull()
+			.references(() => demandeReferent.id),
+		quoi: text('quoi', { enum: FIL_DEMANDE }).notNull(),
+		etape: text('etape'),
+		nomEtape: text('nom_etape'),
+		texte: text('texte'),
+		par: integer('par')
+			.notNull()
+			.references(() => personne.id),
+		le: text('le').notNull(),
+		// Propre à chaque envoi : reconnaît sa ligne (deux gestes au même instant : un seul s'écrit).
+		jeton: text('jeton')
+	},
+	(t) => [index('fil_demande_referent_demande').on(t.demandeId), check('fil_demande_referent_quoi', checkDans('quoi', FIL_DEMANDE))]
+);
+
+// La cloche des demandes aux référents : nouvelle demande, question, réponse, changement d'étape.
+export const avisDemandeReferent = sqliteTable(
+	'avis_demande_referent',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		personneId: versPersonne(),
+		titre: text('titre').notNull(),
+		texte: text('texte').notNull(),
+		url: text('url').notNull(),
+		creeLe: text('cree_le').notNull(),
+		lueLe: text('lue_le')
+	},
+	(t) => [index('avis_demande_referent_personne').on(t.personneId, t.lueLe)]
 );
 
 // La cloche d'une nomination : l'agent nommé à un rôle, à la main (fiche, Nominations).

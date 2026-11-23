@@ -59,6 +59,7 @@ const PAR_SUJET = {
 	renommer_profil: (c) => nomme(c, 'a renommé le profil'),
 	supprimer_profil: () => 'a supprimé un profil',
 	modifier_murs_ouverts: (c) => nomme(c, 'a changé les murs ouverts du profil'),
+	regler_demandes: (c) => nomme(c, 'a réglé les demandes du rôle'),
 	ajouter_engin: (c) => nomme(c, 'a ajouté l’engin'),
 	modifier_engin: (c) => nomme(c, 'a modifié l’engin'),
 	creer_type_engin: (c) => nomme(c, 'a créé la fiche de'),
