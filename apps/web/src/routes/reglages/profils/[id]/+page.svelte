@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Groupe from '#lib/ui/Groupe.svelte';
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 	import { untrack } from 'svelte';
 	import type { Droit } from '@gyro-caserne/socle';
@@ -35,13 +36,18 @@
 		{ libelle: 'Lecture', phrase: 'Voir les publications et en être prévenu.' },
 		{ libelle: 'Écriture', phrase: cle === 'centre' ? 'Aussi commenter, voter et répondre.' : 'Aussi commenter, voter, répondre et publier.' }
 	];
-	// La ligne sous « Murs ouverts », replié : les murs ouverts par leur nom, ou aucun.
-	const resumeMurs = $derived.by(() => {
-		const noms = murs.filter((m) => niveauDe(m.cle) > 0).map((m) => m.nom);
-		if (noms.length === 0) return 'Aucun mur ouvert';
-		return noms.length === 1 ? `${noms[0]} ouvert` : `${noms.slice(0, -1).join(', ')} et ${noms.at(-1)} ouverts`;
-	});
 	const niveauDe = (cle: string) => Math.max(0, NIVEAUX.indexOf((data.profil.mursOuverts as Record<string, string>)[cle] ?? 'aucun'));
+	// Les choix en cours, une valeur par mur (un bind sur `undefined` ferait échouer l'hydratation).
+	let niveaux = $state<Record<string, number>>(untrack(() => Object.fromEntries(murs.map((m) => [m.cle, niveauDe(m.cle)]))));
+	let mursOuverts = $state(false);
+	// Sous « Murs ouverts », replié : combien, et lesquels, d'après les choix en cours.
+	const resumeMurs = $derived.by(() => {
+		const ouverts = murs.filter((m) => (niveaux[m.cle] ?? niveauDe(m.cle)) > 0).map((m) => m.nom);
+		const modifie = murs.some((m) => (niveaux[m.cle] ?? niveauDe(m.cle)) !== niveauDe(m.cle)) ? ', modifié' : '';
+		if (ouverts.length === 0) return `Aucun mur ouvert${modifie}`;
+		const noms = ouverts.length === 1 ? ouverts[0] : `${ouverts.slice(0, -1).join(', ')} et ${ouverts.at(-1)}`;
+		return `${ouverts.length === 1 ? '1 mur ouvert' : `${ouverts.length} murs ouverts`}, ${noms}${modifie}`;
+	});
 </script>
 
 {#snippet retour(cible: string)}
@@ -68,21 +74,17 @@
 <form method="POST" action="?/enregistrer" class="formulaire">
 	<Domaines droits={droits} bind:choix profil />
 	{#if exterieur}
-		<details class="pli repli murs-pli">
-			<summary>
-				<span class="titre-pli">Murs ouverts</span>
-				<span class="resume">{resumeMurs}</span>
-			</summary>
+		<Groupe titre="Murs ouverts" resume={resumeMurs} bind:ouvert={mursOuverts}>
 			<p class="aide">En lecture, on voit les publications et on en est prévenu. En écriture, on peut aussi commenter, voter, répondre et publier (sauf sur Le centre). Un comité ouvert en écriture donne la messagerie avec ses membres.</p>
 			<ul class="murs" role="list">
 				{#each murs as m (m.cle)}
 					<li>
 						<p class="mur" aria-hidden="true">{m.nom}</p>
-						<SelecteurNiveaux name="mur-{m.cle}" legende={m.nom} niveaux={niveauxDuMur(m.cle)} valeur={niveauDe(m.cle)} segments />
+						<SelecteurNiveaux name="mur-{m.cle}" legende={m.nom} niveaux={niveauxDuMur(m.cle)} bind:valeur={niveaux[m.cle]} segments />
 					</li>
 				{/each}
 			</ul>
-		</details>
+		</Groupe>
 	{/if}
 	<BarreActions {message}>
 		<Bouton type="submit">Enregistrer</Bouton>
@@ -171,22 +173,6 @@
 		align-items: center;
 		font-weight: 600;
 		cursor: pointer;
-	}
-	.murs-pli > summary {
-		flex-direction: column;
-		align-items: flex-start;
-		justify-content: center;
-		padding: var(--espace-8) 0;
-	}
-	.titre-pli {
-		font: 700 var(--texte-18)/1.2 var(--police-titre);
-	}
-	.resume {
-		font-weight: 400;
-		color: var(--doux);
-	}
-	.murs-pli > .murs {
-		padding-bottom: var(--espace-16);
 	}
 	.pli .formulaire {
 		padding-bottom: var(--espace-16);
