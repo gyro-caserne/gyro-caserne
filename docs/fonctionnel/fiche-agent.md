@@ -29,6 +29,7 @@ Ici, les **gestionnaires** sont ceux qui ont le droit `GERER_ACCES` sur le centr
 ## Les règles
 
 - L'agent modifie lui-même sa photo, son surnom, son téléphone et sa visibilité, ainsi que son contact d'urgence. Les gestionnaires modifient tout le reste.
+- Une **personne extérieure** (retraité, réserve citoyenne) n'a ni grade, ni date de nomination, ni entrée au centre, ni engagement SPV, ni équipe, ni statut d'agent. Sa fiche ne les montre pas. Le bloc « Parcours » devient « Profil », et « Équipe et statut » disparaît. Son départ, son retour et la levée d'une suspension se font dans « Départ du centre ». À l'ajout, ces champs se cachent dès qu'un profil extérieur est choisi. Sans JavaScript, le serveur les ignore. Un ancien grade reste en base, sans se montrer, ni sur la fiche ni dans la liste. L'import refuse une équipe ou un statut d'agent sur sa ligne, et ignore son grade et ses dates de parcours.
 - **RGPD** : la date de naissance et le contact d'urgence sont limités au strict nécessaire et effacés au départ de l'agent. 12 mois après son dernier départ (ou plus tôt, sur sa demande), toutes ses données personnelles sont effacées et il devient « Ancien agent » : voir [Données des agents](donnees-des-agents.md).
 
 ## Ce qui existe aujourd'hui (lot 1)

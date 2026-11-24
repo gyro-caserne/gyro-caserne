@@ -89,7 +89,9 @@ const CHAMP_DE_L_ERREUR: Record<string, string> = {
 	'Profil inconnu': 'profilId',
 	'Le chef de centre et son adjoint restent agents': 'profilId',
 	'Équipe inconnue': 'equipeId',
-	'Équipe inactive': 'equipeId'
+	'Équipe inactive': 'equipeId',
+	'Une personne extérieure n’a pas d’équipe': 'equipeId',
+	'Statut sans objet pour une personne extérieure': 'statut'
 };
 
 // Ce que reçoit la page après un envoi : message général, erreurs par champ, saisie à réafficher.

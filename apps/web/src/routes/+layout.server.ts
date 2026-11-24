@@ -1,4 +1,4 @@
-import { aLeDroit, enTeteDe, peutAttribuerQuelqueChose, resumeErreur } from '@gyro-caserne/socle';
+import { aLeDroit, droitsDe, enTeteDe, peutAttribuerQuelqueChose, resumeErreur } from '@gyro-caserne/socle';
 import { aujourdhuiParis, maintenantParis } from '#lib/aujourdhui.ts';
 import type { LayoutServerLoad } from './$types';
 
@@ -16,11 +16,16 @@ export const load: LayoutServerLoad = async ({ locals, depends }) => {
 	// les demandes de réservation à trancher pour qui gère et les remplacements à valider pour les chefs ; le visage de « Moi » ;
 	// la version de l'écusson du centre (null sans écusson : l'en-tête reste comme avant) ; la pastille d'Échanges,
 	// les messages non lus, ensuite suivis toutes les 30 s par la page ; une ligne pour les nouveautés du suivi du centre (chef, adjoint). Une requête.
-	const { cloche, visage, ecusson, nonLus, suivi } = acteur === null ? { cloche: 0, visage: null, ecusson: null, nonLus: 0, suivi: null } : await lireEnTete(base, acteur, aujourdhui, maintenant);
+	const { cloche, visage, ecusson, nonLus, suivi, exterieur } = acteur === null ? { cloche: 0, visage: null, ecusson: null, nonLus: 0, suivi: null, exterieur: false } : await lireEnTete(base, acteur, aujourdhui, maintenant);
+	// Une personne extérieure n'a Caserne que pour réserver. Ses droits sont déjà lus (Réglages) : pas de requête de plus.
+	const caserne = !exterieur || (acteur !== null && (await droitsDe(base, acteur, aujourdhui)).some((d) => d.droit === 'RESERVER'));
 	return {
 		affichage: locals.affichage,
 		connecte: acteur !== null,
 		estPersonne: acteur?.type === 'personne',
+		// Retraité, réserve citoyenne : ni planning, ni remplacements, ni ce qui sert aux agents du centre.
+		exterieur,
+		caserne,
 		// Qui regarde, pour les fêtes déjà vues sur ce navigateur.
 		qui: acteur === null ? '' : acteur.type === 'personne' ? `p${acteur.id}` : 'super',
 		peutReglages,
@@ -44,9 +49,9 @@ async function lireEnTete(base: App.Locals['base'], acteur: NonNullable<App.Loca
 	try {
 		const e = await enTeteDe(base, acteur, aujourdhui, maintenant);
 		// Le suivi du centre ne compte que pour une ligne, quel que soit le nombre de ses nouveautés.
-		return { cloche: e.nonLues + e.remplacementsAValider + e.signalements + e.aTrancher + (e.suivi ? 1 : 0), visage: e.visage, ecusson: e.ecusson, nonLus: e.nonLus, suivi: e.suivi };
+		return { cloche: e.nonLues + e.remplacementsAValider + e.signalements + e.aTrancher + (e.suivi ? 1 : 0), visage: e.visage, ecusson: e.ecusson, nonLus: e.nonLus, suivi: e.suivi, exterieur: e.exterieur };
 	} catch (erreur) {
 		console.error('Cloche illisible', resumeErreur(erreur));
-		return { cloche: 0, visage: null, ecusson: null, nonLus: 0, suivi: null };
+		return { cloche: 0, visage: null, ecusson: null, nonLus: 0, suivi: null, exterieur: false };
 	}
 }

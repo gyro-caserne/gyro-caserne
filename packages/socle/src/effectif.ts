@@ -122,6 +122,9 @@ async function ranger<R extends Rangee, P>(base: Base, aujourdhui: string, range
 	return groupes.filter((g) => g.personnes.length > 0);
 }
 
+// Une personne extérieure (un retraité) garde son ancien grade en base, mais il ne se montre plus.
+const gradeMontre = (grade: string | null, type: string | null) => (type === 'exterieur' ? null : grade);
+
 // La vue de tous : ni statut ni e-mail, pas de partis.
 export async function vueEffectif(base: Base, aujourdhui: string) {
 	const lignes = await base
@@ -131,7 +134,7 @@ export async function vueEffectif(base: Base, aujourdhui: string) {
 		.leftJoin(profil, eq(profil.id, personne.profilId));
 	const roles = await rolesCourants(base, aujourdhui);
 	const presentes = lignes.filter((l) => l.statut !== 'parti');
-	return ranger(base, aujourdhui, presentes, ({ id, prenom, nom, grade }) => ({ id, prenom, nom, grade, roles: roles.get(id) ?? [] }));
+	return ranger(base, aujourdhui, presentes, ({ id, prenom, nom, grade, type }) => ({ id, prenom, nom, grade: gradeMontre(grade, type), roles: roles.get(id) ?? [] }));
 }
 
 // Un stagiaire part en intervention : seuls l'inapte temporaire et le suspendu sont indisponibles.
@@ -169,7 +172,7 @@ export async function listeGestion(base: Base, acteur: Acteur, filtres: { texte?
 		.filter((l) => !texte || [l.prenom, l.nom, l.email].some((champ) => champ.toLowerCase().includes(texte)))
 		.filter((l) => filtres.filtre === undefined || garde[filtres.filtre](l));
 
-	const groupes = await ranger(base, aujourdhui, gardees, ({ id, prenom, nom, email, grade, statut, aCompleter }) => ({ id, prenom, nom, email, grade, statut, roles: roles.get(id) ?? [], aCompleter }));
+	const groupes = await ranger(base, aujourdhui, gardees, ({ id, prenom, nom, email, grade, statut, type, aCompleter }) => ({ id, prenom, nom, email, grade: gradeMontre(grade, type), statut, roles: roles.get(id) ?? [], aCompleter }));
 	const compter = (f: FiltreGestion) => toutes.filter(garde[f]).length;
 	return { groupes, comptes: { 'a-completer': compter('a-completer'), indisponibles: compter('indisponibles'), partis: compter('partis') } };
 }

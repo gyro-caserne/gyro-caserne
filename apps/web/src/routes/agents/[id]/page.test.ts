@@ -418,3 +418,59 @@ describe('passage à un profil extérieur', () => {
 		expect(page).toContain('Cochez « Je confirme » pour changer de profil.');
 	});
 });
+
+// Retraité, réserve citoyenne : ni grade, ni dates de parcours, ni équipe, ni statut d'agent.
+describe('personne extérieure', () => {
+	const profils = [{ id: 1, nom: 'Agent', typePersonne: 'agent' }, { id: 2, nom: 'Retraité', typePersonne: 'exterieur' }];
+	const rene = { ...fiche, prenom: 'René', nom: 'Ancien', grade: { id: 4, libelle: 'Adjudant' }, entreeCentre: '1980-01-01', profil: { id: 2, nom: 'Retraité', typePersonne: 'exterieur' } };
+	const avec = { ...data, profils, grades: [{ id: 4, libelle: 'Adjudant' }], fiche: rene };
+	const CHAMPS = ['id="grade"', 'id="date-grade"', 'id="entree-centre"', 'id="engagement-spv"', 'name="equipeId"', 'name="statut" value="stagiaire"', '<select id="statut"'];
+
+	it('ni grade, ni dates de parcours, ni équipe, ni statut ; le profil seul, dans « Profil »', () => {
+		const page = html({ data: avec, form: null });
+		for (const champ of CHAMPS) expect(page, champ).not.toContain(champ);
+		expect(page).not.toContain('>Équipe et statut<');
+		expect(page).not.toContain('>Parcours<');
+		expect(bloc(page, 'Profil')[0]).toContain('Retraité');
+		expect(page).toContain('id="profil"');
+		const entete = page.slice(page.indexOf('<header'), page.indexOf('</header>'));
+		expect(entete).not.toContain('Adjudant');
+		expect(entete).not.toContain('Opérationnel');
+		expect(page).toContain('Déclarer le départ');
+	});
+
+	it('partie : elle se réintègre d’un bouton, sans choisir de statut', () => {
+		const page = html({ data: { ...avec, fiche: { ...rene, statut: 'parti' } }, form: null });
+		const depart = bloc(page, 'Départ du centre');
+		expect(depart).toBeTruthy();
+		expect(page).toMatch(/<form[^>]*action="\?\/statut[^"]*"[^>]*>(<!---->)?\s*<input type="hidden" name="statut" value="operationnel"[\s\S]*?Réintégrer René/);
+		expect(page).not.toContain('<select id="statut"');
+		expect(page).not.toContain('« Équipe et statut »');
+	});
+
+	it('suspendue : le statut se voit, et la suspension se lève d’un bouton ; un refus s’affiche à côté', () => {
+		const suspendu = { ...avec, fiche: { ...rene, statut: 'suspendu' } };
+		const page = html({ data: suspendu, form: null });
+		const entete = page.slice(page.indexOf('<header'), page.indexOf('</header>'));
+		expect(entete).toContain('Suspendu');
+		expect(page).toMatch(/<input type="hidden" name="statut" value="operationnel"[\s\S]*?Lever la suspension/);
+		expect(page).toContain('Déclarer le départ');
+		const refus = html({ data: suspendu, form: { erreurs: { statut: 'Statut sans objet pour une personne extérieure' }, valeurs: { statut: 'operationnel' } } });
+		expect(ouvert(refus, 'Départ du centre')).toBe(true);
+		expect(bloc(refus, 'Départ du centre')).toBeTruthy();
+		expect(refus).toMatch(/Lever la suspension[\s\S]*?Statut sans objet pour une personne extérieure/);
+	});
+
+	it('d’un profil extérieur vers un profil d’agent : grade et dates de parcours reviennent', () => {
+		const page = html({ data: avec, form: { erreurs: { gradeId: 'Grade inconnu' }, valeurs: { profilId: '1' } } });
+		for (const champ of ['id="grade"', 'id="date-grade"', 'id="entree-centre"', 'id="engagement-spv"']) expect(page, champ).toContain(champ);
+	});
+
+	it('un agent vers un profil extérieur : grade et dates de parcours se cachent', () => {
+		const agent = { ...avec, fiche: { ...fiche, profil: { id: 1, nom: 'Agent', typePersonne: 'agent' } } };
+		expect(html({ data: agent, form: null })).toContain('id="grade"');
+		const page = html({ data: agent, form: { erreurs: { passage: 'Cochez « Je confirme » pour changer de profil.' }, valeurs: { profilId: '2' } } });
+		for (const champ of ['id="grade"', 'id="date-grade"', 'id="entree-centre"', 'id="engagement-spv"']) expect(page, champ).not.toContain(champ);
+		expect(page).toMatch(/name="passage" value="oui"/);
+	});
+});

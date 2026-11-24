@@ -174,7 +174,7 @@ export const actions: Actions = {
 	},
 
 	statut: async ({ locals, params, request }) => {
-		const { acteur, id } = await lireFiche(locals, params.id);
+		const { acteur, id, fiche } = await lireFiche(locals, params.id);
 		const formulaire = await request.formData();
 		const statut = STATUTS_OPERATIONNELS.find((s) => s === formulaire.get('statut'));
 		const valeurs = { statut: String(formulaire.get('statut') ?? '') };
@@ -187,7 +187,8 @@ export const actions: Actions = {
 		} catch (erreur) {
 			return echec(erreur, { valeurs });
 		}
-		return { succes: true, message: 'Statut enregistré', bloc: statut === 'parti' ? 'depart' : 'equipe' };
+		// Une personne extérieure n'a pas « Équipe et statut » : son départ et son retour se font dans « Départ du centre ».
+		return { succes: true, message: 'Statut enregistré', bloc: statut === 'parti' || fiche.profil?.typePersonne === 'exterieur' ? 'depart' : 'equipe' };
 	},
 
 	// Sur demande de l'agent parti : définitif, rien sans confirmation explicite.

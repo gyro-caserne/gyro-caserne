@@ -176,6 +176,25 @@ describe('load du layout', () => {
 		expect(base.requetes - avant).toBe(5);
 	});
 
+	// Lu avec l'en-tête, sans requête de plus : la navigation d'une personne extérieure n'a pas Planning, et Caserne seulement si elle peut réserver.
+	it('personne extérieure : dite, sans requête de plus ; Caserne pour la réserve citoyenne (qui réserve), pas pour un retraité', async () => {
+		const base = await baseDeTest();
+		await chargerJeuDeDepart(base, centre);
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const [agent] = await base.select().from(profil).where(eq(profil.nom, 'Agent'));
+		const [retraite] = await base.insert(profil).values({ nom: 'Retraité', typePersonne: 'exterieur', mursOuverts: '{"vie":"lecture"}' }).returning();
+		const fiche = async (email: string, profilId: number) => ({ type: 'personne', id: (await base.insert(personne).values({ email, prenom: 'P', nom: 'N', profilId }).returning())[0]!.id });
+		const rene = await fiche('rene@x.fr', retraite!.id);
+		expect(await appeler(rene, base)).toMatchObject({ exterieur: true, caserne: false });
+		expect(await appeler(await fiche('reserve@x.fr', reserve!.id), base)).toMatchObject({ exterieur: true, caserne: true });
+		expect(await appeler(await fiche('agent@x.fr', agent!.id), base)).toMatchObject({ exterieur: false, caserne: true });
+		expect(await appeler(super_, base)).toMatchObject({ exterieur: false, caserne: true });
+		expect(await appeler(null)).toMatchObject({ exterieur: false });
+		const avant = base.requetes;
+		await appeler(rene, base);
+		expect(base.requetes - avant).toBe(5);
+	});
+
 	it('compte les messages non lus pour la pastille d’Échanges ; 0 pour le super administrateur ou le visiteur', async () => {
 		const { base, alice, bruno } = await preparer();
 		await envoyer(base, base.photos, bruno, { personne: alice.id }, { texte: 'Salut' }, maintenantParis());

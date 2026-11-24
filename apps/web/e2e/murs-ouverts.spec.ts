@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { connecter } from './connexion.ts';
+import { ETAT_SUPER } from './serveur.ts';
 
 const appli = fileURLToPath(new URL('..', import.meta.url));
 const centre = fileURLToPath(new URL('../../../centres/exemple/', import.meta.url));
@@ -33,5 +34,44 @@ test.describe('murs ouverts à un profil', () => {
 		await page.waitForURL(/\/echanges\/comite:\d+#publication-\d+$/);
 		await expect(page.getByText(texte)).toBeVisible();
 		expect((await page.goto('/echanges/centre'))?.status()).toBe(403);
+	});
+
+	// Un retraité n'a ni planning ni réservation : ni l'onglet Planning, ni Caserne, ni de lien vers ce qui lui serait refusé.
+	test('sa navigation n’a que Accueil et Échanges, et « Moi » ni remplacements ni agenda', async ({ page }) => {
+		await connecter(page, EMAIL);
+		const navigation = page.getByRole('navigation', { name: 'Navigation principale' });
+		await expect(navigation.getByRole('link', { name: 'Accueil', exact: true })).toBeVisible();
+		await expect(navigation.getByRole('link', { name: /^Échanges/ })).toBeVisible();
+		await expect(navigation.getByRole('link', { name: 'Planning', exact: true })).toHaveCount(0);
+		await expect(navigation.getByRole('link', { name: 'Caserne', exact: true })).toHaveCount(0);
+		await expect(page.locator('a[href^="/planning"], a[href^="/remplacements"]')).toHaveCount(0);
+		await page.goto('/moi');
+		await expect(page.getByRole('link', { name: /^Mon profil/ })).toBeVisible();
+		await expect(page.locator('a[href^="/remplacements"], a[href="/moi/agenda"], a[href="/moi/vacances"]')).toHaveCount(0);
+	});
+});
+
+// L'ajout d'une personne extérieure : grade, statut, dates de parcours et équipe se cachent dès que son profil est choisi.
+test.describe('ajouter une personne extérieure', () => {
+	test.use({ storageState: ETAT_SUPER });
+
+	test('le formulaire réagit au choix du profil, puis la fiche ne montre que le profil', async ({ page }, info) => {
+		const marque = `${info.project.name.replace(/\W/g, '')}${info.retry}${Date.now() % 100000}`;
+		await page.goto('/agents/nouveau');
+		// Le choix du profil n'agit qu'une fois la page prête.
+		await page.waitForLoadState('networkidle');
+		const formulaire = page.locator('form[method="POST"]');
+		await expect(formulaire.getByRole('combobox', { name: 'Grade', exact: true })).toBeVisible();
+		await formulaire.getByRole('combobox', { name: 'Profil', exact: true }).selectOption({ label: 'Réserve citoyenne' });
+		for (const nom of ['Grade', 'Statut', 'Équipe']) await expect(formulaire.getByRole('combobox', { name: nom, exact: true })).toHaveCount(0);
+		for (const nom of ['Date de nomination', 'Entrée au centre', 'Engagement SPV']) await expect(formulaire.getByLabel(nom, { exact: true })).toHaveCount(0);
+		await formulaire.getByLabel('Prénom', { exact: true }).fill('Réserve');
+		await formulaire.getByLabel('Nom', { exact: true }).fill(`Citoyenne${marque}`);
+		await formulaire.getByLabel('E-mail', { exact: true }).fill(`rc.${marque.toLowerCase()}@exemple.fr`);
+		await formulaire.getByRole('button', { name: 'Ajouter la personne', exact: true }).click();
+		await expect(page).toHaveURL(/\/agents\/\d+$/);
+		await expect(page.getByRole('heading', { level: 1, name: `Réserve Citoyenne${marque}` })).toBeVisible();
+		await expect(page.getByRole('button', { name: /^Équipe et statut/ })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /^Profil/ })).toBeVisible();
 	});
 });

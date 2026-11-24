@@ -61,6 +61,14 @@ describe('/caserne', () => {
 		expect(html({ peutNominations: false, peutReglages: false, agents: 1, aPourvoir: null })).toContain('1 agent<');
 	});
 
+	it('personne extérieure (réserve citoyenne) : Réservations, sans la liste des agents', () => {
+		const page = html({ exterieur: true, comites: false, agents: 3 });
+		expect(page).toContain('href="/reservations"');
+		expect(page).not.toContain('href="/agents"');
+		// Un groupe vide ne s'affiche pas.
+		expect(page).not.toContain('Organisation');
+	});
+
 	it('« Réservations » pour tous, vers la VL et le matériel', () => {
 		const page = html({});
 		expect(page).toMatch(/href="\/reservations"[\s\S]*?Réservations[\s\S]*?La VL et le matériel de l’amicale/);

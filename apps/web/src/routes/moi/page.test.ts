@@ -28,6 +28,13 @@ describe('/moi', () => {
 		}
 	});
 
+	it('personne extérieure : rien qui mène au planning ni aux remplacements, et pas de grade', () => {
+		const page = html({ estPersonne: true, exterieur: true, identite: { prenom: 'René', nom: 'Ancien', grade: 'Adjudant', role: null, equipe: null } });
+		for (const href of ['/remplacements/demander', '/remplacements', '/moi/vacances', '/moi/agenda']) expect(page, href).not.toContain(`href="${href}"`);
+		for (const href of ['/profil', '/moi/notifications', '/affichage']) expect(page, href).toContain(`href="${href}"`);
+		expect(page).not.toContain('Adjudant');
+	});
+
 	it('carte d’identité : visage à la couleur de l’équipe, nom, grade et équipe', () => {
 		const page = html({ estPersonne: true, identite: { prenom: 'Claire', nom: 'Chef', grade: 'Lieutenant', equipe: { nom: 'Équipe 1', couleur: '#d4a017' } } });
 		expect(page).toMatch(/class="visage[^"]*"[^>]*style="background: #d4a017;/);

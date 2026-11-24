@@ -124,7 +124,8 @@
 
 	{#if rangee}<Casquettes casquettes={data.casquettes} choisie={data.choisie} />{/if}
 
-	{#if data.astreinte}<CarteAstreinte a={data.astreinte} maintenant={data.maintenant} priseOuverte={data.priseOuverte} remplacants={remplacantsCourts(data.astreinte, data.astreinte.courtsCedes.map((r) => ({ ...r, moi: 'cede' as const })), data.maintenant)} compacte />{/if}
+	<!-- Une personne extérieure (retraité, réserve citoyenne) n'a pas d'astreinte : la plaque mènerait au planning, qui lui est refusé. -->
+	{#if data.astreinte && !data.exterieur}<CarteAstreinte a={data.astreinte} maintenant={data.maintenant} priseOuverte={data.priseOuverte} remplacants={remplacantsCourts(data.astreinte, data.astreinte.courtsCedes.map((r) => ({ ...r, moi: 'cede' as const })), data.maintenant)} compacte />{/if}
 
 	<Installer mode="encart" />
 

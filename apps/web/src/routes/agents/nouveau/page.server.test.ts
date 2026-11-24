@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import centre from '$centre';
-import { affectationEquipe, chargerJeuDeDepart, equipe, personne, profil } from '@gyro-caserne/socle';
+import { affectationEquipe, chargerJeuDeDepart, equipe, grade as gradeTable, personne, profil } from '@gyro-caserne/socle';
 import { baseDeTest } from '@gyro-caserne/socle/base-de-test';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import { actions, load } from './+page.server';
@@ -107,6 +107,36 @@ describe('/agents/nouveau', () => {
 		expect(await ajouter(locaux(base, super_), { ...corps, statut: 'parti' })).toMatchObject({ status: 400, data: { erreurs: { statut: 'Statut impossible à la création' } } });
 		expect(await ajouter(locaux(base, super_), { ...corps, statut: 'zombie' })).toMatchObject({ status: 400, data: { erreurs: { statut: 'Choix inconnu' } } });
 		expect(await base.select().from(personne)).toHaveLength(1);
+	});
+
+	it('le type de chaque profil, pour cacher ce qui ne sert pas à une personne extérieure', async () => {
+		const { base } = await preparer();
+		const data = await lire(locaux(base, super_));
+		expect(data.profils).toContainEqual(expect.objectContaining({ nom: 'Réserve citoyenne', typePersonne: 'exterieur' }));
+		expect(data.profils).toContainEqual(expect.objectContaining({ nom: 'Agent', typePersonne: 'agent' }));
+	});
+
+	// Sans JavaScript, le formulaire montre tout : le serveur ignore ce qui n'a pas de sens pour une personne extérieure.
+	it('personne extérieure : ni équipe, ni grade, ni dates de parcours, statut par défaut', async () => {
+		const { base, equipe1 } = await preparer();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const [grade] = await base.select().from(gradeTable);
+		const redirection = await ajouter(locaux(base, super_), {
+			email: 'rc@exemple.fr',
+			prenom: 'Réserve',
+			nom: 'Citoyenne',
+			profilId: String(reserve!.id),
+			equipeId: String(equipe1.id),
+			statut: 'stagiaire',
+			gradeId: String(grade!.id),
+			dateGrade: '2025-01-01',
+			entreeCentre: '2020-01-01',
+			engagementSpv: '2019-01-01'
+		}).catch((r: unknown) => r);
+		const [rc] = await base.select().from(personne).where(eq(personne.email, 'rc@exemple.fr'));
+		expect(redirection).toMatchObject({ status: 303, location: `/agents/${rc!.id}` });
+		expect(rc).toMatchObject({ statut: 'operationnel', gradeId: null, dateGrade: null, entreeCentre: null, engagementSpv: null });
+		expect(await base.select().from(affectationEquipe)).toEqual([]);
 	});
 
 	it('signale un champ trop long sur le champ', async () => {

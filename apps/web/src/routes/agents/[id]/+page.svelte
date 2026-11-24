@@ -74,16 +74,21 @@
 		profilChoisi = profilDeDepart();
 	});
 	const versExterieur = $derived(fiche.profil?.typePersonne !== 'exterieur' && data.profils.some((p) => String(p.id) === profilChoisi && p.typePersonne === 'exterieur'));
+	// Une personne extérieure (retraité, réserve citoyenne) n'a ni grade, ni dates de parcours, ni équipe, ni statut d'agent :
+	// la fiche ne les montre pas, et les cache dès qu'un profil extérieur est choisi. Le serveur les ignore ou les refuse.
+	const exterieur = $derived(fiche.profil?.typePersonne === 'exterieur');
+	const versAgent = $derived(exterieur && data.profils.some((p) => String(p.id) === profilChoisi && p.typePersonne !== 'exterieur'));
+	const sansParcours = $derived((exterieur && !versAgent) || versExterieur);
 	const enumerer = (noms: string[]) => new Intl.ListFormat('fr', { type: 'conjunction' }).format(noms);
 	const ceQuIlQuitte = $derived.by(() => {
 		const quitte = [fiche.equipe ? `quitte ${fiche.equipe.nom}` : null, enCours.length > 0 ? `perd ${enCours.length > 1 ? 'ses rôles' : 'son rôle'} de ${enumerer(enCours.map(intitule))}` : null].filter(Boolean);
 		const qui = `${fiche.prenom} ${fiche.nom}`;
 		return quitte.length > 0 ? `${qui} ${quitte.join(' et ')}.` : `${qui} n’a ni équipe ni rôle à quitter.`;
 	});
-	const sousTitre = $derived([fiche.grade?.libelle, fiche.equipe?.nom].filter(Boolean).join(', '));
+	const sousTitre = $derived(exterieur ? '' : [fiche.grade?.libelle, fiche.equipe?.nom].filter(Boolean).join(', '));
 	const resumes = $derived({
 		identite: [fiche.effaceLe ? null : fiche.email, fiche.telephone].filter(Boolean).join(', '),
-		parcours: [fiche.grade?.libelle ?? 'Aucun grade', fiche.entreeCentre && `au centre depuis ${fiche.entreeCentre.slice(0, 4)}`].filter(Boolean).join(', '),
+		parcours: exterieur ? (fiche.profil?.nom ?? '') : [fiche.grade?.libelle ?? 'Aucun grade', fiche.entreeCentre && `au centre depuis ${fiche.entreeCentre.slice(0, 4)}`].filter(Boolean).join(', '),
 		equipe: `${fiche.equipe?.nom ?? 'Aucune équipe'}, ${LIBELLES_STATUT[fiche.statut].toLocaleLowerCase('fr')}`,
 		aptitudes: data.aptitudes.length ? data.aptitudes.map((a) => (a.valide ? a.nom : `${a.nom} (expirée)`)).join(', ') : 'Aucune aptitude',
 		roles: [enCours.length ? enCours.map(intitule).join(', ') : 'Aucun rôle en cours', data.attributions.aVenir.length && `${data.attributions.aVenir.length} à venir`].filter(Boolean).join(', '),
@@ -103,7 +108,7 @@
 		if (champs.includes('confirmation') || valeurs.statut === 'parti') return 'depart';
 		if (champs.some((c) => IDENTITE.includes(c))) return 'identite';
 		if (champs.some((c) => PARCOURS.includes(c))) return 'parcours';
-		if (champs.includes('equipeId') || champs.includes('statut')) return 'equipe';
+		if (champs.includes('equipeId') || champs.includes('statut')) return exterieur ? 'depart' : 'equipe';
 		return null;
 	});
 	// Effacer ses données : « Plus » s'ouvre sur l'erreur ou le refus.
@@ -186,6 +191,15 @@
 	</ul>
 {/snippet}
 
+<!-- Une personne extérieure n'a pas « Équipe et statut » : son retour (après un départ ou une suspension) se fait ici. -->
+{#snippet retour(libelle: string)}
+	<form method="POST" action={action('statut')}>
+		<input type="hidden" name="statut" value="operationnel" />
+		<Bouton type="submit" variante="secondaire">{libelle}</Bouton>
+		{#if erreurs.statut}<p class="erreur">{erreurs.statut}</p>{/if}
+	</form>
+{/snippet}
+
 {#snippet pictogramme(trace: string)}
 	<span class="rond" aria-hidden="true"
 		><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={trace} /></svg></span
@@ -200,7 +214,7 @@
 				<h1 tabindex="-1">{fiche.prenom} {fiche.nom}</h1>
 				{#if sousTitre}<p class="doux sous-titre"><Insigne grade={fiche.grade?.libelle} taille={24} decoratif />{sousTitre}</p>{/if}
 				<ul class="etiquettes" aria-label="Statut et rôles en cours">
-					<li><Statut statut={fiche.statut} /></li>
+					{#if !exterieur || fiche.statut !== 'operationnel'}<li><Statut statut={fiche.statut} /></li>{/if}
 					{#each enCours as l (l.id)}
 						<li class="role"><IconeRole icone={l.responsabilite.icone} taille={24} />{intitule(l)}</li>
 					{/each}
@@ -250,7 +264,7 @@
 			</div>
 		</Groupe>
 
-		<Groupe titre="Parcours" icone="casque" resume={resumes.parcours} ouvert={blocOuvert === 'parcours'}>
+		<Groupe titre={exterieur ? 'Profil' : 'Parcours'} icone="casque" resume={resumes.parcours} ouvert={blocOuvert === 'parcours'}>
 			<div class="bloc">
 				{#if data.raison}
 					<p class="raison">{data.raison}</p>
@@ -263,15 +277,17 @@
 					</dl>
 				{:else}
 					<form method="POST" action={action('fiche')}>
-						<Choix
-							id="grade"
-							name="gradeId"
-							libelle="Grade"
-							valeur={texte('gradeId', fiche.grade ? String(fiche.grade.id) : '')}
-							erreur={erreurs.gradeId}
-							options={[{ valeur: '', libelle: 'Aucun grade' }, ...data.grades.map((g) => ({ valeur: String(g.id), libelle: g.libelle }))]}
-						/>
-						<Champ id="date-grade" name="dateGrade" type="date" libelle="Date de nomination" valeur={texte('dateGrade', fiche.dateGrade)} erreur={erreurs.dateGrade} />
+						{#if !sansParcours}
+							<Choix
+								id="grade"
+								name="gradeId"
+								libelle="Grade"
+								valeur={texte('gradeId', fiche.grade ? String(fiche.grade.id) : '')}
+								erreur={erreurs.gradeId}
+								options={[{ valeur: '', libelle: 'Aucun grade' }, ...data.grades.map((g) => ({ valeur: String(g.id), libelle: g.libelle }))]}
+							/>
+							<Champ id="date-grade" name="dateGrade" type="date" libelle="Date de nomination" valeur={texte('dateGrade', fiche.dateGrade)} erreur={erreurs.dateGrade} />
+						{/if}
 						<Choix
 							id="profil"
 							name="profilId"
@@ -297,49 +313,54 @@
 								{#if erreurs.passage}<p id="passage-erreur" class="erreur">{erreurs.passage}</p>{/if}
 							</div>
 						{/if}
-						<Champ id="entree-centre" name="entreeCentre" type="date" libelle="Entrée au centre" valeur={texte('entreeCentre', fiche.entreeCentre)} erreur={erreurs.entreeCentre} />
-						<Champ id="engagement-spv" name="engagementSpv" type="date" libelle="Engagement SPV" valeur={texte('engagementSpv', fiche.engagementSpv)} erreur={erreurs.engagementSpv} />
+						{#if !sansParcours}
+							<Champ id="entree-centre" name="entreeCentre" type="date" libelle="Entrée au centre" valeur={texte('entreeCentre', fiche.entreeCentre)} erreur={erreurs.entreeCentre} />
+							<Champ id="engagement-spv" name="engagementSpv" type="date" libelle="Engagement SPV" valeur={texte('engagementSpv', fiche.engagementSpv)} erreur={erreurs.engagementSpv} />
+						{/if}
 						<Bouton type="submit">Enregistrer</Bouton>
 					</form>
 				{/if}
 			</div>
 		</Groupe>
 
-		<Groupe titre="Équipe et statut" icone="groupe" resume={resumes.equipe} ouvert={blocOuvert === 'equipe'}>
-			<div class="bloc">
-				{#if data.raison}
-					<p class="raison">{data.raison}</p>
-					<dl>
-						<dt>Équipe</dt><dd>{#if fiche.equipe}<PastilleEquipe nom={fiche.equipe.nom} couleur={fiche.equipe.couleur} />{:else}Aucune équipe{/if}</dd>
-						<dt>Statut</dt><dd>{LIBELLES_STATUT[fiche.statut]}</dd>
-					</dl>
-				{:else}
-					<form method="POST" action={action('equipe')}>
-						<Choix
-							id="equipe"
-							name="equipeId"
-							libelle="Équipe"
-							aide="Le changement prend effet aujourd'hui."
-							valeur={fiche.equipe ? String(fiche.equipe.id) : 'aucune'}
-							erreur={erreurs.equipeId}
-							options={[{ valeur: 'aucune', libelle: 'Aucune équipe' }, ...data.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom }))]}
-						/>
-						<Bouton type="submit">Enregistrer</Bouton>
-					</form>
-					<form method="POST" action={action('statut')}>
-						<Choix
-							id="statut"
-							name="statut"
-							libelle="Statut"
-							valeur={statutAffiche}
-							erreur={erreurs.statut}
-							options={[...(fiche.statut === 'parti' ? [{ valeur: '', libelle: 'À choisir' }] : []), ...statuts.map((s) => ({ valeur: s, libelle: LIBELLES_STATUT[s] }))]}
-						/>
-						<Bouton type="submit">Enregistrer</Bouton>
-					</form>
-				{/if}
-			</div>
-		</Groupe>
+		{#if !exterieur}
+			<Groupe titre="Équipe et statut" icone="groupe" resume={resumes.equipe} ouvert={blocOuvert === 'equipe'}>
+				<div class="bloc">
+					{#if data.raison}
+						<p class="raison">{data.raison}</p>
+						<dl>
+							<dt>Équipe</dt><dd>{#if fiche.equipe}<PastilleEquipe nom={fiche.equipe.nom} couleur={fiche.equipe.couleur} />{:else}Aucune équipe{/if}</dd>
+							<dt>Statut</dt><dd>{LIBELLES_STATUT[fiche.statut]}</dd>
+						</dl>
+					{:else}
+						<form method="POST" action={action('equipe')}>
+							<Choix
+								id="equipe"
+								name="equipeId"
+								libelle="Équipe"
+								aide="Le changement prend effet aujourd'hui."
+								valeur={fiche.equipe ? String(fiche.equipe.id) : 'aucune'}
+								erreur={erreurs.equipeId}
+								options={[{ valeur: 'aucune', libelle: 'Aucune équipe' }, ...data.equipes.map((e) => ({ valeur: String(e.id), libelle: e.nom }))]}
+							/>
+							<Bouton type="submit">Enregistrer</Bouton>
+						</form>
+						<form method="POST" action={action('statut')}>
+							<Choix
+								id="statut"
+								name="statut"
+								libelle="Statut"
+								valeur={statutAffiche}
+								erreur={erreurs.statut}
+								options={[...(fiche.statut === 'parti' ? [{ valeur: '', libelle: 'À choisir' }] : []), ...statuts.map((s) => ({ valeur: s, libelle: LIBELLES_STATUT[s] }))]}
+							/>
+							<Bouton type="submit">Enregistrer</Bouton>
+						</form>
+					{/if}
+				</div>
+			</Groupe>
+
+		{/if}
 
 		<Groupe titre="Rôles" icone="cle" resume={resumes.roles} ouvert={blocOuvert === 'roles'}>
 			<div class="bloc">
@@ -441,7 +462,12 @@
 				{#if data.raison}
 					<p class="raison">{data.raison}</p>
 				{:else if fiche.statut === 'parti'}
-					<p>A quitté le centre. Pour le réintégrer, changez son statut dans « Équipe et statut ».</p>
+					{#if exterieur}
+						<p>A quitté le centre.</p>
+						{@render retour(`Réintégrer ${fiche.prenom}`)}
+					{:else}
+						<p>A quitté le centre. Pour le réintégrer, changez son statut dans « Équipe et statut ».</p>
+					{/if}
 					{#if data.effacementPrevu}<p>Ses données seront effacées le {date(data.effacementPrevu)}.</p>{/if}
 					{#if erreurs.confirmation}<p class="erreur">{erreurs.confirmation}</p>{/if}
 					<!-- Sur demande de l'agent, sans attendre : définitif, sous « Plus » et confirmé. -->
@@ -464,6 +490,7 @@
 						</form>
 					</details>
 				{:else}
+					{#if exterieur && fiche.statut === 'suspendu'}{@render retour('Lever la suspension')}{/if}
 					<form method="POST" action={action('statut')}>
 						<input type="hidden" name="statut" value="parti" />
 						<p id="depart-avertissement"><strong>Attention :</strong> Sa date de naissance et son contact d'urgence seront effacés, et ses rôles prendront fin aujourd'hui.</p>

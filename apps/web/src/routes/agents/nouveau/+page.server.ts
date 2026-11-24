@@ -7,7 +7,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	await exigerGestion(locals);
 	const { base } = locals;
-	const profils = await base.select({ id: profil.id, nom: profil.nom }).from(profil).orderBy(asc(profil.id));
+	const profils = await base.select({ id: profil.id, nom: profil.nom, typePersonne: profil.typePersonne }).from(profil).orderBy(asc(profil.id));
 	return {
 		profils,
 		statuts: STATUTS_OPERATIONNELS.filter((s) => s !== 'parti'),
