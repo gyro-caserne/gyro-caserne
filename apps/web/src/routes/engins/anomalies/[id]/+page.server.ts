@@ -17,7 +17,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 };
 
 const REFUS: Record<string, string> = {
-	TRAITER_ANOMALIE: 'Seuls le référent engins, les chefs de garde, le chef de centre et son adjoint décident de l’indisponibilité et clôturent sans réparation.',
+	TRAITER_ANOMALIE: 'Seuls le référent engins, les chefs de garde, le chef de centre et son adjoint décident de l’indisponibilité.',
+	clore: 'Seuls le référent engins, les chefs de garde, le chef de centre, son adjoint et les rôles prévenus pour la zone de l’anomalie la clôturent sans réparation.',
 	PRENDRE_EN_CHARGE_ANOMALIE: 'La prise en charge est réservée aux agents du centre.'
 };
 
@@ -62,7 +63,7 @@ export const actions: Actions = {
 		try {
 			await gesteAnomalie(base, acteur, idDe(params.id), geste, maintenantParis(), centre.anomalies);
 		} catch (erreur) {
-			if (erreur instanceof RefusDroit) return fail(403, { quoi: geste.quoi, message: REFUS[erreur.droit] ?? REFUS.TRAITER_ANOMALIE });
+			if (erreur instanceof RefusDroit) return fail(403, { quoi: geste.quoi, message: (geste.quoi === 'clore' && erreur.droit === 'TRAITER_ANOMALIE' ? REFUS.clore : REFUS[erreur.droit]) ?? REFUS.TRAITER_ANOMALIE });
 			if (erreur instanceof DonneeInvalide) return fail(400, { quoi: geste.quoi, message: phraseDe(erreur.message) });
 			throw erreur;
 		}

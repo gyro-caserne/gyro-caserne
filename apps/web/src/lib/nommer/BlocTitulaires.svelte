@@ -9,6 +9,7 @@
 	// Le bloc « Titulaires » d'une fiche de réglage : les mêmes cartes et les mêmes volets que Qui fait quoi.
 	// La fiche d'un rôle (`role`, son nom) : une seule carte, une ligne par équipe ou par comité s'il en a. La fiche d'un comité :
 	// une carte par rôle du comité, au nom du rôle, puis les membres que ces cartes ne montrent pas.
+	// `prevenu` : pour un rôle, les zones des fiches dont il est prévenu des anomalies, en vue même replié.
 	// Replié, sauf juste après la création (`question` : « Qui le tiendra ? ») ou quand on vise l'un de ses postes.
 	type Reponse = { cible?: string; succes?: string; message?: string; erreurs?: Record<string, string>; valeurs?: Record<string, string> } | null | undefined;
 	type Membre = { id: number; nom: string; grade: string | null; roles: string[] };
@@ -21,8 +22,9 @@
 		gestes,
 		aujourdhui,
 		fiches,
+		prevenu,
 		form
-	}: { postes: Poste[]; role?: string; autres?: Membre[]; resume: string; question?: string; gestes: { agents: Agent[] } | null; aujourdhui: string; fiches: boolean; form: unknown } = $props();
+	}: { postes: Poste[]; role?: string; autres?: Membre[]; resume: string; question?: string; gestes: { agents: Agent[] } | null; aujourdhui: string; fiches: boolean; prevenu?: string; form: unknown } = $props();
 	// La réponse d'une action de la page : seules celles des volets (cibles `nommer-` et `mandat-`) concernent ce bloc.
 	const reponse = $derived(form as Reponse);
 
@@ -40,7 +42,7 @@
 </script>
 
 <details class="repli titulaires" {...ouvertAuDepart ? { open: true } : {}} {@attach garderOuvert}>
-	<summary><span class="entete"><h2 class="titre-groupe">Titulaires</h2><span class="resume">{resume}</span></span></summary>
+	<summary><span class="entete"><h2 class="titre-groupe">Titulaires</h2><span class="resume">{resume}</span>{#if prevenu}<span class="resume prevenu">{prevenu}</span>{/if}</span></summary>
 	<div class="contenu">
 		{#if question}<p class="question">{question}</p>{/if}
 		<div role="status">{#if annonce}<p class="succes">{annonce}</p>{/if}</div>

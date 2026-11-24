@@ -252,4 +252,11 @@ describe('page d’un rôle', () => {
 		// Sans le bloc (rôle archivé, ou pas d'accès à Qui fait quoi), rien.
 		expect(html({})).not.toContain('Titulaires');
 	});
+
+	it('« Prévenu pour » : les zones du rôle, dans le bloc Titulaires, en vue même replié ; rien sans zone', () => {
+		const titulairesDuRole = { postes: [], gestes: null, fiches: false };
+		const page = html({ titulairesDuRole, aujourdhui: '2026-11-24', nouveau: false, prevenuPour: [{ zone: 'Sac PS', types: ['VSAV', 'CCRM'] }, { zone: 'Tiroir rouge', types: ['VSAV'] }] });
+		expect(page).toMatch(/<summary[^>]*>[\s\S]*?Prévenu pour Sac PS \(VSAV, CCRM\), Tiroir rouge \(VSAV\)[\s\S]*?<\/summary>/);
+		expect(html({ titulairesDuRole, aujourdhui: '2026-11-24', nouveau: false, prevenuPour: [] })).not.toContain('Prévenu pour');
+	});
 });

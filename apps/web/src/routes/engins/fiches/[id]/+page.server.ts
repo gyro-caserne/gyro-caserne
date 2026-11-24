@@ -1,14 +1,16 @@
 import { error } from '@sveltejs/kit';
-import { DonneeInvalide, lireFiche, modifierFicheEngin, type Geste } from '@gyro-caserne/socle';
+import { DonneeInvalide, lireFiche, modifierFicheEngin, reglerPrevenir, rolesAPrevenir, type Geste } from '@gyro-caserne/socle';
 import { maintenantParis } from '#lib/aujourdhui.ts';
 import { champ, exigerGestionEngins, idDe, quantiteDe, refus } from '#lib/server/engins.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-// L'éditeur de la fiche d'un type d'engin. ?retirer-zone=<ref> : la confirmation avant de retirer une zone et ses éléments.
+// L'éditeur de la fiche d'un type d'engin. ?retirer-zone=<ref> : la confirmation avant de retirer une zone et ses éléments ;
+// ?prevenir=<ref> : le volet des rôles prévenus d'une anomalie de la zone.
 export const load: PageServerLoad = async ({ locals, params, url }) => {
 	const { base } = await exigerGestionEngins(locals);
 	try {
-		return { fiche: await lireFiche(base, idDe(params.id)), retirerZone: idDe(url.searchParams.get('retirer-zone')) || null, nouveau: url.searchParams.has('nouveau') };
+		const [fiche, roles] = await Promise.all([lireFiche(base, idDe(params.id)), rolesAPrevenir(base)]);
+		return { fiche, roles, prevenir: idDe(url.searchParams.get('prevenir')) || null, retirerZone: idDe(url.searchParams.get('retirer-zone')) || null, nouveau: url.searchParams.has('nouveau') };
 	} catch (erreur) {
 		if (erreur instanceof DonneeInvalide) error(404, 'Cette fiche n’existe pas.');
 		throw erreur;
@@ -74,5 +76,18 @@ export const actions: Actions = {
 			return refus(erreur, { cible, zone, valeurs: { nom: champ(f, 'nom'), libelle: champ(f, 'libelle'), quantite: champ(f, 'quantite') } });
 		}
 		return { cible, zone: geste.quoi === 'ajouter_zone' ? 'derniere' : geste.quoi === 'retirer_zone' ? null : zone, succes: SUCCES[geste.quoi] };
+	},
+	// Qui prévenir d'une anomalie de la zone : les rôles cochés ; aucun, ceux qui traitent les anomalies.
+	prevenir: async ({ locals, params, request }) => {
+		const { acteur, base } = await exigerGestionEngins(locals);
+		const f = await request.formData();
+		const zone = idDe(champ(f, 'zone'));
+		const roles = f.getAll('role').map((r) => idDe(String(r)));
+		try {
+			await reglerPrevenir(base, acteur, idDe(params.id), zone, roles, maintenantParis());
+		} catch (erreur) {
+			return refus(erreur, { cible: 'prevenir', zone });
+		}
+		return { cible: 'prevenir', zone, succes: 'Réglage enregistré.' };
 	}
 };

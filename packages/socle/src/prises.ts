@@ -6,8 +6,8 @@ import { ajouterJours, enCours, exigerDateHeure } from './dates.ts';
 import { aLeDroit, type Acteur } from './droits.ts';
 import { lireEngin, voitLesEngins, type EnginVu } from './engins.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
-import type { ElementFiche, ZoneFiche } from './fiches.ts';
-import { avisAnomalies, quiTraite } from './anomalies-avis.ts';
+import { lirePrevenir, type ElementFiche, type ZoneFiche } from './fiches.ts';
+import { avisAnomalies, quiPrevenir } from './anomalies-avis.ts';
 import { ligneJournalSi } from './journal.ts';
 import { GENRES_ECART, STATUTS_AVEC_ACCES, type EtapeAnomalie, type EtatPrise, type GenreEcart, type MotifAttente } from './listes.ts';
 import { rangDuJour, semainesDe, type Reglage } from './planning/calendrier.ts';
@@ -146,12 +146,12 @@ async function exigerPrise(base: Base, acteur: Acteur, maintenant: string): Prom
 // Les zones et éléments d'une version de fiche (celle de la prise, ou la dernière du type), à placer dans un batch.
 function lecturesVersion(base: Base, version: SQL<number>) {
 	return [
-		base.select({ id: ficheZone.id, ref: ficheZone.ref, nom: ficheZone.nom }).from(ficheZone).where(eq(ficheZone.versionId, version)).orderBy(asc(ficheZone.ordre)),
+		base.select({ id: ficheZone.id, ref: ficheZone.ref, nom: ficheZone.nom, prevenir: ficheZone.prevenir }).from(ficheZone).where(eq(ficheZone.versionId, version)).orderBy(asc(ficheZone.ordre)),
 		base.select({ zoneId: ficheElement.zoneId, ref: ficheElement.ref, libelle: ficheElement.libelle, quantite: ficheElement.quantite }).from(ficheElement).where(eq(ficheElement.versionId, version)).orderBy(asc(ficheElement.ordre))
 	] as const;
 }
-function zonesDe(zones: { id: number; ref: number; nom: string }[], elements: ({ zoneId: number } & ElementFiche)[]): ZoneFiche[] {
-	return zones.map((z) => ({ ref: z.ref, nom: z.nom, elements: elements.filter((e) => e.zoneId === z.id).map(({ ref, libelle, quantite }) => ({ ref, libelle, quantite })) }));
+function zonesDe(zones: { id: number; ref: number; nom: string; prevenir: string | null }[], elements: ({ zoneId: number } & ElementFiche)[]): ZoneFiche[] {
+	return zones.map((z) => ({ ref: z.ref, nom: z.nom, prevenir: lirePrevenir(z.prevenir), elements: elements.filter((e) => e.zoneId === z.id).map(({ ref, libelle, quantite }) => ({ ref, libelle, quantite })) }));
 }
 
 const colonnesAnomalie = {
@@ -460,16 +460,21 @@ export async function validerPrise(base: Base, acteur: Acteur, id: number, maint
 	// Rouverte : les anomalies de la première validation que personne ne suit encore suivent leur écart, modifié ou retiré.
 	const libre = sql`${anomalie.priseId} = ${id} AND ${anomalie.closeLe} IS NULL AND NOT ${suivieSql}`;
 	const refs = sql`(SELECT json_extract(value, '$.ref') FROM json_each(${ecarts}))`;
-	const traitent = nouvelles.length ? (await quiTraite(base, maintenant.slice(0, 10), b.prise.equipeId, moi)).filter((x) => x !== moi) : [];
 	const qui = b.noms.get(moi) ?? 'un agent';
+	// Chaque nouvelle anomalie prévient selon sa zone ; chacun reçoit un avis avec les seules anomalies qui le regardent.
+	const zoneDe = (ref: number) => b.zones.find((z) => z.elements.some((e) => e.ref === ref))!;
+	const prevenus = nouvelles.length ? await quiPrevenir(base, maintenant.slice(0, 10), b.prise.equipeId, moi, nouvelles.map((e) => zoneDe(e.ref).prevenir)) : [];
+	const parPersonne = new Map<number, string[]>();
+	nouvelles.forEach((e, i) => {
+		for (const p of prevenus[i]!) if (p !== moi) parPersonne.set(p, [...(parPersonne.get(p) ?? []), e.libelle]);
+	});
+	const parTexte = new Map<string, number[]>();
+	for (const [p, libelles] of parPersonne) {
+		const texte = `${libelles.length} ${libelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${libelles.join(', ')}`;
+		parTexte.set(texte, [...(parTexte.get(texte) ?? []), p]);
+	}
 	const avis = [
-		...avisAnomalies(
-			base,
-			traitent,
-			{ titre: `${b.nomEngin}, prise de garde`, texte: `${nouvelles.length} ${nouvelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${nouvelles.map((e) => e.libelle).join(', ')}`, url: `/engins/anomalies?engin=${enginId}` },
-			maintenant,
-			validee
-		),
+		...[...parTexte].flatMap(([texte, ids]) => avisAnomalies(base, ids, { titre: `${b.nomEngin}, prise de garde`, texte, url: `/engins/anomalies?engin=${enginId}` }, maintenant, validee)),
 		...b.ouvertes
 			.filter((o) => saisie.retrouves.includes(o.id))
 			// Seulement si c'est bien cette prise qui l'a close (un collègue a pu la clore entre-temps).

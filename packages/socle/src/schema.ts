@@ -837,7 +837,9 @@ export const ficheZone = sqliteTable(
 			.references(() => ficheVersion.id),
 		ref: integer('ref').notNull(),
 		nom: text('nom').notNull(),
-		ordre: integer('ordre').notNull()
+		ordre: integer('ordre').notNull(),
+		// Les rôles prévenus d'une anomalie de la zone (identifiants, en JSON) ; rien : ceux qui traitent les anomalies.
+		prevenir: text('prevenir')
 	},
 	(t) => [uniqueIndex('fiche_zone_version_ref').on(t.versionId, t.ref)]
 );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { creerResponsabilite, journal, responsabilite, responsabiliteDroit } from '@gyro-caserne/socle';
+import { creerResponsabilite, journal, lireFiche, reglerPrevenir, responsabilite, responsabiliteDroit, typeEngin } from '@gyro-caserne/socle';
 import { charger, envoyer, locaux, preparer } from '../../de-test.ts';
 import { actions, load } from './+page.server';
 
@@ -18,6 +18,16 @@ describe('page d’un rôle', () => {
 		}
 		await expect(charger(load, locaux(base, referent), { id: '999' })).rejects.toMatchObject({ status: 404 });
 		await expect(charger(load, locaux(base, referent), { id: 'abc' })).rejects.toMatchObject({ status: 404 });
+	});
+
+	it('les zones pour lesquelles le rôle est prévenu', async () => {
+		const { base, chef, resp } = await preparer();
+		const pharmacie = await resp('Référent pharmacie');
+		expect((await charger(load, locaux(base, chef), { id: String(pharmacie.id) })).prevenuPour).toEqual([]);
+		const [vsav] = await base.select().from(typeEngin).where(eq(typeEngin.nom, 'VSAV'));
+		const zone = (await lireFiche(base, vsav!.id)).zones[1]!;
+		await reglerPrevenir(base, chef, vsav!.id, zone.ref, [pharmacie.id], '2026-11-24T10:00');
+		expect((await charger(load, locaux(base, chef), { id: String(pharmacie.id) })).prevenuPour).toEqual([{ zone: zone.nom, types: ['VSAV'] }]);
 	});
 
 	it('rôle système : lecture seule, et le serveur refuse toute modification', async () => {

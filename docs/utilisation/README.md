@@ -63,6 +63,7 @@ Format d'une page :
 - [Comment régler l'armement des engins ?](regler-l-armement-des-engins.md)
 - [Comment mettre l'écusson du centre ?](mettre-l-ecusson-du-centre.md)
 - [Comment modifier la fiche de prise de garde d'un engin ?](modifier-une-fiche-de-prise-de-garde.md)
+- [Comment choisir qui est prévenu d'une anomalie ?](choisir-qui-est-prevenu-d-une-anomalie.md)
 - [Comment faire la prise de garde d'un engin ?](faire-la-prise-de-garde.md)
 - [Comment corriger une prise de garde déjà validée ?](corriger-une-prise-de-garde-validee.md)
 - [Comment signaler un problème sur un engin ?](signaler-un-probleme.md)
