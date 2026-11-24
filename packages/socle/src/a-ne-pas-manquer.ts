@@ -2,13 +2,14 @@ import { alias } from 'drizzle-orm/sqlite-core';
 import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { nomActeur } from './actions/personnes.ts';
 import type { Base } from './base.ts';
-import { ajouterJours, debutMinimumEvenement, exigerDate, exigerDateHeure, momentEvenement } from './dates.ts';
+import { ajouterJours, debutMinimumEvenement, exigerDate, exigerDateHeure, joursFetes, momentEvenement } from './dates.ts';
 import type { Acteur } from './droits.ts';
 import { STATUTS_AVEC_ACCES, type ReponseEvenement } from './listes.ts';
 import { estConvoque, estMembre, mursEtAppartenances, type CleMur, type Mur } from './murs.ts';
 import { requetePourMoi } from './remplacements/lectures.ts';
 import { texteDemande } from './remplacements/tranches.ts';
-import { personne, priseConnaissance, profil, publication, reponseEvenement, souhaitAnniversaire, visiteMur, voteSondage } from './schema.ts';
+import { PALIERS_PAR_DEFAUT } from './anciennete-calcul.ts';
+import { avisAnciennete, personne, priseConnaissance, profil, publication, reglageAnciennete, reponseEvenement, souhaitAnniversaire, visiteMur, voteSondage } from './schema.ts';
 
 export type ItemANePasManquer = { id: number; cle: CleMur; nomMur: string; titre: string };
 export type ANePasManquer = {
@@ -119,30 +120,70 @@ export async function aNePasManquer(base: Base, acteur: Acteur, aujourdhui: stri
 
 // Date de naissance inscrite et affichage activé. Né un 29 février : fêté le 28 février les années non bissextiles.
 const sonJour = (aujourdhui: string) => and(inArray(sql`substr(${personne.naissance}, 6, 5)`, joursFetes(aujourdhui)), eq(personne.anniversaireVisible, 1));
-// Qui le centre fête aujourd'hui : en plus, agents ni partis, ni suspendus, ni extérieurs (requête jointe à `profil`).
-export const fetesDuJour = (aujourdhui: string) => and(sonJour(aujourdhui), inArray(personne.statut, [...STATUTS_AVEC_ACCES]), or(isNull(profil.typePersonne), ne(profil.typePersonne, 'exterieur')));
+// Agents ni partis, ni suspendus, ni extérieurs (requête jointe à `profil`).
+const presents = () => and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), or(isNull(profil.typePersonne), ne(profil.typePersonne, 'exterieur')));
+// Qui le centre fête aujourd'hui (requête jointe à `profil`).
+export const fetesDuJour = (aujourdhui: string) => and(sonJour(aujourdhui), presents());
+
+// L'ancienneté (décision 0047) : les années de service atteintes à la date `jour`, comptées sur l'année de l'engagement SPV.
+export const anneesDeService = (jour: string) => sql<number>`(cast(substr(${jour}, 1, 4) as integer) - cast(substr(${personne.engagementSpv}, 1, 4) as integer))`;
+// Les paliers du centre, lus dans la même requête ; sans réglage, ceux par défaut.
+const paliersDuCentre = sql`(select value from json_each(coalesce((select ${reglageAnciennete.paliers} from ${reglageAnciennete} where ${reglageAnciennete.id} = 1), ${JSON.stringify(PALIERS_PAR_DEFAUT)})))`;
+// Le jour anniversaire de l'engagement tombe sur un palier (engagé un 29 février : le 28 les années non bissextiles). Requête jointe à `profil`.
+export const palierDuJour = (jour: string) => and(inArray(sql`substr(${personne.engagementSpv}, 6, 5)`, joursFetes(jour)), sql`${anneesDeService(jour)} in ${paliersDuCentre}`, presents());
 
 // `geste` : ce que la personne peut faire pour chacun ; rien pour elle-même ni pour le super administrateur (décision 0033). Jamais l'âge.
 export type AnniversaireDuJour = { id: number; prenom: string; nom: string; geste: 'souhaiter' | 'souhaite' | null };
+// Un palier d'ancienneté du jour, et le geste « Féliciter » (décision 0047).
+export type PalierDuJour = { id: number; prenom: string; nom: string; annees: number; geste: 'feliciter' | 'felicite' | null };
+export type FetesDuJour = { anniversaires: AnniversaireDuJour[]; paliers: PalierDuJour[] };
 
-export async function anniversairesDuJour(base: Base, acteur: Acteur, aujourdhui: string): Promise<AnniversaireDuJour[]> {
+// Les anniversaires et les paliers du jour, en une requête : une ligne par personne fêtée.
+export async function fetesDuJourAuCentre(base: Base, acteur: Acteur, aujourdhui: string): Promise<FetesDuJour> {
 	const moi = acteur.type === 'personne' ? acteur.id : null;
 	const souhaite = sql<number>`exists (select 1 from ${souhaitAnniversaire} where ${souhaitAnniversaire.personneId} = ${personne.id} and ${souhaitAnniversaire.jour} = ${aujourdhui} and ${souhaitAnniversaire.auteurId} = ${moi ?? 0})`;
+	const felicite = sql<number>`exists (select 1 from ${avisAnciennete} where ${avisAnciennete.personneId} = ${personne.id} and ${avisAnciennete.jour} = ${aujourdhui} and ${avisAnciennete.auteurId} = ${moi ?? 0})`;
 	const lignes = await base
-		.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, souhaite: souhaite.as('souhaite') })
+		.select({
+			id: personne.id,
+			prenom: personne.prenom,
+			nom: personne.nom,
+			anniversaire: sql<number>`case when ${fetesDuJour(aujourdhui)} then 1 else 0 end`.as('anniversaire'),
+			annees: sql<number | null>`case when ${palierDuJour(aujourdhui)} then ${anneesDeService(aujourdhui)} end`.as('annees'),
+			souhaite: souhaite.as('souhaite'),
+			felicite: felicite.as('felicite')
+		})
 		.from(personne)
 		.leftJoin(profil, eq(profil.id, personne.profilId))
-		.where(fetesDuJour(aujourdhui))
+		.where(or(fetesDuJour(aujourdhui), palierDuJour(aujourdhui)))
 		.orderBy(asc(personne.nom), asc(personne.prenom));
-	return lignes.map(({ souhaite, ...p }) => ({ ...p, geste: moi === null || p.id === moi ? null : souhaite ? 'souhaite' : 'souhaiter' }));
+	const pourAutrui = (id: number) => moi !== null && id !== moi;
+	return {
+		anniversaires: lignes.filter((l) => l.anniversaire === 1).map(({ id, prenom, nom, souhaite }) => ({ id, prenom, nom, geste: pourAutrui(id) ? (souhaite ? 'souhaite' : 'souhaiter') : null })),
+		paliers: lignes.flatMap(({ id, prenom, nom, annees, felicite }) => (annees === null ? [] : [{ id, prenom, nom, annees, geste: pourAutrui(id) ? (felicite ? 'felicite' : 'feliciter') : null }]))
+	};
 }
 
-// L'agent connecté fête-t-il son anniversaire aujourd'hui ? Date inscrite et affichage activé. Si oui, les collègues qui le lui ont souhaité. Une requête.
-export async function monAnniversaire(base: Base, acteur: Acteur, aujourdhui: string): Promise<{ souhaitePar: { prenom: string; nom: string }[] } | null> {
+export async function anniversairesDuJour(base: Base, acteur: Acteur, aujourdhui: string): Promise<AnniversaireDuJour[]> {
+	return (await fetesDuJourAuCentre(base, acteur, aujourdhui)).anniversaires;
+}
+
+export type FetesPourMoi = {
+	// Son anniversaire, et qui le lui a souhaité.
+	anniversaire: { souhaitePar: { prenom: string; nom: string }[] } | null;
+	// Son palier d'ancienneté du jour, et qui l'a félicité.
+	monPalier: { annees: number; feliciteePar: { prenom: string; nom: string }[] } | null;
+	// Les paliers des collègues, à féliciter.
+	paliers: PalierDuJour[];
+};
+
+// L'accueil : l'anniversaire de l'agent connecté (date inscrite et affichage activé), son palier, et ceux de ses collègues. Une requête (un batch).
+export async function fetesPourMoi(base: Base, acteur: Acteur, aujourdhui: string): Promise<FetesPourMoi> {
 	exigerDate(aujourdhui);
-	if (acteur.type !== 'personne') return null;
+	if (acteur.type !== 'personne') return { anniversaire: null, monPalier: null, paliers: [] };
 	const auteur = alias(personne, 'auteur');
-	const [fete, souhaits] = await base.batch([
+	const felicite = sql<number>`exists (select 1 from ${avisAnciennete} where ${avisAnciennete.personneId} = ${personne.id} and ${avisAnciennete.jour} = ${aujourdhui} and ${avisAnciennete.auteurId} = ${acteur.id})`;
+	const [fete, souhaits, paliers, felicitations] = await base.batch([
 		base
 			.select({ id: personne.id })
 			.from(personne)
@@ -152,13 +193,29 @@ export async function monAnniversaire(base: Base, acteur: Acteur, aujourdhui: st
 			.from(souhaitAnniversaire)
 			.innerJoin(auteur, eq(auteur.id, souhaitAnniversaire.auteurId))
 			.where(and(eq(souhaitAnniversaire.personneId, acteur.id), eq(souhaitAnniversaire.jour, aujourdhui)))
-			.orderBy(asc(souhaitAnniversaire.creeLe), asc(souhaitAnniversaire.id))
+			.orderBy(asc(souhaitAnniversaire.creeLe), asc(souhaitAnniversaire.id)),
+		base
+			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, annees: anneesDeService(aujourdhui).as('annees'), felicite: felicite.as('felicite') })
+			.from(personne)
+			.leftJoin(profil, eq(profil.id, personne.profilId))
+			.where(palierDuJour(aujourdhui))
+			.orderBy(asc(personne.nom), asc(personne.prenom)),
+		base
+			.select({ prenom: auteur.prenom, nom: auteur.nom })
+			.from(avisAnciennete)
+			.innerJoin(auteur, eq(auteur.id, avisAnciennete.auteurId))
+			.where(and(eq(avisAnciennete.personneId, acteur.id), eq(avisAnciennete.agentId, acteur.id), eq(avisAnciennete.jour, aujourdhui)))
+			.orderBy(asc(avisAnciennete.creeLe), asc(avisAnciennete.id))
 	]);
-	return fete.length === 0 ? null : { souhaitePar: souhaits };
+	const mien = paliers.find((p) => p.id === acteur.id);
+	return {
+		anniversaire: fete.length === 0 ? null : { souhaitePar: souhaits },
+		monPalier: mien ? { annees: mien.annees, feliciteePar: felicitations } : null,
+		paliers: paliers.filter((p) => p.id !== acteur.id).map(({ felicite, ...p }) => ({ ...p, geste: felicite ? 'felicite' : 'feliciter' }))
+	};
 }
 
-function joursFetes(aujourdhui: string): string[] {
-	exigerDate(aujourdhui);
-	const jour = aujourdhui.slice(5);
-	return jour === '02-28' && ajouterJours(aujourdhui, 1).endsWith('03-01') ? ['02-28', '02-29'] : [jour];
+// L'agent connecté fête-t-il son anniversaire aujourd'hui ? Si oui, les collègues qui le lui ont souhaité. Une requête.
+export async function monAnniversaire(base: Base, acteur: Acteur, aujourdhui: string): Promise<{ souhaitePar: { prenom: string; nom: string }[] } | null> {
+	return (await fetesPourMoi(base, acteur, aujourdhui)).anniversaire;
 }

@@ -1,11 +1,11 @@
-import { and, eq, lt, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, lt, sql } from 'drizzle-orm';
 import { fetesDuJour } from './a-ne-pas-manquer.ts';
 import type { Base } from './base.ts';
 import { exigerDate, exigerDateHeure } from './dates.ts';
 import type { Acteur } from './droits.ts';
 import { DonneeInvalide } from './erreurs.ts';
 import { mettreEnFile } from './notifications.ts';
-import { personne, profil, souhaitAnniversaire } from './schema.ts';
+import { avisAnciennete, personne, profil, souhaitAnniversaire } from './schema.ts';
 
 // « Souhaiter » sous un anniversaire du jour : l'agent fêté est prévenu (cloche et téléphone), une fois par collègue (décision 0033).
 // Une lecture, puis un batch.
@@ -45,8 +45,8 @@ export async function souhaiter(base: Base, acteur: Acteur, personneId: number, 
 	]);
 }
 
-// Ménage de nuit : les souhaits des jours passés.
+// Ménage de nuit : les souhaits et les félicitations d'ancienneté des jours passés (décisions 0033 et 0047).
 export async function effacerSouhaitsPasses(base: Base, aujourdhui: string): Promise<void> {
 	exigerDate(aujourdhui);
-	await base.delete(souhaitAnniversaire).where(lt(souhaitAnniversaire.jour, aujourdhui));
+	await base.batch([base.delete(souhaitAnniversaire).where(lt(souhaitAnniversaire.jour, aujourdhui)), base.delete(avisAnciennete).where(and(isNotNull(avisAnciennete.auteurId), lt(avisAnciennete.jour, aujourdhui)))]);
 }

@@ -12,6 +12,13 @@ export function exigerDate(date: string): void {
 	if (!valide) throw new DonneeInvalide(`Date invalide : ${date}`);
 }
 
+// Les jours (MM-JJ) fêtés à cette date : un anniversaire ou un engagement un 29 février se fête le 28 les années non bissextiles.
+export function joursFetes(aujourdhui: string): string[] {
+	exigerDate(aujourdhui);
+	const jour = aujourdhui.slice(5);
+	return jour === '02-28' && ajouterJours(aujourdhui, 1).endsWith('03-01') ? ['02-28', '02-29'] : [jour];
+}
+
 export function veille(date: string): string {
 	return ajouterJours(date, -1);
 }
