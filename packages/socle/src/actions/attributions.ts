@@ -1,6 +1,6 @@
-import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { Base } from '../base.ts';
-import { exigerDate } from '../dates.ts';
+import { exigerDate, veille } from '../dates.ts';
 import { accorde, droitsDe, estChefDeCentre, type Acteur, type DroitAccorde, type Perimetre } from '../droits.ts';
 import { estGestionnaire } from '../effectif.ts';
 import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
@@ -60,14 +60,40 @@ async function responsabiliteConnue(base: Base, id: number): Promise<Responsabil
 	return ligne;
 }
 
-export async function attribuer(
-	base: Base,
-	acteur: Acteur,
-	a: { personneId: number; responsabiliteId: number; perimetre: Perimetre; debut: string; fin?: string; compteRendu?: string },
-	aujourdhui: string,
-	// `prevenir` : l'agent nommé l'apprend (au téléphone et dans la cloche) ; pas pour l'import du fichier de l'effectif.
-	{ prevenir = true, maintenant = `${aujourdhui}T00:00` }: { prevenir?: boolean; maintenant?: string } = {}
-): Promise<number> {
+type Nomination = { personneId: number; responsabiliteId: number; perimetre: Perimetre; debut: string; fin?: string; compteRendu?: string };
+// `prevenir` : l'agent nommé l'apprend (au téléphone et dans la cloche) ; pas pour l'import du fichier de l'effectif.
+type OptionsNomination = { prevenir?: boolean; maintenant?: string };
+
+export async function attribuer(base: Base, acteur: Acteur, a: Nomination, aujourdhui: string, options: OptionsNomination = {}): Promise<number> {
+	const [lignes] = await base.batch(await preparerNomination(base, acteur, a, aujourdhui, options));
+	return lignes[0]!.id;
+}
+
+// « Remplacer » : le mandat en cours finit la veille du début choisi, et le nouveau titulaire le reprend à cette date.
+// Mêmes règles et mêmes droits que nommer ; les deux changent ensemble, dans une seule écriture groupée.
+export async function remplacerTitulaire(base: Base, acteur: Acteur, r: { attributionId: number; personneId: number; debut: string }, aujourdhui: string, options: OptionsNomination = {}): Promise<number> {
+	exigerDate(aujourdhui);
+	exigerDate(r.debut);
+	const [ligne] = await base.select().from(attribution).where(eq(attribution.id, r.attributionId));
+	if (!ligne) throw new DonneeInvalide('Attribution inconnue');
+	if (ligne.fin !== null && ligne.fin < aujourdhui) throw new DonneeInvalide('Ce mandat est déjà fini');
+	if (r.personneId === ligne.personneId) throw new DonneeInvalide('Cette personne tient déjà ce rôle sur cette période');
+	if (r.debut <= ligne.debut) throw new DonneeInvalide('Choisissez une date après le début du mandat');
+	const finAncien = veille(r.debut);
+	if (ligne.fin !== null && ligne.fin < finAncien) throw new DonneeInvalide('Ce mandat finit avant cette date');
+	// La préparation vérifie le droit de nommer sur ce rôle et ce périmètre : c'est aussi celui de finir l'ancien mandat.
+	const nomination = await preparerNomination(base, acteur, { personneId: r.personneId, responsabiliteId: ligne.responsabiliteId, perimetre: perimetreDeLigne(ligne.perimetreType, ligne.perimetreId), debut: r.debut }, aujourdhui, options, ligne.id);
+	const [, , lignes] = await base.batch([
+		base.update(attribution).set({ fin: finAncien }).where(eq(attribution.id, ligne.id)),
+		ligneJournal(base, { acteur: nomActeur(acteur), action: 'finir_attribution', cibleType: 'attribution', cibleId: ligne.id, details: { fin: finAncien, remplacePar: r.personneId } }, aujourdhui),
+		...nomination
+	]);
+	return lignes[0]!.id;
+}
+
+// Les vérifications d'une nomination, puis ses écritures, à placer dans un batch dans cet ordre (l'insertion d'abord).
+// `remplace` : le mandat qui finit dans la même écriture, ignoré par le contrôle des doublons.
+async function preparerNomination(base: Base, acteur: Acteur, a: Nomination, aujourdhui: string, { prevenir = true, maintenant = `${aujourdhui}T00:00` }: OptionsNomination, remplace?: number) {
 	exigerDate(aujourdhui);
 	exigerDate(a.debut);
 	if (a.fin !== undefined) exigerDate(a.fin);
@@ -107,14 +133,15 @@ export async function attribuer(
 				eq(attribution.perimetreType, a.perimetre.type),
 				memePerimetre,
 				or(isNull(attribution.fin), gte(attribution.fin, a.debut)),
-				a.fin === undefined ? undefined : lte(attribution.debut, a.fin)
+				a.fin === undefined ? undefined : lte(attribution.debut, a.fin),
+				remplace === undefined ? undefined : ne(attribution.id, remplace)
 			)
 		)
 		.limit(1);
 	if (doublon) throw new DonneeInvalide('Cette personne tient déjà ce rôle sur cette période');
 
 	const qui = nomActeur(acteur);
-	const [lignes] = await base.batch([
+	return [
 		base
 			.insert(attribution)
 			.values({
@@ -132,8 +159,7 @@ export async function attribuer(
 		// L'ordre compte : le journal suit l'insertion, last_insert_rowid() est l'id de l'attribution.
 		ligneJournal(base, { acteur: qui, action: 'attribuer', cibleType: 'attribution', cibleId: sql`last_insert_rowid()`, details: { personneId: a.personneId, responsabiliteId: a.responsabiliteId, perimetre: a.perimetre, debut: a.debut, fin: a.fin ?? null } }, aujourdhui),
 		...(prevenir && !(acteur.type === 'personne' && acteur.id === a.personneId) ? avisNomination(base, a.personneId, laResponsabilite.nom, nomPerimetre, acteur, maintenant) : [])
-	]);
-	return lignes[0]!.id;
+	] as const;
 }
 
 export async function finirAttribution(base: Base, acteur: Acteur, attributionId: number, fin: string, aujourdhui: string): Promise<void> {
