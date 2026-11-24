@@ -41,7 +41,7 @@ describe('/caserne', () => {
 		expect(page).not.toContain('href="/reglages"');
 	});
 
-	it('« Habillement » pour un agent du centre ; pas pour le compte de la réserve citoyenne', () => {
+	it('« Habillement » (Faire une demande, au référent habillement) pour un agent du centre ; pas pour le compte de la réserve citoyenne', () => {
 		expect(html({ comites: true })).toMatch(lien('/habillement', 'Habillement'));
 		expect(html({ comites: false })).not.toContain('href="/habillement"');
 	});

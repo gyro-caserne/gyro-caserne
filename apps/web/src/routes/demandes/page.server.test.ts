@@ -32,7 +32,7 @@ describe('/demandes', () => {
 		await expect((load as any)({ locals: locaux(base, null), url: new URL('http://x/demandes') })).rejects.toMatchObject({ status: 303, location: '/connexion' });
 		const data = await (load as any)({ locals: locaux(base, alice), url: new URL(`http://x/demandes?role=${pharmacie}`) });
 		expect(data).toMatchObject({ peutDemander: true, choisi: pharmacie, recus: [] });
-		expect(data.roles).toEqual([expect.objectContaining({ nom: 'Référent engins', icone: 'camion' }), expect.objectContaining({ nom: 'Référent pharmacie', icone: 'croix' })]);
+		expect(data.roles).toEqual([expect.objectContaining({ nom: 'Référent engins', icone: 'camion' }), expect.objectContaining({ nom: 'Référent habillement', icone: 'veste' }), expect.objectContaining({ nom: 'Référent pharmacie', icone: 'croix' })]);
 		expect((await (load as any)({ locals: locaux(base, alice), url: new URL('http://x/demandes?role=999') })).choisi).toBeNull();
 	});
 

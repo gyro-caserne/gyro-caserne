@@ -1,4 +1,4 @@
-import { creerBaseD1, creerBasePhotos, effacerAgentsPartis, equipeSansChefDemain, effacerAnciens, effacerSouhaitsPasses, effacerVieillesDemandes, effacerVieillesDemandesReferents, effacerPhotosOrphelines, effacerVieillesNotifications, effacerVieillesPublications, effacerVieillesReservations, fileDEnvoisVide, mettreAJourReleves, planningDuMatin, rappelsEte, remplacementsDuMoment, resumeErreur } from '@gyro-caserne/socle';
+import { creerBaseD1, creerBasePhotos, effacerAgentsPartis, equipeSansChefDemain, effacerAnciens, effacerSouhaitsPasses, effacerVieillesDemandesReferents, effacerPhotosOrphelines, effacerVieillesNotifications, effacerVieillesPublications, effacerVieillesReservations, fileDEnvoisVide, mettreAJourReleves, planningDuMatin, rappelsEte, remplacementsDuMoment, resumeErreur } from '@gyro-caserne/socle';
 import { aujourdhuiParis, maintenantParis } from './lib/aujourdhui.ts';
 import { envoyerLot } from './lib/server/envoi-push.ts';
 import { clesVapid, type EnvVapid } from './lib/server/webpush.ts';
@@ -18,7 +18,7 @@ type Env = EnvVapid & { BASE: D1Database; PHOTOS: D1Database; VIGILANCE_CLE?: st
 
 // Les notifications du fil sont gardées 30 jours.
 const CONSERVATION_NOTIFICATIONS_JOURS = 30;
-const CONSERVATION_HABILLEMENT_MOIS = 24;
+const CONSERVATION_DEMANDES_MOIS = 24;
 // Les données d'un agent parti sont effacées 12 mois après son dernier départ (décision 0029).
 const CONSERVATION_PARTIS_MOIS = 12;
 // Le ménage, chaque nuit ; le réveil, toutes les dix minutes (chaque réveil démarre à froid : décision 0012). Voir wrangler.jsonc.
@@ -75,8 +75,8 @@ export function avecPlanifie<K extends { fetch: unknown }>(kit: K, centre: { con
 			const reservations = limiteDeConservation(quand, 12);
 			// Les publications des murs et leurs photos, sauf épinglées.
 			const publications = limiteDeConservation(quand, centre.conservationPublicationsMois);
-			// Les demandes d'habillement finies, avec leur fil : 24 mois, comme les publications (décision 0023).
-			const habillement = limiteDeConservation(quand, CONSERVATION_HABILLEMENT_MOIS);
+			// Les demandes aux référents finies, avec leur fil : 24 mois, comme les publications (décisions 0023 et 0043).
+			const demandes = limiteDeConservation(quand, CONSERVATION_DEMANDES_MOIS);
 			const photos = creerBasePhotos(env.PHOTOS);
 			ctx.waitUntil(
 				Promise.all([
@@ -86,9 +86,7 @@ export function avecPlanifie<K extends { fetch: unknown }>(kit: K, centre: { con
 					// Les souhaits d'anniversaire ne passent pas la journée (décision 0033).
 					effacerSouhaitsPasses(base, aujourdhuiParis(quand)),
 					effacerVieillesReservations(base, reservations),
-					effacerVieillesDemandes(base, habillement),
-					// Les demandes aux référents finies, de même.
-					effacerVieillesDemandesReferents(base, habillement),
+					effacerVieillesDemandesReferents(base, demandes),
 					// Les adresses des super administrateurs (séparées par des virgules) : leur compte n'est jamais touché.
 					effacerAgentsPartis(base, limiteDeConservation(quand, CONSERVATION_PARTIS_MOIS), aujourdhuiParis(quand), (env.SUPER_ADMINS ?? '').split(',').map((a) => a.trim()).filter(Boolean)),
 					// Les octets de PHOTOS que plus rien ne référence (un effacement raté) : une tranche par nuit.

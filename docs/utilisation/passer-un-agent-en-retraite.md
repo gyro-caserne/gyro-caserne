@@ -8,4 +8,4 @@ Réservé au chef de centre, à son adjoint et au super administrateur. Il faut 
 4. Lisez ce qu'il quitte (son équipe, ses rôles), puis cochez « Je confirme ».
 5. Appuyez sur « Enregistrer ». Le message « Fiche enregistrée » apparaît.
 
-Ses remplacements, réservations et demandes d'habillement en cours sont annulés, et il sort des groupes de messagerie. Il garde sa fiche, ses notifications et ses conversations à deux, et ses données ne sont pas effacées. Le chef de centre et l'adjoint ne passent pas en retraité.
+Ses remplacements et réservations sont annulés, comme ses demandes aux référents pas encore avancées, et il sort des groupes de messagerie. Il garde sa fiche, ses notifications et ses conversations à deux, et ses données ne sont pas effacées. Le chef de centre et l'adjoint ne passent pas en retraité.

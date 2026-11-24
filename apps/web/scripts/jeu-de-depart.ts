@@ -79,7 +79,7 @@ try {
 			if (role && referente) {
 				const [tenue] = await base.select({ id: attribution.id }).from(attribution).where(and(eq(attribution.personneId, referente), eq(attribution.responsabiliteId, role.id)));
 				if (!tenue) await base.insert(attribution).values({ personneId: referente, responsabiliteId: role.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:jeu-de-depart', saisieLe: maintenantParis() });
-				await chargerHabillementFictif(base, maintenantParis(), referente, [gens['alice.martin@exemple.fr'], gens['bruno.petit@exemple.fr'], gens['david.leroy@exemple.fr']].filter((id): id is number => id !== undefined));
+				await chargerHabillementFictif(base, maintenantParis(), role.id, referente, [gens['alice.martin@exemple.fr'], gens['bruno.petit@exemple.fr'], gens['david.leroy@exemple.fr']].filter((id): id is number => id !== undefined));
 			}
 			// Un planning fictif : l'année en cours et la suivante publiées, quelques manœuvres.
 			await chargerPlanningFictif(base, description, maintenantParis());

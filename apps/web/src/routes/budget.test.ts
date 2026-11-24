@@ -64,9 +64,8 @@ import { POST as appliquerFiches } from './engins/fiches/fichier/appliquer/+serv
 import { load as pageAnomalies } from './engins/anomalies/+page.server';
 import { actions as actionsSignaler } from './engins/anomalies/signaler/+page.server';
 import { actions as actionsAnomalie, load as pageAnomalie } from './engins/anomalies/[id]/+page.server';
-import { actions as actionsHabillement, load as pageHabillement } from './habillement/+page.server';
-import { actions as actionsDemande, load as pageDemande } from './habillement/[id]/+page.server';
-import { load as toutesDemandes } from './habillement/toutes/+page.server';
+import { load as entreeHabillement } from './habillement/+page.server';
+import { load as ancienneDemande } from './habillement/[id]/+page.server';
 import { load as pageSuivi } from './suivi/+page.server';
 import { actions as actionsDemandes, load as pageDemandes } from './demandes/+page.server';
 import { actions as actionsDemandeRef, load as pageDemandeRef } from './demandes/[id]/+page.server';
@@ -392,28 +391,12 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals }); await (accueil as any)({ locals, url: new URL('http://x/') }); await (pageEngin as any)({ locals, params: { id: '1' } }); })).toBeLessThanOrEqual(BUDGET);
 	});
 
-	it('habillement : demander (150 agents), Mes demandes (30), une demande (40 lignes au fil), un geste, toutes les demandes (180), l’Accueil du chef', async () => {
-		const { base, locals, agent, compter } = await centreDe150();
+	it('habillement : l’ancienne entrée et une ancienne adresse de demande, une requête chacune', async () => {
+		const { locals, agent, compter } = await centreDe150();
 		const deLAgent = { ...locals, acteur: { type: 'personne' as const, id: agent.id } };
-		const demander = async (l: unknown, texte: string) => (actionsHabillement.default as any)({ locals: l, request: await requeteFormulaire([['texte', texte]]) }).catch((r: { location?: string }) => r);
-		for (let i = 0; i < 29; i++) await demander(deLAgent, `Veste ${i}`);
-		let fin: { location?: string } = {};
-		expect(await compter(async () => { fin = await demander(deLAgent, 'Rangers 43'); })).toBeLessThanOrEqual(BUDGET);
-		const params = { id: fin.location!.match(/\d+/)![0] };
-		const geste = async (l: unknown, champs: [string, string][]) => (actionsDemande.default as any)({ locals: l, params, request: await requeteFormulaire(champs) });
-		await geste(locals, [['quoi', 'prendre']]);
-		for (let i = 0; i < 20; i++) {
-			await geste(locals, [['quoi', 'question'], ['texte', `Question ${i}`]]);
-			await geste(deLAgent, [['quoi', 'repondre'], ['texte', `Réponse ${i}`]]);
-		}
-		const autres = (await base.select({ id: personne.id }).from(personne)).filter((p) => p.id !== agent.id && p.id !== locals.acteur.id);
-		for (const p of autres) await demander({ ...locals, acteur: { type: 'personne', id: p.id } }, 'Gants 9');
-		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals: deLAgent }); expect((await (pageHabillement as any)({ locals: deLAgent })).enCours).toHaveLength(30); })).toBeLessThanOrEqual(BUDGET);
-		const page = async (l: unknown) => { await (racine as any)({ depends: () => {}, locals: l }); expect((await (pageDemande as any)({ locals: l, params, url: new URL('http://x/') })).demande.fil.length).toBeGreaterThanOrEqual(41); };
-		expect(await compter(() => page(deLAgent))).toBeLessThanOrEqual(BUDGET);
-		expect(await compter(async () => { expect(await geste(locals, [['quoi', 'traiter'], ['issue', 'commande'], ['texte', '']])).toMatchObject({ succes: expect.any(String) }); await page(locals); })).toBeLessThanOrEqual(BUDGET);
-		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals }); expect((await (toutesDemandes as any)({ locals })).enCours.length).toBeGreaterThan(100); })).toBeLessThanOrEqual(BUDGET);
-		expect(await compter(async () => { await (racine as any)({ depends: () => {}, locals }); await (accueil as any)({ locals, url: new URL('http://x/') }); })).toBeLessThanOrEqual(BUDGET);
+		const vers = (p: Promise<unknown>) => p.catch((r: { location?: string }) => r.location);
+		expect(await compter(async () => expect(await vers((entreeHabillement as any)({ locals: deLAgent }))).toMatch(/^\/demandes\?role=\d+$/))).toBe(1);
+		expect(await compter(async () => expect(await vers((ancienneDemande as any)({ locals: deLAgent, params: { id: '3' } }))).toBe('/demandes'))).toBe(1);
 	});
 
 	it('demandes aux référents : demander (150 agents), la page (30), une demande (40 lignes au fil), un geste, la liste du rôle (180), l’Accueil du référent et du chef', async () => {

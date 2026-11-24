@@ -1,16 +1,15 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
 import { acteurDe } from '../src/connexion.ts';
 import { chargerComptesDeTest, COMPTES_DE_TEST } from '../src/comptes-de-test.ts';
-import { aLeDroit } from '../src/droits.ts';
 import { DonneeInvalide } from '../src/erreurs.ts';
-import { chargerHabillementFictif } from '../src/habillement.ts';
+import { chargerHabillementFictif, lireDemandeReferent } from '../src/demandes.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
 import { mursDe } from '../src/murs.ts';
 import { ajouterPersonne } from '../src/actions/personnes.ts';
 import { nombreAValider } from '../src/reservations.ts';
-import { affectationEquipe, attribution, comite, demandeHabillement, equipe, filHabillement, journal, personne, profil, publication, reservation, ressource } from '../src/schema.ts';
+import { affectationEquipe, attribution, comite, demandeReferent, equipe, filDemandeReferent, journal, personne, profil, publication, reservation, ressource, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
 const maintenant = '2026-10-29T10:00';
@@ -22,6 +21,11 @@ async function jeu() {
 	await chargerComptesDeTest(base, base.photos, 'caserne@exemple.fr', maintenant);
 	return base;
 }
+
+// Les demandes d'habillement : celles du rôle « Référent habillement ».
+const roleHabillement = async (base: Awaited<ReturnType<typeof baseDeTest>>) => (await base.select({ id: responsabilite.id }).from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement')))[0]!.id;
+const demandesHabillement = async (base: Awaited<ReturnType<typeof baseDeTest>>) =>
+	base.select({ id: demandeReferent.id, etape: demandeReferent.etape, question: demandeReferent.question, prisePar: demandeReferent.prisePar }).from(demandeReferent).where(eq(demandeReferent.responsabiliteId, await roleHabillement(base))).orderBy(demandeReferent.id);
 
 async function mursDuCompte(base: Awaited<ReturnType<typeof baseDeTest>>, role: string) {
 	const acteur = await acteurDe(base, `caserne+${role}@exemple.fr`, []);
@@ -75,14 +79,34 @@ describe('chargerComptesDeTest', () => {
 		expect(await base.select().from(reservation)).toHaveLength(1);
 	});
 
-	it('un référent habillement fictif et des demandes de l’agent et du membre à différentes étapes, sans doublon au second chargement', async () => {
+	it('un référent habillement fictif et des demandes de l’agent et du membre à différentes étapes, dans les demandes aux référents, sans doublon au second chargement', async () => {
 		const base = await jeu();
+		const etapes = async () => (await demandesHabillement(base)).map((d) => [d.etape, d.question]);
+		expect(await etapes()).toEqual([['demandee', null], ['prise', 'posee'], ['ecommande', null], ['faite', null]]);
+		// Le référent suit la demande livrée, avec son fil et ses étapes nommées.
 		const referent = await acteurDe(base, 'caserne+habillement@exemple.fr', []);
-		expect(await aLeDroit(base, referent!, 'GERER_HABILLEMENT', { type: 'centre' }, aujourdhui)).toBe(true);
-		const etapes = async () => (await base.select({ etape: demandeHabillement.etape }).from(demandeHabillement).orderBy(demandeHabillement.id)).map((d) => d.etape);
-		expect(await etapes()).toEqual(['demandee', 'question', 'traitee', 'livree']);
+		const livree = await lireDemandeReferent(base, referent!, (await demandesHabillement(base))[3]!.id, maintenant);
+		expect(livree).toMatchObject({ nomEtape: 'Livrée', mot: 'Dans votre casier', prisePar: 'Hélène Habillement' });
+		expect(livree.fil.map((f) => [f.quoi, f.etape])).toEqual([['prise', null], ['etape', 'En stock'], ['fin', 'Livrée']]);
 		await chargerComptesDeTest(base, base.photos, 'caserne@exemple.fr', maintenant);
 		expect(await etapes()).toHaveLength(4);
+	});
+
+	it('un retraité, et un référent pharmacie dont le rôle reçoit des demandes', async () => {
+		const base = await jeu();
+		const [retraites] = await base.select().from(profil).where(eq(profil.nom, 'Retraités'));
+		expect(retraites?.typePersonne).toBe('exterieur');
+		const [roger] = await base.select().from(personne).where(eq(personne.email, 'caserne+retraite@exemple.fr'));
+		expect(roger?.profilId).toBe(retraites!.id);
+		const [pharmacie] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent pharmacie'));
+		expect(pharmacie?.demandes).toEqual({ etapes: [], derniere: 'Faite' });
+		const paul = await acteurDe(base, 'caserne+pharmacie@exemple.fr', []);
+		expect(await base.select({ id: attribution.id }).from(attribution).where(and(eq(attribution.personneId, (paul as { id: number }).id), eq(attribution.responsabiliteId, pharmacie!.id)))).toHaveLength(1);
+		// Décochée entre-temps (la production) : cochée à nouveau ; et le profil n'est pas recréé.
+		await base.update(responsabilite).set({ demandes: null }).where(eq(responsabilite.id, pharmacie!.id));
+		await chargerComptesDeTest(base, base.photos, 'caserne@exemple.fr', maintenant);
+		expect((await base.select().from(responsabilite).where(eq(responsabilite.id, pharmacie!.id)))[0]?.demandes).toEqual({ etapes: [], derniere: 'Faite' });
+		expect(await base.select().from(profil).where(eq(profil.nom, 'Retraités'))).toHaveLength(1);
 	});
 
 	it('ne fait rien la deuxième fois', async () => {
@@ -154,10 +178,10 @@ describe('chargerComptesDeTest', () => {
 		const adresses = (await base.select({ email: personne.email }).from(personne)).map((p) => p.email);
 		expect(adresses).not.toContain('caserne+habillement@exemple.fr');
 		expect(adresses).toHaveLength(COMPTES_DE_TEST.length - 3);
-		// Les demandes d'habillement sont là, suivies par le chef de centre (il a le droit de les traiter).
+		// Les demandes d'habillement sont là, suivies par le chef de centre (il agit toujours).
 		const [chef] = await base.select().from(personne).where(eq(personne.email, 'caserne+chef@exemple.fr'));
-		const demandes = await base.select({ etape: demandeHabillement.etape, prisePar: demandeHabillement.prisePar }).from(demandeHabillement).orderBy(demandeHabillement.id);
-		expect(demandes.map((d) => d.etape)).toEqual(['demandee', 'question', 'traitee', 'livree']);
+		const demandes = await demandesHabillement(base);
+		expect(demandes.map((d) => d.etape)).toEqual(['demandee', 'prise', 'ecommande', 'faite']);
 		expect(demandes.filter((d) => d.prisePar !== null).every((d) => d.prisePar === chef!.id)).toBe(true);
 		// Relançable, et l'équipe revenue, les comptes manquants sont créés.
 		await chargerComptesDeTest(base, base.photos, 'caserne@exemple.fr', maintenant);
@@ -181,13 +205,13 @@ describe('chargerComptesDeTest', () => {
 		expect(tenues).toHaveLength(1);
 		const [equipe1] = await base.select({ id: equipe.id }).from(equipe).where(eq(equipe.ordreRotation, 1));
 		expect(await base.select({ equipeId: affectationEquipe.equipeId }).from(affectationEquipe).where(eq(affectationEquipe.personneId, comptes[0]!.id))).toEqual([{ equipeId: equipe1!.id }]);
-		const demandes = await base.select({ prisePar: demandeHabillement.prisePar }).from(demandeHabillement);
+		const demandes = await demandesHabillement(base);
 		const suivies = demandes.filter((d) => d.prisePar !== null);
 		expect(suivies.length).toBeGreaterThan(0);
 		expect(suivies.every((d) => d.prisePar === comptes[0]!.id)).toBe(true);
 		await chargerComptesDeTest(base, base.photos, 'caserne@exemple.fr', maintenant);
 		expect(await lire()).toEqual({ comptes, tenues });
-		expect(await base.select().from(demandeHabillement)).toHaveLength(demandes.length);
+		expect(await demandesHabillement(base)).toHaveLength(demandes.length);
 	});
 
 	it('des demandes déjà suivies par le chef : à la relance, pas de doublon, et le chef les garde', async () => {
@@ -195,20 +219,20 @@ describe('chargerComptesDeTest', () => {
 		const idDe = async (role: string) => (await base.select({ id: personne.id }).from(personne).where(eq(personne.email, `caserne+${role}@exemple.fr`)))[0]!.id;
 		const chef = await idDe('chef');
 		// L'état de la préprod : les demandes chargées quand le référent manquait.
-		await base.delete(filHabillement);
-		await base.delete(demandeHabillement);
-		await chargerHabillementFictif(base, maintenant, chef, [await idDe('agent'), await idDe('membre')]);
-		const lire = () => base.select({ id: demandeHabillement.id, prisePar: demandeHabillement.prisePar }).from(demandeHabillement).orderBy(demandeHabillement.id);
+		await base.delete(filDemandeReferent);
+		await base.delete(demandeReferent);
+		await chargerHabillementFictif(base, maintenant, await roleHabillement(base), chef, [await idDe('agent'), await idDe('membre')]);
+		const lire = () => demandesHabillement(base);
 		const avant = await lire();
-		const fil = await base.select().from(filHabillement);
+		const fil = await base.select().from(filDemandeReferent);
 		await chargerComptesDeTest(base, base.photos, 'caserne@exemple.fr', maintenant);
 		expect(await lire()).toEqual(avant);
-		expect(await base.select().from(filHabillement)).toEqual(fil);
+		expect(await base.select().from(filDemandeReferent)).toEqual(fil);
 		expect(avant.filter((d) => d.prisePar !== null).every((d) => d.prisePar === chef)).toBe(true);
 	});
 
 	it('une équipe qui devient inactive puis revient : jamais de demande d’habillement en double', async () => {
-		const etapes = async (base: Awaited<ReturnType<typeof baseDeTest>>) => (await base.select({ id: demandeHabillement.id }).from(demandeHabillement)).length;
+		const etapes = async (base: Awaited<ReturnType<typeof baseDeTest>>) => (await demandesHabillement(base)).length;
 		// Passe complète, puis l'équipe de l'agent devient inactive, puis revient.
 		const base = await jeu();
 		await base.update(equipe).set({ active: 0 }).where(eq(equipe.ordreRotation, 1));
@@ -239,7 +263,7 @@ describe('chargerComptesDeTest', () => {
 		expect(pubs.some((p) => p.mur === 'vie')).toBe(false);
 		expect(pubs.filter((p) => p.mur === 'centre')).toHaveLength(3);
 		expect(await base.select().from(reservation)).toEqual([]);
-		expect(await base.select().from(demandeHabillement)).not.toEqual([]);
+		expect(await demandesHabillement(base)).not.toEqual([]);
 	});
 
 	it('refuse une adresse de super administrateur', async () => {

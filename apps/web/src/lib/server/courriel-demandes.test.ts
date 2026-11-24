@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { couper, demanderTenue } from '@gyro-caserne/socle';
+import { couper, demanderAuReferent, roleDeLHabillement, type Acteur, type Base } from '@gyro-caserne/socle';
 import { baseDeTest } from '@gyro-caserne/socle/base-de-test';
 import { preparer } from '../../routes/echanges/de-test.ts';
 import { envoyerDemandeParCourriel } from './courriel-demandes.ts';
@@ -7,6 +7,7 @@ import { envoyerDemandeParCourriel } from './courriel-demandes.ts';
 afterEach(() => vi.restoreAllMocks());
 
 // Le chef de centre du jeu commun reçoit les demandes d'habillement : aucun référent n'est nommé.
+const demanderTenue = async (base: Base, acteur: Acteur, texte: string, quand: string) => demanderAuReferent(base, acteur, (await roleDeLHabillement(base))!, texte, quand);
 async function jeu(courriel: (m: { a: string; sujet: string; texte: string }) => Promise<void>) {
 	const { base, chef, alice } = await preparer();
 	const taches: Promise<unknown>[] = [];
@@ -19,17 +20,17 @@ describe('envoyerDemandeParCourriel', () => {
 		const envoyes: { a: string; sujet: string; texte: string }[] = [];
 		const j = await jeu(async (m) => void envoyes.push(m));
 		const id = await demanderTenue(j.base, j.alice, 'Rangers 43', '2026-11-18T10:00');
-		envoyerDemandeParCourriel(j.locals, 'https://caserne.exemple.fr', { genre: 'habillement', id });
+		envoyerDemandeParCourriel(j.locals, 'https://caserne.exemple.fr', { genre: 'demande', id });
 		expect(envoyes).toEqual([]);
 		await j.fini();
-		expect(envoyes).toEqual([{ a: 'chef@exemple.fr', sujet: 'Nouvelle demande d’habillement', texte: `Nouvelle demande d’habillement\nAlice Test : Rangers 43\n\nhttps://caserne.exemple.fr/habillement/${id}\n` }]);
+		expect(envoyes).toEqual([{ a: 'chef@exemple.fr', sujet: 'Nouvelle demande d’Alice Test', texte: `Nouvelle demande d’Alice Test\nRangers 43 (Référent habillement)\n\nhttps://caserne.exemple.fr/demandes/${id}\n` }]);
 	});
 
 	it('« Recevoir les demandes par e-mail » coupé : rien', async () => {
 		const envoyer = vi.fn(async () => {});
 		const j = await jeu(envoyer);
 		await couper(j.base, j.chef, 'courriel', true, '2026-11-18T09:00');
-		envoyerDemandeParCourriel(j.locals, 'https://x', { genre: 'habillement', id: await demanderTenue(j.base, j.alice, 'Gants', '2026-11-18T10:00') });
+		envoyerDemandeParCourriel(j.locals, 'https://x', { genre: 'demande', id: await demanderTenue(j.base, j.alice, 'Gants', '2026-11-18T10:00') });
 		await j.fini();
 		expect(envoyer).not.toHaveBeenCalled();
 	});
@@ -39,15 +40,15 @@ describe('envoyerDemandeParCourriel', () => {
 		const j = await jeu(async () => {
 			throw new Error('Courriel refusé par Brevo (401) : Key not found');
 		});
-		envoyerDemandeParCourriel(j.locals, 'https://x', { genre: 'habillement', id: await demanderTenue(j.base, j.alice, 'Gants', '2026-11-18T10:00') });
+		envoyerDemandeParCourriel(j.locals, 'https://x', { genre: 'demande', id: await demanderTenue(j.base, j.alice, 'Gants', '2026-11-18T10:00') });
 		await expect(j.fini()).resolves.toBeDefined();
 		expect(journal).toHaveBeenCalledWith('Courriel de demande non envoyé', expect.stringContaining('Brevo'));
 		const cassee = await baseDeTest();
 		const l = { base: { ...cassee, select: () => { throw new Error('panne'); } }, courriel: vi.fn(), enArrierePlan: (t: Promise<unknown>) => void t } as unknown as App.Locals;
-		expect(() => envoyerDemandeParCourriel(l, 'https://x', { genre: 'habillement', id: 1 })).not.toThrow();
+		expect(() => envoyerDemandeParCourriel(l, 'https://x', { genre: 'demande', id: 1 })).not.toThrow();
 	});
 
 	it('sans moyen d’envoi (tests, développement sans hooks) : rien', () => {
-		expect(() => envoyerDemandeParCourriel({ enArrierePlan: () => {} } as unknown as App.Locals, 'https://x', { genre: 'habillement', id: 1 })).not.toThrow();
+		expect(() => envoyerDemandeParCourriel({ enArrierePlan: () => {} } as unknown as App.Locals, 'https://x', { genre: 'demande', id: 1 })).not.toThrow();
 	});
 });

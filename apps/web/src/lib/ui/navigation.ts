@@ -26,9 +26,9 @@ export function dansUneConversation(route: string | null, erreur: unknown): bool
 	return !erreur && (route === '/echanges/messages/[id]' || route === '/echanges/messages/a/[personne]');
 }
 
-// Les pages dont l'ouverture marque des notifications lues (mur, publication, remplacements, anomalie, mes réservations, demande d'habillement ou à un référent, suivi du centre) :
+// Les pages dont l'ouverture marque des notifications lues (mur, publication, remplacements, anomalie, mes réservations, demande à un référent, suivi du centre) :
 // la cloche n'est relue qu'après elles, pour ne pas ajouter un appel au serveur à chaque page.
-const MARQUENT_LU = ['/echanges/[mur]', '/echanges/[mur]/[id]', '/remplacements', '/remplacements/[id]', '/planning/ete', '/engins/anomalies/[id]', '/reservations/miennes', '/habillement/[id]', '/demandes/[id]', '/suivi'];
+const MARQUENT_LU = ['/echanges/[mur]', '/echanges/[mur]/[id]', '/remplacements', '/remplacements/[id]', '/planning/ete', '/engins/anomalies/[id]', '/reservations/miennes', '/demandes/[id]', '/suivi'];
 export function marqueDesLues(route: string | null): boolean {
 	return route !== null && MARQUENT_LU.includes(route);
 }

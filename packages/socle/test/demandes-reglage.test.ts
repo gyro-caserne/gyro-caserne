@@ -66,12 +66,12 @@ describe('régler les demandes d’un rôle', () => {
 		await expect(regler(['Prise en compte'])).rejects.toThrow('Nom d’étape en double');
 	});
 
-	it('jamais un rôle système, ni le rôle de l’habillement, ni un rôle d’équipe ou de comité, ni un rôle archivé', async () => {
+	it('jamais un rôle système, ni un rôle d’équipe ou de comité, ni un rôle archivé ; le rôle de l’habillement, oui', async () => {
 		const j = await jeu();
 		const regler = async (nom: string) => reglerDemandes(j.base, j.claire, (await j.role(nom)).id, { etapes: [], derniere: 'Faite' }, QUAND);
 		await expect(regler('Chef de centre')).rejects.toThrow('Ce rôle ne reçoit pas de demandes');
 		await expect(regler('Chef de garde')).rejects.toThrow('Ce rôle ne reçoit pas de demandes');
-		await expect(regler('Référent habillement')).rejects.toThrow('Ce rôle ne reçoit pas de demandes');
+		await regler('Référent habillement');
 		await expect(regler('Membre de comité')).rejects.toThrow('Ce rôle ne reçoit pas de demandes');
 		const engins = (await j.role('Référent engins')).id;
 		await archiverResponsabilite(j.base, j.claire, engins, AUJOURDHUI);
@@ -113,10 +113,9 @@ describe('régler les demandes d’un rôle', () => {
 		expect(JSON.parse((await j.base.select().from(journal).where(eq(journal.action, 'regler_demandes'))).at(-1)!.details)).toEqual({ recoit: false });
 	});
 
-	it('un rôle qui reçoit des demandes ne prend ni le droit de l’habillement ni une autre portée', async () => {
+	it('un rôle qui reçoit des demandes ne prend pas une autre portée', async () => {
 		const j = await jeu();
 		await reglerDemandes(j.base, j.claire, j.pharmacie, { etapes: [], derniere: 'Faite' }, QUAND);
-		await expect(modifierResponsabilite(j.base, j.claire, j.pharmacie, { droits: ['GERER_STOCK', 'GERER_HABILLEMENT'] }, AUJOURDHUI)).rejects.toThrow('Ce rôle reçoit des demandes');
 		await j.base.delete(attribution).where(eq(attribution.personneId, j.ids.paul));
 		await expect(modifierResponsabilite(j.base, j.claire, j.pharmacie, { portee: 'equipe', droits: [] }, AUJOURDHUI)).rejects.toThrow('Ce rôle reçoit des demandes');
 		// Le reste se modifie comme avant.
@@ -168,10 +167,11 @@ describe('corrections de la relecture', () => {
 });
 
 describe('le jeu de départ d’un nouveau centre', () => {
-	it('le référent pharmacie et le référent engins (matériel) reçoivent des demandes ; les autres rôles non', async () => {
+	it('le référent pharmacie, le référent engins (matériel) et le référent habillement reçoivent des demandes ; les autres rôles non', async () => {
 		const j = await jeu();
 		const roles = await j.base.select({ nom: responsabilite.nom, demandes: responsabilite.demandes }).from(responsabilite);
-		expect(roles.filter((r) => r.demandes !== null).map((r) => r.nom).sort()).toEqual(['Référent engins', 'Référent pharmacie']);
+		expect(roles.filter((r) => r.demandes !== null).map((r) => r.nom).sort()).toEqual(['Référent engins', 'Référent habillement', 'Référent pharmacie']);
+		expect(roles.find((r) => r.nom === 'Référent habillement')!.demandes).toEqual({ etapes: [{ id: 'estock', nom: 'En stock' }, { id: 'ecommande', nom: 'Commandée au SDIS' }], derniere: 'Livrée' });
 		expect(roles.find((r) => r.nom === 'Référent pharmacie')!.demandes).toEqual({ etapes: [], derniere: 'Faite' });
 	});
 });
@@ -195,13 +195,14 @@ describe('un seul enregistrement de la page du rôle', () => {
 		expect(await j.base.select().from(journal).where(eq(journal.action, 'regler_demandes'))).toHaveLength(n);
 	});
 
-	it('décocher et changer de portée dans le même envoi ; cocher en ajoutant le droit de l’habillement est refusé', async () => {
+	it('décocher et changer de portée dans le même envoi ; cocher et changer les droits ensemble', async () => {
 		const j = await jeu();
 		await j.base.delete(attribution).where(eq(attribution.personneId, j.ids.paul));
 		await modifierResponsabilite(j.base, j.claire, j.pharmacie, { portee: 'equipe', droits: [], demandes: null }, AUJOURDHUI, QUAND);
 		expect(await j.lire()).toBeNull();
 		const engins = (await j.role('Référent engins')).id;
 		await reglerDemandes(j.base, j.claire, engins, null, QUAND);
-		await expect(modifierResponsabilite(j.base, j.claire, engins, { droits: ['GERER_HABILLEMENT'], demandes: { etapes: [], derniere: 'Faite' } }, AUJOURDHUI, QUAND)).rejects.toThrow('Ce rôle ne reçoit pas de demandes');
+		await modifierResponsabilite(j.base, j.claire, engins, { droits: ['TRAITER_ANOMALIE'], demandes: { etapes: [], derniere: 'Faite' } }, AUJOURDHUI, QUAND);
+		expect((await j.base.select().from(responsabilite).where(eq(responsabilite.id, engins)))[0]!.demandes).toEqual({ etapes: [], derniere: 'Faite' });
 	});
 });

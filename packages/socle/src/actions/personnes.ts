@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Base, BasePhotos } from '../base.ts';
 import { effacerPhotos } from '../commun.ts';
 import { effacerLiensVers, normaliserAdresse } from '../connexion.ts';
@@ -11,10 +11,9 @@ import { STATUTS_AVEC_ACCES, STATUTS_OPERATIONNELS, type StatutOperationnel } fr
 import { departDesGroupes } from '../messagerie.ts';
 import { effacerNotificationsDe } from '../notifications.ts';
 import { annulerDemandesAuPassage } from '../demandes.ts';
-import { FINIES } from '../habillement.ts';
 import { annulerAuDepart } from '../reservations.ts';
 import { remplacementsAuDepart } from '../remplacements/depart.ts';
-import { affectationEquipe, attribution, cleAgenda, demandeHabillement, equipe, filHabillement, grade, personne, profil, profilDroit, session, souhaitAnniversaire, user } from '../schema.ts';
+import { affectationEquipe, attribution, cleAgenda, equipe, grade, personne, profil, profilDroit, session, souhaitAnniversaire, user } from '../schema.ts';
 
 const centre: Perimetre = { type: 'centre' };
 
@@ -265,7 +264,7 @@ export async function modifierFiche(
 }
 
 // Un agent qui passe à un profil extérieur (un retraité) quitte ce qu'un départ lui fait quitter : son équipe et ses rôles (finis la veille),
-// ses groupes de messagerie, ses remplacements et échanges, ses réservations et ses demandes d'habillement en cours, et ses demandes aux référents pas encore avancées. Contrairement à un
+// ses groupes de messagerie, ses remplacements et échanges, ses réservations, et ses demandes aux référents pas encore avancées. Contrairement à un
 // départ, sa fiche, ses notifications et ses conversations à deux restent, et il n'est jamais effacé. Le chef de centre et l'adjoint, non.
 async function passageExterieur(base: Base, acteur: Acteur, fiche: typeof personne.$inferSelect, aujourdhui: string, passage?: { basePhotos: BasePhotos; maintenant: string }) {
 	const [ancien] = fiche.profilId === null ? [] : await base.select({ type: profil.typePersonne }).from(profil).where(eq(profil.id, fiche.profilId));
@@ -276,7 +275,6 @@ async function passageExterieur(base: Base, acteur: Acteur, fiche: typeof person
 	exigerDateHeure(maintenant, 'Date');
 	const affectations = await base.select().from(affectationEquipe).where(eq(affectationEquipe.personneId, fiche.id));
 	const groupes = await departDesGroupes(base, fiche.id, maintenant);
-	const enCoursHabillement = and(eq(demandeHabillement.demandeurId, fiche.id), notInArray(demandeHabillement.etape, [...FINIES, 'traitee']));
 	return {
 		ecritures: [
 			...retraitEquipe(base, acteur, fiche.id, affectations, aujourdhui),
@@ -284,14 +282,6 @@ async function passageExterieur(base: Base, acteur: Acteur, fiche: typeof person
 			...groupes.ecritures,
 			...(await remplacementsAuDepart(base, fiche.id, maintenant)),
 			annulerAuDepart(base, fiche.id, maintenant),
-			// L'annulation s'écrit au fil de chaque demande, puis la demande est close.
-			base.insert(filHabillement).select(
-				base
-					.select({ id: sql<null>`null`.as('id'), demandeId: demandeHabillement.id, quoi: sql<string>`'annulation'`.as('quoi'), texte: sql<null>`null`.as('texte'), par: sql<number>`${fiche.id}`.as('par'), le: sql<string>`${maintenant}`.as('le'), jeton: sql<null>`null`.as('jeton') })
-					.from(demandeHabillement)
-					.where(enCoursHabillement)
-			),
-			base.update(demandeHabillement).set({ etape: 'annulee', finLe: maintenant, majLe: maintenant }).where(enCoursHabillement),
 			// Ses demandes aux référents qui n'ont pas dépassé « Prise en compte » ; plus loin, le référent les finit.
 			...annulerDemandesAuPassage(base, fiche.id, acteur.type === 'personne' ? acteur.id : null, fiche, maintenant)
 		],

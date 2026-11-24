@@ -232,10 +232,11 @@ describe('page d’un rôle', () => {
 		expect(await lire()).toBeNull();
 	});
 
-	it('« Demandes » : pas pour un rôle système ni pour le référent habillement', async () => {
+	it('« Demandes » : pas pour un rôle système ; le référent habillement, oui, avec ses étapes', async () => {
 		const { base, chef, resp } = await preparer();
-		for (const nom of ['Chef de garde', 'Référent habillement']) expect((await charger(load, locaux(base, chef), { id: String((await resp(nom)).id) })).demandesPossibles).toBe(false);
-		const r = await agir('enregistrer', locaux(base, chef), (await resp('Référent habillement')).id, [...fiche('Référent habillement'), ['demandes', '1'], ['case-demandes', '1'], ['recoit', '1'], ['derniere', 'Faite']]);
-		expect(r).toMatchObject({ status: 400, data: { message: 'Ce rôle ne peut pas recevoir de demandes.' } });
+		expect((await charger(load, locaux(base, chef), { id: String((await resp('Chef de garde')).id) })).demandesPossibles).toBe(false);
+		const habillement = await charger(load, locaux(base, chef), { id: String((await resp('Référent habillement')).id) });
+		expect(habillement.demandesPossibles).toBe(true);
+		expect(habillement.role.demandes).toEqual({ etapes: [{ id: 'estock', nom: 'En stock' }, { id: 'ecommande', nom: 'Commandée au SDIS' }], derniere: 'Livrée' });
 	});
 });

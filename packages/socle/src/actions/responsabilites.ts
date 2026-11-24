@@ -2,7 +2,7 @@ import { and, count, countDistinct, eq, gte, isNull, lte, notInArray, or, sql } 
 import type { Base } from '../base.ts';
 import { exigerDate } from '../dates.ts';
 import { aLeDroit, type Acteur } from '../droits.ts';
-import { aDesDemandesEnCours, DERNIERE_PAR_DEFAUT, ecrituresReglage, lectureOccupees } from '../demandes.ts';
+import { aDesDemandesEnCours, ecrituresReglage, lectureOccupees } from '../demandes.ts';
 import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
 import { finirOuSupprimer } from '../fin-de-periode.ts';
 import { NOMS_ICONES, type NomIcone } from '../icones.ts';
@@ -176,7 +176,7 @@ export async function creerResponsabilite(
 	const [lignes] = await base.batch([
 		base
 			.insert(responsabilite)
-			.values({ nom, nature, typePerimetre: portee, comiteAttributeurId, modele: modele?.id ?? null, icone, demandes: modele?.demandes && portee === 'centre' && !droits.includes('GERER_HABILLEMENT') ? { etapes: [], derniere: DERNIERE_PAR_DEFAUT } : null })
+			.values({ nom, nature, typePerimetre: portee, comiteAttributeurId, modele: modele?.id ?? null, icone, demandes: modele?.demandes && portee === 'centre' ? modele.demandes : null })
 			.returning({ id: responsabilite.id }),
 		// L'ordre compte : le journal suit l'insertion, last_insert_rowid() est l'id de la responsabilité.
 		ligneJournal(base, { acteur: nomActeur(acteur), action: 'creer_responsabilite', cibleType: 'responsabilite', cibleId: sql`last_insert_rowid()`, details: { nom, nature, portee, attributeur: attributeurDe({ comiteAttributeurId, typePerimetre: portee }), droits, ...(modele ? { modele: modele.id } : {}), ...(icone ? { icone } : {}) } }, aujourdhui),
@@ -251,16 +251,16 @@ export async function modifierResponsabilite(
 		if (retires.some((l) => l.verrouille === 1)) throw new DonneeInvalide('Droit verrouillé, impossible de le retirer');
 		if (ajoutes.length > 0 || retires.length > 0) noms.push('droits');
 	}
-	// Un rôle qui reçoit des demandes reste de portée centre, sans le droit de l'habillement (un seul circuit, avant C2).
+	// Un rôle qui reçoit des demandes reste de portée centre.
 	const reglage = champs.demandes;
 	const recevra = reglage === undefined ? ligne.demandes !== null : reglage !== null;
-	if (recevra && ligne.demandes !== null && (portee !== 'centre' || ajoutes.includes('GERER_HABILLEMENT'))) throw new DonneeInvalide('Ce rôle reçoit des demandes');
+	if (recevra && ligne.demandes !== null && portee !== 'centre') throw new DonneeInvalide('Ce rôle reçoit des demandes');
 	// Après le contrôle du pouvoir. Seul ce qui change est vérifié : un rôle ancien qui a déjà un tel droit se modifie pour le reste.
 	exigerPorteeDesDroits(portee, portee !== ligne.typePerimetre ? apres : ajoutes);
 	// Le réglage des demandes, s'il change : une lecture de plus (les étapes occupées), ses écritures dans le même batch.
 	const changeDemandes = reglage !== undefined && JSON.stringify(reglage) !== JSON.stringify(ligne.demandes);
 	const demandes = changeDemandes
-		? ecrituresReglage(base, acteur, { ...ligne, typePerimetre: portee, droits: apres }, await lectureOccupees(base, id), reglage, maintenant)
+		? ecrituresReglage(base, acteur, { ...ligne, typePerimetre: portee }, await lectureOccupees(base, id), reglage, maintenant)
 		: null;
 	if (noms.length === 0 && !demandes) return;
 

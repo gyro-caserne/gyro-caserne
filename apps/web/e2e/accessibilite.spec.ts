@@ -114,12 +114,14 @@ for (const theme of ['auto', 'sombre']) {
 				await sansViolation(page);
 			});
 
-			test('demander une tenue puis son suivi, sans violation', async ({ page }) => {
+			test('demander une tenue (Habillement mène à « Faire une demande », le référent choisi) puis son suivi, sans violation', async ({ page }) => {
 				await page.goto('/habillement');
+				await expect(page).toHaveURL(/\/demandes\?role=\d+$/);
 				await page.waitForLoadState('networkidle');
+				await expect(page.getByRole('radio', { name: 'Référent habillement', exact: true })).toBeChecked();
 				await page.getByLabel('Votre demande').fill(`Veste textile en L ${nouvelleMarque()}`);
 				await page.getByRole('button', { name: 'Envoyer la demande' }).click();
-				await expect(page).toHaveURL(/\/habillement\/\d+\?envoyee$/);
+				await expect(page).toHaveURL(/\/demandes\/\d+\?envoyee$/);
 				await expect(page.getByRole('heading', { level: 2, name: 'Suivi' })).toBeVisible();
 				await sansViolation(page);
 				await page.getByLabel('Ajouter une précision').fill('Plutôt longue');
@@ -128,9 +130,12 @@ for (const theme of ['auto', 'sombre']) {
 				await sansViolation(page);
 			});
 
-			test('habillement, super administrateur : toutes les demandes et une demande, sans violation', async ({ browser }) => {
+			test('habillement, super administrateur : toutes les demandes du rôle et une demande, sans violation', async ({ browser }) => {
 				const gestion = await pageSuper(browser, theme);
-				await sansViolation(gestion, '/habillement/toutes');
+				await gestion.goto('/habillement');
+				await expect(gestion).toHaveURL(/\/demandes\?role=\d+$/);
+				const role = new URL(gestion.url()).searchParams.get('role');
+				await sansViolation(gestion, `/demandes/role/${role}`);
 				await gestion.getByRole('link', { name: /Veste textile en L, la mienne est déchirée/ }).first().click();
 				await expect(gestion.getByRole('heading', { level: 2, name: 'Le fil' })).toBeVisible();
 				await sansViolation(gestion);
@@ -709,12 +714,18 @@ test.describe('échanges', () => {
 		await gestion.context().close();
 	});
 
-	test('habillement, référente fictive : sa casquette, puis une demande et le panneau « Traiter », sans violation', async ({ browser }) => {
+	test('habillement, référente fictive : sa casquette, puis une demande et le panneau « Faire avancer », sans violation', async ({ browser }) => {
 		const page = await pageAgent(browser, 'chloe.durand@exemple.fr');
 		await sansViolation(page, '/');
 		await expect(page.getByRole('heading', { name: 'Raccourcis' })).toBeVisible();
-		await page.goto('/habillement/1?panneau=traiter');
-		await expect(page.getByRole('dialog', { name: 'Traiter la demande' })).toBeVisible();
+		await page.getByRole('link', { name: 'Toutes les demandes', exact: true }).click();
+		await expect(page).toHaveURL(/\/demandes\/role\/\d+$/);
+		await page.getByRole('link', { name: /Rangers, taille 43/ }).filter({ hasText: 'Bruno Petit' }).click();
+		await expect(page).toHaveURL(/\/demandes\/\d+$/);
+		await page.goto(`${page.url()}?panneau=avancer`);
+		const avancer = page.getByRole('dialog', { name: 'Faire avancer' });
+		await expect(avancer.getByRole('radio', { name: 'En stock', exact: true })).toBeVisible();
+		await expect(avancer.getByRole('radio', { name: 'Commandée au SDIS', exact: true })).toBeVisible();
 		await sansViolation(page);
 		await page.context().close();
 	});

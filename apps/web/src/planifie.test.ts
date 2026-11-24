@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { effacerAgentsPartis, effacerAnciens, equipeSansChefDemain, fileDEnvoisVide, effacerPhotosOrphelines, effacerSouhaitsPasses, effacerVieillesDemandes, effacerVieillesDemandesReferents, effacerVieillesNotifications, effacerVieillesPublications, effacerVieillesReservations, mettreAJourReleves, planningDuMatin, rappelsEte, remplacementsDuMoment } from '@gyro-caserne/socle';
+import { effacerAgentsPartis, effacerAnciens, equipeSansChefDemain, fileDEnvoisVide, effacerPhotosOrphelines, effacerSouhaitsPasses, effacerVieillesDemandesReferents, effacerVieillesNotifications, effacerVieillesPublications, effacerVieillesReservations, mettreAJourReleves, planningDuMatin, rappelsEte, remplacementsDuMoment } from '@gyro-caserne/socle';
 import { envoyerLot } from './lib/server/envoi-push.ts';
 import { avecPlanifie, limiteDeConservation } from './planifie.ts';
 
-vi.mock('@gyro-caserne/socle', async (original) => ({ ...(await original<typeof import('@gyro-caserne/socle')>()), effacerAgentsPartis: vi.fn(async () => 0), effacerAnciens: vi.fn(async () => {}), fileDEnvoisVide: vi.fn(async () => false), effacerPhotosOrphelines: vi.fn(async () => 0), effacerSouhaitsPasses: vi.fn(async () => {}), effacerVieillesPublications: vi.fn(async () => 0), effacerVieillesNotifications: vi.fn(async () => {}), effacerVieillesReservations: vi.fn(async () => {}), effacerVieillesDemandes: vi.fn(async () => {}), effacerVieillesDemandesReferents: vi.fn(async () => {}), mettreAJourReleves: vi.fn(async () => {}), planningDuMatin: vi.fn(async () => ({ publiees: 0, relances: 0 })), rappelsEte: vi.fn(async () => 0), remplacementsDuMoment: vi.fn(async () => ({ expirees: 0, relances: 0 })), equipeSansChefDemain: vi.fn(async () => 0) }));
+vi.mock('@gyro-caserne/socle', async (original) => ({ ...(await original<typeof import('@gyro-caserne/socle')>()), effacerAgentsPartis: vi.fn(async () => 0), effacerAnciens: vi.fn(async () => {}), fileDEnvoisVide: vi.fn(async () => false), effacerPhotosOrphelines: vi.fn(async () => 0), effacerSouhaitsPasses: vi.fn(async () => {}), effacerVieillesPublications: vi.fn(async () => 0), effacerVieillesNotifications: vi.fn(async () => {}), effacerVieillesReservations: vi.fn(async () => {}), effacerVieillesDemandesReferents: vi.fn(async () => {}), mettreAJourReleves: vi.fn(async () => {}), planningDuMatin: vi.fn(async () => ({ publiees: 0, relances: 0 })), rappelsEte: vi.fn(async () => 0), remplacementsDuMoment: vi.fn(async () => ({ expirees: 0, relances: 0 })), equipeSansChefDemain: vi.fn(async () => 0) }));
 vi.mock('./lib/server/envoi-push.ts', () => ({ envoyerLot: vi.fn(async () => ({ envoyes: 0, perimes: 0 })) }));
 
 describe('limiteDeConservation', () => {
@@ -61,8 +61,7 @@ describe('avecPlanifie', () => {
 		expect(vi.mocked(effacerVieillesReservations).mock.calls[0]![1]).toBe('2025-10-29');
 		// Les publications des murs plus anciennes que la durée du centre (24 mois ici).
 		expect(vi.mocked(effacerVieillesPublications).mock.calls[0]![2]).toBe('2024-10-29');
-		// Les demandes d'habillement finies depuis plus de 24 mois.
-		expect(vi.mocked(effacerVieillesDemandes).mock.calls[0]![1]).toBe('2024-10-29');
+		// Les demandes aux référents finies depuis plus de 24 mois.
 		expect(vi.mocked(effacerVieillesDemandesReferents).mock.calls[0]![1]).toBe('2024-10-29');
 		// Les agents partis depuis 12 mois (ce jour-là compris) : leurs données sont effacées, datées du jour à Paris.
 		expect(vi.mocked(effacerAgentsPartis).mock.calls[0]!.slice(1)).toEqual(['2025-10-29', '2026-10-29', []]);
