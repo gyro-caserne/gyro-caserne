@@ -1,6 +1,6 @@
 # « Qui fait quoi » : nommer au même endroit qu'on lit (design)
 
-Premier lot issu de l'audit des réglages et des nominations, fait le 24/11/2026. Direction validée par le porteur le même jour : fusion des deux écrans, volet de la personne plutôt qu'un menu « Plus ».
+Premier lot issu de l’audit des réglages et des nominations (24/11/2026). Direction et design validés par le porteur le même jour (fusion des deux écrans, volet de la personne plutôt qu’un menu « Plus »).
 
 ## Pourquoi
 
