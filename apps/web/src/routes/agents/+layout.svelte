@@ -91,7 +91,7 @@
 	{@const depart = ouvert(g.cle)}
 	<Groupe titre={g.titre} resume={resume(g.personnes.length, g.equipe)} couleur={g.equipe?.couleur} alerte={sansChef} ouvert={depart}>
 		{#snippet action()}
-			{#if data.gestion && sansChef}<a class="nommer" href="/nominations">Nommer <span class="masque">un chef pour {g.titre}</span></a>{/if}
+			{#if data.gestion && sansChef}<a class="nommer" href="/comites">Nommer <span class="masque">un chef pour {g.titre}</span></a>{/if}
 		{/snippet}
 		<ul>
 			{#each g.personnes as p (p.id)}{@render agent(p, g.equipe?.couleur ?? null)}{/each}

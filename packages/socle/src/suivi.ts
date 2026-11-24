@@ -183,7 +183,7 @@ function lienDe(l: { action: string; cibleType: string; cibleId: number | null; 
 		case 'personne':
 			return id === null ? '/agents' : `/agents/${id}`;
 		case 'attribution':
-			return l.agent === null ? '/nominations' : `/agents/${l.agent}`;
+			return l.agent === null ? '/comites' : `/agents/${l.agent}`;
 		case 'planning':
 			return id === null ? '/planning/preparer' : `/planning/preparer/manoeuvre?id=${id}`;
 		case 'responsabilite':
@@ -213,7 +213,7 @@ function lienDe(l: { action: string; cibleType: string; cibleId: number | null; 
 		case 'centre':
 			return '/reglages';
 		case 'equipe':
-			return '/nominations';
+			return '/comites';
 		case 'fete_centre':
 			return '/planning/preparer?etape=fetes';
 		default:

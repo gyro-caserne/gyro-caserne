@@ -167,10 +167,10 @@ describe('aDecider', () => {
 
 		// Seules les fonctions vacantes sont listées : les missions (référents habillement et pharmacie, rôles de comité) non. En septembre, pas encore de planning à préparer.
 		expect(await aDecider(base, acteur(chef), '2026-09-25')).toEqual([
-			{ texte: 'Équipe 2 sans chef de garde', lien: '/nominations' },
-			{ texte: 'Équipe 3 sans chef de garde', lien: '/nominations' },
-			{ texte: 'Équipe 4 sans chef de garde', lien: '/nominations' },
-			{ texte: 'Référent technique sans titulaire', lien: '/nominations' },
+			{ texte: 'Équipe 2 sans chef de garde', lien: '/comites' },
+			{ texte: 'Équipe 3 sans chef de garde', lien: '/comites' },
+			{ texte: 'Équipe 4 sans chef de garde', lien: '/comites' },
+			{ texte: 'Référent technique sans titulaire', lien: '/comites' },
 			{ texte: '2 fiches à compléter (grade ou date d’entrée manquants)', lien: '/agents?filtre=a-completer' }
 		]);
 	});

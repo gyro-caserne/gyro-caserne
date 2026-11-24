@@ -182,7 +182,7 @@ describe('rubriqueDe', () => {
 		expect(rubriqueDe('/habillement/3')).toBe('/caserne');
 		expect(rubriqueDe('/demandes/role/3')).toBe('/caserne');
 		expect(rubriqueDe('/agents/12')).toBe('/caserne');
-		expect(rubriqueDe('/nominations')).toBe('/caserne');
+		expect(rubriqueDe('/comites')).toBe('/caserne');
 		expect(rubriqueDe('/comites')).toBe('/caserne');
 		expect(rubriqueDe('/comitesx')).toBe('/comitesx');
 		expect(rubriqueDe('/reservations/3/reserver')).toBe('/caserne');

@@ -215,14 +215,6 @@ export type LigneAttribution = {
 	peutTerminer: boolean;
 };
 
-export type Titulaire = {
-	id: number;
-	personne: { id: number; prenom: string; nom: string };
-	perimetre: PerimetreNomme;
-	debut: string;
-	fin: string | null;
-};
-
 export type CeQueJePeuxAttribuer = {
 	responsabiliteId: number;
 	nom: string;
@@ -332,41 +324,6 @@ export async function peutAttribuerQuelqueChose(base: Base, acteur: Acteur, aujo
 	if (!contexte.estChef && !contexte.droits.some((d) => d.droit === 'ATTRIBUER_RESPONSABILITE')) return false;
 	const { responsabilites, perimetres } = await candidats(base);
 	return responsabilites.some((r) => perimetres[r.typePerimetre].some((p) => peutAttribuer(contexte, r, perimetreDeLigne(p.type, p.id))));
-}
-
-// Titulaires en cours et à venir des responsabilités données, sur les périmètres que l'acteur peut attribuer.
-async function titulaires(base: Base, contexte: Contexte, responsabilites: Responsabilite[], aujourdhui: string): Promise<Map<number, Titulaire[]>> {
-	const parRole = new Map(responsabilites.map((r) => [r.id, [] as Titulaire[]]));
-	if (responsabilites.length === 0) return parRole;
-	const parId = new Map(responsabilites.map((r) => [r.id, r]));
-	const nommer = await nommeurDePerimetres(base);
-	const lignes = await base
-		.select({ a: attribution, p: { id: personne.id, prenom: personne.prenom, nom: personne.nom } })
-		.from(attribution)
-		.innerJoin(personne, eq(personne.id, attribution.personneId))
-		.where(and(inArray(attribution.responsabiliteId, [...parId.keys()]), or(isNull(attribution.fin), gte(attribution.fin, aujourdhui))))
-		.orderBy(attribution.debut, personne.nom, personne.prenom, attribution.id);
-	for (const { a, p } of lignes) {
-		if (!peutAttribuer(contexte, parId.get(a.responsabiliteId)!, perimetreDeLigne(a.perimetreType, a.perimetreId))) continue;
-		parRole.get(a.responsabiliteId)!.push({ id: a.id, personne: p, perimetre: nommer(a.perimetreType, a.perimetreId), debut: a.debut, fin: a.fin });
-	}
-	return parRole;
-}
-
-export async function titulairesDe(base: Base, acteur: Acteur, responsabiliteId: number, aujourdhui: string): Promise<Titulaire[]> {
-	exigerDate(aujourdhui);
-	const laResponsabilite = await responsabiliteConnue(base, responsabiliteId);
-	const contexte = await contexteDe(base, acteur, aujourdhui);
-	return (await titulaires(base, contexte, [laResponsabilite], aujourdhui)).get(responsabiliteId)!;
-}
-
-// Les titulaires de chaque responsabilité que l'acteur peut attribuer, ses droits lus une seule fois.
-export async function titulairesDesMiens(base: Base, acteur: Acteur, aujourdhui: string): Promise<Map<number, Titulaire[]>> {
-	exigerDate(aujourdhui);
-	const contexte = await contexteDe(base, acteur, aujourdhui);
-	const { responsabilites, perimetres } = await candidats(base);
-	const miennes = responsabilites.filter((r) => perimetres[r.typePerimetre].some((p) => peutAttribuer(contexte, r, perimetreDeLigne(p.type, p.id))));
-	return titulaires(base, contexte, miennes, aujourdhui);
 }
 
 // L'agent nommé : une ligne dans sa cloche et un envoi au téléphone (lieu « nominations » : seul « tout » le coupe).

@@ -24,7 +24,6 @@ import { actions as actionsPublier, load as pagePublier } from './echanges/publi
 import { actions as actionsPublication, load as publicationSeule } from './echanges/[mur]/[id]/+page.server';
 import { load as listeAgents } from './agents/+layout.server';
 import { actions as actionsFiche, load as fiche } from './agents/[id]/+page.server';
-import { load as nominations } from './nominations/+page.server';
 import { load as caserne } from './caserne/+page.server';
 import { actions as actionsComites, load as comites } from './comites/+page.server';
 import { load as moi } from './moi/+page.server';
@@ -165,20 +164,11 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 		expect(n).toBeLessThanOrEqual(BUDGET);
 	});
 
-	it('/nominations', async () => {
-		const { locals, compter } = await centreDe150();
-		const n = await compter(async () => {
-			await (racine as any)({ depends: () => {}, locals });
-			await (nominations as any)({ locals, url: new URL('http://localhost/nominations') });
-		});
-		expect(n).toBeLessThanOrEqual(BUDGET);
-	});
-
 	it('/caserne : l’effectif et ce qui est à pourvoir', async () => {
 		const { locals, compter } = await centreDe150();
 		const n = await compter(async () => {
-			await (racine as any)({ depends: () => {}, locals });
-			const data = await (caserne as any)({ locals });
+			const r = await (racine as any)({ depends: () => {}, locals });
+			const data = await (caserne as any)({ locals, parent: async () => r });
 			expect(data.agents).toBe(151);
 			expect(data.aPourvoir).toBeGreaterThan(0);
 		});

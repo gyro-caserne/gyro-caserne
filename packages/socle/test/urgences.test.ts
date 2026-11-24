@@ -100,14 +100,14 @@ describe('urgence : une équipe sans chef de garde la veille de sa relève', () 
 		await j.base.delete(attribution).where(eq(attribution.personneId, j.idDe(j.chefDeGarde)));
 		expect(await equipeSansChefDemain(j.base, VEILLE, reglage)).toBe(1);
 		const [envoi] = await j.envois(j.claire);
-		expect(envoi).toMatchObject({ titre: expect.stringMatching(/ sans chef de garde demain$/), url: '/nominations' });
+		expect(envoi).toMatchObject({ titre: expect.stringMatching(/ sans chef de garde demain$/), url: '/comites' });
 		expect((await j.envois(j.paul)).length).toBe(1);
 		expect(await j.envois(j.alice)).toEqual([]);
 		// Une seule fois par relève, même au passage de 8 h 10.
 		expect(await equipeSansChefDemain(j.base, '2026-11-05T08:10', reglage)).toBe(0);
 		expect((await j.envois(j.claire)).length).toBe(1);
 		const { lignes } = await suiviDuCentre(j.base, j.claire, '2026-11-05');
-		expect(lignes[0]).toMatchObject({ qui: 'Planning', phrase: expect.stringMatching(/^signale l’équipe .+ sans chef de garde pour la relève de demain$/), lien: '/nominations' });
+		expect(lignes[0]).toMatchObject({ qui: 'Planning', phrase: expect.stringMatching(/^signale l’équipe .+ sans chef de garde pour la relève de demain$/), lien: '/comites' });
 	});
 
 	it('un chef de garde en fonction sur l’équipe de la relève : rien', async () => {
