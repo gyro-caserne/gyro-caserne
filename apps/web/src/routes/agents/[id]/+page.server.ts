@@ -108,12 +108,13 @@ const PHRASES_APTITUDE: Record<string, string> = {
 };
 
 // Les aptitudes : donner (ou corriger ses dates), ôter.
-async function geste(locals: App.Locals, brut: string, faire: (acteur: Acteur, id: number) => Promise<void>, message: string) {
+// Après un refus, `valeurs` rend au formulaire ce qui a été saisi.
+async function geste(locals: App.Locals, brut: string, faire: (acteur: Acteur, id: number) => Promise<void>, message: string, valeurs?: Record<string, string>) {
 	const { acteur, id } = await lireFiche(locals, brut);
 	try {
 		await faire(acteur, id);
 	} catch (erreur) {
-		if (erreur instanceof DonneeInvalide) return fail(400, { message: PHRASES_APTITUDE[erreur.message] ?? (erreur.message.startsWith('Date invalide') ? 'Indiquez une date valide.' : `${erreur.message}.`), bloc: 'aptitudes' });
+		if (erreur instanceof DonneeInvalide) return fail(400, { message: PHRASES_APTITUDE[erreur.message] ?? (erreur.message.startsWith('Date invalide') ? 'Indiquez une date valide.' : `${erreur.message}.`), bloc: 'aptitudes', ...(valeurs && { valeurs }) });
 		throw erreur;
 	}
 	return { succes: true, message, bloc: 'aptitudes' };
@@ -122,13 +123,13 @@ async function geste(locals: App.Locals, brut: string, faire: (acteur: Acteur, i
 export const actions: Actions = {
 	aptitude: async ({ locals, params, request }) => {
 		const formulaire = await request.formData();
-		const aptitudeId = Number(formulaire.get('aptitudeId'));
-		const expire = String(formulaire.get('expireLe') ?? '');
+		const valeurs = { aptitudeId: String(formulaire.get('aptitudeId') ?? ''), obtenueLe: String(formulaire.get('obtenueLe') ?? ''), expireLe: String(formulaire.get('expireLe') ?? '') };
 		return geste(
 			locals,
 			params.id,
-			(acteur, id) => donnerAptitude(locals.base, acteur, id, { aptitudeId, obtenueLe: String(formulaire.get('obtenueLe') ?? ''), expireLe: expire || null }, maintenantParis()),
-			'Aptitude enregistrée'
+			(acteur, id) => donnerAptitude(locals.base, acteur, id, { aptitudeId: Number(valeurs.aptitudeId), obtenueLe: valeurs.obtenueLe, expireLe: valeurs.expireLe || null }, maintenantParis()),
+			'Aptitude enregistrée',
+			valeurs
 		);
 	},
 

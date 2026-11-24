@@ -402,6 +402,15 @@ describe('page fiche agent : aptitudes', () => {
 		expect(page).toContain('expire le 01/01/2026');
 		expect(page).toContain('Enregistrer l’aptitude');
 	});
+
+	it('après un refus, le formulaire garde la saisie', () => {
+		const aptitudesDuCentre = [{ id: 1, nom: 'CA2', controlee: true, ordre: 1 }, { id: 2, nom: 'COD1', controlee: true, ordre: 2 }];
+		const form = { message: 'La date d’expiration doit suivre la date d’obtention.', bloc: 'aptitudes', valeurs: { aptitudeId: '2', obtenueLe: '2020-03-01', expireLe: '2019-01-01' } };
+		const page = html({ data: { ...data, aptitudesDuCentre }, form });
+		expect(page).toMatch(/<option value="2"[^>]*selected/);
+		expect(page).toMatch(/name="obtenueLe"[^>]*value="2020-03-01"|value="2020-03-01"[^>]*name="obtenueLe"/);
+		expect(page).toMatch(/name="expireLe"[^>]*value="2019-01-01"|value="2019-01-01"[^>]*name="expireLe"/);
+	});
 });
 
 describe('passage à un profil extérieur', () => {
