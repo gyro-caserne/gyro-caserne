@@ -133,6 +133,13 @@ describe('accueil', () => {
 		const texte = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 		const grand = (html: string) => html.match(/<p class="grand[^"]*">([\s\S]*?)<\/p>/)![1]!.replace(/<[^>]+>/g, '').trim();
 
+		it('personne extérieure (retraité) : pas de plaque, aucun lien vers le planning', () => {
+			const html = page({ casquettes: [astreinte], choisie: 'astreinte', contenu: { type: 'astreinte' }, astreinte: carte({ mienne: false, enCours: true }), maintenant: '2026-11-24T10:00', priseOuverte: false, exterieur: true });
+			expect(html).not.toContain('class="plaque');
+			expect(html).not.toContain('href="/planning');
+			expect(html).not.toContain('href="/remplacements');
+		});
+
 		it('à venir : à-plat de la couleur de l’équipe, texte noir ou blanc selon elle, grand compte à rebours, dates à droite', () => {
 			const html = accueil(carte(), '2026-11-01T10:00');
 			expect(html).toMatch(/class="plaque[^"]*compacte[^"]*"[^>]*style="--equipe: #1565c0; --sur-equipe: #ffffff; --sur-bouton: #1d2733;"/);
