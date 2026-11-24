@@ -21,10 +21,10 @@ export function textesAnciennete(a: Anciennete): TextesAnciennete | null {
 	};
 }
 
-// « Claire Martin et Marc Petit vous ont félicité. » : trois noms au plus, puis un nombre.
+// « Claire Martin et Marc Petit vous félicitent. » : trois noms au plus, puis un nombre.
 export function phraseFelicitations(par: { prenom: string; nom: string }[]): string {
 	if (par.length === 0) return '';
 	const noms = par.map((p) => `${p.prenom} ${p.nom}`.trim());
 	const liste = noms.length <= 3 ? noms : [...noms.slice(0, 2), `${noms.length - 2} autres collègues`];
-	return `${new Intl.ListFormat('fr', { type: 'conjunction' }).format(liste)} vous ${par.length === 1 ? 'a' : 'ont'} félicité.`;
+	return `${new Intl.ListFormat('fr', { type: 'conjunction' }).format(liste)} vous ${par.length === 1 ? 'félicite' : 'félicitent'}.`;
 }

@@ -27,8 +27,8 @@ describe('textes de l’ancienneté', () => {
 	});
 
 	it('qui a félicité : trois noms, puis le nombre des autres', () => {
-		expect(phraseFelicitations([p('Claire')])).toBe('Claire Test vous a félicité.');
-		expect(phraseFelicitations([p('Claire'), p('Marc')])).toBe('Claire Test et Marc Test vous ont félicité.');
-		expect(phraseFelicitations([p('Paul'), p('Marc'), p('Luc'), p('Léa')])).toBe('Paul Test, Marc Test et 2 autres collègues vous ont félicité.');
+		expect(phraseFelicitations([p('Claire')])).toBe('Claire Test vous félicite.');
+		expect(phraseFelicitations([p('Claire'), p('Marc')])).toBe('Claire Test et Marc Test vous félicitent.');
+		expect(phraseFelicitations([p('Paul'), p('Marc'), p('Luc'), p('Léa')])).toBe('Paul Test, Marc Test et 2 autres collègues vous félicitent.');
 	});
 });

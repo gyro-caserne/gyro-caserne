@@ -56,7 +56,7 @@ export type Reponse = { cible: string; succes?: string; message?: string; erreur
 const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Nom vide': { champ: 'nom', texte: 'Indiquez le nom.' },
 	'Au moins un palier': { texte: 'Cochez au moins un palier.' },
-	'Palier de 1 à 60 ans': { texte: 'Un palier va de 1 à 60 ans.' },
+	'Palier de 2 à 60 ans': { texte: 'Un palier va de 2 à 60 ans.' },
 	'Nom trop long': { champ: 'nom', texte: 'Le nom ne peut pas dépasser 60 caractères.' },
 	'Nom déjà utilisé': { champ: 'nom', texte: 'Ce nom est déjà utilisé (les majuscules et les espaces autour ne comptent pas).' },
 	'Thème vide': { champ: 'theme', texte: 'Indiquez le thème.' },

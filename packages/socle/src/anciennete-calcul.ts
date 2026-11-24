@@ -3,6 +3,8 @@
 
 // Par défaut, un palier tous les 5 ans.
 export const PALIERS_PAR_DEFAUT = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+// Pas de palier à 1 an : « 1 an de service » n'est pas une étape fêtée.
+export const PALIER_MIN = 2;
 export const PALIER_MAX = 60;
 
 // Les échelons de la médaille d'honneur des sapeurs-pompiers. Ils disent où en est l'ancienneté, pas qu'une médaille a été remise.

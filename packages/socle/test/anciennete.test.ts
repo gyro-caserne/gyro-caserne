@@ -63,7 +63,7 @@ describe('les paliers du centre', () => {
 	it('refusés : sans le droit, hors de 1 à 60 ans, liste vide', async () => {
 		const { base, claire, marc } = await jeu();
 		await expect(reglerPaliers(base, acteur(marc), [10], maintenant)).rejects.toBeInstanceOf(RefusDroit);
-		for (const mauvais of [[0], [61], [2.5], []]) await expect(reglerPaliers(base, acteur(claire), mauvais, maintenant)).rejects.toBeInstanceOf(DonneeInvalide);
+		for (const mauvais of [[0], [1], [61], [2.5], []]) await expect(reglerPaliers(base, acteur(claire), mauvais, maintenant)).rejects.toBeInstanceOf(DonneeInvalide);
 		expect((await lirePaliers(base))[0]).toBe(5);
 	});
 });
@@ -196,5 +196,26 @@ describe('30 jours avant, au réveil', () => {
 		expect(await base.select().from(avisAnciennete)).toHaveLength(2);
 		await effacerVieillesNotifications(base, '2026-11-13');
 		expect(await base.select().from(avisAnciennete)).toEqual([]);
+	});
+
+	it('deux réveils qui se croisent : chaque ligne et chaque e-mail une seule fois ; le chef n’est pas prévenu de son propre palier', async () => {
+		const { base, claire, paul } = await jeu();
+		await base.update(personne).set({ engagementSpv: '2006-12-12' }).where(eq(personne.id, claire));
+		const [a, b] = await Promise.all([ancienneteDuMatin(base, huit), ancienneteDuMatin(base, '2026-11-12T08:10')]);
+		const courriels = [...a, ...b];
+		expect(courriels.map((c) => c.a).sort()).toEqual(['claire@exemple.fr', 'paul@exemple.fr']);
+		expect(courriels.find((c) => c.a === 'claire@exemple.fr')!.texte).toBe('Dans 30 jours, le 12 décembre, Thomas Agent atteint 10 ans de service.');
+		expect(courriels.find((c) => c.a === 'paul@exemple.fr')!.texte).toContain('Claire Martin atteint 20 ans de service.');
+		const lignes = await base.select({ personneId: avisAnciennete.personneId, agentId: avisAnciennete.agentId }).from(avisAnciennete);
+		expect(lignes).toHaveLength(3);
+		expect(lignes).not.toContainEqual({ personneId: claire, agentId: claire });
+		expect(lignes.filter((l) => l.personneId === paul)).toHaveLength(2);
+	});
+
+	it('engagé un 29 février : annoncé 30 jours avant le 28 février d’une année non bissextile', async () => {
+		const { base, nouvelle } = await jeu();
+		await nouvelle('Leon', { nom: 'Bissextile', engagementSpv: '2016-02-29' });
+		// 30 jours avant le 28 février 2026 : le 29 janvier.
+		expect((await ancienneteDuMatin(base, '2026-01-29T08:00')).map((c) => c.texte)).toEqual(['Dans 30 jours, le 28 février, Leon Bissextile atteint 10 ans de service.', 'Dans 30 jours, le 28 février, Leon Bissextile atteint 10 ans de service.']);
 	});
 });

@@ -3,7 +3,8 @@ import { asc, eq } from 'drizzle-orm';
 import {
 	affecterEquipe,
 	anciennete,
-	lirePaliers,
+	PALIERS_PAR_DEFAUT,
+	reglageAnciennete,
 	annuaire,
 	aptitudesEtListe,
 	donnerAptitude,
@@ -65,15 +66,16 @@ async function peutEcrire(locals: App.Locals, acteur: Acteur, id: number, aujour
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const { acteur, aujourdhui, fiche } = await lireFiche(locals, params.id);
 	const { base } = locals;
-	const [[grades, profils, equipes], aptitudes, paliers] = await Promise.all([
+	const [[grades, profils, equipes, reglage], aptitudes] = await Promise.all([
 		base.batch([
 			base.select({ id: grade.id, libelle: grade.libelle }).from(grade).orderBy(asc(grade.ordre)),
 			base.select({ id: profil.id, nom: profil.nom, typePersonne: profil.typePersonne }).from(profil).orderBy(asc(profil.id)),
-			base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation))
+			base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation)),
+			base.select({ paliers: reglageAnciennete.paliers }).from(reglageAnciennete)
 		]),
-		aptitudesEtListe(base, acteur, fiche.id, aujourdhui),
-		lirePaliers(base)
+		aptitudesEtListe(base, acteur, fiche.id, aujourdhui)
 	]);
+	const paliers = reglage[0] ? (JSON.parse(reglage[0].paliers) as number[]) : PALIERS_PAR_DEFAUT;
 	return {
 		aujourdhui,
 		fiche,

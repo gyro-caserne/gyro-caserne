@@ -1,7 +1,7 @@
-import { and, asc, eq, inArray, isNull, notExists, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, notExists, sql } from 'drizzle-orm';
 import { anneesDeService, palierDuJour } from './a-ne-pas-manquer.ts';
 import { nomActeur } from './actions/personnes.ts';
-import { anciennete, PALIER_MAX, PALIERS_PAR_DEFAUT, type Anciennete } from './anciennete-calcul.ts';
+import { anciennete, PALIER_MAX, PALIER_MIN, PALIERS_PAR_DEFAUT, type Anciennete } from './anciennete-calcul.ts';
 import type { Base } from './base.ts';
 import type { Courriel } from './courriels.ts';
 import { ajouterJours, exigerDateHeure, formatDeDate } from './dates.ts';
@@ -32,11 +32,11 @@ export async function ancienneteDe(base: Base, personneId: number, aujourdhui: s
 	return anciennete(p?.engagement ?? null, p?.entree ?? null, aujourdhui, r ? (JSON.parse(r.paliers) as number[]) : PALIERS_PAR_DEFAUT);
 }
 
-// Les paliers du centre, avec ceux qui gèrent les listes du centre : de 1 à 60 ans, rangés, sans doublon. Au moins un.
+// Les paliers du centre, avec ceux qui gèrent les listes du centre : de 2 à 60 ans, rangés, sans doublon. Au moins un.
 export async function reglerPaliers(base: Base, acteur: Acteur, paliers: number[], maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	if (!(await aLeDroit(base, acteur, 'GERER_LISTES', { type: 'centre' }, aujourdhui))) throw new RefusDroit('GERER_LISTES', { type: 'centre' });
-	if (!paliers.every((p) => Number.isInteger(p) && p >= 1 && p <= PALIER_MAX)) throw new DonneeInvalide(`Palier de 1 à ${PALIER_MAX} ans`);
+	if (!paliers.every((p) => Number.isInteger(p) && p >= PALIER_MIN && p <= PALIER_MAX)) throw new DonneeInvalide(`Palier de ${PALIER_MIN} à ${PALIER_MAX} ans`);
 	const ranges = [...new Set(paliers)].sort((a, b) => a - b);
 	if (ranges.length === 0) throw new DonneeInvalide('Au moins un palier');
 	const valeur = JSON.stringify(ranges);
@@ -123,31 +123,38 @@ export async function ancienneteDuMatin(base: Base, maintenant: string): Promise
 	]);
 	const nouveaux = aVenir.filter((p) => !deja.some((d) => d.agentId === p.id && d.annees === p.annees));
 	if (nouveaux.length === 0 || chefs.length === 0) return [];
-	const titre = nouveaux.length === 1 ? 'Palier d’ancienneté dans 30 jours' : 'Paliers d’ancienneté dans 30 jours';
 	const lignes = nouveaux.map((p) => ({ p, texte: `Dans ${ANNONCE_JOURS} jours, ${leJour(cible)}, ${`${p.prenom} ${p.nom}`.trim()} atteint ${p.annees} ans de service.` }));
 	const ids = chefs.map((c) => c.id);
-	await base.batch(
+	// Une ligne par chef et par agent, pas pour son propre palier ; jamais deux fois (un réveil en retard peut croiser le suivant).
+	const ecrites = (await base.batch(
 		lignes.map(({ p, texte }) =>
-			base.insert(avisAnciennete).select(
-				base
-					.select({
-						id: sql<number | null>`null`.as('id'),
-						personneId: personne.id,
-						agentId: sql<number>`${p.id}`.as('agent_id'),
-						auteurId: sql<number | null>`null`.as('auteur_id'),
-						annees: sql<number>`${p.annees}`.as('annees'),
-						jour: sql<string>`${cible}`.as('jour'),
-						titre: sql<string>`${'Palier d’ancienneté dans 30 jours'}`.as('titre'),
-						texte: sql<string>`${texte}`.as('texte'),
-						url: sql<string>`${`/agents/${p.id}`}`.as('url'),
-						creeLe: sql<string>`${maintenant}`.as('cree_le'),
-						lueLe: sql<string | null>`null`.as('lue_le')
-					})
-					.from(personne)
-					.where(and(inArray(personne.id, parmi(ids)), notExists(base.select({ un: sql`1` }).from(avisAnciennete).where(and(eq(avisAnciennete.personneId, personne.id), eq(avisAnciennete.agentId, p.id), eq(avisAnciennete.annees, p.annees), isNull(avisAnciennete.auteurId))))))
-			)
+			base
+				.insert(avisAnciennete)
+				.select(
+					base
+						.select({
+							id: sql<number | null>`null`.as('id'),
+							personneId: personne.id,
+							agentId: sql<number>`${p.id}`.as('agent_id'),
+							auteurId: sql<number | null>`null`.as('auteur_id'),
+							annees: sql<number>`${p.annees}`.as('annees'),
+							jour: sql<string>`${cible}`.as('jour'),
+							titre: sql<string>`${'Palier d’ancienneté dans 30 jours'}`.as('titre'),
+							texte: sql<string>`${texte}`.as('texte'),
+							url: sql<string>`${`/agents/${p.id}`}`.as('url'),
+							creeLe: sql<string>`${maintenant}`.as('cree_le'),
+							lueLe: sql<string | null>`null`.as('lue_le')
+						})
+						.from(personne)
+						.where(and(inArray(personne.id, parmi(ids)), ne(personne.id, p.id), notExists(base.select({ un: sql`1` }).from(avisAnciennete).where(and(eq(avisAnciennete.personneId, personne.id), eq(avisAnciennete.agentId, p.id), eq(avisAnciennete.annees, p.annees), isNull(avisAnciennete.auteurId))))))
+				)
+				.returning({ personneId: avisAnciennete.personneId, agentId: avisAnciennete.agentId })
 		) as [never, ...never[]]
-	);
-	const url = nouveaux.length === 1 ? `/agents/${nouveaux[0]!.id}` : '/agents';
-	return chefs.filter((c) => c.coupe === 0 && c.a !== '').map((c) => ({ a: c.a, titre, texte: lignes.map((l) => l.texte).join('\n'), url }));
+	)) as { personneId: number; agentId: number }[][];
+	// L'e-mail de chaque chef ne liste que les lignes écrites pour lui à ce réveil.
+	return chefs.flatMap((c) => {
+		const siennes = lignes.filter((l) => ecrites.flat().some((e) => e.personneId === c.id && e.agentId === l.p.id));
+		if (siennes.length === 0 || c.coupe !== 0 || c.a === '') return [];
+		return [{ a: c.a, titre: siennes.length === 1 ? 'Palier d’ancienneté dans 30 jours' : 'Paliers d’ancienneté dans 30 jours', texte: siennes.map((l) => l.texte).join('\n'), url: siennes.length === 1 ? `/agents/${siennes[0]!.p.id}` : '/agents' }];
+	});
 }

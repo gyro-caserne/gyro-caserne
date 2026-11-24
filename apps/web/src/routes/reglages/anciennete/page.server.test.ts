@@ -17,7 +17,7 @@ describe('réglages : paliers d’ancienneté', () => {
 		expect(await envoyer(actions, 'enregistrer', l, [['palier', '40'], ['palier', '10'], ['palier', '20'], ['palier', '25'], ['palier', '30']])).toEqual({ cible: 'anciennete', succes: 'Paliers d’ancienneté enregistrés.' });
 		expect(await lirePaliers(base)).toEqual([10, 20, 25, 30, 40]);
 		expect(await envoyer(actions, 'enregistrer', l, [])).toMatchObject({ status: 400, data: { message: 'Cochez au moins un palier.' } });
-		expect(await envoyer(actions, 'enregistrer', l, [['palier', 'abc']])).toMatchObject({ status: 400, data: { message: 'Un palier va de 1 à 60 ans.' } });
+		expect(await envoyer(actions, 'enregistrer', l, [['palier', 'abc']])).toMatchObject({ status: 400, data: { message: 'Un palier va de 2 à 60 ans.' } });
 		expect(await lirePaliers(base)).toEqual([10, 20, 25, 30, 40]);
 	});
 });

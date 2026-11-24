@@ -520,6 +520,8 @@ describe('page fiche agent : ancienneté', () => {
 
 	it('sans date d’engagement : « à compléter » pour qui peut modifier la fiche, rien sinon ; rien pour une personne extérieure', () => {
 		expect(texte(bloc(html({ data, form: null })))).toContain('Date d’engagement à compléter');
+		// Avec la seule date d'entrée : les années au centre et la date à compléter, ensemble.
+		expect(texte(bloc(html({ data: { ...data, anciennete: { annees: null, auCentre: 8, echelon: null, prochain: null } }, form: null })))).toContain('8 ans au centre Date d’engagement à compléter');
 		expect(html({ data: { ...data, raison: 'Seul un super administrateur modifie la fiche du chef de centre.' }, form: null })).not.toContain('class="anciennete');
 		expect(html({ data: { ...data, fiche: { ...fiche, profil: { id: 2, nom: 'Retraité', typePersonne: 'exterieur' } }, anciennete: { annees: 30, auCentre: 30, echelon: 'or', prochain: null } }, form: null })).not.toContain('class="anciennete');
 	});
