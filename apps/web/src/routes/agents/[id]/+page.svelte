@@ -77,7 +77,8 @@
 	// Une personne extérieure (retraité, réserve citoyenne) n'a ni grade, ni dates de parcours, ni équipe, ni statut d'agent :
 	// la fiche ne les montre pas, et les cache dès qu'un profil extérieur est choisi. Le serveur les ignore ou les refuse.
 	const exterieur = $derived(fiche.profil?.typePersonne === 'exterieur');
-	const sansParcours = $derived(exterieur || versExterieur);
+	const versAgent = $derived(exterieur && data.profils.some((p) => String(p.id) === profilChoisi && p.typePersonne !== 'exterieur'));
+	const sansParcours = $derived((exterieur && !versAgent) || versExterieur);
 	const enumerer = (noms: string[]) => new Intl.ListFormat('fr', { type: 'conjunction' }).format(noms);
 	const ceQuIlQuitte = $derived.by(() => {
 		const quitte = [fiche.equipe ? `quitte ${fiche.equipe.nom}` : null, enCours.length > 0 ? `perd ${enCours.length > 1 ? 'ses rôles' : 'son rôle'} de ${enumerer(enCours.map(intitule))}` : null].filter(Boolean);
@@ -107,7 +108,7 @@
 		if (champs.includes('confirmation') || valeurs.statut === 'parti') return 'depart';
 		if (champs.some((c) => IDENTITE.includes(c))) return 'identite';
 		if (champs.some((c) => PARCOURS.includes(c))) return 'parcours';
-		if (champs.includes('equipeId') || champs.includes('statut')) return 'equipe';
+		if (champs.includes('equipeId') || champs.includes('statut')) return exterieur ? 'depart' : 'equipe';
 		return null;
 	});
 	// Effacer ses données : « Plus » s'ouvre sur l'erreur ou le refus.
@@ -190,6 +191,15 @@
 	</ul>
 {/snippet}
 
+<!-- Une personne extérieure n'a pas « Équipe et statut » : son retour (après un départ ou une suspension) se fait ici. -->
+{#snippet retour(libelle: string)}
+	<form method="POST" action={action('statut')}>
+		<input type="hidden" name="statut" value="operationnel" />
+		<Bouton type="submit" variante="secondaire">{libelle}</Bouton>
+		{#if erreurs.statut}<p class="erreur">{erreurs.statut}</p>{/if}
+	</form>
+{/snippet}
+
 {#snippet pictogramme(trace: string)}
 	<span class="rond" aria-hidden="true"
 		><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={trace} /></svg></span
@@ -204,7 +214,7 @@
 				<h1 tabindex="-1">{fiche.prenom} {fiche.nom}</h1>
 				{#if sousTitre}<p class="doux sous-titre"><Insigne grade={fiche.grade?.libelle} taille={24} decoratif />{sousTitre}</p>{/if}
 				<ul class="etiquettes" aria-label="Statut et rôles en cours">
-					{#if !exterieur || fiche.statut === 'parti'}<li><Statut statut={fiche.statut} /></li>{/if}
+					{#if !exterieur || fiche.statut !== 'operationnel'}<li><Statut statut={fiche.statut} /></li>{/if}
 					{#each enCours as l (l.id)}
 						<li class="role"><IconeRole icone={l.responsabilite.icone} taille={24} />{intitule(l)}</li>
 					{/each}
@@ -453,11 +463,8 @@
 					<p class="raison">{data.raison}</p>
 				{:else if fiche.statut === 'parti'}
 					{#if exterieur}
-						<form method="POST" action={action('statut')}>
-							<input type="hidden" name="statut" value="operationnel" />
-							<p>A quitté le centre.</p>
-							<Bouton type="submit" variante="secondaire">Réintégrer {fiche.prenom}</Bouton>
-						</form>
+						<p>A quitté le centre.</p>
+						{@render retour(`Réintégrer ${fiche.prenom}`)}
 					{:else}
 						<p>A quitté le centre. Pour le réintégrer, changez son statut dans « Équipe et statut ».</p>
 					{/if}
@@ -483,6 +490,7 @@
 						</form>
 					</details>
 				{:else}
+					{#if exterieur && fiche.statut === 'suspendu'}{@render retour('Lever la suspension')}{/if}
 					<form method="POST" action={action('statut')}>
 						<input type="hidden" name="statut" value="parti" />
 						<p id="depart-avertissement"><strong>Attention :</strong> Sa date de naissance et son contact d'urgence seront effacés, et ses rôles prendront fin aujourd'hui.</p>

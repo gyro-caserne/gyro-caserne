@@ -37,7 +37,7 @@ test.describe('murs ouverts à un profil', () => {
 	});
 
 	// Un retraité n'a ni planning ni réservation : ni l'onglet Planning, ni Caserne, ni de lien vers ce qui lui serait refusé.
-	test('sa navigation : Accueil et Échanges ; « Moi » sans remplacements ni agenda', async ({ page }) => {
+	test('sa navigation n’a que Accueil et Échanges, et « Moi » ni remplacements ni agenda', async ({ page }) => {
 		await connecter(page, EMAIL);
 		const navigation = page.getByRole('navigation', { name: 'Navigation principale' });
 		await expect(navigation.getByRole('link', { name: 'Accueil', exact: true })).toBeVisible();
@@ -58,6 +58,8 @@ test.describe('ajouter une personne extérieure', () => {
 	test('le formulaire réagit au choix du profil, puis la fiche ne montre que le profil', async ({ page }, info) => {
 		const marque = `${info.project.name.replace(/\W/g, '')}${info.retry}${Date.now() % 100000}`;
 		await page.goto('/agents/nouveau');
+		// Le choix du profil n'agit qu'une fois la page prête.
+		await page.waitForLoadState('networkidle');
 		const formulaire = page.locator('form[method="POST"]');
 		await expect(formulaire.getByRole('combobox', { name: 'Grade', exact: true })).toBeVisible();
 		await formulaire.getByRole('combobox', { name: 'Profil', exact: true }).selectOption({ label: 'Réserve citoyenne' });

@@ -443,9 +443,27 @@ describe('personne extérieure', () => {
 		const page = html({ data: { ...avec, fiche: { ...rene, statut: 'parti' } }, form: null });
 		const depart = bloc(page, 'Départ du centre');
 		expect(depart).toBeTruthy();
-		expect(page).toMatch(/<form[^>]*action="\?\/statut[^"]*"[^>]*>\s*<input type="hidden" name="statut" value="operationnel"[\s\S]*?Réintégrer René/);
+		expect(page).toMatch(/<form[^>]*action="\?\/statut[^"]*"[^>]*>(<!---->)?\s*<input type="hidden" name="statut" value="operationnel"[\s\S]*?Réintégrer René/);
 		expect(page).not.toContain('<select id="statut"');
 		expect(page).not.toContain('« Équipe et statut »');
+	});
+
+	it('suspendue : le statut se voit, et la suspension se lève d’un bouton ; un refus s’affiche à côté', () => {
+		const suspendu = { ...avec, fiche: { ...rene, statut: 'suspendu' } };
+		const page = html({ data: suspendu, form: null });
+		const entete = page.slice(page.indexOf('<header'), page.indexOf('</header>'));
+		expect(entete).toContain('Suspendu');
+		expect(page).toMatch(/<input type="hidden" name="statut" value="operationnel"[\s\S]*?Lever la suspension/);
+		expect(page).toContain('Déclarer le départ');
+		const refus = html({ data: suspendu, form: { erreurs: { statut: 'Statut sans objet pour une personne extérieure' }, valeurs: { statut: 'operationnel' } } });
+		expect(ouvert(refus, 'Départ du centre')).toBe(true);
+		expect(bloc(refus, 'Départ du centre')).toBeTruthy();
+		expect(refus).toMatch(/Lever la suspension[\s\S]*?Statut sans objet pour une personne extérieure/);
+	});
+
+	it('d’un profil extérieur vers un profil d’agent : grade et dates de parcours reviennent', () => {
+		const page = html({ data: avec, form: { erreurs: { gradeId: 'Grade inconnu' }, valeurs: { profilId: '1' } } });
+		for (const champ of ['id="grade"', 'id="date-grade"', 'id="entree-centre"', 'id="engagement-spv"']) expect(page, champ).toContain(champ);
 	});
 
 	it('un agent vers un profil extérieur : grade et dates de parcours se cachent', () => {

@@ -322,6 +322,17 @@ describe('apercuImport : erreurs', () => {
 		]);
 	});
 
+	it('personne extérieure : grade et dates de parcours ne comptent pas comme des changements', async () => {
+		const { base, acteur, nouvelle } = await jeu();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const rene = await nouvelle('René', 'Ancien', { profilId: reserve!.id });
+		const fichier = await exporter(base, acteur);
+		changer(fichier, rene, { Grade: 'Caporal', 'Entrée au centre': '01/01/2020', 'Date de grade': '01/01/2021', 'Engagement SPV': '01/01/2019', Naissance: '02/03/1950' });
+		const apercu = await apercuImport(base, acteur, fichier, aujourdhui, reservees);
+		expect(apercu.erreurs).toEqual([]);
+		expect(apercu.operations).toEqual([expect.objectContaining({ type: 'modifier', personneId: rene, champs: { naissance: '1950-03-02' } })]);
+	});
+
 	it('e-mail réservé, déjà pris par un autre agent, ou en double dans le fichier', async () => {
 		const { base, acteur, nouvelle } = await jeu();
 		const lea = await nouvelle('Léa', 'Durand');

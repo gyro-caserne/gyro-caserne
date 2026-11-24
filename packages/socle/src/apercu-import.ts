@@ -275,7 +275,11 @@ export async function apercuImport(base: Base, acteur: Acteur, fichier: FichierL
 				if (DATES.some(([, c]) => c === cle)) return dateFichier(valeur as string);
 				return String(valeur);
 			};
-			const colonnes: (readonly [string, keyof ChampsFiche])[] = [['E-mail', 'email'], ['Prénom', 'prenom'], ['Nom', 'nom'], ['Grade', 'gradeId'], ['Profil', 'profilId'], ['Téléphone', 'telephone'], ...DATES];
+			// Grade et dates de parcours d'une personne extérieure : ignorés à l'enregistrement, donc pas des changements.
+			const parcours = ['gradeId', 'dateGrade', 'entreeCentre', 'engagementSpv'];
+			const colonnes = ([['E-mail', 'email'], ['Prénom', 'prenom'], ['Nom', 'nom'], ['Grade', 'gradeId'], ['Profil', 'profilId'], ['Téléphone', 'telephone'], ...DATES] as (readonly [string, keyof ChampsFiche])[]).filter(
+				([, cle]) => leProfil?.typePersonne !== 'exterieur' || !parcours.includes(cle)
+			);
 			const champs: Partial<ChampsFiche> = {};
 			for (const [colonne, cle] of colonnes) {
 				if (nouveaux[cle] === fiche[cle]) continue;
