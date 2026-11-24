@@ -37,12 +37,13 @@ export function dateCourte(iso: string): string {
 export const compteFiche = (zones: { elements: unknown[] }[]) => `${pluriel(zones.length, 'zone')}, ${pluriel(zones.reduce((n, z) => n + z.elements.length, 0), 'élément')}`;
 
 // « 2 ajoutés, 1 retiré, rangement changé » ; « Aucun changement ».
-export function resumerFiche(c: { ajoutes: string[]; retires: string[]; modifies: string[]; ordre: boolean }): string {
+export function resumerFiche(c: { ajoutes: string[]; retires: string[]; modifies: string[]; prevenir?: string[]; ordre: boolean }): string {
 	const morceaux = [
 		c.ajoutes.length ? pluriel(c.ajoutes.length, 'élément ajouté', 'éléments ajoutés') : '',
 		c.retires.length ? pluriel(c.retires.length, 'retiré', 'retirés') : '',
 		c.modifies.length ? pluriel(c.modifies.length, 'modifié', 'modifiés') : '',
-		c.ordre ? 'rangement changé' : ''
+		c.ordre ? 'rangement changé' : '',
+		c.prevenir?.length ? pluriel(c.prevenir.length, 'zone à prévenir autrement', 'zones à prévenir autrement') : ''
 	].filter(Boolean);
 	return morceaux.length ? morceaux.join(', ') : 'Aucun changement';
 }

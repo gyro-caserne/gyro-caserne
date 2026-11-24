@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { etatAffiche, ETATS, texteEtape, compteFiche, dateCourte, etatPrise, jourCourt, jourHeure, parEquipe, resumerFiche, situationDe, sousLigne, texteEcart, texteReleve } from './textes.ts';
+import { etatAffiche, ETATS, texteEtape, compteFiche, dateCourte, etatPrise, jourCourt, jourHeure, parEquipe, enListe, resumerFiche, situationDe, sousLigne, texteEcart, texteReleve } from './textes.ts';
 
 const engin = { id: 1, nom: 'VSAV 23', type: 'VSAV', typeId: 1, immatriculation: 'AB-123-CD', situation: 'prete' as const, provenance: 'CIS Exemple-Nord', etat: 'disponible' as const, partiLe: null };
 
@@ -27,6 +27,8 @@ describe('textes des engins', () => {
 	it('résume les changements d’une fiche importée', () => {
 		expect(resumerFiche({ ajoutes: ['a', 'b'], retires: ['c'], modifies: [], ordre: true })).toBe('2 éléments ajoutés, 1 retiré, rangement changé');
 		expect(resumerFiche({ ajoutes: [], retires: [], modifies: [], ordre: false })).toBe('Aucun changement');
+		expect(resumerFiche({ ajoutes: [], retires: [], modifies: [], prevenir: ['Sac PS, prévient Référent pharmacie'], ordre: false })).toBe('1 zone à prévenir autrement');
+		expect(enListe(['Référent pharmacie', 'Référent engins', 'Chef de centre'])).toBe('Référent pharmacie, Référent engins et Chef de centre');
 	});
 
 	it('prise de garde : état, relève, écart', () => {
