@@ -12,6 +12,7 @@ import {
 	modifierResponsabilite,
 	recoitPossible,
 	roleCourt,
+	zonesPrevenues,
 	type Droit
 } from '@gyro-caserne/socle';
 import { postesDuRole } from '#lib/nommer/postes.ts';
@@ -52,10 +53,12 @@ export const load: PageServerLoad = async ({ locals, params, parent, url }) => {
 	const { acteur, base, aujourdhui, role } = await lireRole(locals, params.id);
 	const modele = MODELES.find((m) => m.id === role.modele) ?? null;
 	// Le bloc « Titulaires » : qui tient le rôle, et pour qui peut le nommer, les mêmes gestes que Qui fait quoi (un envoi de plus).
-	const qfq = role.archiveeLe === null ? await lireQuiFaitQuoi(base, acteur, aujourdhui, (await parent()).peutNominations) : null;
+	// Et les zones des fiches pour lesquelles il est prévenu d'une anomalie.
+	const [qfq, prevenuPour] = role.archiveeLe === null ? await Promise.all([lireQuiFaitQuoi(base, acteur, aujourdhui, (await parent()).peutNominations), zonesPrevenues(base, role.id)]) : [null, []];
 	return {
 		aujourdhui,
 		titulairesDuRole: qfq && { postes: postesDuRole(qfq.vue, role, roleCourt(role.nom)), gestes: qfq.vue.gestes, fiches: qfq.fiches },
+		prevenuPour,
 		// Juste après « Créer le rôle » : le bloc s'ouvre et demande qui le tiendra.
 		nouveau: url.searchParams.has('nouveau'),
 		role,

@@ -2,7 +2,7 @@ import type { DonneesFichierFiches, FichierFichesLu } from '@gyro-caserne/socle'
 import readXlsxFile from 'read-excel-file/universal';
 import writeXlsxFile, { type Cell, type Feature, type Sheet } from 'write-excel-file/universal';
 
-// Le classeur des fiches : une feuille par type d'engin (Réf., Zone, Élément, Quantité), la ligne d'en-tête figée.
+// Le classeur des fiches : une feuille par type d'engin (Réf., Zone, Élément, Quantité, Prévenir), la ligne d'en-tête figée.
 const texte = (valeur: string): Cell => (valeur === '' ? null : { value: valeur, type: String });
 
 function cellule(entete: string, valeur: string): Cell {
@@ -10,7 +10,7 @@ function cellule(entete: string, valeur: string): Cell {
 	return texte(valeur);
 }
 
-const LARGEURS: Record<string, number> = { 'Réf.': 8, Zone: 26, Élément: 52, Quantité: 11 };
+const LARGEURS: Record<string, number> = { 'Réf.': 8, Zone: 26, Élément: 52, Quantité: 11, Prévenir: 34 };
 
 export async function ecrireClasseurFiches(donnees: DonneesFichierFiches): Promise<Blob> {
 	// Seules des lignes sont figées : le volet actif est celui du bas à gauche, sinon Excel propose de réparer le fichier.
@@ -40,8 +40,9 @@ export async function lireClasseurFiches(fichier: Blob): Promise<FichierFichesLu
 	const lu: FichierFichesLu = { feuilles: {}, entetes: {} };
 	for (const f of await readXlsxFile(fichier)) {
 		const [ligneEntetes = [], ...suite] = f.data as Valeur[][];
-		// Les quatre colonnes de l'export seulement : une colonne de notes ajoutée à droite est ignorée.
-		const entetes = ligneEntetes.slice(0, 4).map(enTexte);
+		// Les colonnes de l'export seulement (« Prévenir » est facultative) : une colonne de notes ajoutée à droite est ignorée.
+		const lues = ligneEntetes.slice(0, 5).map(enTexte);
+		const entetes = lues[4]?.toLocaleLowerCase('fr') === 'prévenir' ? lues : lues.slice(0, 4);
 		lu.entetes![f.sheet] = entetes;
 		lu.feuilles[f.sheet] = suite.map((ligne, i) => ({ numero: i + 2, cellules: entetes.map((_, colonne) => enTexte(ligne[colonne] ?? null)) })).filter((l) => l.cellules.some((c) => c !== ''));
 	}

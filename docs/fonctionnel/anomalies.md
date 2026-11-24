@@ -9,7 +9,7 @@ Signaler un problème (sur un engin, un contenant comme un sac, un local ou du m
 ## Les notions
 
 - **Objet concerné** : un engin, un contenant (un sac, par exemple), un local ou du matériel.
-- **Catégorie** (liste ouverte) : engin, pharmacie, bâtiment, amicale… Elle **décide qui est prévenu**, par exemple le référent pharmacie pour une anomalie de la catégorie pharmacie.
+- **Catégorie** (liste ouverte) : engin, pharmacie, bâtiment, amicale… Elle **décide qui est prévenu**, par exemple le référent pharmacie pour une anomalie de la catégorie pharmacie. Livré pour les anomalies de prise de garde, par la zone de la fiche (voir « Prévenus selon la zone »).
 - **Effet sur l'engin**, seulement pour un engin ou un contenant :
   - **bloquant** : l'engin est indisponible jusqu'à sa remise en service ;
   - **avertissement** : l'engin reste utilisable, mais un bandeau prévient tous ceux qui l'ouvrent (« Treuil HS, ne pas utiliser ») ;
@@ -43,12 +43,16 @@ Une anomalie close ne se rouvre pas : si le problème revient, on en signale une
 
 ## Exemple
 
+À la prise de garde du VSAV, l'agent note le kit douleur du Sac PS utilisé. Le Sac PS prévient le référent pharmacie : les trois référentes pharmacie et le chef de garde reçoivent l'anomalie, pas le référent engins. Une référente la prend en charge, remplace le kit et la clôt.
+
 À la prise de garde, l'agent trouve le treuil du VTU en panne. Il le signale en avertissement : le VTU reste disponible, avec le bandeau « Treuil HS ». Le référent engins prend l'anomalie en charge et la met en attente, motif « au garage ». Au retour, il enregistre la réparation : l'anomalie est close. Le bandeau disparaît.
 
 ## Ce que fait le lot C
 
 - **Signaler** : à la prise de garde (chaque écart devient une anomalie), ou directement depuis l'engin ou la liste des anomalies : **Signaler un problème**, l'engin, une phrase, « C'est » manquant, abîmé ou à remplacer, puis « Signaler » (note et photo facultatives). L'engin **reste disponible**.
 - **Prévenus** : le référent engins, le chef de centre et son adjoint, et le chef de garde de l'équipe d'astreinte (cloche et téléphone). Ensuite, le déclarant et celui qui l'a prise en charge apprennent chaque étape.
+- **Prévenus selon la zone** : une zone d'une fiche peut nommer les rôles à prévenir (« Prévenir : Référent pharmacie » sur le Sac PS). Une anomalie signalée à la prise de garde sur un élément de cette zone prévient alors tous les titulaires de ces rôles et le chef de garde d'astreinte ; le référent engins seulement si son rôle est choisi. Personne ne tient un rôle choisi : le chef de centre et l'adjoint sont prévenus à sa place. Une zone sans réglage, ou un signalement hors fiche, garde la règle ci-dessus. Chacun reçoit un avis avec ses seules anomalies ; le chef de garde, toutes.
+- **Les rôles prévenus** d'une zone prennent en charge ses anomalies, les commentent et les closent (le matériel remplacé). Rendre l'engin indisponible ou le remettre en service reste à ceux qui traitent les anomalies. La fiche d'un rôle (Réglages, puis Rôles) dit pour quelles zones il est prévenu : « Prévenu pour Sac PS (VSAV, CCRM) ».
 - **Suivre** : Caserne → Anomalies (ou Engins → Anomalies, ou la page de l'engin) : les ouvertes d'abord, engin par engin, avec leur étape ; puis les closes récentes. La page d'une anomalie montre les étapes du centre, l'historique (qui, quand, quoi) et les gestes permis : **Je la prends en charge** d'un toucher ; **Mettre en attente…** (pièce commandée, au garage, chez un prestataire), **Réparée…** (ce qui a été fait ; l'anomalie est alors close, sauf étape « vérifiée »), **Clore sans réparation…** (qui traite) ouvrent chacun un panneau avec leur formulaire, qui se ferme une fois l'envoi fait.
 - **Décider** (référent engins, chefs de garde, chef de centre et adjoint) : **Rendre l'engin indisponible** depuis l'anomalie ; une fois close, **Remettre en service**, décision à part. Jamais d'indisponibilité automatique.
 - **Sur l'engin** : un bandeau « Avertissement : 1 anomalie ouverte » (ou « VTU est indisponible ») avec chaque anomalie et son étape ; dans la liste des engins, l'état écrit : Disponible, Avertissement ou Indisponible.

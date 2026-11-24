@@ -9,6 +9,9 @@ const charger = (locals: unknown, id: number, recherche = '') => (load as any)({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const geste = async (locals: unknown, id: number, corps: [string, string][]) => (actions.geste as any)({ locals, params: { id: String(id) }, request: await requeteFormulaire(corps) });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const prevenir = async (locals: unknown, id: number, corps: [string, string][]) => (actions.prevenir as any)({ locals, params: { id: String(id) }, request: await requeteFormulaire(corps) });
+
 describe('/engins/fiches/[id]', () => {
 	it('réservé à qui gère ; 404 pour un type inconnu ; la zone à confirmer', async () => {
 		const { base, alice, chef, types } = await preparer();
@@ -34,6 +37,22 @@ describe('/engins/fiches/[id]', () => {
 		expect(apres.zones[1]!.elements.map((e) => e.libelle)).toEqual(['Niveau de carburant (au moins 3/4)', 'Gyrophares et deux-tons', 'Gilets haute visibilité', 'Extincteur']);
 		await geste(locaux(base, chef), types.VTU, [['quoi', 'retirer_zone'], ['zone', String(cabine!.ref)]]);
 		expect((await lireFiche(base, types.VTU)).zones.map((z) => z.nom)).toEqual(['Épuisement', 'Coffres', 'Toit']);
+	});
+
+	it('prévenir : le volet ouvert par l’adresse, les rôles du centre, le réglage enregistré', async () => {
+		const { base, alice, chef, types } = await preparer();
+		const zone = (await lireFiche(base, types.VTU)).zones[0]!.ref;
+		const vue = await charger(locaux(base, chef), types.VTU, `?prevenir=${zone}`);
+		expect(vue.prevenir).toBe(zone);
+		const pharmacie = vue.roles.find((r: { nom: string }) => r.nom === 'Référent pharmacie')!;
+		expect(vue.roles.map((r: { nom: string }) => r.nom)).not.toContain('Chef de garde');
+		expect(await prevenir(locaux(base, chef), types.VTU, [['zone', String(zone)], ['role', String(pharmacie.id)]])).toEqual({ cible: 'prevenir', zone, succes: 'Réglage enregistré.' });
+		expect((await lireFiche(base, types.VTU)).zones[0]!.prevenir).toEqual([pharmacie.id]);
+		// Tout décoché : la règle d'aujourd'hui.
+		await prevenir(locaux(base, chef), types.VTU, [['zone', String(zone)]]);
+		expect((await lireFiche(base, types.VTU)).zones[0]!.prevenir).toEqual([]);
+		expect(await prevenir(locaux(base, chef), types.VTU, [['zone', String(zone)], ['role', '999']])).toMatchObject({ status: 400, data: { cible: 'prevenir', message: 'Ce rôle n’existe plus. La page a été rechargée.' } });
+		await expect(prevenir(locaux(base, alice), types.VTU, [['zone', String(zone)]])).rejects.toMatchObject({ status: 403 });
 	});
 
 	it('un refus est dit à côté du bon formulaire, avec la saisie', async () => {

@@ -112,7 +112,7 @@ describe('lien de l’accueil vers la prise de garde', () => {
 });
 
 describe('gestes du brouillon (sans base)', () => {
-	const zones = [{ ref: 1, nom: 'Cabine', elements: [{ ref: 5, libelle: 'Gilets', quantite: 3 }, { ref: 2, libelle: 'Radio', quantite: null }] }];
+	const zones = [{ ref: 1, nom: 'Cabine', prevenir: [], elements: [{ ref: 5, libelle: 'Gilets', quantite: 3 }, { ref: 2, libelle: 'Radio', quantite: null }] }];
 	const ctx = { zones, ouvertes: [{ id: 9, ref: 2 }], agents: [1, 2] };
 
 	it('écart : genre, nombre manquant seulement pour un élément compté, note', () => {

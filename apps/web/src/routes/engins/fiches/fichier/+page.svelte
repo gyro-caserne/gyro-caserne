@@ -113,7 +113,7 @@
 	<ol class="etapes" role="list">
 		<li>
 			<Carte titre="1. Exporter les fiches">
-				<p class="note">Partez toujours de l’export. La colonne « Réf. » garde le lien de chaque élément avec son historique. Une ligne sans « Réf. » est un nouvel élément ; une ligne effacée retire l’élément. Une feuille absente laisse sa fiche telle quelle.</p>
+				<p class="note">Partez toujours de l’export. La colonne « Réf. » garde le lien de chaque élément avec son historique. Une ligne sans « Réf. » est un nouvel élément ; une ligne effacée retire l’élément. Une feuille absente laisse sa fiche telle quelle. La colonne « Prévenir » donne, pour chaque zone, les rôles prévenus d’une anomalie, séparés par des virgules.</p>
 				<div class="actions"><Bouton variante="secondaire" desactive={occupe} onclick={exporter}>Exporter les fiches</Bouton></div>
 			</Carte>
 		</li>
@@ -139,7 +139,7 @@
 				{#each apercu.fiches as f (f.type)}
 					<Groupe titre="Fiche {f.type}" resume={resumerFiche(f) + (f.nouvelleVersion ? `, deviendra la version ${f.version + 1}` : '')} niveauTitre={3}>
 						<div class="details">
-							{#each [['Ajoutés', f.ajoutes], ['Retirés', f.retires], ['Modifiés', f.modifies]] as const as [titre, liste] (titre)}
+							{#each [['Ajoutés', f.ajoutes], ['Retirés', f.retires], ['Modifiés', f.modifies], ['Qui prévenir', f.prevenir]] as const as [titre, liste] (titre)}
 								{#if liste.length}
 									<section>
 										<h4>{titre}</h4>

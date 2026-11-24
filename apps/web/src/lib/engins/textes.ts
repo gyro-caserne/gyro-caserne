@@ -37,12 +37,13 @@ export function dateCourte(iso: string): string {
 export const compteFiche = (zones: { elements: unknown[] }[]) => `${pluriel(zones.length, 'zone')}, ${pluriel(zones.reduce((n, z) => n + z.elements.length, 0), 'élément')}`;
 
 // « 2 ajoutés, 1 retiré, rangement changé » ; « Aucun changement ».
-export function resumerFiche(c: { ajoutes: string[]; retires: string[]; modifies: string[]; ordre: boolean }): string {
+export function resumerFiche(c: { ajoutes: string[]; retires: string[]; modifies: string[]; prevenir?: string[]; ordre: boolean }): string {
 	const morceaux = [
 		c.ajoutes.length ? pluriel(c.ajoutes.length, 'élément ajouté', 'éléments ajoutés') : '',
 		c.retires.length ? pluriel(c.retires.length, 'retiré', 'retirés') : '',
 		c.modifies.length ? pluriel(c.modifies.length, 'modifié', 'modifiés') : '',
-		c.ordre ? 'rangement changé' : ''
+		c.ordre ? 'rangement changé' : '',
+		c.prevenir?.length ? `qui prévenir changé pour ${pluriel(c.prevenir.length, 'zone')}` : ''
 	].filter(Boolean);
 	return morceaux.length ? morceaux.join(', ') : 'Aucun changement';
 }
@@ -77,3 +78,9 @@ export function texteEcart(e: { genre: keyof typeof GENRES; manque: number | nul
 	const nombre = e.genre === 'manquant' && e.manque !== null ? ` (${e.manque}${quantite ? ` sur ${quantite}` : ''})` : '';
 	return [`${GENRES[e.genre]}${nombre}`, e.note].filter(Boolean).join(', ');
 }
+
+// « Référent pharmacie », « Référent pharmacie et Référent engins », « A, B et C ».
+export const enListe = (noms: string[]) => new Intl.ListFormat('fr', { type: 'conjunction' }).format(noms);
+
+// Les rôles prévenus d'une zone, par leur nom ; un rôle disparu de la liste est ignoré.
+export const nomsPrevenus = (prevenir: number[], roles: { id: number; nom: string }[]) => prevenir.flatMap((id) => roles.find((r) => r.id === id)?.nom ?? []);

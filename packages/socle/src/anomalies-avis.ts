@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import type { Base } from './base.ts';
 import { enCours } from './dates.ts';
 import { STATUTS_AVEC_ACCES } from './listes.ts';
@@ -7,11 +7,14 @@ import { attribution, avisAnomalie, personne, profilDroit, responsabilite, respo
 
 // Qui est prévenu d'une anomalie, et la ligne de la cloche. Partagé par la prise de garde et le suivi des anomalies.
 
-// Ceux qui traitent les anomalies au centre (TRAITER_ANOMALIE sur le centre : référent engins…, ou à défaut chef de centre et adjoint)
-// et le chef de garde de l'équipe d'astreinte. `auteur` : qui signale ; seul référent, il ne compte pas (le chef et l'adjoint sont prévenus). Une requête.
-export async function quiTraite(base: Base, aujourdhui: string, equipeAstreinte: number | null, auteur: number | null = null): Promise<number[]> {
+// Qui est prévenu d'une nouvelle anomalie, pour chaque liste de rôles (ceux de sa zone). Une liste vide, ou sans rôle encore valable :
+// ceux qui traitent les anomalies au centre (TRAITER_ANOMALIE sur le centre : référent engins…, ou à défaut chef de centre et adjoint).
+// Sinon : les titulaires en cours des rôles choisis, et pour un rôle sans titulaire, le chef de centre et l'adjoint.
+// Toujours : le chef de garde de l'équipe d'astreinte. `auteur` : qui signale ; seul titulaire, il ne compte pas. Une requête.
+export async function quiPrevenir(base: Base, aujourdhui: string, equipeAstreinte: number | null, auteur: number | null, listes: number[][]): Promise<number[][]> {
 	const avecAcces = inArray(personne.statut, [...STATUTS_AVEC_ACCES]);
-	const [duProfil, tenues] = await base.batch([
+	const roles = [...new Set(listes.flat())];
+	const lectures = [
 		base
 			.select({ id: personne.id })
 			.from(personne)
@@ -23,8 +26,25 @@ export async function quiTraite(base: Base, aujourdhui: string, equipeAstreinte:
 			.innerJoin(responsabilite, eq(responsabilite.id, attribution.responsabiliteId))
 			.innerJoin(responsabiliteDroit, and(eq(responsabiliteDroit.responsabiliteId, responsabilite.id), eq(responsabiliteDroit.droit, 'TRAITER_ANOMALIE')))
 			.innerJoin(personne, eq(personne.id, attribution.personneId))
-			.where(and(avecAcces, isNull(responsabilite.archiveeLe)))
-	]);
+			.where(and(avecAcces, isNull(responsabilite.archiveeLe))),
+		// Les rôles choisis (archivés compris, pour les ignorer), le chef de centre et l'adjoint, avec leurs titulaires.
+		base
+			.select({
+				role: sql<number>`${responsabilite.id}`.as('role'),
+				archivee: responsabilite.archiveeLe,
+				systeme: responsabilite.systeme,
+				portee: responsabilite.typePerimetre,
+				id: sql<number | null>`${personne.id}`.as('titulaire'),
+				type: attribution.perimetreType,
+				debut: attribution.debut,
+				fin: attribution.fin
+			})
+			.from(responsabilite)
+			.leftJoin(attribution, eq(attribution.responsabiliteId, responsabilite.id))
+			.leftJoin(personne, and(eq(personne.id, attribution.personneId), avecAcces))
+			.where(or(inArray(responsabilite.id, roles.length ? roles : [0]), inArray(responsabilite.systeme, ['chef_centre', 'chef_centre_adjoint'])))
+	] as const;
+	const [duProfil, tenues, choisis] = roles.length ? await base.batch(lectures) : [...(await base.batch([lectures[0], lectures[1]])), []];
 	const valides = tenues.filter((t) => t.type === t.portee && enCours(t.debut, t.fin, aujourdhui));
 	const chefDeGarde = valides.filter((t) => t.systeme === 'chef_equipe' && equipeAstreinte !== null && t.perimetreId === equipeAstreinte).map((t) => t.id);
 	const ids = [...duProfil.map((p) => p.id), ...valides.filter((t) => t.type === 'centre').map((t) => t.id), ...chefDeGarde];
@@ -33,7 +53,22 @@ export async function quiTraite(base: Base, aujourdhui: string, equipeAstreinte:
 	const centre = valides.filter((t) => t.type === 'centre');
 	const chefs = centre.filter((t) => t.systeme === 'chef_centre' || t.systeme === 'chef_centre_adjoint').map((t) => t.id);
 	const avecReferent = centre.some((t) => t.systeme === null && !chefs.includes(t.id) && t.id !== auteur);
-	return [...new Set(ids)].filter((id) => !avecReferent || !chefs.includes(id) || chefDeGarde.includes(id));
+	const habituels = [...new Set(ids)].filter((id) => !avecReferent || !chefs.includes(id) || chefDeGarde.includes(id));
+
+	const tenus = choisis.filter((c) => c.id !== null && c.type === c.portee && c.type === 'centre' && enCours(c.debut!, c.fin, aujourdhui));
+	const titulaires = (role: number) => tenus.filter((c) => c.role === role).map((c) => c.id!);
+	const chefsDuCentre = tenus.filter((c) => c.systeme === 'chef_centre' || c.systeme === 'chef_centre_adjoint').map((c) => c.id!);
+	return listes.map((liste) => {
+		const actifs = [...new Set(liste)].filter((r) => choisis.some((c) => c.role === r && c.archivee === null && c.portee === 'centre'));
+		if (actifs.length === 0) return habituels;
+		const sansTitulaire = actifs.some((r) => titulaires(r).every((id) => id === auteur));
+		return [...new Set([...actifs.flatMap(titulaires), ...chefDeGarde, ...(sansTitulaire ? chefsDuCentre : [])])];
+	});
+}
+
+// La règle d'aujourd'hui, sans réglage de zone (signalement direct, zone sans réglage).
+export async function quiTraite(base: Base, aujourdhui: string, equipeAstreinte: number | null, auteur: number | null = null): Promise<number[]> {
+	return (await quiPrevenir(base, aujourdhui, equipeAstreinte, auteur, [[]]))[0]!;
 }
 
 const parmi = (ids: number[]) => sql`(select value from json_each(${JSON.stringify(ids)}))`;

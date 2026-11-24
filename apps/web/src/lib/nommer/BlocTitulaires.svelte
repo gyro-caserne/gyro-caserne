@@ -8,6 +8,7 @@
 	import { posteVise, voletVise, type Agent, type Poste } from './postes.ts';
 
 	// Le bloc « Titulaires » d'une fiche de réglage (un rôle, un comité) : les mêmes lignes et les mêmes volets que Qui fait quoi.
+	// `prevenu` : pour un rôle, les zones des fiches dont il est prévenu des anomalies, en vue même replié.
 	// Replié, sauf juste après la création (`question` : « Qui le tiendra ? ») ou quand on vise l'un de ses postes.
 	type Reponse = { cible?: string; succes?: string; message?: string; erreurs?: Record<string, string>; valeurs?: Record<string, string> } | null | undefined;
 	type Membre = { id: number; nom: string; grade: string | null; roles: string[] };
@@ -19,8 +20,9 @@
 		gestes,
 		aujourdhui,
 		fiches,
+		prevenu,
 		form
-	}: { postes: Poste[]; autres?: Membre[]; resume: string; question?: string; gestes: { agents: Agent[] } | null; aujourdhui: string; fiches: boolean; form: unknown } = $props();
+	}: { postes: Poste[]; autres?: Membre[]; resume: string; question?: string; gestes: { agents: Agent[] } | null; aujourdhui: string; fiches: boolean; prevenu?: string; form: unknown } = $props();
 	// La réponse d'une action de la page : seules celles des volets (cibles `nommer-` et `mandat-`) concernent ce bloc.
 	const reponse = $derived(form as Reponse);
 
@@ -39,7 +41,7 @@
 </script>
 
 <details class="repli titulaires" {...ouvertAuDepart ? { open: true } : {}} {@attach garderOuvert}>
-	<summary><span class="entete"><h2 class="titre-groupe">Titulaires</h2><span class="resume">{resume}</span></span></summary>
+	<summary><span class="entete"><h2 class="titre-groupe">Titulaires</h2><span class="resume">{resume}</span>{#if prevenu}<span class="resume prevenu">{prevenu}</span>{/if}</span></summary>
 	<div class="contenu">
 		{#if question}<p class="question">{question}</p>{/if}
 		<div role="status">{#if annonce}<p class="succes">{annonce}</p>{/if}</div>
