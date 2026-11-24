@@ -304,6 +304,15 @@ describe('BarreActions', () => {
 	it('garde la zone d’annonce même sans message', () => {
 		expect(html(BarreActions, { children: contenu })).toContain('role="status"');
 	});
+	// Collée en bas, elle ne doit cacher ni la fin de la page ni le champ qui a le focus : le navigateur garde
+	// sous lui une marge de la hauteur de la barre (mesurée), en plus de la navigation du bas au téléphone.
+	it('réserve sa hauteur sous le contenu et sous le champ qui a le focus', () => {
+		const source = readFileSync(new URL('./BarreActions.svelte', import.meta.url), 'utf8');
+		expect(html(BarreActions, { children: contenu })).toMatch(/<div class="barre-actions[^"]*"/);
+		expect(source).toMatch(/bind:offsetHeight=\{hauteur\}/);
+		expect(source).toMatch(/setProperty\('--hauteur-barre-actions'/);
+		expect(source).toMatch(/:global\(html:has\(\.barre-actions\)\) \{[^}]*scroll-padding-bottom: calc\(var\(--hauteur-barre-actions[^}]*\}/);
+	});
 });
 
 describe('IconeRole', () => {
