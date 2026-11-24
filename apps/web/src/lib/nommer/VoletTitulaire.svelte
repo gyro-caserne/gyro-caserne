@@ -131,6 +131,10 @@
 		flex-wrap: wrap;
 		gap: var(--espace-12);
 	}
+	/* Liens et boutons de la rangée à la même hauteur, d'une ligne à l'autre. */
+	.gestes > a {
+		min-height: var(--cible);
+	}
 	/* Un formulaire déplié sous la rangée de gestes, séparé par un trait fin. */
 	.deplie {
 		padding-top: var(--espace-16);

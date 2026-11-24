@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
@@ -101,6 +102,12 @@ describe('/comites', () => {
 		expect(page).not.toContain('À pourvoir');
 		expect(page).not.toContain('?mandat=');
 		expect(page).not.toContain('?nommer=');
+	});
+
+	it('à l’ordinateur, une seule colonne à la largeur d’une liste, centrée : les lignes ne s’étirent pas', () => {
+		const source = readFileSync(new URL('./+page.svelte', import.meta.url), 'utf8');
+		expect(source).toMatch(/\.page \{[^}]*max-width: var\(--largeur-liste\);[^}]*margin-inline: auto;/);
+		expect(source).not.toContain('grid-template-columns');
 	});
 
 	it('les fonctions (chef de centre et adjoint, chefs de garde, autres fonctions) puis les missions', () => {

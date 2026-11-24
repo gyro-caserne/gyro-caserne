@@ -225,8 +225,12 @@
 		flex-direction: column;
 		gap: var(--espace-16);
 	}
+	/* Une liste : la largeur d'une liste, centrée ; à l'ordinateur, les lignes ne s'étirent pas sur tout l'écran. */
 	.page {
 		gap: var(--espace-24);
+		width: 100%;
+		max-width: var(--largeur-liste);
+		margin-inline: auto;
 	}
 	.colonnes {
 		display: flex;
@@ -272,14 +276,5 @@
 		border-radius: var(--rayon-petit);
 		border: 2px solid var(--ok);
 		font-weight: 600;
-	}
-	/* À l'ordinateur, les comités à gauche, les rôles à droite. */
-	@media (min-width: 1024px) {
-		.colonnes {
-			display: grid;
-			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-			align-items: start;
-			gap: var(--espace-32);
-		}
 	}
 </style>
