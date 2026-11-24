@@ -24,7 +24,9 @@ La page se lit sans aucun geste : les titulaires du jour, ou « Personne pour l'
 ## Pour qui nomme
 
 Il voit **une carte par rôle**, et les groupes laissent de l'air entre elles :
-- en tête de la carte, le nom du rôle et un seul bouton **Nommer** (**Ajouter un membre** pour les membres d'un comité) ;
+- en tête de la carte, le nom du rôle et au plus un bouton :
+  - **un rôle à titulaire unique** (une fonction, comme le chef de centre ou un chef de garde, ou un rôle qui donne le droit de nommer, comme le rapporteur) : **Nommer** tant que personne ne le tient, puis rien. Pour changer de titulaire, on ouvre la personne, puis **Remplacer** ;
+  - **un rôle à plusieurs titulaires** (les membres d'un comité, les missions comme les référents) : **Nommer** s'il est vide, **Ajouter** sinon, et toujours **Ajouter un membre** pour les membres d'un comité ;
 - dessous, ses titulaires, une ligne par personne avec la flèche qui ouvre son **volet**, ou une ligne « À pourvoir » (fonction) ou « Personne pour l'instant » (mission) s'il n'y a personne. Un mandat qui commence plus tard le dit (« à partir du 3 déc. 2026 ») ;
 - au-delà de cinq titulaires, les autres se déplient par « Voir les N titulaires » ;
 - **un rôle d'équipe** (chef de garde) : une seule carte, une ligne par équipe, avec le titulaire, ou « À pourvoir » et **Nommer** sur la ligne, chaque équipe ayant son poste ;

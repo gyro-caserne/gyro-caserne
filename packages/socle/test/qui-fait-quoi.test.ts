@@ -211,20 +211,26 @@ describe('quiFaitQuoi, avec les gestes de qui nomme', () => {
 		await nommer(alice, role('Référent engins'), { type: 'centre' }, { debut: '2026-12-01' });
 		await base.insert(responsabilite).values({ nom: 'Référent sécurité', nature: 'fonction', typePerimetre: 'centre' });
 		const vue = await quiFaitQuoi(base, acteur(chef), aujourdhui, { gestes: true });
-		expect(vue.fonctions.find((r) => r.nom === 'Référent sécurité')!.nommer).toEqual({ aPourvoir: true });
+		expect(vue.fonctions.find((r) => r.nom === 'Référent sécurité')!.nommer).toEqual({ aPourvoir: true, unique: true });
 		// Le chef de centre n'est nommé que par un super administrateur : pas de geste sur sa ligne.
 		const [chefCentre, adjoint] = vue.commandement;
 		expect(chefCentre!.nommer).toBeUndefined();
 		expect(chefCentre!.titulaires[0]!.mandat).toBeUndefined();
-		expect(adjoint!.nommer).toEqual({ aPourvoir: true });
+		expect(adjoint!.nommer).toEqual({ aPourvoir: true, unique: true });
 		const [chefsDeGarde] = vue.equipes;
 		expect(chefsDeGarde!.parEquipe[0]).toMatchObject({ equipeId: equipes[0]!.id, nommer: { aPourvoir: false }, titulaires: [{ nom: 'Bruno Petit', mandat: { id: expect.any(Number), debut: '2026-01-01', fin: null } }] });
 		expect(chefsDeGarde!.parEquipe[1]).toMatchObject({ nommer: { aPourvoir: true }, titulaires: [] });
 		// Une mission vide n'est pas à pourvoir ; un mandat à venir compte comme tenu.
 		const engins = vue.missions.find((r) => r.nom === 'Référent engins')!;
 		expect(engins).toMatchObject({ nommer: { aPourvoir: false }, titulaires: [{ nom: 'Alice Bernard', mandat: { debut: '2026-12-01' } }] });
-		expect(vue.missions.find((r) => r.nom === 'Référent habillement')!.nommer).toEqual({ aPourvoir: false });
-		expect(vue.missions.find((r) => r.nom === 'Référent technique')!.nommer).toEqual({ aPourvoir: false });
+		expect(vue.missions.find((r) => r.nom === 'Référent habillement')!.nommer).toEqual({ aPourvoir: false, unique: false });
+		expect(vue.missions.find((r) => r.nom === 'Référent technique')!.nommer).toEqual({ aPourvoir: false, unique: false });
+		// Un titulaire unique : une fonction, ou un rôle qui donne le droit de nommer (le rapporteur). Les autres en acceptent plusieurs.
+		expect(chefsDeGarde!.parEquipe[0]!.nommer!.unique).toBe(true);
+		expect(vue.comites.find((c) => c.id === amicale)!.postes!.map((p) => [p.nom, p.nommer.unique])).toEqual([
+			['Rapporteur', true],
+			['Membre', false]
+		]);
 		// Les rôles de comité, poste par poste dans chaque comité, le rapporteur d'abord.
 		const carte = vue.comites.find((c) => c.id === amicale)!;
 		expect(carte.postes!.map((p) => [p.nom, p.titulaires.map((t) => t.nom)])).toEqual([
@@ -298,7 +304,7 @@ describe('quiFaitQuoi, avec les gestes de qui nomme', () => {
 		const { base, bruno, alice, amicale, nommer, role } = await jeu();
 		const [sport] = await base.insert(responsabilite).values({ nom: 'Référent sport', nature: 'mission', typePerimetre: 'centre', comiteAttributeurId: amicale }).returning();
 		const duRapporteur = await quiFaitQuoi(base, acteur(bruno), aujourdhui, { gestes: true });
-		expect(duRapporteur.missions.find((r) => r.id === sport!.id)!.nommer).toEqual({ aPourvoir: false });
+		expect(duRapporteur.missions.find((r) => r.id === sport!.id)!.nommer).toEqual({ aPourvoir: false, unique: false });
 		expect(duRapporteur.missions.find((r) => r.nom === 'Référent engins')!.nommer).toBeUndefined();
 		await nommer(alice, role('Rapporteur de comité'), { type: 'comite', id: (await base.insert(comite).values({ nom: 'Autre', theme: 'x' }).returning())[0]!.id });
 		const dAilleurs = await quiFaitQuoi(base, acteur(alice), aujourdhui, { gestes: true });

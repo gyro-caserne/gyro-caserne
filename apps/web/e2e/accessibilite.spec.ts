@@ -385,7 +385,7 @@ for (const theme of ['auto', 'sombre']) {
 				await page.goto('/comites');
 				await page.waitForLoadState('networkidle');
 				await ouvrirGroupe(page, 'Missions');
-				await page.getByRole('link', { name: 'Nommer (Référent pharmacie)', exact: true }).click();
+				await page.getByRole('link', { name: 'Ajouter (Référent pharmacie)', exact: true }).click();
 				await expect(page.getByRole('dialog', { name: 'Nommer', exact: true })).toBeVisible();
 				await sansViolation(page);
 				await page.keyboard.press('Escape');
@@ -1100,7 +1100,7 @@ test.describe('qui fait quoi', () => {
 		await page.goto('/comites');
 		await page.waitForLoadState('networkidle');
 		await ouvrirGroupe(page, 'Missions');
-		const ouvrir = page.getByRole('link', { name: 'Nommer (Référent pharmacie)', exact: true });
+		const ouvrir = page.getByRole('link', { name: 'Ajouter (Référent pharmacie)', exact: true });
 		const volet = page.getByRole('dialog', { name: 'Nommer', exact: true });
 		await ouvrir.focus();
 		await page.keyboard.press('Enter');

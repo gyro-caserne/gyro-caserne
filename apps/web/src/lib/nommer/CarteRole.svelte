@@ -4,8 +4,9 @@
 	import Rangee from '#lib/ui/Rangee.svelte';
 	import { adresseVolet, intitule, type Poste } from './postes.ts';
 
-	// Une carte par rôle. En tête, son nom et un seul geste : « Nommer » (« Ajouter un membre » pour les membres d'un comité),
-	// ou « Demander » pour un rôle qu'on ne nomme pas. Dessous, ses titulaires, une ligne par personne (la flèche ouvre son volet),
+	// Une carte par rôle. En tête, son nom et au plus un geste. Un rôle à titulaire unique (une fonction, le rapporteur) : « Nommer »
+	// tant que personne ne le tient, rien ensuite (on remplace depuis la personne). Un rôle à plusieurs titulaires : « Nommer » s'il est
+	// vide, « Ajouter » sinon, et toujours « Ajouter un membre » pour les membres d'un comité. Pour un rôle qu'on ne nomme pas, « Demander ». Dessous, ses titulaires, une ligne par personne (la flèche ouvre son volet),
 	// ou « À pourvoir » s'il n'y a personne.
 	// `parPerimetre` : un rôle tenu équipe par équipe (ou comité par comité) : une ligne par poste, le titulaire, ou « À pourvoir »
 	// avec « Nommer » sur la ligne, chaque poste étant à part.
@@ -22,7 +23,13 @@
 	// Peu de lignes d'un coup : au-delà de cinq titulaires, les autres se déplient par « Voir les N titulaires ».
 	const VISIBLES = 5;
 	const seul = $derived(parPerimetre ? null : (postes[0] ?? null));
-	const geste = $derived(seul?.role === 'Membre' && seul.perimetre.type === 'comite' ? 'Ajouter un membre' : 'Nommer');
+	const geste = $derived.by(() => {
+		if (!seul?.nommer) return null;
+		const tenu = seul.titulaires.length > 0;
+		if (seul.nommer.unique) return tenu ? null : 'Nommer';
+		if (seul.role === 'Membre' && seul.perimetre.type === 'comite') return 'Ajouter un membre';
+		return tenu ? 'Ajouter' : 'Nommer';
+	});
 	const nommer = (p: Poste) => adresseVolet(page.url.searchParams, { nommer: p.cle });
 	const aVenir = (debut: string | undefined) => (debut && debut > aujourdhui ? `À partir du ${dateCourte(debut)}` : undefined);
 	// La sous-ligne d'un titulaire : son équipe ou son comité pour un rôle tenu poste par poste, et le début d'un mandat à venir.
@@ -45,9 +52,9 @@
 <ul role="list" class="lignes carte-role">
 	<li class="tete">
 		<svelte:element this={`h${niveau}`} class="titre-role">{titre}</svelte:element>
-		{#if seul?.nommer}
+		{#if seul && geste}
 			<a class="lien-secondaire geste" href={nommer(seul)}>{geste}<span class="masque">{` (${intitule(seul)})`}</span></a>
-		{:else if demande}
+		{:else if demande && !seul?.nommer}
 			<a class="lien-secondaire geste" href="/demandes?role={demande}">Demander<span class="masque">{` au rôle ${titre}`}</span></a>
 		{/if}
 	</li>
