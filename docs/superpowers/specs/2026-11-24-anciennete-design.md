@@ -12,8 +12,18 @@ L'ancienneté se compte en **années de service**, depuis la date d'engagement S
 
 ## Ce qui change
 
-**1. Sur la fiche d'un agent**
-- Une ligne « Ancienneté : 12 ans de service, 8 ans au centre », calculée à partir des dates de la fiche (engagement SPV et entrée au centre).
+**1. Sur la fiche d'un agent : un bloc visuel, pas une ligne de texte** (demande du porteur)
+- À gauche, l'**insigne du palier atteint**, dessiné à l'encre comme les autres icônes :
+  - une médaille avec son ruban, aux couleurs de l'échelon de la médaille d'honneur des sapeurs-pompiers : bronze pour 10 ans, argent pour 20, vermeil pour 25, or pour 30, grand or pour 40 ;
+  - pour les autres paliers (5, 15, 35…) et avant le premier, une médaille neutre, à l'encre seule.
+- À droite :
+  - le **nombre d'années**, en grand, dans le style des titres : « 12 ans » ;
+  - « de service, dont 8 au centre » ;
+  - l'échelon en toutes lettres, par exemple « Échelon argent ». La couleur n'est jamais la seule information.
+- En dessous, une **fine barre de progression** vers le prochain palier : « Prochain palier : 15 ans, le 3 mars 2029 ». Sur le dernier palier réglé, pas de barre.
+- C'est sobre : une seule carte, plate, sans bande de couleur. Les couleurs viennent de jetons ajoutés à `app.css` (bronze, argent, vermeil, or), lisibles en clair comme en sombre. Les animations sont coupées si l'agent l'a demandé.
+- Le même insigne revient, en petit, sur la carte du jour J et dans l'e-mail.
+- Les mots « échelon » et « palier » disent où en est l'ancienneté. Ils n'affirment pas que la médaille a été remise : la remise reste hors du sujet.
 - Si une date manque, on n'affiche que ce qu'on sait, ou « Date d'engagement à compléter » pour qui peut modifier la fiche.
 - Tout agent voit sa propre ancienneté dans Moi. Sur la fiche d'un collègue, la ligne suit la visibilité actuelle des dates de parcours.
 
@@ -23,7 +33,7 @@ L'ancienneté se compte en **années de service**, depuis la date d'engagement S
 - Un palier est atteint le jour anniversaire de l'engagement.
 
 **3. Le jour J : une carte éphémère, comme pour un anniversaire**
-- **La carte** : dans « Aujourd'hui au centre », à l'accueil et sur Échanges, « Thomas Agent fête ses 10 ans de service », avec un bouton **Féliciter**, comme « Souhaiter » pour un anniversaire.
+- **La carte** : dans « Aujourd'hui au centre », à l'accueil et sur Échanges, « Thomas Agent fête ses 10 ans de service », avec l'insigne du palier et un bouton **Féliciter**, comme « Souhaiter » pour un anniversaire.
 - **Ce qu'elle n'est pas** : pas une publication sur un mur. Le lendemain, la carte disparaît.
 - **Le bouton Féliciter** prévient l'agent (cloche et téléphone : « Claire vous félicite pour vos 10 ans de service »). On ne félicite qu'une fois par palier.
 - **Qui la voit** : les mêmes personnes que pour un anniversaire.
