@@ -1102,6 +1102,35 @@ export const souhaitAnniversaire = sqliteTable(
 	(t) => [uniqueIndex('souhait_anniversaire_unique').on(t.personneId, t.jour, t.auteurId)]
 );
 
+// Les paliers d'ancienneté du centre (anciennete.ts) : une seule ligne, `paliers` JSON (années, croissantes). Absente : tous les 5 ans.
+export const reglageAnciennete = sqliteTable('reglage_anciennete', {
+	id: integer('id').primaryKey(),
+	paliers: text('paliers').notNull()
+});
+
+// La cloche de l'ancienneté : un collègue félicite l'agent pour son palier (`auteur_id`), ou l'appli prévient le chef et l'adjoint
+// d'un palier dans 30 jours (`auteur_id` vide). `agent_id` : l'agent du palier ; `jour` : la date du palier.
+// Une félicitation par collègue et par palier ; effacée la nuit suivante, comme un souhait (décision 0047).
+export const avisAnciennete = sqliteTable(
+	'avis_anciennete',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		personneId: versPersonne(),
+		agentId: integer('agent_id')
+			.notNull()
+			.references(() => personne.id),
+		auteurId: integer('auteur_id').references(() => personne.id),
+		annees: integer('annees').notNull(),
+		jour: text('jour').notNull(),
+		titre: text('titre').notNull(),
+		texte: text('texte').notNull(),
+		url: text('url').notNull(),
+		creeLe: text('cree_le').notNull(),
+		lueLe: text('lue_le')
+	},
+	(t) => [uniqueIndex('avis_anciennete_unique').on(t.personneId, t.agentId, t.annees, t.auteurId), index('avis_anciennete_personne').on(t.personneId, t.lueLe)]
+);
+
 // Tables de connexion (Better Auth), dans la même base.
 export * from './schema-auth.ts';
 
