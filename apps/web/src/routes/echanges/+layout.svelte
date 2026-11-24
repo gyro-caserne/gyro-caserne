@@ -98,7 +98,7 @@
 
 {#snippet palier(p: PalierDuJour)}
 	<div class="ligne-jour">
-		<span class="medaille"><InsigneAnciennete echelon={echelonDe(p.annees)} taille={32} /></span>
+		<span class="medaille"><InsigneAnciennete echelon={echelonDe(p.annees)} taille={40} /></span>
 		<strong class="quoi">{p.prenom} {p.nom} fête ses {p.annees} ans de service</strong>
 		<span class="geste"><Feliciter {p} retour={page.url.pathname} /></span>
 	</div>
