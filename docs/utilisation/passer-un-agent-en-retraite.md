@@ -10,4 +10,4 @@ Réservé au chef de centre, à son adjoint et au super administrateur. Il faut 
 
 Sa fiche ne montre plus son grade, ses dates de parcours, son équipe ni son statut. Le bloc « Parcours » devient « Profil ». Dans l'appli, il n'a plus l'onglet Planning ni les remplacements, et Caserne seulement si son profil lui permet de réserver.
 
-Ses remplacements, réservations et demandes d'habillement en cours sont annulés, et il sort des groupes de messagerie. Il garde sa fiche, ses notifications et ses conversations à deux, et ses données ne sont pas effacées. Le chef de centre et l'adjoint ne passent pas en retraité.
+Ses remplacements et réservations sont annulés, comme ses demandes aux référents pas encore avancées, et il sort des groupes de messagerie. Il garde sa fiche, ses notifications et ses conversations à deux, et ses données ne sont pas effacées. Le chef de centre et l'adjoint ne passent pas en retraité.

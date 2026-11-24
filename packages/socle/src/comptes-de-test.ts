@@ -10,12 +10,14 @@ import { ajouterJours, exigerDateHeure } from './dates.ts';
 import type { Acteur, Perimetre } from './droits.ts';
 import { DonneeInvalide } from './erreurs.ts';
 import { chargerEnginsFictifs } from './engins.ts';
-import { chargerHabillementFictif } from './habillement.ts';
+import { chargerHabillementFictif, reglerDemandes } from './demandes.ts';
+import { SANS_ETAPE } from './modeles.ts';
+import { creerProfil } from './actions/profils.ts';
 import { chargerMaterielFictif, reserver } from './reservations.ts';
 import { chargerAptitudesFictives } from './remplacements/fictif.ts';
 import { attribution, comite, equipe, personne, profil, publication, reservation, responsabilite, ressource } from './schema.ts';
 
-type Compte = { role: string; prenom: string; nom: string; profil: 'Agent' | 'Réserve citoyenne'; equipe?: number; responsabilite?: string; comite?: string };
+type Compte = { role: string; prenom: string; nom: string; profil: 'Agent' | 'Réserve citoyenne' | 'Retraités'; equipe?: number; responsabilite?: string; comite?: string };
 
 // `equipe` : numéro dans la rotation ; `comite` : nom du comité, pour un rôle de comité.
 export const COMPTES_DE_TEST: Compte[] = [
@@ -28,8 +30,12 @@ export const COMPTES_DE_TEST: Compte[] = [
 	{ role: 'referent', prenom: 'Rémi', nom: 'Référent', profil: 'Agent', equipe: 2, responsabilite: 'Référent technique' },
 	{ role: 'engins', prenom: 'Erwan', nom: 'Engins', profil: 'Agent', equipe: 3, responsabilite: 'Référent engins' },
 	{ role: 'habillement', prenom: 'Hélène', nom: 'Habillement', profil: 'Agent', equipe: 1, responsabilite: 'Référent habillement' },
-	{ role: 'exterieur', prenom: 'Estelle', nom: 'Extérieure', profil: 'Réserve citoyenne' }
+	{ role: 'pharmacie', prenom: 'Paul', nom: 'Pharmacie', profil: 'Agent', equipe: 2, responsabilite: 'Référent pharmacie' },
+	{ role: 'exterieur', prenom: 'Estelle', nom: 'Extérieure', profil: 'Réserve citoyenne' },
+	{ role: 'retraite', prenom: 'Roger', nom: 'Retraité', profil: 'Retraités' }
 ];
+// Le profil des retraités, créé s'il manque (un profil extérieur, sans droit).
+const RETRAITES = 'Retraités';
 
 // Nom neutre dans le journal : l'adresse de la boîte n'y est pas inscrite.
 const INSTALLATEUR: Acteur = { type: 'super', email: 'comptes-de-test' };
@@ -54,14 +60,16 @@ export async function chargerComptesDeTest(base: Base, basePhotos: BasePhotos, b
 		if (!c) throw manque(`comité « ${nom} » absent ou dissous`);
 		return c.id;
 	};
+	const responsabiliteDe = (nom: string) => responsabilites.find((x) => x.nom === nom && x.archiveeLe === null);
 	const sautes = COMPTES_DE_TEST.filter((c) => c.equipe !== undefined && idEquipe(c.equipe) === null);
 	const prevus = COMPTES_DE_TEST.filter((c) => !sautes.includes(c)).map((c) => {
-		const p = profils.find((x) => x.nom === c.profil);
+		// Le profil des retraités manquant est créé après les vérifications (identifiant 0 d'ici là).
+		const p = profils.find((x) => x.nom.toLocaleLowerCase('fr') === c.profil.toLocaleLowerCase('fr')) ?? (c.profil === RETRAITES ? { id: 0 } : undefined);
 		if (!p) throw manque(`profil « ${c.profil} » absent`);
 		if (adressesReservees.map((a) => a.trim().toLowerCase()).includes(adresse(c.role))) throw manque(`${adresse(c.role)} est réservée au super administrateur`);
 		let tenue: { id: number; perimetre: Perimetre } | null = null;
 		if (c.responsabilite) {
-			const r = responsabilites.find((x) => x.nom === c.responsabilite && x.archiveeLe === null);
+			const r = responsabiliteDe(c.responsabilite);
 			if (!r) throw manque(`responsabilité « ${c.responsabilite} » absente ou archivée`);
 			const perimetre: Perimetre = r.type === 'centre' ? { type: 'centre' } : r.type === 'equipe' ? { type: 'equipe', id: idEquipe(c.equipe!)! } : { type: 'comite', id: idComite(c.comite!) };
 			tenue = { id: r.id, perimetre };
@@ -75,6 +83,12 @@ export async function chargerComptesDeTest(base: Base, basePhotos: BasePhotos, b
 			? `Équipe ${numero} absente ou inactive : compte ${roles[0]} sauté, avec ses données.`
 			: `Équipe ${numero} absente ou inactive : comptes ${roles.slice(0, -1).join(', ')} et ${roles.at(-1)} sautés, avec leurs données.`;
 	});
+
+	const retraites = prevus.filter((c) => c.profilId === 0);
+	if (retraites.length) {
+		const id = await creerProfil(base, INSTALLATEUR, { nom: RETRAITES, typePersonne: 'exterieur' }, aujourdhui);
+		for (const c of retraites) c.profilId = id;
+	}
 
 	const ids: Record<string, number> = {};
 	for (const c of prevus) {
@@ -138,12 +152,15 @@ export async function chargerComptesDeTest(base: Base, basePhotos: BasePhotos, b
 	// Réservations : le matériel de l'amicale, et une demande de l'agent qui attend l'amicale.
 	await chargerMaterielFictif(base, maintenant);
 	await chargerEnginsFictifs(base, maintenant);
-	// Des demandes d'habillement de l'agent et du membre, suivies par le référent habillement (sans lui, par le chef de centre, qui en a le droit).
+	// Des demandes d'habillement de l'agent et du membre, suivies par le référent habillement (sans lui, par le chef de centre, qui agit toujours).
 	// Un compte sauté mais créé lors d'un passage précédent garde ses demandes : il est retrouvé par son adresse, pour ne rien refaire en double.
 	// Des demandes déjà là ne changent pas de main : celles suivies par le chef le restent.
 	const dejaLa = async (role: string) => ids[role] ?? (await base.select({ id: personne.id }).from(personne).where(eq(personne.email, adresse(role))))[0]?.id;
 	const demandeurs = [await dejaLa('agent'), await dejaLa('membre')].filter((id) => id !== undefined);
-	await chargerHabillementFictif(base, maintenant, (await dejaLa('habillement')) ?? ids.chef!, demandeurs);
+	await chargerHabillementFictif(base, maintenant, responsabiliteDe('Référent habillement')!.id, (await dejaLa('habillement')) ?? ids.chef!, demandeurs);
+	// La pharmacie reçoit des demandes.
+	const [pharmacie] = await base.select({ id: responsabilite.id, demandes: responsabilite.demandes }).from(responsabilite).where(eq(responsabilite.id, responsabiliteDe('Référent pharmacie')!.id));
+	if (pharmacie && pharmacie.demandes === null) await reglerDemandes(base, INSTALLATEUR, pharmacie.id, SANS_ETAPE, maintenant);
 	// Des aptitudes, pour essayer les remplacements.
 	await chargerAptitudesFictives(base, maintenant);
 	if (!la('agent')) return infos;

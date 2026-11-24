@@ -62,7 +62,7 @@
 	{#if data.courriel !== null && data.courriel !== undefined}
 		<Carte titre="Par e-mail">
 			<form method="POST" action="?/courriel" use:enhance={garder}>
-				<Interrupteur libelle="Recevoir les demandes par e-mail" description="Une nouvelle demande adressée à vos rôles (habillement, anomalie, réservation à valider) arrive aussi dans votre boîte. La suite reste dans l’appli." nom="oui" coche={data.courriel} envoyer />
+				<Interrupteur libelle="Recevoir les demandes par e-mail" description="Une nouvelle demande adressée à vos rôles (habillement, pharmacie, anomalie, réservation à valider) arrive aussi dans votre boîte. La suite reste dans l’appli." nom="oui" coche={data.courriel} envoyer />
 			</form>
 		</Carte>
 	{/if}

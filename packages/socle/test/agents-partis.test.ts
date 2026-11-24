@@ -9,7 +9,6 @@ import type { Acteur } from '../src/droits.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { ficheAgent, listeGestion } from '../src/effectif.ts';
 import { donneesFichier } from '../src/fichier-effectif.ts';
-import { gesteHabillement, lireDemande, toutesLesDemandes } from '../src/habillement.ts';
 import { dateDEffacement, effacerAgent, effacerAgentsPartis, PARTIS_PAR_NUIT } from '../src/partis.ts';
 import { historiquePrises, lirePriseFaite } from '../src/prises.ts';
 import { demandeVue } from '../src/remplacements/lectures.ts';
@@ -19,7 +18,6 @@ import {
 	account,
 	affectationEquipe,
 	anomalie,
-	avisHabillement,
 	avisRemplacement,
 	destinataireRemplacement,
 	aptitude,
@@ -27,7 +25,6 @@ import {
 	attribution,
 	champCentre,
 	cleAgenda,
-	demandeHabillement,
 	demandeRemplacement,
 	engin,
 	envoiLien,
@@ -291,19 +288,18 @@ describe('effacerAgent (sur demande)', () => {
 });
 
 describe('l’historique sous « Ancien agent »', () => {
-	it('publications, demandes de remplacement et d’habillement en cours, prises de garde et anomalies : rien ne casse', { timeout: 60_000 }, async () => {
+	it('publications, demandes de remplacement, prises de garde et anomalies : rien ne casse', { timeout: 60_000 }, async () => {
 		const { base, m, reglage, acteurs } = await jeuGrossi();
 		const nomDe = async (id: number) => {
 			const [p] = await base.select({ prenom: personne.prenom, nom: personne.nom }).from(personne).where(eq(personne.id, id));
 			return `${p!.prenom} ${p!.nom}`;
 		};
 		const chefId = (acteurs.chef as { id: number }).id;
-		// Une publication d'un agent, une anomalie, une demande de remplacement acceptée, une demande d'habillement en cours.
+		// Une publication d'un agent, une anomalie, une demande de remplacement acceptée.
 		const [pub] = await base.select().from(publication).where(and(like(publication.auteur, 'personne:%'), ne(publication.auteur, `personne:${chefId}`)));
 		const auteurPub = Number(pub!.auteur.slice(9));
 		const [ano] = await base.select().from(anomalie).where(ne(anomalie.signaleePar, chefId));
 		const [dem] = await base.select().from(demandeRemplacement).where(and(isNotNull(demandeRemplacement.remplacantId), ne(demandeRemplacement.demandeurId, chefId)));
-		const [hab] = await base.select().from(demandeHabillement).where(and(eq(demandeHabillement.etape, 'demandee'), ne(demandeHabillement.demandeurId, chefId)));
 		// Une prise de garde validée, faite par l'auteur de l'anomalie.
 		const [unEngin] = await base.select().from(engin);
 		const [version] = await base.select().from(ficheVersion).where(eq(ficheVersion.typeId, unEngin!.typeId));
@@ -311,7 +307,7 @@ describe('l’historique sous « Ancien agent »', () => {
 			.insert(priseGarde)
 			.values({ enginId: unEngin!.id, releve: '2026-11-01T19:00', versionId: version!.id, etat: 'validee', commenceePar: ano!.signaleePar, commenceeLe: '2026-11-01T19:05', modifieePar: ano!.signaleePar, modifieeLe: '2026-11-01T19:30', valideeLe: '2026-11-01T19:30', saisie: JSON.stringify({ participants: [ano!.signaleePar] }) })
 			.returning();
-		const effaces = [...new Set([auteurPub, ano!.signaleePar, dem!.demandeurId, hab!.demandeurId])];
+		const effaces = [...new Set([auteurPub, ano!.signaleePar, dem!.demandeurId])];
 		const anciens = await Promise.all(effaces.map(nomDe));
 		for (const id of effaces) {
 			await changerStatut(base, base.photos, superAdmin, id, 'parti', m);
@@ -330,18 +326,6 @@ describe('l’historique sous « Ancien agent »', () => {
 		// La demande de remplacement, vue par le remplaçant.
 		const remplacant: Acteur = { type: 'personne', id: dem!.remplacantId! };
 		if (!effaces.includes(dem!.remplacantId!)) sansAnciens(await demandeVue(base, remplacant, dem!.id, m, reglage));
-		// L'habillement : la demande en cours reste dans la liste du référent et s'ouvre.
-		const toutes = await toutesLesDemandes(base, superAdmin, m.slice(0, 10));
-		expect(toutes.enCours.some((d) => d.id === hab!.id)).toBe(true);
-		sansAnciens(await lireDemande(base, superAdmin, hab!.id, m));
-		// Le référent la prend, pose une question, la traite et la livre : aucun avis ni envoi pour l'effacé.
-		const plusTard = (min: number) => `${m.slice(0, 11)}${String(10 + min).padStart(2, '0')}:30`;
-		await gesteHabillement(base, acteurs.chef, hab!.id, { quoi: 'prendre' }, plusTard(1));
-		await gesteHabillement(base, acteurs.chef, hab!.id, { quoi: 'question', texte: 'Quelle taille ?' }, plusTard(2));
-		await gesteHabillement(base, acteurs.chef, hab!.id, { quoi: 'traiter', issue: 'stock', texte: 'En stock' }, plusTard(3));
-		await gesteHabillement(base, acteurs.chef, hab!.id, { quoi: 'livrer', texte: 'Au vestiaire' }, plusTard(4));
-		expect(await base.select().from(avisHabillement).where(eq(avisHabillement.personneId, hab!.demandeurId))).toEqual([]);
-		sansAnciens(await lireDemande(base, superAdmin, hab!.id, plusTard(5)));
 	});
 
 	it('une demande de remplacement ouverte à tous, dont un destinataire est effacé : relance et expiration passent', { timeout: 60_000 }, async () => {

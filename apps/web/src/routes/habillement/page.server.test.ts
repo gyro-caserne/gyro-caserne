@@ -1,94 +1,45 @@
 import { eq } from 'drizzle-orm';
-import { attribution, demandeHabillement, personne, responsabilite } from '@gyro-caserne/socle';
+import { archiverResponsabilite, demandeReferent, responsabilite } from '@gyro-caserne/socle';
 import { describe, expect, it } from 'vitest';
-import { locaux, preparer, requeteFormulaire } from '../echanges/de-test.ts';
-import { actions, load } from './+page.server';
-import { actions as actionsDemande, load as demande } from './[id]/+page.server';
-import { load as toutes } from './toutes/+page.server';
+import { locaux, preparer } from '../echanges/de-test.ts';
+import { load } from './+page.server';
+import { load as ancienne } from './[id]/+page.server';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-async function jeu() {
-	const p = await preparer();
-	const [r] = await p.base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
-	await p.base.insert(attribution).values({ personneId: p.bruno.id, responsabiliteId: r!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
-	const demander = async (acteur: unknown, texte: string) => (actions.default as any)({ locals: locaux(p.base, acteur), request: await requeteFormulaire([['texte', texte]]) });
-	const geste = async (acteur: unknown, id: number, corps: [string, string][]) => (actionsDemande.default as any)({ locals: locaux(p.base, acteur), params: { id: String(id) }, request: await requeteFormulaire(corps) });
-	const ouvrir = (acteur: unknown, id: number | string) => (demande as any)({ locals: locaux(p.base, acteur), params: { id: String(id) }, url: new URL(`http://x/habillement/${id}`) });
-	return { ...p, referent: p.bruno, demander, geste, ouvrir };
-}
-const idDe = async (promesse: Promise<unknown>) => {
+const vers = async (promesse: Promise<unknown>) => {
 	const r = (await promesse.catch((e) => e)) as { status: number; location: string };
 	expect(r.status).toBe(303);
-	return Number(/\/habillement\/(\d+)\?envoyee$/.exec(r.location)![1]);
+	return r.location;
 };
 
-describe('/habillement', () => {
-	it('une nouvelle demande part aussi par e-mail au référent, après la réponse, avec le lien absolu', async () => {
-		const { base, alice, bruno } = await jeu();
-		const envoyes: { a: string; sujet: string; texte: string }[] = [];
-		const taches: Promise<unknown>[] = [];
-		const locals = { ...locaux(base, alice), courriel: async (m: { a: string; sujet: string; texte: string }) => void envoyes.push(m), enArrierePlan: (t: Promise<unknown>) => taches.push(t) };
-		const r = await (actions.default as any)({ locals, request: await requeteFormulaire([['texte', 'Rangers 43']]), url: new URL('https://caserne.exemple.fr/habillement') }).catch((e: unknown) => e);
-		await Promise.all(taches);
-		const [bob] = await base.select().from(personne).where(eq(personne.id, bruno.id));
-		expect(envoyes).toEqual([{ a: bob!.email, sujet: 'Nouvelle demande d’habillement', texte: expect.stringContaining(`https://caserne.exemple.fr${r.location.replace('?envoyee', '')}`) }]);
+describe('/habillement, l’ancienne entrée', () => {
+	it('mène à « Faire une demande », le référent habillement déjà choisi ; demande la connexion', async () => {
+		const { base, alice } = await preparer();
+		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
+		expect(await vers((load as any)({ locals: locaux(base, alice) }))).toBe(`/demandes?role=${r!.id}`);
+		expect(await vers((load as any)({ locals: locaux(base, null) }))).toBe('/connexion');
+		// Le rôle ne reçoit plus de demandes : « Faire une demande », sans rôle choisi.
+		await archiverResponsabilite(base, { type: 'super', email: 'a@b.fr' }, r!.id, '2026-11-23');
+		expect(await vers((load as any)({ locals: locaux(base, alice) }))).toBe('/demandes');
 	});
 
-	it('demande la connexion ; le super administrateur va à toutes les demandes', async () => {
-		const { base } = await jeu();
-		await expect((load as any)({ locals: locaux(base, null) })).rejects.toMatchObject({ status: 303, location: '/connexion' });
-		await expect((load as any)({ locals: locaux(base, { type: 'super', email: 'a@b.fr' }) })).rejects.toMatchObject({ status: 303, location: '/habillement/toutes' });
+	it('le rôle de la reprise d’abord, même sans le droit ; sinon celui qui a les étapes de l’habillement', async () => {
+		const { base, alice } = await preparer();
+		const [natif] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
+		const [tenues] = await base.insert(responsabilite).values({ nom: 'Tenues', nature: 'mission', typePerimetre: 'centre', modele: 'referent_habillement', demandes: { etapes: [], derniere: 'Faite' } }).returning();
+		expect(await vers((load as any)({ locals: locaux(base, alice) }))).toBe(`/demandes?role=${natif!.id}`);
+		await base.insert(demandeReferent).values({ responsabiliteId: tenues!.id, demandeurId: alice.id, texte: 'Veste', creeLe: '2026-11-01T10:00', majLe: '2026-11-01T10:00', habillementId: 3 });
+		expect(await vers((load as any)({ locals: locaux(base, alice) }))).toBe(`/demandes?role=${tenues!.id}`);
 	});
 
-	it('envoyer une demande mène à son suivi ; vide, elle est refusée avec une phrase, le texte gardé', async () => {
-		const { base, alice, demander } = await jeu();
-		const id = await idDe(demander(alice, 'Veste textile en L'));
-		expect((await (load as any)({ locals: locaux(base, alice) })).enCours.map((d: { id: number }) => d.id)).toEqual([id]);
-		expect(await demander(alice, '   ')).toMatchObject({ status: 400, data: { texte: '   ', message: 'Décrivez votre besoin : quelle pièce, quelle taille, pourquoi.' } });
-	});
-
-	it('« Toutes les demandes » : pour le référent (et le lien sur sa page), refusé à un agent', async () => {
-		const { base, alice, referent, demander } = await jeu();
-		await idDe(demander(alice, 'Veste'));
-		expect((await (load as any)({ locals: locaux(base, referent) })).gere).toBe(true);
-		expect(await (load as any)({ locals: locaux(base, alice) })).toMatchObject({ gere: false, peutDemander: true });
-		expect((await (toutes as any)({ locals: locaux(base, referent) })).enCours).toHaveLength(1);
-		await expect((toutes as any)({ locals: locaux(base, alice) })).rejects.toMatchObject({ status: 403 });
-	});
-});
-
-describe('/habillement/[id]', () => {
-	it('404 pour un autre agent ou une adresse inconnue ; « envoyee » affiche le bandeau', async () => {
-		const { alice, chef, demander, ouvrir, base } = await jeu();
-		const id = await idDe(demander(alice, 'Veste'));
-		const autre = (await base.select().from(demandeHabillement))[0]!;
-		expect(autre.id).toBe(id);
-		await expect(ouvrir({ type: 'personne', id: 9999 }, id)).rejects.toMatchObject({ status: 404 });
-		await expect(ouvrir(alice, 'abc')).rejects.toMatchObject({ status: 404 });
-		expect((await ouvrir(chef, id)).demande.gestes).toEqual(['prendre', 'question', 'traiter']);
-	});
-
-	it('les gestes par le formulaire : prendre, question, réponse, traiter, livrer (« Autre » et son mot) ; refus lisible', async () => {
-		const { alice, referent, demander, geste, ouvrir } = await jeu();
-		const id = await idDe(demander(alice, 'Rangers'));
-		expect(await geste(referent, id, [['quoi', 'prendre']])).toEqual({ quoi: 'prendre', succes: 'Vous l’avez prise en compte.' });
-		expect(await geste(referent, id, [['quoi', 'question'], ['texte', '']])).toMatchObject({ status: 400, data: { quoi: 'question', message: 'Écrivez votre message.' } });
-		await geste(referent, id, [['quoi', 'question'], ['texte', 'Quelle taille ?']]);
-		await geste(alice, id, [['quoi', 'repondre'], ['texte', '43']]);
-		expect(await geste(referent, id, [['quoi', 'traiter'], ['issue', 'refus'], ['texte', '']])).toMatchObject({ status: 400, data: { message: 'Expliquez le refus en un mot. L’agent le lira.' } });
-		await geste(referent, id, [['quoi', 'traiter'], ['issue', 'stock'], ['texte', '']]);
-		await geste(referent, id, [['quoi', 'livrer'], ['recuperation', 'autre'], ['texte', 'Au bureau du chef']]);
-		expect((await ouvrir(alice, id)).demande).toMatchObject({ etape: 'livree', livraison: 'Au bureau du chef' });
-		expect(await geste(alice, id, [['quoi', 'annuler']])).toMatchObject({ status: 400, data: { message: 'Ce geste n’est plus possible. La demande a avancé.' } });
-		expect(await geste(alice, id, [['quoi', 'nimporte']])).toMatchObject({ status: 400, data: { quoi: null } });
-		await expect(geste({ type: 'personne', id: 9999 }, id, [['quoi', 'prendre']])).rejects.toMatchObject({ status: 404 });
-	});
-
-	it('livrer avec une récupération proposée', async () => {
-		const { alice, referent, demander, geste, ouvrir } = await jeu();
-		const id = await idDe(demander(alice, 'Gants'));
-		await geste(referent, id, [['quoi', 'traiter'], ['issue', 'commande'], ['texte', '']]);
-		await geste(referent, id, [['quoi', 'livrer'], ['recuperation', 'Dans votre casier'], ['texte', '']]);
-		expect((await ouvrir(alice, id)).demande.livraison).toBe('Dans votre casier');
+	it('une ancienne adresse de demande mène à la demande reprise, sinon à « Mes demandes »', async () => {
+		const { base, alice } = await preparer();
+		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
+		const [d] = await base.insert(demandeReferent).values({ responsabiliteId: r!.id, demandeurId: alice.id, texte: 'Veste', creeLe: '2026-11-01T10:00', majLe: '2026-11-01T10:00', habillementId: 12 }).returning();
+		const ouvrir = (acteur: unknown, id: string) => vers((ancienne as any)({ locals: locaux(base, acteur), params: { id } }));
+		expect(await ouvrir(alice, '12')).toBe(`/demandes/${d!.id}`);
+		expect(await ouvrir(alice, '13')).toBe('/demandes');
+		expect(await ouvrir(alice, 'toutes')).toBe('/demandes');
+		expect(await ouvrir(null, '12')).toBe('/connexion');
 	});
 });

@@ -10,7 +10,7 @@ import { effacerNotificationsDe } from './notifications.ts';
 import { aptitudeAgent, cleAgenda, envoiLien, journal, personne, user, valeurChamp, visiteMur } from './schema.ts';
 
 // Agents partis : 12 mois après le dernier départ, la nuit efface leurs données personnelles (décision 0029).
-// La fiche reste, sous « Ancien agent » : publications, messages, demandes, prises de garde, anomalies et habillement la citent.
+// La fiche reste, sous « Ancien agent » : publications, messages, demandes, prises de garde, et anomalies la citent.
 export const PARTIS_PAR_NUIT = 10;
 
 // Le jour où la nuit l'efface : un an après le départ (la limite de 12 mois tombe le 28 février pour un départ un 29 : le 1er mars).

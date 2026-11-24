@@ -151,7 +151,7 @@ describe('page d’un rôle', () => {
 		expect(page).not.toMatch(/<form/);
 		expect(page).not.toContain('Revenir au modèle');
 		expect(page).not.toContain('Enregistrer');
-		expect(page.match(/<fieldset class="selecteur[^"]*" disabled/g)).toHaveLength(6);
+		expect(page.match(/<fieldset class="selecteur[^"]*" disabled/g)).toHaveLength(5);
 		expect(page).toMatch(/name="admin"[^>]*disabled/);
 		expect(page).toContain('Valider un remplacement');
 		// Les droits sans effet ne s'affichent pas, même tenus par le rôle.

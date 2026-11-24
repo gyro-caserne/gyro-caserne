@@ -57,7 +57,7 @@ const PHRASES: Record<string, string> = {
 export const phraseDemande = (message: string) => PHRASES[message] ?? 'Ce geste n’a pas pu être enregistré.';
 
 // Le titre d'une demande : son texte sur une ligne, coupé à la fin d'un mot autour de `max` caractères, avec « … » comme les
-// autres titres coupés (habillement). Le texte complet reste dans le fil.
+// autres titres coupés. Le texte complet reste dans le fil.
 export function titreDeDemande(texte: string, max = 60): string {
 	const ligne = texte.replace(/\s+/g, ' ').trim();
 	if (ligne.length <= max) return ligne;

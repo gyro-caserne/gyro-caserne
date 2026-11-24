@@ -94,7 +94,6 @@ describe('faire une demande', () => {
 		await expect(j.demander(j.ids.alice, 'x'.repeat(501))).rejects.toThrow('Demande trop longue');
 		await expect(j.demander(j.ids.exterieur)).rejects.toThrow('Réservé aux agents du centre');
 		await expect(demanderAuReferent(j.base, j.superAdmin, j.pharmacie, 'Compresses', QUAND)).rejects.toThrow('Réservé aux agents du centre');
-		await expect(j.demander(j.ids.alice, 'Veste', await j.role('Référent habillement'))).rejects.toThrow('Ce rôle ne reçoit pas de demandes');
 		await expect(j.demander(j.ids.alice, 'Veste', 999)).rejects.toThrow('Ce rôle ne reçoit pas de demandes');
 		expect(await j.base.select().from(demandeReferent)).toEqual([]);
 	});
@@ -104,7 +103,7 @@ describe('faire une demande', () => {
 		await j.demander(j.ids.alice, 'Compresses');
 		await j.demander(j.ids.alice, 'Lampe frontale', await j.role('Référent engins'));
 		expect((await mesDemandesReferents(j.base, j.qui(j.ids.alice))).enCours.map((d) => [d.texte, d.role]).sort()).toEqual([['Compresses', 'Référent pharmacie'], ['Lampe frontale', 'Référent engins']]);
-		expect((await rolesQuiRecoivent(j.base)).map((r) => r.nom)).toEqual(['Référent engins', 'Référent pharmacie']);
+		expect((await rolesQuiRecoivent(j.base)).map((r) => r.nom)).toEqual(['Référent engins', 'Référent habillement', 'Référent pharmacie']);
 	});
 });
 
@@ -365,11 +364,11 @@ describe('la page des demandes', () => {
 		await j.demander(j.ids.alice);
 		const page = async (qui: number) => pageDesDemandes(j.base, j.qui(qui), '2026-11-23');
 		const alice = await page(j.ids.alice);
-		expect(alice.roles.map((r) => r.nom)).toEqual(['Référent engins', 'Référent pharmacie']);
+		expect(alice.roles.map((r) => r.nom)).toEqual(['Référent engins', 'Référent habillement', 'Référent pharmacie']);
 		expect(alice.recus).toEqual([]);
 		expect(alice.enCours.map((d) => d.texte)).toEqual(['Compresses stériles']);
 		expect((await page(j.ids.paul)).recus).toMatchObject([{ id: j.pharmacie, nom: 'Référent pharmacie', enCours: 1 }]);
-		expect((await page(j.ids.claire)).recus.map((r) => [r.nom, r.enCours])).toEqual([['Référent engins', 0], ['Référent pharmacie', 1]]);
+		expect((await page(j.ids.claire)).recus.map((r) => [r.nom, r.enCours])).toEqual([['Référent engins', 0], ['Référent habillement', 0], ['Référent pharmacie', 1]]);
 	});
 });
 
