@@ -336,6 +336,21 @@ Décision [0033](../decisions/0033-souhaiter-un-anniversaire.md). Migration `002
 - Coût : `souhaiter` 2 requêtes ; la liste des anniversaires reste une requête ; l'accueil, une requête comme avant (`monAnniversaire` en `batch`).
 
 
+## Ancienneté de service
+
+Décision [0047](../decisions/0047-anciennete.md). Migration `0040` (additive).
+
+| Table | Contenu |
+|---|---|
+| `reglage_anciennete` | une ligne (`id` 1), `paliers` JSON (années, croissantes). Absente : `PALIERS_PAR_DEFAUT` (tous les 5 ans, jusqu'à 50). |
+| `avis_anciennete` | `personne_id` (destinataire), `agent_id` (l'agent du palier), `auteur_id` (le collègue qui félicite ; vide pour l'annonce aux chefs), `annees`, `jour` (date du palier), `titre`, `texte`, `url`, `cree_le`, `lue_le`. Unique sur (destinataire, agent, palier, auteur). C'est la ligne de cloche (genre `anciennete`). |
+
+- `anciennete-calcul.ts` (sans base) : `anneesEntre`, `dateDuPalier`, `echelonDe` (bronze 10, argent 20, vermeil 25, or 30, grand or 40), `anciennete` (années, années au centre, échelon, prochain palier, sa date et la part faite depuis le palier précédent).
+- `a-ne-pas-manquer.ts` : `anneesDeService(jour)` et `palierDuJour(jour)` en SQL (jour anniversaire de l'engagement par `joursFetes` de `dates.ts`, années dans les paliers du centre par une sous-requête sur `reglage_anciennete`, agents présents) ; `fetesDuJourAuCentre` (anniversaires et paliers du jour, une requête, avec le geste `feliciter` ou `felicite`), `anniversairesDuJour` (sa part anniversaires) ; `fetesPourMoi` (accueil : son anniversaire, son palier et qui l'a félicité, les paliers des collègues, un `batch`), `monAnniversaire`.
+- `anciennete.ts` : `lirePaliers`, `reglerPaliers` (`GERER_LISTES`, de 1 à 60 ans, rangés, sans doublon, journal `regler_anciennete`), `ancienneteDe` (Moi, un `batch`), `feliciter` (comme `souhaiter` : une lecture, puis un `batch` qui écrit la ligne revérifiée et l'envoi au téléphone si elle vient d'être écrite, lieu `anciennete`), `ancienneteDuMatin` (réveil de 8 h et 8 h 10 : une lecture des paliers à J+30, des chefs et des annonces déjà faites ; une écriture par agent nouveau, aux chefs ; rend les e-mails, un par chef hors coupure `courriel`).
+- Ménage : `effacerSouhaitsPasses` efface aussi les félicitations des jours passés ; `effacerVieillesNotifications`, les annonces de plus de 30 jours ; `effacerNotificationsDe`, tout ce qui touche la personne (destinataire, agent ou auteur).
+- Coût : Échanges et accueil, aucune requête de plus ; `feliciter` 2 requêtes ; le réveil, 1 lecture (et 1 écriture s'il y a un palier).
+
 ## Notifications des chefs (décision 0038)
 
 - `suivi.ts` : `ACTIONS_SUIVI` (liste fixe, une phrase par action, rangée par sujet : `SUJETS_SUIVI`, `actionsDuSujet`), `suiviDuCentre` (25 lignes du journal par page, sur les trois derniers mois (`ilYaTroisMois` : le même jour, trois mois plus tôt, ramené au dernier jour du mois), filtrées en SQL par la liste d'actions du `sujet`, noms de l'auteur et de la cible en une requête ; l'arrivée, sans `vu` ni `avant`, lit `personne.suivi_vu` (rendu en `vu`, pour le repère de la dernière visite) puis le pose à la dernière ligne du journal, dans le même lot ; avec `vu`, la marque de l'arrivée redonnée par les filtres et la suite, rien n'est lu ni marqué), `nouveautesSuiviSql` (le compte de l'en-tête, nul hors chefs, borné à 99, aux 1 000 dernières lignes et aux trois derniers mois, dans la requête d'`enTeteDe`, de `filDeNotifications` et de la pastille de `prendreEnvois`), `estChefOuAdjointSql`.
