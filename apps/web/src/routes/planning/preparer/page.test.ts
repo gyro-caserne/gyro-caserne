@@ -205,7 +205,7 @@ describe('Préparer l’année en cinq étapes', () => {
 		expect(html).toContain('Équipe 3 a 6 agents. Il manque 1 CE');
 		expect(html).toContain('Équipe 1 a 6 agents et peut armer le FPT seule');
 		expect(html).toContain('href="/agents"');
-		expect(html).toContain('href="/nominations"');
+		expect(html).toContain('href="/comites"');
 		expect(html).toContain('53 semaines, Noël pour l’équipe 2, Nouvel An pour l’équipe 1, 1 manœuvre reprise, Équipe 3 incomplète, Aucune période de vacances saisie');
 		expect(html).toContain('action="?/proposition&amp;annee=2027&amp;etape=roulement"');
 		expect(html).toContain('Accepter et écrire le brouillon');

@@ -45,7 +45,7 @@ export async function equipeSansChefDemain(base: Base, maintenant: string, regla
 	]);
 	const e = equipeDe(releve, annees, changees, equipes, reglage);
 	if (!e || deja.length > 0 || chefsDeGarde.some((c) => c.equipeId === e.id && enCours(c.debut, c.fin, demain))) return 0;
-	const donnees = { titre: `${e.nom} sans chef de garde demain`, texte: `Aucun chef de garde nommé pour la relève de demain, à ${Number(reglage.debut.heure.slice(0, 2))} h.`, url: '/nominations', tag: `urgence:sans-chef:${releve}` };
+	const donnees = { titre: `${e.nom} sans chef de garde demain`, texte: `Aucun chef de garde nommé pour la relève de demain, à ${Number(reglage.debut.heure.slice(0, 2))} h.`, url: '/comites', tag: `urgence:sans-chef:${releve}` };
 	await base.batch([ligneJournal(base, { acteur: 'planning', action: 'alerter_sans_chef', cibleType: 'equipe', cibleId: e.id, details: { releve } }, maintenant), avisUrgence(base, chefsDuCentre(base, aujourdhui), donnees, maintenant)]);
 	return 1;
 }

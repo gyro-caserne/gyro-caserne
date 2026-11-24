@@ -386,39 +386,42 @@
 				{/if}
 
 				{#if choix}
-					<form method="POST" action={action('attribuer')} class="nomination" use:enhance={surEnvoi('attribuer')}>
-						<h3>Attribuer une responsabilité</h3>
-						<!-- Zones présentes dès le chargement : le message y est annoncé. -->
-						<div role="status">{#if concerne('attribuer') && form?.succes}<p class="succes">{form.message}</p>{/if}</div>
-						<div role="alert">
-							{#if concerne('attribuer') && !form?.succes && (form?.message || form?.erreurs)}<p class="echec">{form?.message ?? 'Le formulaire contient des erreurs.'}</p>{/if}
-						</div>
-						<Choix
-							id="responsabilite"
-							name="responsabiliteId"
-							libelle="Responsabilité"
-							bind:valeur={responsabiliteChoisie}
-							erreur={erreursNomination.responsabiliteId}
-							options={nominations.map((r) => ({ valeur: String(r.responsabiliteId), libelle: r.nom }))}
-						/>
-						{#if choix.portee === 'centre'}
-							<input type="hidden" name="perimetre" value="centre" />
-						{:else}
-							{#key choix.responsabiliteId}
-								<Choix
-									id="perimetre"
-									name="perimetre"
-									libelle={choix.portee === 'equipe' ? 'Équipe' : 'Comité'}
-									valeur={perimetreInitial}
-									erreur={erreursNomination.perimetreId}
-									options={choix.perimetres.map((p) => ({ valeur: String(p.id), libelle: p.nom }))}
-								/>
-							{/key}
-						{/if}
-						<Champ id="debut" name="debut" type="date" libelle="Début" requis valeur={saisie('debut', aujourdhuiIso)} erreur={erreursNomination.debut} />
-						<Champ id="fin" name="fin" type="date" libelle="Fin" aide="Facultative. Sans date, le rôle dure jusqu'à ce qu'on le termine." valeur={saisie('fin', '')} erreur={erreursNomination.fin} />
-						<Bouton type="submit" desactive={envoi === 'attribuer'}>Attribuer</Bouton>
-					</form>
+					<!-- « Nommer à un rôle » : le même contenu que le volet Nommer de Qui fait quoi, déplié dans le bloc. -->
+					<details class="repli nommer" {...concerne('attribuer') ? { open: true } : {}}>
+						<summary>Nommer à un rôle</summary>
+						<form method="POST" action={action('attribuer')} class="nomination" use:enhance={surEnvoi('attribuer')}>
+							<!-- Zones présentes dès le chargement : le message y est annoncé. -->
+							<div role="status">{#if concerne('attribuer') && form?.succes}<p class="succes">{form.message}</p>{/if}</div>
+							<div role="alert">
+								{#if concerne('attribuer') && !form?.succes && (form?.message || form?.erreurs)}<p class="echec">{form?.message ?? 'Le formulaire contient des erreurs.'}</p>{/if}
+							</div>
+							<Choix
+								id="responsabilite"
+								name="responsabiliteId"
+								libelle="Rôle"
+								bind:valeur={responsabiliteChoisie}
+								erreur={erreursNomination.responsabiliteId}
+								options={nominations.map((r) => ({ valeur: String(r.responsabiliteId), libelle: r.nom }))}
+							/>
+							{#if choix.portee === 'centre'}
+								<input type="hidden" name="perimetre" value="centre" />
+							{:else}
+								{#key choix.responsabiliteId}
+									<Choix
+										id="perimetre"
+										name="perimetre"
+										libelle={choix.portee === 'equipe' ? 'Équipe' : 'Comité'}
+										valeur={perimetreInitial}
+										erreur={erreursNomination.perimetreId}
+										options={choix.perimetres.map((p) => ({ valeur: String(p.id), libelle: p.nom }))}
+									/>
+								{/key}
+							{/if}
+							<Champ id="debut" name="debut" type="date" libelle="À partir du" requis valeur={saisie('debut', aujourdhuiIso)} erreur={erreursNomination.debut ?? erreursNomination.personneId} />
+							<Champ id="fin" name="fin" type="date" libelle="Dernier jour" aide="Facultatif. Sans date, le mandat dure jusqu’à ce qu’on le finisse." valeur={saisie('fin', '')} erreur={erreursNomination.fin} />
+							<Bouton type="submit" desactive={envoi === 'attribuer'}>Nommer</Bouton>
+						</form>
+					</details>
 				{/if}
 			</div>
 		</Groupe>
@@ -735,13 +738,13 @@
 		padding-top: 0;
 		border-top: none;
 	}
-	form.nomination {
-		margin-top: var(--espace-24);
-		padding-top: var(--espace-24);
+	.nommer {
+		margin-top: var(--espace-16);
+		padding-top: var(--espace-8);
 		border-top: 1px solid var(--trait);
 	}
-	form.nomination h3 {
-		margin: 0;
+	form.nomination {
+		padding-top: var(--espace-8);
 	}
 	summary {
 		cursor: pointer;

@@ -69,7 +69,7 @@ describe('/agents : vue de tous', () => {
 		const mise = html(Layout, { data, children: enfants });
 		expect(mise).toMatch(/class="resume[^"]*alerte[^"]*">1 agent, sans chef de garde</);
 		expect(mise.match(/class="resume[^"]*alerte/g)).toHaveLength(1);
-		expect(mise).not.toContain('/nominations');
+		expect(mise).not.toContain('href="/comites"');
 	});
 
 	it('l’insigne du grade à côté du nom, caché aux lecteurs d’écran (le grade est écrit dessous) ; rien sans grade', () => {
@@ -183,8 +183,8 @@ describe('/agents : gestion', () => {
 
 	it('propose « Nommer » à côté d’une équipe sans chef', () => {
 		const mise = html(Layout, { data: gestion(), children: enfants });
-		expect(mise).toMatch(/<a[^>]*href="\/nominations"[^>]*>Nommer <span class="masque[^"]*">un chef pour Équipe 1<\/span><\/a>/);
-		expect(mise.match(/href="\/nominations"/g)).toHaveLength(1);
+		expect(mise).toMatch(/<a[^>]*href="\/comites"[^>]*>Nommer <span class="masque[^"]*">un chef pour Équipe 1<\/span><\/a>/);
+		expect(mise.match(/href="\/comites"/g)).toHaveLength(1);
 	});
 
 	it('garde la recherche et le filtre dans le lien vers la fiche', () => {

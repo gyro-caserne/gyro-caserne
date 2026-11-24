@@ -10,10 +10,8 @@
 	const organisation: Lien[] = $derived([
 		// La liste des agents : pas pour une personne extérieure (réserve citoyenne), venue pour réserver.
 		...(data.exterieur ? [] : [{ href: '/agents', titre: 'Agents', valeur: data.agents === undefined ? undefined : pluriel(data.agents, 'agent') }]),
-		...(data.comites ? [{ href: '/comites', titre: 'Comités et référents', texte: 'Qui fait quoi au centre' }] : []),
-		...(data.peutNominations
-			? [{ href: '/nominations', titre: 'Nominations', texte: 'Qui tient quel rôle', valeur: data.aPourvoir ? `${data.aPourvoir} à pourvoir` : undefined }]
-			: []),
+		// Pour qui peut nommer, ce qui est à pourvoir.
+		...(data.comites ? [{ href: '/comites', titre: 'Qui fait quoi', texte: 'Les comités, les rôles et qui les tient', valeur: data.aPourvoir ? `${data.aPourvoir} à pourvoir` : undefined }] : []),
 		// Le suivi du centre : pour le chef, l'adjoint et le super administrateur (lu avec la cloche, sans requête de plus).
 		...(data.suivi === null || data.suivi === undefined ? [] : [{ href: '/suivi', titre: 'Suivi du centre', texte: 'Ce qui s’est passé au centre', valeur: data.suivi ? pluriel(data.suivi, 'nouveauté') : undefined }]),
 		...(data.peutReglages ? [{ href: '/reglages', titre: 'Réglages', texte: 'Créer les comités et les rôles, régler leurs droits' }] : [])
@@ -22,7 +20,7 @@
 		...(data.engins === null ? [] : [{ href: '/engins', titre: 'Engins', texte: 'Leur état et leur fiche de prise de garde', valeur: data.engins === undefined ? undefined : pluriel(data.engins, 'engin') }]),
 		...(data.anomalies === null || data.anomalies === undefined ? [] : [{ href: '/engins/anomalies', titre: 'Anomalies', texte: 'Ce qui est signalé sur les engins, jusqu’à la réparation', valeur: data.anomalies ? pluriel(data.anomalies, 'ouverte', 'ouvertes') : 'Aucune ouverte' }]),
 		{ href: '/reservations', titre: 'Réservations', texte: 'La VL et le matériel de l’amicale' },
-		// Comme « Comités et référents » : pour les agents du centre, pas pour le compte de la réserve citoyenne.
+		// Comme « Qui fait quoi » : pour les agents du centre, pas pour le compte de la réserve citoyenne.
 		// « Faire une demande », le référent habillement déjà choisi.
 		...(data.comites ? [{ href: '/habillement', titre: 'Habillement', texte: 'Demander une tenue, suivre ses demandes' }] : []),
 		// Aux autres référents (pharmacie, matériel) : de même.

@@ -32,13 +32,19 @@ async function referentePharmacie(gestion: Page): Promise<string> {
 	await gestion.locator('form[method="POST"]').getByRole('combobox', { name: 'Équipe' }).selectOption({ label: 'Équipe 1' });
 	await gestion.getByRole('button', { name: "Ajouter l'agent" }).click();
 	await expect(gestion).toHaveURL(/\/agents\/\d+$/);
-	await gestion.goto('/nominations');
-	const carte = gestion.locator('section').filter({ has: gestion.getByRole('heading', { level: 2, name: 'Référent pharmacie', exact: true }) });
-	await carte.getByRole('button', { name: 'Nommer', exact: true }).click();
-	const formulaire = carte.locator('dialog form[action="?/attribuer"]');
-	await formulaire.getByLabel('Agent', { exact: true }).selectOption({ label: `Zoé ${nom} (Équipe 1)` });
-	await formulaire.getByRole('button', { name: 'Nommer' }).click();
-	await expect(carte.getByRole('status')).toHaveText('Rôle attribué');
+	// Sur sa fiche, « Nommer à un rôle », dans le bloc Rôles.
+	const roles = gestion.getByRole('button', { name: /^Rôles/ });
+	const repli = gestion.locator('details', { has: gestion.locator('summary', { hasText: 'Nommer à un rôle' }) });
+	// Avant l'hydratation, le bouton du bloc ne fait rien : on réessaie.
+	await expect(async () => {
+		if ((await roles.getAttribute('aria-expanded')) === 'false') await roles.click();
+		await expect(repli.locator('summary')).toBeVisible({ timeout: 1000 });
+	}).toPass();
+	await repli.locator('summary').click();
+	const formulaire = repli.locator('form[action^="?/attribuer"]');
+	await formulaire.getByLabel('Rôle', { exact: true }).selectOption({ label: 'Référent pharmacie' });
+	await formulaire.getByRole('button', { name: 'Nommer', exact: true }).click();
+	await expect(formulaire.getByRole('status')).toHaveText('Nomination enregistrée.');
 	return email;
 }
 

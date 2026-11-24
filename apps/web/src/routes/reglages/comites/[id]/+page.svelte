@@ -7,6 +7,8 @@
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import Pastille from '#lib/ui/Pastille.svelte';
 	import ChoixIcone from '../../ChoixIcone.svelte';
+	import BlocTitulaires from '#lib/nommer/BlocTitulaires.svelte';
+	import { resume } from '#lib/nommer/postes.ts';
 
 	let { data, form } = $props();
 
@@ -18,6 +20,8 @@
 	const saisie = (champ: 'nom' | 'theme', defaut: string) => (concerne('comite') ? (form?.valeurs?.[champ] ?? defaut) : defaut);
 	const iconeSaisie = $derived((concerne('comite') ? form?.valeurs?.icone : undefined) as ReturnType<typeof iconeDuComite> | undefined);
 
+	const blocTitulaires = $derived(data.titulairesDuComite);
+	const resumeTitulaires = $derived(blocTitulaires ? resume(pluriel(c.membresEnCours, 'membre'), blocTitulaires.postes) : '');
 	const SUITE = 'les nominations à venir sont annulées. Les responsabilités qu’il attribuait seront attribuées par le chef de centre.';
 	const avertissement = (n: number) =>
 		n === 0
@@ -44,6 +48,19 @@
 	{#snippet tete()}<IconeRole icone={iconeDuComite(c)} taille={48} />{/snippet}
 </EnTetePage>
 {#if c.dissousLe !== null}<p><Pastille ton="neutre">Dissous</Pastille></p>{/if}
+
+{#if blocTitulaires}
+	<BlocTitulaires
+		postes={blocTitulaires.postes}
+		autres={blocTitulaires.autres}
+		resume={resumeTitulaires}
+		question={data.nouveau ? 'Qui seront son rapporteur et ses membres ?' : undefined}
+		gestes={blocTitulaires.gestes}
+		aujourdhui={data.aujourdhui}
+		fiches={blocTitulaires.fiches}
+		{form}
+	/>
+{/if}
 
 {#if c.dissousLe === null}
 	<section class="carte" aria-labelledby="titre-comite">

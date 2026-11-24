@@ -43,7 +43,6 @@ const ETATS = [
 	'routes/remplacements/+page.svelte | .compte',
 	'routes/planning/ete/+page.svelte | .compte',
 	'routes/planning/ete/+page.svelte | .etiquette',
-	'routes/nominations/+page.svelte | .titulaire',
 ];
 
 describe('formes', () => {
@@ -307,7 +306,6 @@ describe('direction B', () => {
 			['routes/reglages/Domaines.svelte', /<div class="domaines pile">/],
 			['lib/engins/ZonesFiche.svelte', /<div class="zones pile">/],
 			['routes/engins/fiches/[id]/+page.svelte', /<div class="zones pile">/],
-			['routes/nominations/+page.svelte', /<div class="roles pile">/],
 			['routes/reservations/[id]/+page.svelte', /<ul class="jours pile" role="list">/],
 			['routes/reservations/materiel/+page.svelte', /<ul class="pile" role="list">/],
 			['lib/planning/VueAnnee.svelte', /<div class="mois pile">/]
@@ -380,7 +378,7 @@ describe('direction B', () => {
 			expect(source(f), f).toContain('<Retour ');
 			expect(source(f), f).not.toMatch(/>‹ /);
 		}
-		for (const f of ['routes/agents/+layout.svelte', 'routes/nominations/+page.svelte', 'routes/comites/+page.svelte', 'routes/reglages/+page.svelte']) expect(source(f), f).toMatch(/retour=\{\{ href: '\/caserne', libelle: 'Caserne' \}\}/);
+		for (const f of ['routes/agents/+layout.svelte', 'routes/comites/+page.svelte', 'routes/reglages/+page.svelte']) expect(source(f), f).toMatch(/retour=\{\{ href: '\/caserne', libelle: 'Caserne' \}\}/);
 	});
 
 	it('une seule forme de dépliage : le chevron de « .repli », posé par app.css', () => {

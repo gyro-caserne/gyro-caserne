@@ -28,14 +28,15 @@ Au démarrage, le chef de centre ou le super administrateur nomme les premiers m
 
 **À l'écran**, deux chemins pour les mêmes règles :
 
-- **depuis la fiche de l'agent** (gestionnaires), bloc « Rôles » : « Attribuer », puis « Changer la date de fin » ou « Terminer » sur un rôle ;
-- **depuis la page « Nominations »**, pour quiconque peut attribuer au moins une responsabilité (rapporteur d'un comité, chef de centre…) : une carte par rôle qu'il peut donner (icône, nom, périmètre), ses titulaires en pastilles et, s'il n'y en a pas, « À pourvoir » en orange pour une fonction, « Sans titulaire » en gris pour une mission. En tête, le nombre de fonctions à pourvoir (« Chaque fonction a son titulaire. » sinon). « Nommer » ouvre un volet (agent, début aujourd'hui, « Changer les dates » replié) ; « Annuler » ou Échap le ferment et le focus revient sur « Nommer ». Un refus garde le volet ouvert, l'erreur dedans et le focus sur le premier champ fautif ; refermé puis rouvert, le volet repart à neuf ; une pastille ouvre la confirmation du retrait, avec aussi « Changer la date de fin ». Une recherche filtre les cartes par rôle ou par agent. Sans JavaScript, tout marche par l'adresse de la page. Elle s'ouvre depuis l'onglet « Caserne » (avec le nombre de fonctions « à pourvoir » ; les missions sans titulaire ne comptent pas) ; les autres n'y ont ni le lien ni la page.
+- **depuis la fiche de l'agent** (gestionnaires), bloc « Rôles » : « Nommer à un rôle », puis « Changer la date de fin » ou « Terminer » sur un rôle ;
+- **depuis Qui fait quoi** (Caserne), pour quiconque peut nommer au moins un rôle (rapporteur d'un comité, chef de centre…), et depuis le bloc « Titulaires » de la fiche d'un rôle ou d'un comité : « À pourvoir » en tête, la ligne d'un titulaire ouvre son volet (« Remplacer », « Finir le mandat »), « Nommer » ouvre le volet Nommer. Voir [Qui fait quoi](comites-et-referents.md).
 
 Chacun ne voit et ne propose que les rôles et les périmètres qu'il a le droit d'attribuer. Exemple : le rapporteur de l'« Amicale » nomme les membres de l'Amicale, mais ni un « Référent engins » (attribué par le chef de centre), ni un membre d'un autre comité.
 
-- **Terminer** (case « Je confirme » sur la fiche, « Confirmer le retrait » sur « Nominations ») : le rôle s'arrête la veille, ses droits disparaissent dès aujourd'hui. Un rôle qui commence aujourd'hui ou plus tard est annulé.
+- **Terminer** (case « Je confirme » sur la fiche ; « Finir le mandat » ou « Annuler la nomination » sur Qui fait quoi, avec une date de fin) : le rôle s'arrête la veille, ses droits disparaissent dès aujourd'hui. Un rôle qui commence aujourd'hui ou plus tard est annulé.
 - **Changer la date de fin** : on avance la fin d'un rôle en cours ou à venir ; on ne la repousse pas (« Une attribution ne peut qu’être raccourcie »). Mêmes droits que « Terminer ».
 - **Personne partie** : on ne la nomme pas (« Cette personne est partie »).
+- **Remplacer** (Qui fait quoi) : le mandat en cours finit la veille de la date choisie, le nouveau titulaire commence ce jour-là, en une seule écriture ; mêmes règles et mêmes droits que nommer.
 - **Doublon refusé** : même personne, même rôle, même périmètre, périodes qui se chevauchent → « Cette personne tient déjà ce rôle sur cette période ».
 - **L'agent nommé est prévenu** (au téléphone et dans la cloche) : « Vous êtes nommé Chef de garde », le périmètre et qui l'a nommé. Pas s'il s'est nommé lui-même, pas pour un retrait, pas pour l'import du fichier de l'effectif (pas de rafale). Une affectation d'équipe n'est pas une nomination. Le chef de centre et l'adjoint qui n'ont pas nommé le voient dans leur suivi du centre (voir [Notifications](notifications.md#suivi-du-centre-chef-de-centre-adjoint)).
 - **Tout le centre voit** les rôles en cours de chacun dans la liste des agents (« Rôles : Chef de garde (Équipe 1) »), sans dates ni auteur.
@@ -67,8 +68,8 @@ Les droits d'administration (gérer les accès, les comités, les responsabilit�
 **Droits du centre.** « Gérer les accès », « Gérer les comités » et « Gérer les responsabilités » valent pour tout le centre : ils ne se donnent qu'à un rôle de portée « Tout le centre ». Sur un rôle d'équipe ou de comité, ces trois cases sont grisées et décochées, avec la raison, et suivent la portée choisie à l'écran (sans JavaScript, seulement après l'enregistrement) ; un droit déjà porté part à l'enregistrement, et « Tout revenir » ne les rend pas. Le serveur refuse le reste, avec la raison (créer, modifier les droits ou changer la portée). « Nommer » se donne à toute portée : le rapporteur nomme dans son comité. Un profil ne donne aucun de ces droits.
 
 **La nature d'un rôle.** Une *fonction* doit toujours être tenue (chef de centre, chef de garde, référent technique) ; une *mission* est confiée quand le centre en a besoin (référents pharmacie, engins, habillement, rôles de comité). Ce que ça change :
-- une fonction sans titulaire est rappelée au chef de centre et à l'adjoint dans « À décider » (« Référent technique : aucun titulaire ») et marquée « À pourvoir » en orange dans les réglages et dans Nominations, et comptée sur Caserne ; une mission sans titulaire n'est ni rappelée ni comptée, et porte « Sans titulaire » en gris ;
-- « Comités et référents » et la fiche d'un agent rangent les fonctions avant les missions.
+- une fonction sans titulaire est rappelée au chef de centre et à l'adjoint dans « À décider » (« Référent technique : aucun titulaire ») et marquée « À pourvoir » en orange dans les réglages et dans Qui fait quoi, et comptée sur Caserne ; une mission sans titulaire n'est ni rappelée ni comptée, et porte « Sans titulaire » en gris ;
+- « Qui fait quoi » et la fiche d'un agent rangent les fonctions avant les missions.
 
 La nature ne change aucun droit.
 

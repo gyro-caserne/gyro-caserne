@@ -4,6 +4,9 @@ import { echec, type Reponse } from './formulaire-agent.ts';
 const CHAMP_DE_L_ERREUR: Record<string, string> = {
 	'Cette personne tient déjà ce rôle sur cette période': 'debut',
 	'Fin avant le début': 'fin',
+	'Choisissez une date après le début du mandat': 'debut',
+	'Ce mandat finit avant cette date': 'debut',
+	'Une personne extérieure ne tient pas de rôle de comité': 'personneId',
 	'Une attribution ne peut qu’être raccourcie': 'fin',
 	'Personne inconnue': 'personneId',
 	'Cette personne est partie': 'personneId',
@@ -15,5 +18,5 @@ const CHAMP_DE_L_ERREUR: Record<string, string> = {
 	'Comité dissous': 'perimetreId'
 };
 
-// Traduit un refus du socle pour les formulaires de nomination (fiche, page « Nominations »).
+// Traduit un refus du socle pour les formulaires de nomination (fiche agent, Qui fait quoi, fiches d'un rôle et d'un comité).
 export const echecAttribution = (erreur: unknown, contexte: Reponse = {}) => echec(erreur, contexte, CHAMP_DE_L_ERREUR);

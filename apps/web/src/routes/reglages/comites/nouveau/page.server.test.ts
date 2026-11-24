@@ -22,7 +22,7 @@ describe('nouveau comité', () => {
 
 	it('crée un comité puis ouvre sa page', async () => {
 		const { base, referent } = await preparer();
-		await expect(creer(locaux(base, referent), [['nom', ' Sport '], ['theme', 'sport']])).rejects.toMatchObject({ status: 303, location: expect.stringMatching(/^\/reglages\/comites\/\d+$/) });
+		await expect(creer(locaux(base, referent), [['nom', ' Sport '], ['theme', 'sport']])).rejects.toMatchObject({ status: 303, location: expect.stringMatching(/^\/reglages\/comites\/\d+\?nouveau$/) });
 		expect(await base.select().from(comite).where(eq(comite.nom, 'Sport'))).toHaveLength(1);
 	});
 
