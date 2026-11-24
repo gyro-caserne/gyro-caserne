@@ -77,3 +77,9 @@ export function texteEcart(e: { genre: keyof typeof GENRES; manque: number | nul
 	const nombre = e.genre === 'manquant' && e.manque !== null ? ` (${e.manque}${quantite ? ` sur ${quantite}` : ''})` : '';
 	return [`${GENRES[e.genre]}${nombre}`, e.note].filter(Boolean).join(', ');
 }
+
+// « Référent pharmacie », « Référent pharmacie et Référent engins », « A, B et C ».
+export const enListe = (noms: string[]) => new Intl.ListFormat('fr', { type: 'conjunction' }).format(noms);
+
+// Les rôles prévenus d'une zone, par leur nom ; un rôle disparu de la liste est ignoré.
+export const nomsPrevenus = (prevenir: number[], roles: { id: number; nom: string }[]) => prevenir.flatMap((id) => roles.find((r) => r.id === id)?.nom ?? []);

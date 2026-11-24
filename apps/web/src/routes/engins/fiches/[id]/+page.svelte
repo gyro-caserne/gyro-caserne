@@ -3,7 +3,9 @@
 	import { tick } from 'svelte';
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import type { Fiche } from '@gyro-caserne/socle';
-	import { compteFiche, dateCourte } from '#lib/engins/textes.ts';
+	import { goto } from '$app/navigation';
+	import { compteFiche, dateCourte, enListe, nomsPrevenus } from '#lib/engins/textes.ts';
+	import Panneau from '#lib/planning/Panneau.svelte';
 	import { pluriel } from '#lib/pluriel.ts';
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import Champ from '#lib/ui/Champ.svelte';
@@ -11,9 +13,28 @@
 	import Groupe from '#lib/ui/Groupe.svelte';
 
 	type Reponse = { cible?: string; zone?: number | 'derniere' | null; succes?: string; message?: string; valeurs?: { nom: string; libelle: string; quantite: string } } | null;
-	let { data, form }: { data: { fiche: Fiche; retirerZone: number | null; nouveau: boolean }; form: Reponse } = $props();
+	type Role = { id: number; nom: string };
+	let { data, form }: { data: { fiche: Fiche; roles: Role[]; prevenir: number | null; retirerZone: number | null; nouveau: boolean }; form: Reponse } = $props();
 
 	const f = $derived(data.fiche);
+	// Qui est prévenu d'une anomalie de la zone : les rôles choisis, sinon ceux qui traitent les anomalies.
+	const prevenus = (z: Fiche['zones'][number]) => enListe(nomsPrevenus(z.prevenir, data.roles));
+	const resumeZone = (z: Fiche['zones'][number]) => pluriel(z.elements.length, 'élément') + (prevenus(z) ? `, prévient ${prevenus(z)}` : '');
+	const zonePrevenir = $derived(f.zones.find((z) => z.ref === data.prevenir) ?? null);
+	// Le volet se ferme une fois enregistré ; le message de réussite est gardé, la navigation qui le ferme effaçant `form`.
+	let reussite = $state('');
+	const fermerVolet: SubmitFunction = ({ formData }) => {
+		const zone = Number(formData.get('zone'));
+		reussite = '';
+		return async ({ update, result }) => {
+			await update({ reset: false });
+			if (result.type === 'success') {
+				await goto('?', { replaceState: true, noScroll: true });
+				reussite = String(result.data?.succes ?? '');
+				document.getElementById(`prevenir-${zone}`)?.focus();
+			}
+		};
+	};
 	const pour = (cible: string) => (form?.cible === cible ? form : null);
 	// La zone touchée reste ouverte ; une nouvelle zone s'ouvre.
 	const ouverte = (ref: number, i: number) => form?.zone === ref || (form?.zone === 'derniere' && i === f.zones.length - 1) || data.retirerZone === ref;
@@ -57,14 +78,18 @@
 		{#if f.version.utilisee}Elle a déjà servi à une prise. La modifier crée la version {f.version.numero + 1}, l’historique garde celle-ci.{/if}
 	</p>
 
-	<div role="status" class="masque">{form?.succes ?? ''}</div>
-	{#if form?.succes}<p class="succes">{form.succes}</p>{/if}
+	<div role="status" class="masque">{form?.succes ?? reussite}</div>
+	{#if form?.succes ?? reussite}<p class="succes">{form?.succes ?? reussite}</p>{/if}
 	{#if data.nouveau && f.zones.length === 0}<p class="note">Fiche créée. Commencez par ses zones : cabine, coffres, sacs…</p>{/if}
 
 	<div class="zones pile">
 		{#each f.zones as z, i (z.ref)}
-			<Groupe titre={z.nom} resume={pluriel(z.elements.length, 'élément')} ouvert={ouverte(z.ref, i)}>
+			<Groupe titre={z.nom} resume={resumeZone(z)} ouvert={ouverte(z.ref, i) || (form?.cible === 'prevenir' && form.zone === z.ref) || data.prevenir === z.ref}>
 				<div class="zone" id="zone-{z.ref}" tabindex="-1" role="group" aria-label="Zone {z.nom}">
+					<a class="prevenir" id="prevenir-{z.ref}" href="?prevenir={z.ref}" data-sveltekit-reset="false" data-sveltekit-noscroll>
+						<span class="texte"><span class="titre">Prévenir<span class="masque">{' '}pour la zone {z.nom}</span></span><span class="qui">{prevenus(z) || 'Ceux qui traitent les anomalies'}</span></span>
+						<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
+					</a>
 					{#if z.elements.length === 0}<p class="doux">Aucun élément. Ajoutez le premier ci-dessous.</p>{/if}
 					<ol role="list">
 						{#each z.elements as e, j (e.ref)}
@@ -150,6 +175,23 @@
 			</Groupe>
 		{/each}
 	</div>
+
+	{#if zonePrevenir}
+		<Panneau titre="Prévenir pour {zonePrevenir.nom}" fermer="?">
+			<form method="POST" action="?/prevenir&prevenir={zonePrevenir.ref}" use:enhance={fermerVolet} class="formulaire">
+				<input type="hidden" name="zone" value={zonePrevenir.ref} />
+				<p class="doux">Une anomalie signalée dans cette zone prévient les titulaires des rôles cochés et le chef de garde. Sans rôle coché, ceux qui traitent les anomalies sont prévenus.</p>
+				<fieldset class="roles">
+					<legend class="masque">Rôles prévenus</legend>
+					{#each data.roles as r (r.id)}
+						<label class="case"><input type="checkbox" name="role" value={r.id} checked={zonePrevenir.prevenir.includes(r.id)} /> {r.nom}</label>
+					{/each}
+				</fieldset>
+				{#if form?.cible === 'prevenir' && form.message}<p class="echec" role="alert">{form.message}</p>{/if}
+				<div><Bouton type="submit">Enregistrer</Bouton></div>
+			</form>
+		</Panneau>
+	{/if}
 
 	<section class="panneau" aria-labelledby="titre-nouvelle-zone">
 		<h2 id="titre-nouvelle-zone">Ajouter une zone</h2>
@@ -261,6 +303,39 @@
 	}
 	.retirer {
 		align-self: flex-start;
+	}
+	.prevenir {
+		display: flex;
+		align-items: center;
+		gap: var(--espace-12);
+		min-height: var(--cible);
+		padding: var(--espace-8) 0 var(--espace-12);
+		border-bottom: 1px solid var(--trait-doux);
+		color: var(--encre);
+		text-decoration: none;
+	}
+	.prevenir .texte {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+	}
+	.prevenir .titre {
+		font-weight: 600;
+	}
+	.prevenir .qui {
+		color: var(--doux);
+	}
+	.prevenir svg {
+		flex: none;
+		color: var(--doux);
+	}
+	.roles {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-4);
+		margin: 0;
+		padding: 0;
+		border: 0;
 	}
 	summary {
 		display: inline-flex;

@@ -50,6 +50,7 @@ const PHRASES: Record<string, string> = {
 	'Trop d’éléments': 'Une fiche a 300 éléments au plus.',
 	'Zone inconnue': 'Cette zone n’existe plus. La page a été rechargée.',
 	'Élément inconnu': 'Cet élément n’existe plus. La page a été rechargée.',
+	'Rôle inconnu': 'Ce rôle n’existe plus. La page a été rechargée.',
 	'Zones à voir': 'Il reste des zones à voir. Marquez chacune « Tout est complet » avant de valider.',
 	'Relève passée': 'Cette prise appartient à une relève passée. Rechargez la page pour celle en cours.',
 	'Prise déjà validée': 'Cette prise est déjà validée.',

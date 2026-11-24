@@ -9,14 +9,20 @@ const fiche = (utilisee = false) => ({
 	type: 'VTU',
 	version: { id: 1, numero: 2, auteur: 'Rémi Test', creeLe: '2026-11-02T10:00', utilisee },
 	zones: [
-		{ ref: 1, nom: 'Cabine', elements: [{ ref: 10, libelle: 'Radio', quantite: null }, { ref: 11, libelle: 'Gilets', quantite: 3 }] },
-		{ ref: 2, nom: 'Coffres', elements: [] }
+		{ ref: 1, nom: 'Cabine', prevenir: [], elements: [{ ref: 10, libelle: 'Radio', quantite: null }, { ref: 11, libelle: 'Gilets', quantite: 3 }] },
+		{ ref: 2, nom: 'Coffres', prevenir: [7, 8], elements: [] }
 	]
 });
 
+const roles = [
+	{ id: 6, nom: 'Référent engins' },
+	{ id: 7, nom: 'Référent pharmacie' },
+	{ id: 8, nom: 'Référent matériel' }
+];
+
 describe('éditeur de fiche', () => {
 	it('version, auteur, zones repliées ; chaque élément a ses gestes nommés', () => {
-		const page = html({ fiche: fiche(), retirerZone: null, nouveau: false });
+		const page = html({ fiche: fiche(), retirerZone: null, nouveau: false, roles, prevenir: null });
 		expect(page).toContain('Version 2');
 		expect(page).toContain('Rémi Test');
 		expect(page).toMatch(/aria-expanded="false"[\s\S]*?Cabine/);
@@ -28,13 +34,28 @@ describe('éditeur de fiche', () => {
 	});
 
 	it('une version déjà utilisée annonce la suivante', () => {
-		expect(html({ fiche: fiche(true), retirerZone: null, nouveau: false })).toContain('La modifier crée la version 3');
+		expect(html({ fiche: fiche(true), retirerZone: null, nouveau: false, roles, prevenir: null })).toContain('La modifier crée la version 3');
 	});
 
 	it('après un geste, la zone touchée est ouverte et le succès dit ; retirer une zone demande confirmation', () => {
-		const page = html({ fiche: fiche(), retirerZone: 1, nouveau: false }, { cible: 'element:10', zone: 1, succes: 'Élément déplacé.' });
+		const page = html({ fiche: fiche(), retirerZone: 1, nouveau: false, roles, prevenir: null }, { cible: 'element:10', zone: 1, succes: 'Élément déplacé.' });
 		expect(page).toMatch(/aria-expanded="true"[\s\S]*?Cabine/);
 		expect(page).toContain('Élément déplacé.');
 		expect(page).toContain('Retirer « Cabine » et ses 2 éléments ?');
+	});
+
+	it('prévenir : sur chaque zone, la ligne qui ouvre le volet ; le volet coche les rôles choisis', () => {
+		const page = html({ fiche: fiche(), retirerZone: null, nouveau: false, roles, prevenir: null });
+		expect(page).toMatch(/href="\?prevenir=1"[^>]*>[\s\S]*?Prévenir[\s\S]*?Ceux qui traitent les anomalies/);
+		expect(page).toMatch(/href="\?prevenir=2"[^>]*>[\s\S]*?Prévenir[\s\S]*?Référent pharmacie et Référent matériel/);
+		// Le résumé de la zone repliée le dit aussi.
+		expect(page).toContain('0 élément, prévient Référent pharmacie et Référent matériel');
+		expect(page).not.toContain('<dialog');
+		const volet = html({ fiche: fiche(), retirerZone: null, nouveau: false, roles, prevenir: 2 });
+		expect(volet).toContain('<dialog');
+		expect(volet).toContain('Prévenir pour Coffres');
+		expect(volet).toMatch(/<input[^>]*value="7"[^>]*checked/);
+		expect(volet).not.toMatch(/<input[^>]*value="6"[^>]*checked/);
+		expect(volet).toContain('action="?/prevenir&amp;prevenir=2"');
 	});
 });
