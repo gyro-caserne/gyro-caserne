@@ -1,13 +1,23 @@
+<script module lang="ts">
+	let actives = 0;
+</script>
+
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
 	let { message, children }: { message?: string; children: Snippet } = $props();
 
 	// Sa hauteur, pour que le navigateur ne cache jamais derrière elle le champ qui a le focus.
+	// La variable n'est retirée qu'au départ de la dernière barre de la page.
 	let hauteur = $state(0);
 	$effect(() => {
+		actives++;
+		return () => {
+			if (--actives === 0) document.documentElement.style.removeProperty('--hauteur-barre-actions');
+		};
+	});
+	$effect(() => {
 		document.documentElement.style.setProperty('--hauteur-barre-actions', `${hauteur}px`);
-		return () => document.documentElement.style.removeProperty('--hauteur-barre-actions');
 	});
 </script>
 

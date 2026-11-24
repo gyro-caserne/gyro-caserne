@@ -411,6 +411,12 @@ describe('page fiche agent : aptitudes', () => {
 		expect(page).toMatch(/name="obtenueLe"[^>]*value="2020-03-01"|value="2020-03-01"[^>]*name="obtenueLe"/);
 		expect(page).toMatch(/name="expireLe"[^>]*value="2019-01-01"|value="2019-01-01"[^>]*name="expireLe"/);
 	});
+
+	it('un refus de retrait ne change pas le formulaire d’ajout', () => {
+		const page = html({ data, form: { message: 'Aptitude inconnue.', bloc: 'aptitudes' } });
+		expect(page).toMatch(/<option value="1"[^>]*selected/);
+		expect(page).toMatch(/name="obtenueLe"[^>]*value="2026-10-27"/);
+	});
 });
 
 describe('passage à un profil extérieur', () => {
