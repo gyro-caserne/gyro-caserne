@@ -7,8 +7,9 @@ Réservé au chef de centre, à son adjoint, aux chefs de garde et au référent
 3. Ouvrez une zone (« Cabine ») :
    - **Ajouter un élément** : son nom et, s'il se compte, la quantité attendue, puis **Ajouter l’élément** ;
    - **Modifier** à côté d'un élément : changer le nom, la quantité ou la zone, puis **Enregistrer** ; les flèches le montent ou le descendent ; **Retirer** l'enlève.
-4. En bas, sous « Ajouter une zone », son nom puis **Ajouter la zone**. Dans une zone, **Gérer la zone** : **Renommer**, **Monter**, **Descendre** ou **Retirer la zone** (puis **Oui, retirer**).
+4. En tête de chaque zone, **Prévenir** choisit qui reçoit ses anomalies (voir [Comment choisir qui est prévenu d'une anomalie ?](choisir-qui-est-prevenu-d-une-anomalie.md)).
+5. En bas, sous « Ajouter une zone », son nom puis **Ajouter la zone**. Dans une zone, **Gérer la zone** : **Renommer**, **Monter**, **Descendre** ou **Retirer la zone** (puis **Oui, retirer**).
 
 Les changements valent pour la prochaine prise de garde ; les prises passées gardent leur fiche.
 
-Pour tout changer d'un coup : **Fichier des fiches** → **Exporter les fiches**, modifiez le fichier dans Excel ou LibreOffice (gardez la colonne « Réf. »), puis importez-le, vérifiez l'aperçu et **Validez**.
+Pour tout changer d'un coup : **Fichier des fiches** → **Exporter les fiches**, modifiez le fichier dans Excel ou LibreOffice (gardez la colonne « Réf. » ; la colonne « Prévenir » donne les rôles de chaque zone), puis importez-le, vérifiez l'aperçu et **Validez**.
