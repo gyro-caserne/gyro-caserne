@@ -57,4 +57,17 @@ describe('page d’un profil', () => {
 		const page = html({ data: retraite, form: null });
 		expect(page).toMatch(/action="\?\/supprimer"[\s\S]*name="confirmation" value="oui"[\s\S]*class="grave[^"]*"[^>]*>(<!---->)?Supprimer le profil/);
 	});
+
+	it('murs ouverts repliés dans un groupe, avec combien et lesquels ; le formulaire vise l’action nommée', () => {
+		const page = html({ data: retraite, form: null });
+		expect(page).toMatch(/<h2[^>]*>[\s\S]*?Murs ouverts/);
+		expect(page).toContain('2 murs ouverts, Vie du centre et Retraités');
+		expect(page).toMatch(/aria-expanded="false"/);
+		expect(page).toContain('action="?/enregistrer"');
+		const un = { ...retraite, profil: { ...retraite.profil, mursOuverts: { vie: 'lecture' } } };
+		expect(html({ data: un, form: null })).toContain('1 mur ouvert, Vie du centre');
+		const trois = { ...retraite, comitesChoix: [{ id: 4, nom: 'Retraités' }, { id: 2, nom: 'Amicale' }], profil: { ...retraite.profil, mursOuverts: { vie: 'lecture', 'comite:4': 'ecriture', 'comite:2': 'lecture' } } };
+		expect(html({ data: trois, form: null })).toContain('3 murs ouverts, Vie du centre, Retraités et Amicale');
+		expect(html({ data: { ...retraite, profil: { ...retraite.profil, mursOuverts: {} } }, form: null })).toContain('Aucun mur ouvert');
+	});
 });

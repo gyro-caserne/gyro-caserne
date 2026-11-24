@@ -22,9 +22,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 export const actions: Actions = {
-	// Un seul « Enregistrer » : les droits et, pour un extérieur, les murs ouverts (« mur-<clé> » vaut 0 aucun accès, 1 lecture, 2 écriture),
+	// Un seul « Enregistrer » (action nommée : SvelteKit refuse « default » à côté de « renommer » et « supprimer ») : les droits et, pour un extérieur, les murs ouverts (« mur-<clé> » vaut 0 aucun accès, 1 lecture, 2 écriture),
 	// en un geste du socle (une lecture et une écriture groupées) ; chacun garde sa ligne au journal.
-	default: async ({ locals, params, request }) => {
+	enregistrer: async ({ locals, params, request }) => {
 		const { acteur, base } = locals;
 		if (!acteur) redirect(303, '/connexion');
 		const id = numero(params.id);
