@@ -159,7 +159,7 @@ describe('quiFaitQuoi', () => {
 		expect(vue.equipes).toHaveLength(1);
 		const [chefs] = vue.equipes;
 		expect(chefs!).toMatchObject({ nom: 'Chef de garde', nature: 'fonction' });
-		expect(chefs!.parEquipe[0]).toEqual({ equipe: equipes[0]!.nom, titulaires: [{ id: expect.any(Number), nom: 'Bruno Petit', grade: null, ecrire: true }] });
+		expect(chefs!.parEquipe[0]).toEqual({ equipeId: equipes[0]!.id, equipe: equipes[0]!.nom, titulaires: [{ id: expect.any(Number), nom: 'Bruno Petit', grade: null, ecrire: true }] });
 		expect(chefs!.parEquipe.map((l) => l.equipe)).toEqual(equipes.slice(0, -1).map((e) => e.nom));
 		expect(chefs!.parEquipe[1]!.titulaires).toEqual([]);
 	});
@@ -194,5 +194,72 @@ describe('quiFaitQuoi', () => {
 		await expect(quiFaitQuoi(base, acteur(await nouvelle('Reserve', 'Citoyenne', { exterieur: true })), aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
 		await expect(quiFaitQuoi(base, acteur(await nouvelle('Paul', 'Parti', { statut: 'parti' })), aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
 		await expect(quiFaitQuoi(base, superAdmin, aujourdhui)).resolves.toMatchObject({ comites: expect.any(Array) });
+	});
+});
+
+describe('quiFaitQuoi, avec les gestes de qui nomme', () => {
+	it('sans l’option, ni geste ni mandat : la page d’un agent ne change pas', async () => {
+		const { base, chef } = await jeu();
+		const vue = await quiFaitQuoi(base, acteur(chef), aujourdhui);
+		expect(vue.gestes).toBeNull();
+		expect(JSON.stringify(vue)).not.toMatch(/"mandat"|"nommer"|"postes"/);
+	});
+
+	it('le chef de centre : chaque poste qu’il nomme, ses mandats en cours et à venir, ce qui est à pourvoir', async () => {
+		const { base, chef, alice, bruno, equipes, role, nommer, amicale } = await jeu();
+		await nommer(alice, role('Référent engins'), { type: 'centre' }, { debut: '2026-12-01' });
+		const vue = await quiFaitQuoi(base, acteur(chef), aujourdhui, { gestes: true });
+		// Le chef de centre n'est nommé que par un super administrateur : pas de geste sur sa ligne.
+		const [chefCentre, adjoint] = vue.commandement;
+		expect(chefCentre!.nommer).toBeUndefined();
+		expect(chefCentre!.titulaires[0]!.mandat).toBeUndefined();
+		expect(adjoint!.nommer).toEqual({ aPourvoir: true });
+		const [chefsDeGarde] = vue.equipes;
+		expect(chefsDeGarde!.parEquipe[0]).toMatchObject({ equipeId: equipes[0]!.id, nommer: { aPourvoir: false }, titulaires: [{ nom: 'Bruno Petit', mandat: { id: expect.any(Number), debut: '2026-01-01', fin: null } }] });
+		expect(chefsDeGarde!.parEquipe[1]).toMatchObject({ nommer: { aPourvoir: true }, titulaires: [] });
+		// Une mission vide n'est pas à pourvoir ; un mandat à venir compte comme tenu.
+		const engins = vue.missions.find((r) => r.nom === 'Référent engins')!;
+		expect(engins).toMatchObject({ nommer: { aPourvoir: false }, titulaires: [{ nom: 'Alice Bernard', mandat: { debut: '2026-12-01' } }] });
+		expect(vue.missions.find((r) => r.nom === 'Référent habillement')!.nommer).toEqual({ aPourvoir: false });
+		expect(vue.fonctions.find((r) => r.nom === 'Référent technique')!.nommer).toEqual({ aPourvoir: true });
+		// Les rôles de comité, poste par poste dans chaque comité, le rapporteur d'abord.
+		const carte = vue.comites.find((c) => c.id === amicale)!;
+		expect(carte.postes!.map((p) => [p.nom, p.titulaires.map((t) => t.nom)])).toEqual([
+			['Rapporteur', ['Bruno Petit']],
+			['Membre', ['Alice Bernard']]
+		]);
+		// Les agents à nommer : nom et équipe, dans l'ordre des noms.
+		expect(vue.gestes!.agents.find((a) => a.id === bruno)).toEqual({ id: bruno, nom: 'Bruno Petit', equipeId: null });
+		expect(vue.gestes!.agents.map((a) => a.nom)).toEqual([...vue.gestes!.agents.map((a) => a.nom)].sort((x, y) => x.split(' ')[1]!.localeCompare(y.split(' ')[1]!, 'fr') || x.localeCompare(y, 'fr')));
+	});
+
+	it('le rapporteur de l’amicale : les gestes de son comité seulement', async () => {
+		const { base, bruno, amicale } = await jeu();
+		const vue = await quiFaitQuoi(base, acteur(bruno), aujourdhui, { gestes: true });
+		expect(vue.commandement.every((r) => r.nommer === undefined)).toBe(true);
+		expect(vue.equipes.flatMap((r) => r.parEquipe).every((l) => l.nommer === undefined)).toBe(true);
+		expect([...vue.fonctions, ...vue.missions].every((r) => r.nommer === undefined && r.titulaires.every((t) => t.mandat === undefined))).toBe(true);
+		expect(vue.comites.find((c) => c.id === amicale)!.postes!.length).toBeGreaterThan(0);
+		expect(vue.comites.find((c) => c.id !== amicale)!.postes).toEqual([]);
+	});
+
+	it('un agent qui ne nomme rien : aucun geste, et aucune requête de plus', async () => {
+		const { base, alice } = await jeu();
+		const avant = base.requetes;
+		await quiFaitQuoi(base, acteur(alice), aujourdhui);
+		const sans = base.requetes - avant;
+		const vue = await quiFaitQuoi(base, acteur(alice), aujourdhui, { gestes: true });
+		expect(vue.gestes).toBeNull();
+		expect(base.requetes - avant - sans).toBeLessThanOrEqual(sans);
+	});
+
+	it('pour qui nomme, les gestes viennent du même envoi : aucune requête de plus', async () => {
+		const { base, chef } = await jeu();
+		await quiFaitQuoi(base, acteur(chef), aujourdhui);
+		const avant = base.requetes;
+		await quiFaitQuoi(base, acteur(chef), aujourdhui);
+		const sans = base.requetes - avant;
+		await quiFaitQuoi(base, acteur(chef), aujourdhui, { gestes: true });
+		expect(base.requetes - avant - sans).toBe(sans);
 	});
 });

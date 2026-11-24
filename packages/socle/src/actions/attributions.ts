@@ -24,7 +24,7 @@ async function contexteDe(base: Base, acteur: Acteur, aujourdhui: string): Promi
 
 // Seule définition de « qui peut attribuer ou retirer telle responsabilité sur tel périmètre » : le motif du refus, ou null si permis.
 // Sans exception : le menu de chaque page juge ainsi de nombreux cas, et lancer une exception coûte du calcul.
-function refusDAttribution(contexte: Contexte, laResponsabilite: Responsabilite, perimetre: Perimetre): { vise: Perimetre; message?: string } | null {
+function refusDAttribution(contexte: Contexte, laResponsabilite: Pick<Responsabilite, 'systeme' | 'comiteAttributeurId'>, perimetre: Perimetre): { vise: Perimetre; message?: string } | null {
 	// Exceptions aux droits : le chef de centre est nommé par un super administrateur, son adjoint par le chef de centre.
 	if (laResponsabilite.systeme === 'chef_centre') return contexte.acteur.type === 'super' ? null : { vise: { type: 'centre' }, message: 'Seul un super administrateur nomme ou retire le chef de centre' };
 	if (laResponsabilite.systeme === 'chef_centre_adjoint') return contexte.acteur.type === 'super' || contexte.estChef ? null : { vise: { type: 'centre' }, message: 'Seul le chef de centre nomme ou retire un adjoint' };
@@ -48,6 +48,12 @@ function peutAttribuer(contexte: Contexte, laResponsabilite: Responsabilite, per
 export async function regleDAttribution(base: Base, acteur: Acteur, aujourdhui: string): Promise<(laResponsabilite: Responsabilite, perimetre: Perimetre) => boolean> {
 	const contexte = await contexteDe(base, acteur, aujourdhui);
 	return (laResponsabilite, perimetre) => peutAttribuer(contexte, laResponsabilite, perimetre);
+}
+
+// La même règle, pour qui a déjà lu les droits de l'acteur et sait s'il est chef de centre (Qui fait quoi) : rien à relire.
+export function regleDAttributionLue(acteur: Acteur, droits: DroitAccorde[], estChef: boolean): (laResponsabilite: Pick<Responsabilite, 'systeme' | 'comiteAttributeurId'>, perimetre: Perimetre) => boolean {
+	const contexte = { acteur, droits, estChef };
+	return (laResponsabilite, perimetre) => refusDAttribution(contexte, laResponsabilite, perimetre) === null;
 }
 
 function perimetreDeLigne(type: TypePerimetre, id: number | null): Perimetre {
