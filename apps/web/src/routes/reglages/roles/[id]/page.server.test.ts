@@ -239,4 +239,36 @@ describe('page d’un rôle', () => {
 		expect(habillement.demandesPossibles).toBe(true);
 		expect(habillement.role.demandes).toEqual({ etapes: [{ id: 'estock', nom: 'En stock' }, { id: 'ecommande', nom: 'Commandée au SDIS' }], derniere: 'Livrée' });
 	});
+
+	describe('le bloc « Titulaires »', () => {
+		it('pour qui peut nommer : les postes du rôle avec leurs gestes ; « Qui le tiendra ? » juste après la création', async () => {
+			const { base, chef, resp } = await preparer();
+			const chefGarde = await resp('Chef de garde');
+			const data = await charger(load, locaux(base, chef), { id: String(chefGarde.id) }, `http://x/reglages/roles/${chefGarde.id}?nouveau`, true);
+			expect(data.nouveau).toBe(true);
+			expect(data.titulairesDuRole.gestes.agents.length).toBeGreaterThan(0);
+			expect(data.titulairesDuRole.postes.length).toBeGreaterThan(1);
+			expect(data.titulairesDuRole.postes.every((p: { roleId: number; nommer?: { aPourvoir: boolean } }) => p.roleId === chefGarde.id && p.nommer?.aPourvoir)).toBe(true);
+		});
+
+		it('pour qui règle sans nommer : les titulaires, lus, sans geste', async () => {
+			const { base, referent, chef, resp } = await preparer();
+			const technique = await resp('Référent technique');
+			const data = await charger(load, locaux(base, referent), { id: String(technique.id) }, 'http://x/', false);
+			expect(data.nouveau).toBe(false);
+			expect(data.titulairesDuRole.gestes).toBeNull();
+			expect(data.titulairesDuRole.postes).toHaveLength(1);
+			expect(data.titulairesDuRole.postes[0]).toMatchObject({ titulaires: [{ id: referent.id }] });
+			expect(data.titulairesDuRole.postes[0].nommer).toBeUndefined();
+			void chef;
+		});
+
+		it('nommer depuis la fiche : pour qui ouvre la fiche, le socle décide du reste', async () => {
+			const { base, chef, ordinaire, resp } = await preparer();
+			const technique = await resp('Référent technique');
+			const corps: [string, string][] = [['poste', `${technique.id}-centre`], ['responsabiliteId', String(technique.id)], ['perimetre', 'centre'], ['personneId', String(ordinaire.id)], ['debut', '2026-01-02']];
+			await expect(agir('nommer', locaux(base, ordinaire), technique.id, corps)).rejects.toMatchObject({ status: 403 });
+			expect(await agir('nommer', locaux(base, chef), technique.id, corps)).toEqual({ cible: `nommer-${technique.id}-centre`, succes: 'Nomination enregistrée.' });
+		});
+	});
 });

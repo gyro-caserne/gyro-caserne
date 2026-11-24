@@ -228,15 +228,15 @@ describe('accueil', () => {
 			choisie: 'centre',
 			peutNominations: true,
 			peutReglages: true,
-			contenu: { type: 'centre', aDecider: [{ texte: 'Équipe 2 sans chef de garde', lien: '/nominations' }] }
+			contenu: { type: 'centre', aDecider: [{ texte: 'Équipe 2 sans chef de garde', lien: '/comites' }] }
 		});
 		expect(html).toContain('À décider');
 		expect(html.match(/<ul[^>]*>/g)!.every((ul) => ul.includes('role="list"'))).toBe(true);
 		// À décider : une alerte, pas seulement une couleur.
-		expect(html).toMatch(/<a[^>]*class="rangee[^"]*alerte[^"]*"[^>]*href="\/nominations"/);
+		expect(html).toMatch(/<a[^>]*class="rangee[^"]*alerte[^"]*"[^>]*href="\/comites"/);
 		expect(html).toContain('class="signe');
-		expect(html).toMatch(/<a[^>]*href="\/nominations"[^>]*>[\s\S]*?Équipe 2 sans chef de garde/);
-		for (const [href, titre] of [['/agents', 'Agents'], ['/nominations', 'Nominations'], ['/reglages', 'Réglages']]) {
+		expect(html).toMatch(/<a[^>]*href="\/comites"[^>]*>[\s\S]*?Équipe 2 sans chef de garde/);
+		for (const [href, titre] of [['/agents', 'Agents'], ['/comites', 'Qui fait quoi'], ['/reglages', 'Réglages']]) {
 			expect(html).toMatch(new RegExp(`<a[^>]*href="${href}"[^>]*>[\\s\\S]*?${titre}`));
 		}
 	});
@@ -248,7 +248,7 @@ describe('accueil', () => {
 	});
 
 	it('« À décider » : trois visibles, le reste derrière « Voir les autres »', () => {
-		const aDecider = ['Équipe 2', 'Équipe 3', 'Pharmacie', 'Engins', 'Fiches'].map((t) => ({ texte: `${t} à pourvoir`, lien: '/nominations' }));
+		const aDecider = ['Équipe 2', 'Équipe 3', 'Pharmacie', 'Engins', 'Fiches'].map((t) => ({ texte: `${t} à pourvoir`, lien: '/comites' }));
 		const html = page({ casquettes: [centre, astreinte], choisie: 'centre', contenu: { type: 'centre', aDecider } });
 		const visibles = html.slice(0, html.indexOf('<details'));
 		expect(visibles).toContain('Pharmacie à pourvoir');
@@ -257,7 +257,7 @@ describe('accueil', () => {
 	});
 
 	describe('« À décider » en tête', () => {
-		const aDecider = [{ texte: 'Équipe 2 sans chef de garde', lien: '/nominations' }];
+		const aDecider = [{ texte: 'Équipe 2 sans chef de garde', lien: '/comites' }];
 		const aNePasManquer = { ...vide, sondages: [{ id: 4, cle: 'vie', nomMur: 'Vie du centre', titre: 'Repas ?' }] };
 		const colonnes = (html: string) => html.split(/class="colonne\s/).slice(1);
 

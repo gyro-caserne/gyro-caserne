@@ -45,7 +45,7 @@ Un agent demande ce qu'il lui faut à un référent, en texte libre, et suit sa 
 
 - **Caserne, Faire une demande** : la nouvelle demande, mes demandes (en cours, puis terminées), et les **demandes reçues** de mes rôles (tous les rôles pour le chef et l'adjoint), avec leur nombre en cours.
 - **Accueil, casquette du rôle** : dans « À décider », les demandes à prendre en compte et celles qu'on suit dont la réponse est arrivée ; puis **Toutes les demandes**. Sans titulaire, la même chose dans « Le centre » du chef et de l'adjoint.
-- **Comités et référents** : **Demander** sur la ligne d'un rôle qui reçoit des demandes.
+- **Qui fait quoi** : **Demander** sur la ligne d'un rôle qui reçoit des demandes.
 
 ## Conservation
 

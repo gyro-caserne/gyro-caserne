@@ -1,6 +1,11 @@
 import { render } from 'svelte/server';
-import { describe, expect, it } from 'vitest';
-import Page from './+page.svelte';
+import { describe, expect, it, vi } from 'vitest';
+
+// Le bloc « Titulaires » lit l'adresse : `?mandat=` et `?nommer=` ouvrent ses volets.
+const adresse = vi.hoisted(() => ({ url: new URL('http://x/reglages/roles/3') }));
+vi.mock('$app/state', () => ({ page: adresse }));
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+const { default: Page } = await import('./+page.svelte');
 
 const droit = (d: string, verrouille = false) => ({ droit: d, verrouille });
 const role = (champs: Record<string, unknown> = {}) => ({
@@ -227,5 +232,24 @@ describe('page d’un rôle', () => {
 		// La saisie renvoyée par le serveur s'affiche à la place du réglage enregistré.
 		expect(html({ role: role({ demandes: reglage, demandesGardees: null }), demandesPossibles: true }, { cible: 'role', demandes: { recoit: true, etapes: [{ nom: 'Rangée' }], derniere: 'Remise' } })).toMatch(/value="Rangée"[\s\S]*value="Remise"/);
 		expect(html({ role: role({ demandes: null }), demandesPossibles: false })).not.toMatch(/>Demandes<\/summary>/);
+	});
+
+	it('le bloc « Titulaires » en tête : replié, ses lignes et ses gestes ; ouvert avec « Qui le tiendra ? » après la création', () => {
+		const titulairesDuRole = {
+			postes: [{ cle: '3-centre', roleId: 3, role: 'Référent engins', nature: 'mission', perimetre: { type: 'centre', id: null, nom: null }, titulaires: [{ id: 8, nom: 'Denis Roux', grade: null, ecrire: false, mandat: { id: 21, debut: '2026-01-01', fin: null } }], nommer: { aPourvoir: false } }],
+			gestes: { agents: [{ id: 4, nom: 'Alice Bernard', equipeId: null, equipe: null }] },
+			fiches: false
+		};
+		const page = html({ titulairesDuRole, aujourdhui: '2026-11-24', nouveau: false });
+		expect(page.indexOf('Titulaires')).toBeLessThan(page.indexOf('Ce que ce rôle peut faire'));
+		expect(page).toMatch(/<details class="repli titulaires[^"]*"><summary/);
+		expect(page).toMatch(/Titulaires<\/h2>(<!---->)?<span[^>]*>1 titulaire<\/span>/);
+		expect(page).toMatch(/href="\?mandat=21"[\s\S]*?Denis Roux/);
+		expect(page).toMatch(/href="\?nommer=3-centre"/);
+		const apres = html({ titulairesDuRole, aujourdhui: '2026-11-24', nouveau: true });
+		expect(apres).toMatch(/<details class="repli titulaires[^"]*" open/);
+		expect(apres).toContain('Qui le tiendra ?');
+		// Sans le bloc (rôle archivé, ou pas d'accès à Qui fait quoi), rien.
+		expect(html({})).not.toContain('Titulaires');
 	});
 });

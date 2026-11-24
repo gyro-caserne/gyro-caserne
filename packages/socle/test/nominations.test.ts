@@ -1,7 +1,7 @@
 import { count, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
-import { attribuer, attributionsDe, finirAttribution, ceQueJePeuxAttribuer, peutAttribuerQuelqueChose, terminerAttribution, titulairesDe, titulairesDesMiens } from '../src/actions/attributions.ts';
+import { attribuer, attributionsDe, finirAttribution, ceQueJePeuxAttribuer, peutAttribuerQuelqueChose, terminerAttribution } from '../src/actions/attributions.ts';
 import { changerStatut } from '../src/actions/personnes.ts';
 import { dissoudreComite } from '../src/actions/comites.ts';
 import { archiverResponsabilite } from '../src/actions/responsabilites.ts';
@@ -248,49 +248,6 @@ describe('attributionsDe', () => {
 		const { enCours, passees } = await attributionsDe(base, superAdmin, simpleId, aujourdhui);
 		expect(enCours).toEqual([]);
 		expect(passees.map((l) => l.responsabilite.nom).sort()).toEqual(['Membre de comité', 'Référent pharmacie']);
-	});
-});
-
-describe('titulairesDe', () => {
-	it('titulaires en cours et à venir, sur les périmètres que l’acteur peut attribuer', async () => {
-		const { base, r, rapporteur, nouvelle, nommer, amicale, bureau } = await jeu();
-		const enCours = await nouvelle('Encours');
-		const aVenir = await nouvelle('Avenir');
-		const passe = await nouvelle('Passe');
-		const ailleurs = await nouvelle('Ailleurs');
-		await nommer(enCours, 'Membre de comité', amicale);
-		await nommer(aVenir, 'Membre de comité', amicale, '2026-12-01');
-		await nommer(passe, 'Membre de comité', amicale, '2025-01-01', '2025-12-31');
-		await nommer(ailleurs, 'Membre de comité', bureau);
-
-		const vus = await titulairesDe(base, rapporteur, r('Membre de comité'), aujourdhui);
-		expect(vus).toEqual([
-			{ id: expect.any(Number), personne: { id: enCours, prenom: 'Encours', nom: 'Test' }, perimetre: { type: 'comite', id: amicale.id, nom: 'Amicale' }, debut: '2026-01-01', fin: null },
-			{ id: expect.any(Number), personne: { id: aVenir, prenom: 'Avenir', nom: 'Test' }, perimetre: { type: 'comite', id: amicale.id, nom: 'Amicale' }, debut: '2026-12-01', fin: null }
-		]);
-		expect((await titulairesDe(base, superAdmin, r('Membre de comité'), aujourdhui)).map((t) => t.personne.prenom)).toEqual(['Ailleurs', 'Encours', 'Avenir']);
-		expect(await titulairesDe(base, rapporteur, r('Référent engins'), aujourdhui)).toEqual([]);
-		await expect(titulairesDe(base, rapporteur, 999, aujourdhui)).rejects.toBeInstanceOf(DonneeInvalide);
-	});
-});
-
-describe('titulairesDesMiens', () => {
-	it('pour chaque rôle que l’acteur peut attribuer, les mêmes titulaires que titulairesDe', async () => {
-		const { base, r, rapporteur, simple, nouvelle, nommer, amicale, bureau } = await jeu();
-		const membre = await nouvelle('Membre');
-		await nommer(membre, 'Membre de comité', amicale);
-		await nommer(await nouvelle('Ailleurs'), 'Membre de comité', bureau);
-		await nommer(await nouvelle('Engins'), 'Référent engins', centre);
-
-		const parRole = await titulairesDesMiens(base, rapporteur, aujourdhui);
-		expect([...parRole.keys()].sort()).toEqual([r('Membre de comité'), r('Rapporteur de comité')].sort());
-		expect(parRole.get(r('Membre de comité'))).toEqual(await titulairesDe(base, rapporteur, r('Membre de comité'), aujourdhui));
-		expect(parRole.get(r('Membre de comité'))!.map((t) => t.personne.prenom)).toEqual(['Membre']);
-		expect(parRole.get(r('Rapporteur de comité'))!.map((t) => t.personne.prenom)).toEqual(['Rapporteur']);
-
-		const pourLeSuper = await titulairesDesMiens(base, superAdmin, aujourdhui);
-		for (const [id, liste] of pourLeSuper) expect(liste).toEqual(await titulairesDe(base, superAdmin, id, aujourdhui));
-		expect(await titulairesDesMiens(base, simple, aujourdhui)).toEqual(new Map());
 	});
 });
 

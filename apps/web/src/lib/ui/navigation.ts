@@ -18,7 +18,7 @@ export function entreesNavigation(connecte: boolean, { exterieur = false, casern
 // Les pages rangées sous un onglet, ou sous « Moi », en plus de la sienne.
 const rangement: Record<string, string[]> = {
 	'/planning': ['/remplacements'],
-	'/caserne': ['/agents', '/comites', '/engins', '/nominations', '/reglages', '/reservations', '/habillement', '/demandes', '/suivi'],
+	'/caserne': ['/agents', '/comites', '/engins', '/reglages', '/reservations', '/habillement', '/demandes', '/suivi'],
 	'/moi': ['/profil', '/affichage']
 };
 

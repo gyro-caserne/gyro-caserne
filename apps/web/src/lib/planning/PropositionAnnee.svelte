@@ -34,7 +34,7 @@
 			{/each}
 		</ul>
 		{#if incompletes}
-			<p class="doux">L’appli signale seulement. Aucun agent n’est déplacé. Pour ajuster, passez par <a href="/agents">Agents</a> ou <a href="/nominations">Nominations</a>.</p>
+			<p class="doux">L’appli signale seulement. Aucun agent n’est déplacé. Pour ajuster, passez par <a href="/agents">Agents</a> ou <a href="/comites">Qui fait quoi</a>.</p>
 		{/if}
 	</section>
 

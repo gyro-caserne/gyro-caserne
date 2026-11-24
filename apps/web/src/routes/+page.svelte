@@ -52,7 +52,7 @@
 
 	const gerer: { href: string; titre: string; icone: NomIcone }[] = $derived([
 		{ href: '/agents', titre: 'Agents', icone: 'casque' },
-		...(data.peutNominations ? [{ href: '/nominations', titre: 'Nominations', icone: 'etoile' as const }] : []),
+		...(data.peutNominations ? [{ href: '/comites', titre: 'Qui fait quoi', icone: 'etoile' as const }] : []),
 		...(data.peutReglages ? [{ href: '/reglages', titre: 'Réglages', icone: 'outil' as const }] : [])
 	]);
 	// Ce qui attend une décision passe avant tout le reste, sur toutes les casquettes.

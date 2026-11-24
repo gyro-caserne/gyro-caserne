@@ -1,6 +1,6 @@
-import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { Base } from '../base.ts';
-import { exigerDate } from '../dates.ts';
+import { exigerDate, veille } from '../dates.ts';
 import { accorde, droitsDe, estChefDeCentre, type Acteur, type DroitAccorde, type Perimetre } from '../droits.ts';
 import { estGestionnaire } from '../effectif.ts';
 import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
@@ -24,7 +24,7 @@ async function contexteDe(base: Base, acteur: Acteur, aujourdhui: string): Promi
 
 // Seule définition de « qui peut attribuer ou retirer telle responsabilité sur tel périmètre » : le motif du refus, ou null si permis.
 // Sans exception : le menu de chaque page juge ainsi de nombreux cas, et lancer une exception coûte du calcul.
-function refusDAttribution(contexte: Contexte, laResponsabilite: Responsabilite, perimetre: Perimetre): { vise: Perimetre; message?: string } | null {
+function refusDAttribution(contexte: Contexte, laResponsabilite: Pick<Responsabilite, 'systeme' | 'comiteAttributeurId'>, perimetre: Perimetre): { vise: Perimetre; message?: string } | null {
 	// Exceptions aux droits : le chef de centre est nommé par un super administrateur, son adjoint par le chef de centre.
 	if (laResponsabilite.systeme === 'chef_centre') return contexte.acteur.type === 'super' ? null : { vise: { type: 'centre' }, message: 'Seul un super administrateur nomme ou retire le chef de centre' };
 	if (laResponsabilite.systeme === 'chef_centre_adjoint') return contexte.acteur.type === 'super' || contexte.estChef ? null : { vise: { type: 'centre' }, message: 'Seul le chef de centre nomme ou retire un adjoint' };
@@ -50,6 +50,12 @@ export async function regleDAttribution(base: Base, acteur: Acteur, aujourdhui: 
 	return (laResponsabilite, perimetre) => peutAttribuer(contexte, laResponsabilite, perimetre);
 }
 
+// La même règle, pour qui a déjà lu les droits de l'acteur et sait s'il est chef de centre (Qui fait quoi) : rien à relire.
+export function regleDAttributionLue(acteur: Acteur, droits: DroitAccorde[], estChef: boolean): (laResponsabilite: Pick<Responsabilite, 'systeme' | 'comiteAttributeurId'>, perimetre: Perimetre) => boolean {
+	const contexte = { acteur, droits, estChef };
+	return (laResponsabilite, perimetre) => refusDAttribution(contexte, laResponsabilite, perimetre) === null;
+}
+
 function perimetreDeLigne(type: TypePerimetre, id: number | null): Perimetre {
 	return type === 'centre' || id === null ? { type: 'centre' } : { type, id };
 }
@@ -60,14 +66,46 @@ async function responsabiliteConnue(base: Base, id: number): Promise<Responsabil
 	return ligne;
 }
 
-export async function attribuer(
-	base: Base,
-	acteur: Acteur,
-	a: { personneId: number; responsabiliteId: number; perimetre: Perimetre; debut: string; fin?: string; compteRendu?: string },
-	aujourdhui: string,
-	// `prevenir` : l'agent nommé l'apprend (au téléphone et dans la cloche) ; pas pour l'import du fichier de l'effectif.
-	{ prevenir = true, maintenant = `${aujourdhui}T00:00` }: { prevenir?: boolean; maintenant?: string } = {}
-): Promise<number> {
+type Nomination = { personneId: number; responsabiliteId: number; perimetre: Perimetre; debut: string; fin?: string; compteRendu?: string };
+// `prevenir` : l'agent nommé l'apprend (au téléphone et dans la cloche) ; pas pour l'import du fichier de l'effectif.
+type OptionsNomination = { prevenir?: boolean; maintenant?: string };
+
+export async function attribuer(base: Base, acteur: Acteur, a: Nomination, aujourdhui: string, options: OptionsNomination = {}): Promise<number> {
+	const [lignes] = await base.batch(await preparerNomination(base, acteur, a, aujourdhui, options));
+	return lignes[0]!.id;
+}
+
+// « Remplacer » : le mandat en cours finit la veille du début choisi, et le nouveau titulaire le reprend à cette date.
+// Mêmes règles et mêmes droits que nommer ; les deux changent ensemble, dans une seule écriture groupée.
+export async function remplacerTitulaire(base: Base, acteur: Acteur, r: { attributionId: number; personneId: number; debut: string }, aujourdhui: string, options: OptionsNomination = {}): Promise<number> {
+	exigerDate(aujourdhui);
+	exigerDate(r.debut);
+	const [ligne] = await base.select().from(attribution).where(eq(attribution.id, r.attributionId));
+	if (!ligne) throw new DonneeInvalide('Attribution inconnue');
+	const perimetre = perimetreDeLigne(ligne.perimetreType, ligne.perimetreId);
+	// Le droit d'abord : sans lui, rien n'est dit du mandat. C'est celui de nommer sur ce rôle et ce périmètre.
+	exigerAttribution(await contexteDe(base, acteur, aujourdhui), await responsabiliteConnue(base, ligne.responsabiliteId), perimetre);
+	if (ligne.fin !== null && ligne.fin < aujourdhui) throw new DonneeInvalide('Ce mandat est déjà fini');
+	// Un mandat qui n'a pas commencé ne se remplace pas : on annule la nomination, puis on nomme.
+	if (ligne.debut > aujourdhui) throw new DonneeInvalide('Ce mandat n’a pas commencé');
+	if (r.personneId === ligne.personneId) throw new DonneeInvalide('Cette personne tient déjà ce rôle sur cette période');
+	if (r.debut <= ligne.debut) throw new DonneeInvalide('Choisissez une date après le début du mandat');
+	const finAncien = veille(r.debut);
+	if (ligne.fin !== null && ligne.fin < finAncien) throw new DonneeInvalide('Ce mandat finit avant cette date');
+	// Une mission d'une durée fixée garde sa fin : le remplaçant la reprend jusqu'au même jour.
+	const fin = ligne.fin !== null && ligne.fin >= r.debut ? ligne.fin : undefined;
+	const nomination = await preparerNomination(base, acteur, { personneId: r.personneId, responsabiliteId: ligne.responsabiliteId, perimetre, debut: r.debut, ...(fin && { fin }) }, aujourdhui, options, ligne.id);
+	const [, , lignes] = await base.batch([
+		base.update(attribution).set({ fin: finAncien }).where(eq(attribution.id, ligne.id)),
+		ligneJournal(base, { acteur: nomActeur(acteur), action: 'finir_attribution', cibleType: 'attribution', cibleId: ligne.id, details: { fin: finAncien, remplacePar: r.personneId } }, aujourdhui),
+		...nomination
+	]);
+	return lignes[0]!.id;
+}
+
+// Les vérifications d'une nomination, puis ses écritures, à placer dans un batch dans cet ordre (l'insertion d'abord).
+// `remplace` : le mandat qui finit dans la même écriture, ignoré par le contrôle des doublons.
+async function preparerNomination(base: Base, acteur: Acteur, a: Nomination, aujourdhui: string, { prevenir = true, maintenant = `${aujourdhui}T00:00` }: OptionsNomination, remplace?: number) {
 	exigerDate(aujourdhui);
 	exigerDate(a.debut);
 	if (a.fin !== undefined) exigerDate(a.fin);
@@ -107,14 +145,15 @@ export async function attribuer(
 				eq(attribution.perimetreType, a.perimetre.type),
 				memePerimetre,
 				or(isNull(attribution.fin), gte(attribution.fin, a.debut)),
-				a.fin === undefined ? undefined : lte(attribution.debut, a.fin)
+				a.fin === undefined ? undefined : lte(attribution.debut, a.fin),
+				remplace === undefined ? undefined : ne(attribution.id, remplace)
 			)
 		)
 		.limit(1);
 	if (doublon) throw new DonneeInvalide('Cette personne tient déjà ce rôle sur cette période');
 
 	const qui = nomActeur(acteur);
-	const [lignes] = await base.batch([
+	return [
 		base
 			.insert(attribution)
 			.values({
@@ -132,8 +171,7 @@ export async function attribuer(
 		// L'ordre compte : le journal suit l'insertion, last_insert_rowid() est l'id de l'attribution.
 		ligneJournal(base, { acteur: qui, action: 'attribuer', cibleType: 'attribution', cibleId: sql`last_insert_rowid()`, details: { personneId: a.personneId, responsabiliteId: a.responsabiliteId, perimetre: a.perimetre, debut: a.debut, fin: a.fin ?? null } }, aujourdhui),
 		...(prevenir && !(acteur.type === 'personne' && acteur.id === a.personneId) ? avisNomination(base, a.personneId, laResponsabilite.nom, nomPerimetre, acteur, maintenant) : [])
-	]);
-	return lignes[0]!.id;
+	] as const;
 }
 
 export async function finirAttribution(base: Base, acteur: Acteur, attributionId: number, fin: string, aujourdhui: string): Promise<void> {
@@ -181,14 +219,6 @@ export type LigneAttribution = {
 	fin: string | null;
 	saisiePar: string;
 	peutTerminer: boolean;
-};
-
-export type Titulaire = {
-	id: number;
-	personne: { id: number; prenom: string; nom: string };
-	perimetre: PerimetreNomme;
-	debut: string;
-	fin: string | null;
 };
 
 export type CeQueJePeuxAttribuer = {
@@ -300,41 +330,6 @@ export async function peutAttribuerQuelqueChose(base: Base, acteur: Acteur, aujo
 	if (!contexte.estChef && !contexte.droits.some((d) => d.droit === 'ATTRIBUER_RESPONSABILITE')) return false;
 	const { responsabilites, perimetres } = await candidats(base);
 	return responsabilites.some((r) => perimetres[r.typePerimetre].some((p) => peutAttribuer(contexte, r, perimetreDeLigne(p.type, p.id))));
-}
-
-// Titulaires en cours et à venir des responsabilités données, sur les périmètres que l'acteur peut attribuer.
-async function titulaires(base: Base, contexte: Contexte, responsabilites: Responsabilite[], aujourdhui: string): Promise<Map<number, Titulaire[]>> {
-	const parRole = new Map(responsabilites.map((r) => [r.id, [] as Titulaire[]]));
-	if (responsabilites.length === 0) return parRole;
-	const parId = new Map(responsabilites.map((r) => [r.id, r]));
-	const nommer = await nommeurDePerimetres(base);
-	const lignes = await base
-		.select({ a: attribution, p: { id: personne.id, prenom: personne.prenom, nom: personne.nom } })
-		.from(attribution)
-		.innerJoin(personne, eq(personne.id, attribution.personneId))
-		.where(and(inArray(attribution.responsabiliteId, [...parId.keys()]), or(isNull(attribution.fin), gte(attribution.fin, aujourdhui))))
-		.orderBy(attribution.debut, personne.nom, personne.prenom, attribution.id);
-	for (const { a, p } of lignes) {
-		if (!peutAttribuer(contexte, parId.get(a.responsabiliteId)!, perimetreDeLigne(a.perimetreType, a.perimetreId))) continue;
-		parRole.get(a.responsabiliteId)!.push({ id: a.id, personne: p, perimetre: nommer(a.perimetreType, a.perimetreId), debut: a.debut, fin: a.fin });
-	}
-	return parRole;
-}
-
-export async function titulairesDe(base: Base, acteur: Acteur, responsabiliteId: number, aujourdhui: string): Promise<Titulaire[]> {
-	exigerDate(aujourdhui);
-	const laResponsabilite = await responsabiliteConnue(base, responsabiliteId);
-	const contexte = await contexteDe(base, acteur, aujourdhui);
-	return (await titulaires(base, contexte, [laResponsabilite], aujourdhui)).get(responsabiliteId)!;
-}
-
-// Les titulaires de chaque responsabilité que l'acteur peut attribuer, ses droits lus une seule fois.
-export async function titulairesDesMiens(base: Base, acteur: Acteur, aujourdhui: string): Promise<Map<number, Titulaire[]>> {
-	exigerDate(aujourdhui);
-	const contexte = await contexteDe(base, acteur, aujourdhui);
-	const { responsabilites, perimetres } = await candidats(base);
-	const miennes = responsabilites.filter((r) => perimetres[r.typePerimetre].some((p) => peutAttribuer(contexte, r, perimetreDeLigne(p.type, p.id))));
-	return titulaires(base, contexte, miennes, aujourdhui);
 }
 
 // L'agent nommé : une ligne dans sa cloche et un envoi au téléphone (lieu « nominations » : seul « tout » le coupe).

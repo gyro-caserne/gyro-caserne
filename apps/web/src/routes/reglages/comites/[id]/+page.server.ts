@@ -2,6 +2,9 @@ import { error } from '@sveltejs/kit';
 import { dissoudreComite, iconeDuComite, listerComites, modifierComite, type NomIcone } from '@gyro-caserne/socle';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import { accesReglages, echec, manque, numero, texte, type Reponse } from '#lib/server/formulaire-reglages.ts';
+import { postesDuComite } from '#lib/nommer/postes.ts';
+import { actionsNommerApres } from '#lib/server/actions-nommer.ts';
+import { lireQuiFaitQuoi } from '#lib/server/qui-fait-quoi.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 async function lireComite(locals: App.Locals, brut: string) {
@@ -14,12 +17,23 @@ async function lireComite(locals: App.Locals, brut: string) {
 	return { ...acces, aujourdhui, comite };
 }
 
-export const load: PageServerLoad = async ({ locals, params }) => {
-	const { comite } = await lireComite(locals, params.id);
-	return { comite };
+export const load: PageServerLoad = async ({ locals, params, parent, url }) => {
+	const { acteur, base, aujourdhui, comite } = await lireComite(locals, params.id);
+	// Le bloc « Titulaires » : ses membres, et pour qui peut y nommer, les mêmes gestes que Qui fait quoi (un envoi de plus).
+	const qfq = comite.dissousLe === null ? await lireQuiFaitQuoi(base, acteur, aujourdhui, (await parent()).peutNominations) : null;
+	return {
+		comite,
+		aujourdhui,
+		titulairesDuComite: qfq && { ...postesDuComite(qfq.vue, comite.id), gestes: qfq.vue.gestes, fiches: qfq.fiches },
+		// Juste après « Créer le comité » : le bloc s'ouvre et demande qui l'animera.
+		nouveau: url.searchParams.has('nouveau')
+	};
 };
 
 export const actions: Actions = {
+	// Nommer, remplacer, finir : les gestes du bloc « Titulaires », pour qui ouvre cette page.
+	...actionsNommerApres(({ locals, params }) => lireComite(locals, params.id ?? '')),
+
 	modifier: async ({ locals, params, request }) => {
 		const { acteur, base, aujourdhui, comite } = await lireComite(locals, params.id);
 		const formulaire = await request.formData();

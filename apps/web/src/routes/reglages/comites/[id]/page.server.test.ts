@@ -80,4 +80,15 @@ describe('page d’un comité', () => {
 		expect(ligne!.fin).not.toBeNull();
 		expect(await base.select().from(journal).where(eq(journal.action, 'dissoudre_comite'))).toHaveLength(1);
 	});
+
+	it('le bloc « Titulaires » : les postes du comité pour qui peut y nommer, et la question après la création', async () => {
+		const { base, chef, referent, com } = await preparer();
+		const amicale = await com('Amicale');
+		const data = await charger(load, locaux(base, chef), { id: String(amicale.id) }, `http://x/reglages/comites/${amicale.id}?nouveau`, true);
+		expect(data.nouveau).toBe(true);
+		expect(data.titulairesDuComite.postes.map((p: { role: string }) => p.role)).toEqual(expect.arrayContaining(['Rapporteur', 'Membre']));
+		const lu = await charger(load, locaux(base, referent), { id: String(amicale.id) });
+		expect(lu.titulairesDuComite.gestes).toBeNull();
+		expect(lu.titulairesDuComite.postes).toEqual([]);
+	});
 });
