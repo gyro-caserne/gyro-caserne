@@ -1,6 +1,6 @@
 # Anomalies : prévenir le bon référent selon la zone (design)
 
-Demande du chef de centre de Laillé, transmise par le porteur le 24/11/2026.
+Demande du chef de centre de Laillé, transmise par le porteur le 24/11/2026. Design validé par le porteur le même jour.
 
 ## Pourquoi
 
@@ -8,7 +8,7 @@ Aujourd'hui, une anomalie signalée sur un engin prévient ceux qui ont le droit
 
 ## Décisions du porteur
 
-- On sépare les anomalies selon ce qu'elles concernent. Ce qui touche la pharmacie va aux référentes pharmacie. Ce qui touche le véhicule (niveau d'huile, voyant moteur…) va au référent engins et au parc matériel.
+- On sépare les anomalies selon ce qu'elles concernent. Ce qui touche la pharmacie va aux référentes pharmacie. Ce qui touche le véhicule (niveau d'huile, voyant moteur…) va au référent engins, qui tient aussi le parc matériel à Laillé.
 - Le chef de garde reste prévenu de toute anomalie, pharmacie comprise, puisque c'est lui qui juge du départ.
 - Le référent engins n'est pas prévenu des anomalies de pharmacie. Il les retrouve dans la liste des anomalies de l'engin.
 - Ce lot doit rester dans l'esprit du lot de simplification en cours (« Qui fait quoi », audit des réglages) : pas de nouvel écran, pas de nouveau mot, les rôles et le verbe « prévenir » tels qu'on les connaît.
@@ -37,7 +37,7 @@ Aujourd'hui, une anomalie signalée sur un engin prévient ceux qui ont le droit
 
 ## Pour Laillé (une fois en production)
 
-- **VSAV** : Sac PS, tiroirs rouge, bleu, vert et jaune → Référent pharmacie. Vérifications et Cabine → Référent engins et Parc matériel.
+- **VSAV** : Sac PS, tiroirs rouge, bleu, vert et jaune → Référent pharmacie. Vérifications et Cabine → Référent engins (il tient aussi le parc matériel).
 - **Sac PS du CCRM** → Référent pharmacie.
 - Le porteur fait ces réglages, ou on les met dans le fichier des fiches.
 
