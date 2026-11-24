@@ -1066,8 +1066,11 @@ test.describe('qui fait quoi', () => {
 		await page.getByRole('link', { name: new RegExp(`^${premier.nom}`) }).click();
 		const volet = page.getByRole('dialog', { name: premier.nom, exact: true });
 		await expect(volet.getByText(role, { exact: true })).toBeVisible();
-		await volet.getByLabel('Nouveau titulaire', { exact: true }).selectOption({ label: `${second.nom} (Équipe 1)` });
+		// « Remplacer » déplie le formulaire sur place.
 		await volet.getByRole('button', { name: 'Remplacer', exact: true }).click();
+		await expect(volet.getByRole('button', { name: 'Remplacer', exact: true })).toHaveAttribute('aria-expanded', 'true');
+		await volet.getByLabel('Nouveau titulaire', { exact: true }).selectOption({ label: `${second.nom} (Équipe 1)` });
+		await volet.getByRole('button', { name: 'Confirmer le remplacement', exact: true }).click();
 		await expect(volet).toHaveCount(0);
 		await expect(page.getByText('Remplacement enregistré.', { exact: true })).toBeVisible();
 		// Le groupe reste ouvert : l'ancien titulaire n'y est plus, le nouveau oui.
@@ -1075,14 +1078,16 @@ test.describe('qui fait quoi', () => {
 		const ligne = page.getByRole('link', { name: new RegExp(`^${second.nom}`) });
 		await expect(ligne).toBeVisible();
 
-		// Finir le mandat : grave, sous « Plus », toujours confirmé.
+		// Finir le mandat : un geste visible et grave, qui déplie sa confirmation sur place.
 		await ligne.click();
 		const sien = page.getByRole('dialog', { name: second.nom, exact: true });
-		await sien.getByText('Plus', { exact: true }).click();
+		await expect(sien.getByText('Plus', { exact: true })).toHaveCount(0);
+		await expect(sien.getByLabel('Je confirme', { exact: true })).toBeHidden();
 		await sien.getByRole('button', { name: 'Finir le mandat', exact: true }).click();
+		await sien.getByRole('button', { name: 'Confirmer la fin du mandat', exact: true }).click();
 		await expect(sien.getByText('Cochez « Je confirme » pour finir le mandat.', { exact: true })).toBeVisible();
 		await sien.getByLabel('Je confirme', { exact: true }).check();
-		await sien.getByRole('button', { name: 'Finir le mandat', exact: true }).click();
+		await sien.getByRole('button', { name: 'Confirmer la fin du mandat', exact: true }).click();
 		await expect(sien).toHaveCount(0);
 		await expect(page.getByText('Fin du mandat enregistrée.', { exact: true })).toBeVisible();
 		await page.context().close();

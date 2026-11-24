@@ -174,7 +174,8 @@
 <div class="page">
 	<EnTetePage titre="Qui fait quoi" retour={{ href: '/caserne', libelle: 'Caserne' }}>
 		{#snippet secondaire()}
-			{#if data.peutReglages}<a class="lien-secondaire" href="/reglages">Gérer<span class="masque">{' les réglages du centre'}</span></a>{/if}
+			<!-- Créer et régler les rôles et les comités (droits, qui nomme) : ce que les gestes de la page ne font pas. -->
+			{#if data.peutReglages}<a class="lien-secondaire" href="/reglages">Régler les rôles et les comités</a>{/if}
 		{/snippet}
 	</EnTetePage>
 

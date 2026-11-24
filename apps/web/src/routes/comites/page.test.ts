@@ -172,11 +172,12 @@ describe('/comites', () => {
 		expect(page).not.toMatch(/Denis Roux(<!--[^>]*-->)*<svg/);
 	});
 
-	it('« Gérer » mène aux réglages, pour qui peut régler', () => {
-		expect(html({})).not.toMatch(/>Gérer</);
-		expect(html({ peutNominations: true })).not.toMatch(/>Gérer</);
-		expect(html({ peutReglages: true })).toMatch(/<a[^>]*href="\/reglages"[^>]*>Gérer<span class="masque"> les réglages du centre<\/span><\/a>/);
+	it('« Régler les rôles et les comités » mène aux réglages, pour qui peut régler', () => {
+		expect(html({})).not.toContain('href="/reglages"');
+		expect(html({ peutNominations: true })).not.toContain('href="/reglages"');
+		expect(html({ peutReglages: true })).toMatch(/<a class="lien-secondaire" href="\/reglages">Régler les rôles et les comités<\/a>/);
 		expect(html({ peutReglages: true, peutNominations: true })).not.toContain('/nominations');
+		expect(html({ peutReglages: true })).not.toContain('>Gérer');
 	});
 
 	it('« Demander » sur la ligne d’un rôle qui reçoit des demandes, pour un agent ; jamais pour le super administrateur', () => {
@@ -236,27 +237,31 @@ describe('/comites', () => {
 			expect(page).not.toContain('?mandat=undefined');
 		});
 
-		it('le volet de la personne : son rôle et depuis quand, « Remplacer », sa fiche, et « Finir le mandat » sous « Plus »', () => {
+		it('le volet de la personne : son rôle et depuis quand, puis des gestes visibles, sans « Plus »', () => {
 			const page = html(chef, null, '/comites?mandat=31');
 			expect(page).toMatch(/<dialog class="panneau[^"]*" open[\s\S]*?<h2[^>]*>Bruno Petit<\/h2>/);
 			const volet = page.slice(page.indexOf('<dialog'));
 			expect(volet).toContain('Chef de garde, Équipe 1');
 			expect(volet).toContain('Depuis le 1 janv. 2026');
-			expect(volet).toMatch(/<form method="POST" action="\?\/remplacer"[\s\S]*?name="attributionId" value="31"[\s\S]*?<button[^>]*type="submit"[^>]*>Remplacer<\/button>/);
+			expect(volet).not.toContain('<details');
+			expect(volet).not.toContain('>Plus<');
+			expect(volet).toMatch(/<a class="lien-secondaire" href="\/agents\/5">Voir sa fiche<\/a>/);
+			expect(volet).toMatch(/href="\/echanges\/messages\/a\/5">Écrire/);
+			// Sans JavaScript (le rendu du serveur), les deux formulaires sont dépliés.
+			expect(volet).toMatch(/<form id="remplacer-31" method="POST" action="\?\/remplacer"[^>]*>[\s\S]*?name="attributionId" value="31"[\s\S]*?>Confirmer le remplacement<\/button>/);
+			expect(volet).not.toMatch(/<form id="remplacer-31"[^>]*hidden/);
 			expect(volet).toContain('Le mandat de Bruno Petit finira la veille.');
-			// Le titulaire n'est pas proposé pour se remplacer ; ceux de son équipe d'abord.
 			expect(volet).not.toMatch(/<option value="5"/);
 			expect(volet).toMatch(/<option value="4"[^>]*>Alice Bernard \(Équipe 1\)[\s\S]*?<option value="9"/);
-			expect(volet).toMatch(/<a class="lien-secondaire" href="\/agents\/5">Voir sa fiche<\/a>/);
-			expect(volet).toMatch(/<details class="plus"><summary>Plus<\/summary>[\s\S]*?action="\?\/finir"[\s\S]*?name="confirmation"[\s\S]*?class="grave"[^>]*>Finir le mandat<\/button>/);
+			expect(volet).toMatch(/<form id="finir-31" method="POST" action="\?\/finir"[\s\S]*?name="confirmation"[\s\S]*?class="grave"[^>]*>Confirmer la fin du mandat<\/button>/);
 			// Le groupe de la ligne visée s'ouvre.
 			expect(page).toMatch(/<details class="repli groupe[^"]*" open[^>]*><summary[^>]*><span[^>]*><h2[^>]*>Chefs de garde/);
 		});
 
-		it('le volet d’un mandat à venir propose d’annuler la nomination', () => {
+		it('le volet d’un mandat à venir propose d’annuler la nomination, sans remplacer', () => {
 			const volet = html(chef, null, '/comites?mandat=40');
 			expect(volet).toContain('À partir du 10 déc. 2026');
-			expect(volet).toMatch(/action="\?\/terminer"[\s\S]*?>Annuler la nomination<\/button>/);
+			expect(volet).toMatch(/action="\?\/terminer"[\s\S]*?>Confirmer l’annulation<\/button>/);
 			expect(volet).not.toContain('action="?/finir"');
 			expect(volet).not.toContain('action="?/remplacer"');
 		});

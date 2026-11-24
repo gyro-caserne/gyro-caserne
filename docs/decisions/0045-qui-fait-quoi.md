@@ -4,7 +4,7 @@
 - **Options** : garder Nominations et y ajouter les lignes vides (écartée : deux écrans pour une même question) ; un menu « Plus » sur chaque titulaire (écartée par le porteur) ; fusionner les deux écrans, la ligne d'un titulaire ouvrant le volet de la personne (retenue).
 - **Choix** :
   - Comités et référents devient **Qui fait quoi** (`/comites`) ; `/nominations` répond par une redirection 301 ;
-  - « À pourvoir » en tête (fonction sans titulaire en cours ni à venir), groupes repliés avec résumé, volet de la personne (Remplacer, Voir sa fiche, Finir le mandat) et volet Nommer, ouverts par l'adresse (`?mandat=`, `?nommer=`), comme les panneaux des anomalies ;
+  - « À pourvoir » en tête (fonction sans titulaire en cours ni à venir), groupes repliés avec résumé, volet de la personne avec une rangée de gestes visibles, sans « Plus » (Remplacer, Voir sa fiche, Écrire, Finir le mandat, chacun dépliant son formulaire sur place), à la demande du porteur et volet Nommer, ouverts par l'adresse (`?mandat=`, `?nommer=`), comme les panneaux des anomalies ;
   - le socle gagne `remplacerTitulaire` : fin de l'ancien mandat la veille et nouveau mandat dans un seul batch, avec la préparation de `attribuer` (mêmes règles, même droit, même avis au nommé) ;
   - `quiFaitQuoi` prend l'option `gestes` : les mandats en cours et à venir dans le même batch, la règle de droit appliquée aux droits déjà lus (`regleDAttributionLue`), le chef de centre reconnu d'après ses rôles du jour, déjà lus. Aucune requête de plus, pour l'agent comme pour le chef ;
   - les fiches d'un rôle et d'un comité ont un bloc Titulaires (mêmes lignes, mêmes volets) ; la fiche agent garde « Nommer à un rôle » ;

@@ -27,10 +27,12 @@ Sur chaque poste qu'il peut nommer :
 - **la ligne d'un titulaire** : son nom et une flèche ; toute la ligne ouvre le **volet de la personne**. Un mandat qui commence plus tard le dit (« à partir du 3 déc. 2026 ») ;
 - **une ligne vide** : « À pourvoir » (fonction) ou « Personne pour l'instant » (mission), et **Nommer**. Une mission garde « Nommer » sous ses titulaires, pour en ajouter un.
 
-Le **volet de la personne** dit son rôle, l'équipe ou le comité, et « Depuis le … ». Il propose :
-- **Remplacer**, l'action principale : le nouveau titulaire et sa date de début. Le mandat en cours finit la veille, le nouveau commence à la date choisie, en une seule écriture ;
+Le **volet de la personne** dit son rôle, l'équipe ou le comité, et « Depuis le … ». Dessous, une rangée de gestes visibles :
+- **Remplacer**, l'action principale : il déplie sur place la recherche, le nouveau titulaire et sa date de début, puis **Confirmer le remplacement**. Le mandat en cours finit la veille, le nouveau commence à la date choisie, en une seule écriture ;
 - **Voir sa fiche**, pour qui gère les agents, et **Écrire** si l'on peut lui écrire ;
-- sous **Plus**, **Finir le mandat** (contour rouge, avec la date du dernier jour, aujourd'hui par défaut, et « Je confirme »). Un mandat qui n'a pas commencé propose à la place **Annuler la nomination**, confirmée de même.
+- **Finir le mandat** (contour rouge) : il déplie sur place la date du dernier jour (aujourd'hui par défaut), « Je confirme » et **Confirmer la fin du mandat**. Un mandat qui n'a pas commencé propose à la place **Annuler la nomination**, sans Remplacer, confirmée de même.
+
+Sans JavaScript, les deux formulaires sont dépliés d'emblée.
 
 Le **volet Nommer**, le même partout : l'agent (ceux de l'équipe du poste d'abord, puis les autres ; une recherche par nom), la date de début (aujourd'hui par défaut), et, replié, une date de fin facultative pour une mission d'une durée connue.
 
@@ -46,7 +48,7 @@ Les règles ne changent pas ([Accès et attributions](acces-et-attributions.md))
 
 ## Qui y entre
 
-Tout agent qui a accès, et le super administrateur. Le compte de la réserve citoyenne n'a pas le lien dans Caserne et reçoit un refus s'il ouvre l'adresse. « Gérer », en haut de la page, mène aux réglages pour qui règle les comités ou les rôles.
+Tout agent qui a accès, et le super administrateur. Le compte de la réserve citoyenne n'a pas le lien dans Caserne et reçoit un refus s'il ouvre l'adresse. « Régler les rôles et les comités », en haut de la page, mène aux réglages pour qui les règle : créer un rôle ou un comité, ses droits, qui le nomme. Les nominations, elles, se font sur la page.
 
 ## Exemple
 

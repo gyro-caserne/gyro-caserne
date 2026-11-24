@@ -16,10 +16,10 @@ Vous pouvez aussi nommer depuis la fiche d'un rôle (Réglages, bloc « Titulair
 ## Finir un mandat
 
 1. Dans Qui fait quoi, appuyez sur la ligne de la personne : son volet s'ouvre.
-2. Appuyez sur « Plus ».
-3. Choisissez le dernier jour du mandat (aujourd'hui par défaut), cochez « Je confirme », puis appuyez sur « Finir le mandat ».
+2. Appuyez sur « Finir le mandat ».
+3. Choisissez le dernier jour du mandat (aujourd'hui par défaut), cochez « Je confirme », puis appuyez sur « Confirmer la fin du mandat ».
 
-La personne perd le rôle et ses droits après ce jour. Un mandat qui n'a pas commencé s'annule de la même façon, par « Annuler la nomination ».
+La personne perd le rôle et ses droits après ce jour. Un mandat qui n'a pas commencé s'annule de la même façon, par « Annuler la nomination » puis « Confirmer l’annulation ».
 
 Pour mettre quelqu'un d'autre à sa place en un seul geste, voyez [Comment remplacer un chef de garde ?](remplacer-un-chef-de-garde.md)
 
