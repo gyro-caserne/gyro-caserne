@@ -23,13 +23,16 @@
 	const zonePrevenir = $derived(f.zones.find((z) => z.ref === data.prevenir) ?? null);
 	// Le volet se ferme une fois enregistré ; le message de réussite est gardé, la navigation qui le ferme effaçant `form`.
 	let reussite = $state('');
+	// La zone du volet reste ouverte quand il se ferme (enregistré, Échap, Fermer) : le focus revient à sa ligne Prévenir.
+	let zoneDuVolet = $state<number | null>(null);
 	const fermerVolet: SubmitFunction = ({ formData }) => {
 		const zone = Number(formData.get('zone'));
+		zoneDuVolet = zone;
 		reussite = '';
 		return async ({ update, result }) => {
 			await update({ reset: false });
 			if (result.type === 'success') {
-				await goto('?', { replaceState: true, noScroll: true });
+				await goto('?', { replaceState: true });
 				reussite = String(result.data?.succes ?? '');
 				document.getElementById(`prevenir-${zone}`)?.focus();
 			}
@@ -78,15 +81,15 @@
 		{#if f.version.utilisee}Elle a déjà servi à une prise. La modifier crée la version {f.version.numero + 1}, l’historique garde celle-ci.{/if}
 	</p>
 
-	<div role="status" class="masque">{form?.succes ?? reussite}</div>
-	{#if form?.succes ?? reussite}<p class="succes">{form?.succes ?? reussite}</p>{/if}
+	<div role="status" class="masque">{form ? (form.succes ?? '') : reussite}</div>
+	{#if form ? form.succes : reussite}<p class="succes">{form ? form.succes : reussite}</p>{/if}
 	{#if data.nouveau && f.zones.length === 0}<p class="note">Fiche créée. Commencez par ses zones : cabine, coffres, sacs…</p>{/if}
 
 	<div class="zones pile">
 		{#each f.zones as z, i (z.ref)}
-			<Groupe titre={z.nom} resume={resumeZone(z)} ouvert={ouverte(z.ref, i) || (form?.cible === 'prevenir' && form.zone === z.ref) || data.prevenir === z.ref}>
+			<Groupe titre={z.nom} resume={resumeZone(z)} ouvert={ouverte(z.ref, i) || (form?.cible === 'prevenir' && form.zone === z.ref) || data.prevenir === z.ref || zoneDuVolet === z.ref}>
 				<div class="zone" id="zone-{z.ref}" tabindex="-1" role="group" aria-label="Zone {z.nom}">
-					<a class="prevenir" id="prevenir-{z.ref}" href="?prevenir={z.ref}" data-sveltekit-reset="false" data-sveltekit-noscroll>
+					<a class="prevenir" id="prevenir-{z.ref}" href="?prevenir={z.ref}" data-sveltekit-reset="false" data-sveltekit-noscroll onclick={() => (zoneDuVolet = z.ref)}>
 						<span class="texte"><span class="titre">Prévenir<span class="masque">{' '}pour la zone {z.nom}</span></span><span class="qui">{prevenus(z) || 'Ceux qui traitent les anomalies'}</span></span>
 						<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6" /></svg>
 					</a>
@@ -329,10 +332,15 @@
 		flex: none;
 		color: var(--doux);
 	}
+	.roles label {
+		display: flex;
+		align-items: center;
+		gap: var(--espace-12);
+		min-height: var(--cible);
+	}
 	.roles {
 		display: flex;
 		flex-direction: column;
-		gap: var(--espace-4);
 		margin: 0;
 		padding: 0;
 		border: 0;

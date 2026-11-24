@@ -42,7 +42,7 @@ export async function lireClasseurFiches(fichier: Blob): Promise<FichierFichesLu
 		const [ligneEntetes = [], ...suite] = f.data as Valeur[][];
 		// Les colonnes de l'export seulement (« Prévenir » est facultative) : une colonne de notes ajoutée à droite est ignorée.
 		const lues = ligneEntetes.slice(0, 5).map(enTexte);
-		const entetes = lues[4] === 'Prévenir' ? lues : lues.slice(0, 4);
+		const entetes = lues[4]?.toLocaleLowerCase('fr') === 'prévenir' ? lues : lues.slice(0, 4);
 		lu.entetes![f.sheet] = entetes;
 		lu.feuilles[f.sheet] = suite.map((ligne, i) => ({ numero: i + 2, cellules: entetes.map((_, colonne) => enTexte(ligne[colonne] ?? null)) })).filter((l) => l.cellules.some((c) => c !== ''));
 	}

@@ -172,6 +172,15 @@ describe('fichier des fiches', () => {
 			expect((await lireFiche(base, types.VTU)).zones[0]!.prevenir).toEqual([pharmacie]);
 		});
 
+		it('l’en-tête se lit sans tenir compte de la casse ; un nom de rôle avec une virgule est reconnu entier', async () => {
+			const { base, referent, types, feuille } = await avecExport();
+			await base.update(responsabilite).set({ nom: 'Référent pharmacie, secours' }).where(eq(responsabilite.nom, 'Référent pharmacie'));
+			const fichier = lu({ VTU: avecCabine(feuille('VTU'), 'Référent pharmacie, secours') }, ['Réf.', 'Zone', 'Élément', 'Quantité', ' prévenir ']);
+			expect((await apercuFiches(base, referent, fichier, maintenant)).erreurs).toEqual([]);
+			await appliquerFiches(base, referent, fichier, maintenant);
+			expect((await lireFiche(base, types.VTU)).zones[0]!.prevenir).toEqual([await roleNomme(base, 'Référent pharmacie, secours')]);
+		});
+
 		it('refuse un rôle inconnu ou deux réglages différents pour une zone, avec la ligne', async () => {
 			const { base, referent, feuille } = await avecExport();
 			const vtu = avecCabine(feuille('VTU'), 'Référent pharmacie');

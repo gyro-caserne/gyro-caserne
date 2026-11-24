@@ -27,7 +27,7 @@ describe('textes des engins', () => {
 	it('résume les changements d’une fiche importée', () => {
 		expect(resumerFiche({ ajoutes: ['a', 'b'], retires: ['c'], modifies: [], ordre: true })).toBe('2 éléments ajoutés, 1 retiré, rangement changé');
 		expect(resumerFiche({ ajoutes: [], retires: [], modifies: [], ordre: false })).toBe('Aucun changement');
-		expect(resumerFiche({ ajoutes: [], retires: [], modifies: [], prevenir: ['Sac PS, prévient Référent pharmacie'], ordre: false })).toBe('1 zone à prévenir autrement');
+		expect(resumerFiche({ ajoutes: [], retires: [], modifies: [], prevenir: ['Sac PS, prévient Référent pharmacie'], ordre: false })).toBe('qui prévenir changé pour 1 zone');
 		expect(enListe(['Référent pharmacie', 'Référent engins', 'Chef de centre'])).toBe('Référent pharmacie, Référent engins et Chef de centre');
 	});
 

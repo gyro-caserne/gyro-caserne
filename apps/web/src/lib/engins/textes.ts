@@ -43,7 +43,7 @@ export function resumerFiche(c: { ajoutes: string[]; retires: string[]; modifies
 		c.retires.length ? pluriel(c.retires.length, 'retiré', 'retirés') : '',
 		c.modifies.length ? pluriel(c.modifies.length, 'modifié', 'modifiés') : '',
 		c.ordre ? 'rangement changé' : '',
-		c.prevenir?.length ? pluriel(c.prevenir.length, 'zone à prévenir autrement', 'zones à prévenir autrement') : ''
+		c.prevenir?.length ? `qui prévenir changé pour ${pluriel(c.prevenir.length, 'zone')}` : ''
 	].filter(Boolean);
 	return morceaux.length ? morceaux.join(', ') : 'Aucun changement';
 }

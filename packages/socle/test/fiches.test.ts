@@ -157,6 +157,10 @@ describe('qui prévenir, par zone', () => {
 		const v2 = await lireFiche(base, types.VSAV);
 		expect(v2.version.numero).toBe(2);
 		expect(v2.zones[1]).toMatchObject({ nom: 'Sac PS', prevenir: [pharmacie, engins] });
+		// Les mêmes rôles dans un autre ordre : rien d'écrit, pas de journal.
+		const lignes = (await base.select().from(journal)).length;
+		await reglerPrevenir(base, referent, types.VSAV, zone, [engins, pharmacie], maintenant);
+		expect(await base.select().from(journal)).toHaveLength(lignes);
 		// Rien : la règle d'aujourd'hui.
 		await reglerPrevenir(base, referent, types.VSAV, zone, [], maintenant);
 		expect((await lireFiche(base, types.VSAV)).zones[1]!.prevenir).toEqual([]);

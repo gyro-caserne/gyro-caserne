@@ -460,6 +460,38 @@ describe('qui prévenir, selon la zone', () => {
 		expect(await j.avis(j.referent)).toEqual([]);
 	});
 
+	it('l’auteur seul titulaire du rôle choisi : le chef de centre et l’adjoint, à sa place', async () => {
+		const j = await jeuZones();
+		await j.base.insert(attribution).values({ personneId: idDe(j.alice), responsabiliteId: j.pharmacie, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		await j.prise([j.sac.elements[0]!.ref]);
+		expect(await j.avis(j.claire)).toHaveLength(1);
+		expect(await j.avis(j.paul)).toHaveLength(1);
+		expect(await j.avis(j.alice)).toEqual([]);
+	});
+
+	it('deux rôles, l’un tenu, l’autre sans titulaire : ses titulaires, et le chef et l’adjoint pour l’autre', async () => {
+		const j = await jeuZones();
+		const paula = await nommee(j, 'Paula', { nom: 'Référent pharmacie' });
+		const [habillement] = await j.base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
+		await reglerPrevenir(j.base, j.referent, j.types.VSAV, j.sac.ref, [j.pharmacie, habillement!.id], QUAND);
+		await j.prise([j.sac.elements[0]!.ref]);
+		expect(await j.avis(paula)).toHaveLength(1);
+		expect(await j.avis(j.claire)).toHaveLength(1);
+		expect(await j.avis(j.paul)).toHaveLength(1);
+		expect(await j.avis(j.referent)).toEqual([]);
+	});
+
+	it('un rôle prévenu ne remet pas l’engin en service', async () => {
+		const j = await jeuZones();
+		const paula = await nommee(j, 'Paula', { nom: 'Référent pharmacie' });
+		await j.prise([j.sac.elements[0]!.ref]);
+		const [brancard] = await j.base.select().from(anomalie).where(eq(anomalie.enginId, j.vsav));
+		await gesteAnomalie(j.base, j.referent, brancard!.id, { quoi: 'indisponible' }, PLUS_TARD, REGLAGE_ANOMALIES);
+		await gesteAnomalie(j.base, paula, brancard!.id, { quoi: 'clore', texte: 'Remplacé' }, PLUS_TARD, REGLAGE_ANOMALIES);
+		await expect(gesteAnomalie(j.base, paula, brancard!.id, { quoi: 'remettre' }, PLUS_TARD, REGLAGE_ANOMALIES)).rejects.toBeInstanceOf(RefusDroit);
+		expect(await j.etatEngin(j.vsav)).toBe('indisponible');
+	});
+
 	it('le rôle choisi archivé : la zone revient à la règle d’aujourd’hui', async () => {
 		const j = await jeuZones();
 		await j.base.update(responsabilite).set({ archiveeLe: '2026-10-01' }).where(eq(responsabilite.id, j.pharmacie));

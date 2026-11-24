@@ -26,7 +26,7 @@ test.describe('anomalies par zone', () => {
 			INSERT INTO attribution (personne_id, responsabilite_id, perimetre_type, perimetre_id, debut, saisie_par, saisie_le) SELECT p.id, r.id, 'centre', NULL, '2026-01-01', '${MARQUE}', '2026-01-01' FROM personne p, responsabilite r WHERE p.email = '${ENGINS}' AND r.nom = 'Référent engins';`);
 	});
 	test.afterAll(() => {
-		executer(`UPDATE fiche_zone SET prevenir = NULL; DELETE FROM attribution WHERE saisie_par = '${MARQUE}';`);
+		executer(`UPDATE fiche_zone SET prevenir = NULL WHERE nom = '${ZONE}' AND version_id = (SELECT max(v.id) FROM fiche_version v JOIN type_engin t ON t.id = v.type_id WHERE t.nom = 'VSAV'); DELETE FROM attribution WHERE saisie_par = '${MARQUE}';`);
 	});
 
 	test('la zone prévient la pharmacie, pas le référent engins', async ({ browser }, info) => {
@@ -45,6 +45,8 @@ test.describe('anomalies par zone', () => {
 		await volet.getByRole('button', { name: 'Enregistrer', exact: true }).click();
 		await expect(volet).toBeHidden();
 		await expect(chef.getByRole('status').filter({ hasText: 'Réglage enregistré.' })).toHaveCount(1);
+		// La zone reste ouverte, le focus revient à sa ligne Prévenir.
+		await expect(chef.getByRole('link', { name: new RegExp(`^Prévenir pour la zone ${ZONE}`) })).toBeFocused();
 		await expect(chef.getByRole('link', { name: new RegExp(`^Prévenir pour la zone ${ZONE}`) })).toContainText('Référent pharmacie');
 
 		// Un agent note un écart dans la zone, à la prise du VSAV 1, puis la valide.
@@ -74,11 +76,11 @@ test.describe('anomalies par zone', () => {
 		const pia = await (await browser.newContext()).newPage();
 		await connecter(pia, PHARMACIE);
 		await pia.goto('/notifications');
-		await expect(pia.getByText('VSAV 1, prise de garde', { exact: true })).toBeVisible();
+		await expect(pia.getByText('VSAV 1, prise de garde')).toBeVisible();
 		const eric = await (await browser.newContext()).newPage();
 		await connecter(eric, ENGINS);
 		await eric.goto('/notifications');
 		await expect(eric.getByRole('heading', { level: 1 })).toBeVisible();
-		await expect(eric.getByText('VSAV 1, prise de garde', { exact: true })).toHaveCount(0);
+		await expect(eric.getByText('VSAV 1, prise de garde')).toHaveCount(0);
 	});
 });

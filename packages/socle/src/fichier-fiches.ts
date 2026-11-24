@@ -38,6 +38,9 @@ const propre = (t: string) => t.trim().replace(/\s+/g, ' ');
 // Les rôles d'une cellule « Prévenir » ; null si l'un est inconnu (l'erreur est dite).
 function rolesDe(cellule: string, roles: Role[], erreur: (message: string) => void): number[] | null {
 	const ids: number[] = [];
+	// Un nom de rôle qui contient lui-même une virgule est reconnu entier.
+	const entier = roles.find((r) => memeNom(r.nom, cellule));
+	if (entier) return [entier.id];
 	for (const nom of cellule.split(',').map(propre).filter(Boolean)) {
 		const role = roles.find((r) => memeNom(r.nom, nom));
 		if (!role) {
@@ -154,7 +157,7 @@ async function analyser(base: Base, acteur: Acteur, lu: FichierFichesLu, mainten
 			continue;
 		}
 		const avantErreurs = erreurs.length;
-		const avecPrevenir = (lues?.[4] ?? '').trim() === 'Prévenir';
+		const avecPrevenir = memeNom(lues?.[4] ?? '', 'Prévenir');
 		const zones = lireFeuille(fiche, lignes, refs, avecPrevenir ? roles : null, erreur);
 		if (erreurs.length > avantErreurs) continue;
 		try {

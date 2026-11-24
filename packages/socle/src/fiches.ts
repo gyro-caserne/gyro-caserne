@@ -3,7 +3,7 @@ import { instruction, type Base } from './base.ts';
 import { exigerDateHeure } from './dates.ts';
 import { droitsDe, occupe, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
-import { ligneJournal } from './journal.ts';
+import { ligneJournal, ligneJournalSi } from './journal.ts';
 import { nomActeur } from './actions/personnes.ts';
 import { ficheElement, ficheVersion, ficheZone, personne, responsabilite, typeEngin } from './schema.ts';
 
@@ -293,14 +293,16 @@ export async function reglerPrevenir(base: Base, acteur: Acteur, typeId: number,
 	if (!z) throw new DonneeInvalide('Zone inconnue');
 	const choisis = [...new Set(roles)];
 	if (choisis.some((r) => !valables.some((v) => v.id === r))) throw new DonneeInvalide('Rôle inconnu');
-	if (JSON.stringify(choisis) === JSON.stringify(z.prevenir)) return;
+	if (JSON.stringify([...choisis].sort()) === JSON.stringify([...z.prevenir].sort())) return;
 	const derniere = sql`(SELECT max(${ficheVersion.id}) FROM ${ficheVersion} WHERE ${ficheVersion.typeId} = ${typeId})`;
+	// La zone a pu disparaître entre-temps (un collègue a écrit une nouvelle version) : rien n'est écrit, pas même au journal.
+	const existe = sql`EXISTS (SELECT 1 FROM ${ficheZone} WHERE ${ficheZone.versionId} = ${derniere} AND ${ficheZone.ref} = ${zone})`;
 	await base.batch([
 		base
 			.update(ficheZone)
 			.set({ prevenir: choisis.length ? JSON.stringify(choisis) : null })
 			.where(and(sql`${ficheZone.versionId} = ${derniere}`, eq(ficheZone.ref, zone))),
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_fiche', cibleType: 'type_engin', cibleId: typeId, details: { geste: { quoi: 'prevenir_zone', zone, roles: choisis } } }, maintenant)
+		ligneJournalSi(base, { acteur: nomActeur(acteur), action: 'modifier_fiche', cibleType: 'type_engin', cibleId: typeId, details: { geste: { quoi: 'prevenir_zone', zone, roles: choisis } } }, maintenant, existe)
 	]);
 }
 
