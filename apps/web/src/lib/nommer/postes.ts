@@ -12,7 +12,7 @@ export type Poste = {
 	titulaires: Titulaire[];
 	nommer?: { aPourvoir: boolean };
 };
-export type Agent = { id: number; nom: string; equipeId: number | null; equipe: string | null };
+export type Agent = { id: number; nom: string; equipeId: number | null; equipe: string | null; exterieur?: boolean };
 
 export const cleDePoste = (roleId: number, perimetreId: number | null) => `${roleId}-${perimetreId ?? 'centre'}`;
 
@@ -44,14 +44,18 @@ export function resume(compte: string, postes: { nommer?: { aPourvoir: boolean }
 
 // Les agents proposés pour nommer : ceux de l'équipe du poste d'abord, puis les autres, chacun dans l'ordre des noms.
 export function agentsPour(agents: Agent[], poste: Pick<Poste, 'perimetre'>, sauf: number[] = []): Agent[] {
-	const libres = agents.filter((a) => !sauf.includes(a.id));
+	// Une personne extérieure ne tient pas de rôle de comité (règle du socle) : elle n'y est pas proposée.
+	const libres = agents.filter((a) => !sauf.includes(a.id) && !(a.exterieur && poste.perimetre.type === 'comite'));
 	if (poste.perimetre.type !== 'equipe') return libres;
 	return [...libres.filter((a) => a.equipeId === poste.perimetre.id), ...libres.filter((a) => a.equipeId !== poste.perimetre.id)];
 }
 
+// Les paramètres de l'adresse de la page (ceux de `page.url`, en lecture seule).
+type Adresse = { get(nom: string): string | null; toString(): string };
+
 // L'adresse d'un volet, en gardant le reste de l'adresse ; sans volet, `vers(null)`.
-export function adresseVolet(recherche: URLSearchParams, volet: { mandat: number } | { nommer: string } | null): string {
-	const p = new URLSearchParams(recherche);
+export function adresseVolet(recherche: Adresse, volet: { mandat: number } | { nommer: string } | null): string {
+	const p = new URLSearchParams(recherche.toString());
 	p.delete('mandat');
 	p.delete('nommer');
 	if (volet && 'mandat' in volet) p.set('mandat', String(volet.mandat));
@@ -65,7 +69,7 @@ export const simple = (texte: string) => texte.normalize('NFD').replace(/\p{Diac
 
 // Le volet visé : celui d'un refus (rouvert avec ses erreurs, même sans JavaScript), sinon celui de l'adresse.
 type Envoi = { cible?: unknown; succes?: unknown } | null | undefined;
-export function voletVise(recherche: URLSearchParams, form: Envoi): { mandat: number } | { nommer: string } | null {
+export function voletVise(recherche: Adresse, form: Envoi): { mandat: number } | { nommer: string } | null {
 	const refus = form && !form.succes ? String(form.cible ?? '') : '';
 	if (refus.startsWith('mandat-') && /^\d+$/.test(refus.slice(7))) return { mandat: Number(refus.slice(7)) };
 	if (refus.startsWith('nommer-')) return { nommer: refus.slice(7) };

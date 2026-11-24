@@ -82,13 +82,19 @@ export async function remplacerTitulaire(base: Base, acteur: Acteur, r: { attrib
 	exigerDate(r.debut);
 	const [ligne] = await base.select().from(attribution).where(eq(attribution.id, r.attributionId));
 	if (!ligne) throw new DonneeInvalide('Attribution inconnue');
+	const perimetre = perimetreDeLigne(ligne.perimetreType, ligne.perimetreId);
+	// Le droit d'abord : sans lui, rien n'est dit du mandat. C'est celui de nommer sur ce rôle et ce périmètre.
+	exigerAttribution(await contexteDe(base, acteur, aujourdhui), await responsabiliteConnue(base, ligne.responsabiliteId), perimetre);
 	if (ligne.fin !== null && ligne.fin < aujourdhui) throw new DonneeInvalide('Ce mandat est déjà fini');
+	// Un mandat qui n'a pas commencé ne se remplace pas : on annule la nomination, puis on nomme.
+	if (ligne.debut > aujourdhui) throw new DonneeInvalide('Ce mandat n’a pas commencé');
 	if (r.personneId === ligne.personneId) throw new DonneeInvalide('Cette personne tient déjà ce rôle sur cette période');
 	if (r.debut <= ligne.debut) throw new DonneeInvalide('Choisissez une date après le début du mandat');
 	const finAncien = veille(r.debut);
 	if (ligne.fin !== null && ligne.fin < finAncien) throw new DonneeInvalide('Ce mandat finit avant cette date');
-	// La préparation vérifie le droit de nommer sur ce rôle et ce périmètre : c'est aussi celui de finir l'ancien mandat.
-	const nomination = await preparerNomination(base, acteur, { personneId: r.personneId, responsabiliteId: ligne.responsabiliteId, perimetre: perimetreDeLigne(ligne.perimetreType, ligne.perimetreId), debut: r.debut }, aujourdhui, options, ligne.id);
+	// Une mission d'une durée fixée garde sa fin : le remplaçant la reprend jusqu'au même jour.
+	const fin = ligne.fin !== null && ligne.fin >= r.debut ? ligne.fin : undefined;
+	const nomination = await preparerNomination(base, acteur, { personneId: r.personneId, responsabiliteId: ligne.responsabiliteId, perimetre, debut: r.debut, ...(fin && { fin }) }, aujourdhui, options, ligne.id);
 	const [, , lignes] = await base.batch([
 		base.update(attribution).set({ fin: finAncien }).where(eq(attribution.id, ligne.id)),
 		ligneJournal(base, { acteur: nomActeur(acteur), action: 'finir_attribution', cibleType: 'attribution', cibleId: ligne.id, details: { fin: finAncien, remplacePar: r.personneId } }, aujourdhui),

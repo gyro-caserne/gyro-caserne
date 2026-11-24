@@ -82,9 +82,11 @@ export const actionsNommer = {
 
 // Les mêmes gestes, sur une page qui a sa propre règle d'entrée (la fiche d'un rôle, d'un comité) : elle passe d'abord.
 export function actionsNommerApres(exiger: (e: RequestEvent) => Promise<unknown>) {
-	const garde = (geste: (e: Evenement) => Promise<unknown>) => async (e: RequestEvent) => {
-		await exiger(e);
-		return geste(e);
-	};
+	const garde =
+		<R>(geste: (e: Evenement) => Promise<R>) =>
+		async (e: RequestEvent) => {
+			await exiger(e);
+			return geste(e);
+		};
 	return { nommer: garde(actionsNommer.nommer), remplacer: garde(actionsNommer.remplacer), finir: garde(actionsNommer.finir), terminer: garde(actionsNommer.terminer) };
 }

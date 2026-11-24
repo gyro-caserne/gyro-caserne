@@ -258,6 +258,7 @@ describe('/comites', () => {
 			expect(volet).toContain('À partir du 10 déc. 2026');
 			expect(volet).toMatch(/action="\?\/terminer"[\s\S]*?>Annuler la nomination<\/button>/);
 			expect(volet).not.toContain('action="?/finir"');
+			expect(volet).not.toContain('action="?/remplacer"');
 		});
 
 		it('le volet « Nommer » : le poste, les agents de l’équipe d’abord, la date de début', () => {
@@ -275,6 +276,8 @@ describe('/comites', () => {
 		it('un refus rouvre son volet avec ses erreurs, même sans JavaScript ; une réussite s’annonce', () => {
 			const refus = html(chef, { cible: 'mandat-31', erreurs: { personneId: 'Choisissez un agent.' }, valeurs: { personneId: '', debut: '2026-11-30' } }, '/comites?/remplacer');
 			expect(refus).toMatch(/<dialog[\s\S]*?Choisissez un agent\.[\s\S]*?value="2026-11-30"/);
+			// Sans JavaScript, le groupe du mandat remplacé se rouvre pour qu'on voie le résultat.
+			expect(html(chef, { cible: 'mandat-31', succes: 'Remplacement enregistré.' }, '/comites?/remplacer')).toMatch(/<details class="repli groupe[^"]*" open[^>]*><summary[^>]*><span[^>]*><h2[^>]*>Chefs de garde/);
 			const reussite = html(chef, { cible: 'nommer-3-2', succes: 'Nomination enregistrée.' }, '/comites?/nommer');
 			expect(reussite).not.toContain('<dialog');
 			expect(reussite).toMatch(/<div role="status"><p class="succes[^"]*">Nomination enregistrée\.<\/p>/);

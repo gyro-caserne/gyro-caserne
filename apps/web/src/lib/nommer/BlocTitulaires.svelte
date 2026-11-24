@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import Insigne from '#lib/ui/Insigne.svelte';
 	import Rangee from '#lib/ui/Rangee.svelte';
@@ -19,15 +20,25 @@
 		aujourdhui,
 		fiches,
 		form
-	}: { postes: Poste[]; autres?: Membre[]; resume: string; question?: string; gestes: { agents: Agent[] } | null; aujourdhui: string; fiches: boolean; form: Reponse } = $props();
+	}: { postes: Poste[]; autres?: Membre[]; resume: string; question?: string; gestes: { agents: Agent[] } | null; aujourdhui: string; fiches: boolean; form: unknown } = $props();
+	// La réponse d'une action de la page : seules celles des volets (cibles `nommer-` et `mandat-`) concernent ce bloc.
+	const reponse = $derived(form as Reponse);
 
-	const vise = $derived(posteVise(postes, voletVise(page.url.searchParams, form)) !== null || (Boolean(form?.succes) && /^(nommer|mandat)-/.test(String(form?.cible ?? ''))));
+	const vise = $derived(posteVise(postes, voletVise(page.url.searchParams, reponse)) !== null || (Boolean(reponse?.succes) && /^(nommer|mandat)-/.test(String(reponse?.cible ?? ''))));
 	let reussite = $state('');
-	const annonce = $derived(reussite || (form?.succes && /^(nommer|mandat)-/.test(String(form.cible ?? '')) ? String(form.succes) : ''));
+	// Ouvert dès le chargement par l'attribut ; ensuite, par la page, sans jamais le refermer.
+	const ouvertAuDepart = untrack(() => Boolean(question) || vise);
+	const garderOuvert = (bloc: HTMLDetailsElement) => {
+		if (vise) bloc.open = true;
+	};
+	$effect(() => {
+		if (posteVise(postes, voletVise(page.url.searchParams, reponse))) reussite = '';
+	});
+	const annonce = $derived(reussite || (reponse?.succes && /^(nommer|mandat)-/.test(String(reponse.cible ?? '')) ? String(reponse.succes) : ''));
 	const libelle = (p: Poste) => p.perimetre.nom ?? p.role;
 </script>
 
-<details class="repli titulaires" {...question || vise ? { open: true } : {}}>
+<details class="repli titulaires" {...ouvertAuDepart ? { open: true } : {}} {@attach garderOuvert}>
 	<summary><span class="entete"><h2 class="titre-groupe">Titulaires</h2><span class="resume">{resume}</span></span></summary>
 	<div class="contenu">
 		{#if question}<p class="question">{question}</p>{/if}
@@ -50,7 +61,7 @@
 </details>
 
 {#if gestes}
-	<Volets {postes} agents={gestes.agents} {aujourdhui} {fiches} {form} onreussite={(m) => (reussite = m)} />
+	<Volets {postes} agents={gestes.agents} {aujourdhui} {fiches} form={reponse} onreussite={(m) => (reussite = m)} />
 {/if}
 
 <style>

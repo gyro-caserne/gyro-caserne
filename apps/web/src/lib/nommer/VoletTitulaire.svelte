@@ -6,7 +6,8 @@
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import Champ from '#lib/ui/Champ.svelte';
 	import Choix from '#lib/ui/Choix.svelte';
-	import { agentsPour, intitule, type Agent, type Poste } from './postes.ts';
+	import { onMount, untrack } from 'svelte';
+	import { agentsPour, intitule, simple, type Agent, type Poste } from './postes.ts';
 	import { surEnvoi } from './envoi.svelte.ts';
 
 	// Le volet de la personne : son rôle et depuis quand ; « Remplacer » d'abord, « Finir le mandat » (grave, confirmé) sous « Plus ».
@@ -32,8 +33,20 @@
 	const plusOuvert = $derived(Boolean(erreurs.fin || erreurs.confirmation));
 	// Le remplaçant commence au plus tôt aujourd'hui, et toujours après le début du mandat.
 	const debutPropose = $derived(m.debut < aujourdhui ? aujourdhui : ajouterJours(m.debut, 1));
-	const options = $derived(agentsPour(agents, poste, [t.id]).map((a) => ({ valeur: String(a.id), libelle: a.equipe ? `${a.nom} (${a.equipe})` : a.nom })));
-	const etat = surEnvoi(() => fermer, onreussite);
+	// La recherche par nom, comme dans le volet « Nommer » ; l'agent déjà choisi reste dans la liste.
+	let recherche = $state('');
+	let choisi = $state(untrack(() => refus?.valeurs?.personneId ?? ''));
+	let monte = $state(false);
+	onMount(() => (monte = true));
+	const options = $derived(
+		agentsPour(agents, poste, [t.id])
+			.filter((a) => String(a.id) === choisi || simple(a.nom).includes(simple(recherche)))
+			.map((a) => ({ valeur: String(a.id), libelle: a.equipe ? `${a.nom} (${a.equipe})` : a.nom }))
+	);
+	const etat = surEnvoi(
+		() => fermer,
+		(m) => onreussite(m)
+	);
 </script>
 
 <Panneau titre={t.nom} {fermer}>
@@ -44,13 +57,17 @@
 		</div>
 		<div role="alert">{#if refus?.message}<p class="echec">{refus.message}</p>{/if}</div>
 
-		<form method="POST" action="?/remplacer" class="formulaire" use:enhance={etat.soumettre}>
-			<h3>Remplacer</h3>
-			<input type="hidden" name="attributionId" value={m.id} />
-			<Choix id="remplacant-{m.id}" name="personneId" libelle="Nouveau titulaire" valeur={refus?.valeurs?.personneId ?? ''} options={[{ valeur: '', libelle: 'Choisissez un agent' }, ...options]} erreur={erreurs.personneId} />
-			<Champ id="debut-{m.id}" name="debut" type="date" libelle="À partir du" requis valeur={refus?.valeurs?.debut ?? debutPropose} erreur={erreurs.debut} aide="Le mandat de {t.nom} finira la veille." />
-			<div><Bouton type="submit" desactive={etat.envoi}>Remplacer</Bouton></div>
-		</form>
+		<!-- Un mandat qui n'a pas commencé ne se remplace pas : on annule la nomination, sous « Plus ». -->
+		{#if !aVenir}
+			<form method="POST" action="?/remplacer" class="formulaire" use:enhance={etat.soumettre}>
+				<h3>Remplacer</h3>
+				<input type="hidden" name="attributionId" value={m.id} />
+				{#if monte}<Champ id="chercher-{m.id}" name="recherche" type="search" libelle="Rechercher par nom" bind:valeur={recherche} />{/if}
+				<Choix id="remplacant-{m.id}" name="personneId" libelle="Nouveau titulaire" bind:valeur={choisi} options={[{ valeur: '', libelle: 'Choisissez un agent' }, ...options]} erreur={erreurs.personneId} />
+				<Champ id="debut-{m.id}" name="debut" type="date" libelle="À partir du" requis valeur={refus?.valeurs?.debut ?? debutPropose} erreur={erreurs.debut} aide="Le mandat de {t.nom} finira la veille." />
+				<div><Bouton type="submit" desactive={etat.envoi}>Remplacer</Bouton></div>
+			</form>
+		{/if}
 
 		{#if fiches || t.ecrire}
 			<div class="liens">

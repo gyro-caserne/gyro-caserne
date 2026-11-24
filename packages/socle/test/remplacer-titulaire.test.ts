@@ -76,4 +76,39 @@ describe('remplacerTitulaire', () => {
 		await base.update(attribution).set({ fin: '2026-06-30' }).where(eq(attribution.id, mandat));
 		await expect(remplacerTitulaire(base, superAdmin, { attributionId: mandat, personneId: nouveau, debut: aujourdhui }, aujourdhui)).rejects.toThrow('Ce mandat est déjà fini');
 	});
+
+	it('garde la fin d’une mission d’une durée fixée ; refuse une date après cette fin, et un mandat qui n’a pas commencé', async () => {
+		const { base, chefGarde, nouvelle, mandat } = await jeu();
+		await base.update(attribution).set({ fin: '2027-06-30' }).where(eq(attribution.id, mandat));
+		const nouveau = await nouvelle('nouveau@exemple.fr');
+		await expect(remplacerTitulaire(base, superAdmin, { attributionId: mandat, personneId: nouveau, debut: '2027-08-01' }, aujourdhui)).rejects.toThrow('Ce mandat finit avant cette date');
+		const id = await remplacerTitulaire(base, superAdmin, { attributionId: mandat, personneId: nouveau, debut: '2026-12-01' }, aujourdhui);
+		const [repris] = await base.select().from(attribution).where(eq(attribution.id, id));
+		expect(repris).toMatchObject({ debut: '2026-12-01', fin: '2027-06-30' });
+		const autre = await nouvelle('autre@exemple.fr');
+		await expect(remplacerTitulaire(base, superAdmin, { attributionId: id, personneId: autre, debut: '2026-12-15' }, aujourdhui)).rejects.toThrow('Ce mandat n’a pas commencé');
+		void chefGarde;
+	});
+
+	it('refuse sans rien dire du mandat à qui n’a pas le droit', async () => {
+		const { base, nouvelle, mandat } = await jeu();
+		const simple = await nouvelle('simple@exemple.fr');
+		await base.update(attribution).set({ fin: '2026-01-31' }).where(eq(attribution.id, mandat));
+		await expect(remplacerTitulaire(base, { type: 'personne', id: simple }, { attributionId: mandat, personneId: simple, debut: aujourdhui }, aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
+	});
+
+	it('l’adjoint : seul le chef de centre le remplace', async () => {
+		const { base, nouvelle } = await jeu();
+		const [chefCentre] = await base.insert(responsabilite).values({ nom: 'Chef de centre', nature: 'fonction', typePerimetre: 'centre', systeme: 'chef_centre' }).returning();
+		const [adjoint] = await base.insert(responsabilite).values({ nom: 'Chef de centre adjoint', nature: 'fonction', typePerimetre: 'centre', systeme: 'chef_centre_adjoint' }).returning();
+		await base.insert(responsabiliteDroit).values({ responsabiliteId: adjoint!.id, droit: 'ATTRIBUER_RESPONSABILITE' });
+		const chef = await nouvelle('chef@exemple.fr');
+		await attribuer(base, superAdmin, { personneId: chef, responsabiliteId: chefCentre!.id, perimetre: { type: 'centre' }, debut: '2026-01-01' }, aujourdhui);
+		const vieil = await nouvelle('vieil@exemple.fr');
+		const mandat = await attribuer(base, superAdmin, { personneId: vieil, responsabiliteId: adjoint!.id, perimetre: { type: 'centre' }, debut: '2026-01-01' }, aujourdhui);
+		const nouveau = await nouvelle('nouvel@exemple.fr');
+		// L'adjoint, qui nomme sur le centre, ne se remplace pas lui-même par un autre.
+		await expect(remplacerTitulaire(base, { type: 'personne', id: vieil }, { attributionId: mandat, personneId: nouveau, debut: aujourdhui }, aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
+		await expect(remplacerTitulaire(base, { type: 'personne', id: chef }, { attributionId: mandat, personneId: nouveau, debut: aujourdhui }, aujourdhui)).resolves.toBeTypeOf('number');
+	});
 });

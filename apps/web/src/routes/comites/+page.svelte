@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { murDuComite } from '#lib/murs/phrases.ts';
 	import LignesPoste from '#lib/nommer/LignesPoste.svelte';
@@ -32,12 +32,22 @@
 		const ouvert = posteVise(postes, voletVise(page.url.searchParams, form));
 		if (ouvert) return ouvert.poste.cle;
 		const reussi = form?.succes ? String(form.cible ?? '') : '';
-		return reussi.startsWith('nommer-') ? reussi.slice(7) : null;
+		if (reussi.startsWith('nommer-')) return reussi.slice(7);
+		return reussi.startsWith('mandat-') ? (posteVise(postes, { mandat: Number(reussi.slice(7)) })?.poste.cle ?? null) : null;
 	});
-	const ouvert = (cles: string[]) => (visePoste && cles.includes(visePoste) ? { open: true } : {});
+	// Ouvert dès le chargement par l'attribut ; ensuite, par la page, sans jamais le refermer (le volet fermé, on reste où l'on était).
+	const viseAuDepart = untrack(() => visePoste);
+	const ouvert = (cles: string[]) => (viseAuDepart && cles.includes(viseAuDepart) ? { open: true } : {});
+	const garderOuvert = (cles: string[]) => (groupe: HTMLDetailsElement) => {
+		if (visePoste && cles.includes(visePoste)) groupe.open = true;
+	};
 
 	// Une réussite avec JavaScript (le volet s'est fermé) ou sans (la page revient avec la réponse).
 	let reussite = $state('');
+	// Un volet qui s'ouvre efface l'annonce précédente.
+	$effect(() => {
+		if (posteVise(postes, voletVise(page.url.searchParams, form))) reussite = '';
+	});
 	const annonce = $derived(reussite || (form?.succes ? String(form.succes) : ''));
 
 	const resumeRoles = (roles: { id: number }[], centre = true) => resume(pluriel(roles.length, 'rôle'), centre ? roles.map((r) => posteDe(r.id, null)) : []);
@@ -97,7 +107,7 @@
 
 <!-- Un groupe replié, avec sa ligne de résumé ; il s'ouvre quand on vise l'un de ses postes. -->
 {#snippet groupe(titre: string, sommaire: string, cles: string[], contenu: Snippet)}
-	<details class="repli groupe" {...ouvert(cles)}>
+	<details class="repli groupe" {...ouvert(cles)} {@attach garderOuvert(cles)}>
 		<summary><span class="entete"><h2 class="titre-groupe">{titre}</h2><span class="resume">{sommaire}</span></span></summary>
 		<div class="contenu">{@render contenu()}</div>
 	</details>

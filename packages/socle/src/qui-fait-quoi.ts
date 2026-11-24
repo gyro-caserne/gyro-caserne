@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { regleDAttributionLue } from './actions/attributions.ts';
 import type { Base } from './base.ts';
 import { tenuesValides } from './casquettes.ts';
@@ -32,7 +32,7 @@ export type QuiFaitQuoi = {
 	// L'acteur peut faire une demande (un agent, pas le super administrateur).
 	peutDemander: boolean;
 	// Avec l'option `gestes`, pour qui peut nommer au moins un poste : les agents qu'on peut nommer (nom, équipe). Sinon null.
-	gestes: { agents: { id: number; nom: string; equipeId: number | null; equipe: string | null }[] } | null;
+	gestes: { agents: { id: number; nom: string; equipeId: number | null; equipe: string | null; exterieur: boolean }[] } | null;
 };
 
 // « Rapporteur de comité » se lit « Rapporteur » sous le nom du comité.
@@ -76,10 +76,18 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 		.from(attribution)
 		.where(or(isNull(attribution.fin), gte(attribution.fin, aujourdhui)))
 		.orderBy(asc(attribution.debut), asc(attribution.id));
+	// Et tous ceux qu'on peut nommer : les suspendus et les extérieurs aussi, comme le socle (seul un parti est refusé).
+	const lectureNommables = base
+		.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, type: profil.typePersonne })
+		.from(personne)
+		.leftJoin(profil, eq(profil.id, personne.profilId))
+		.where(ne(personne.statut, 'parti'));
 	type Mandats = Awaited<typeof lectureMandats>;
-	const lus = gestes ? await base.batch([...lectures, lectureMandats]) : await base.batch(lectures);
+	type Nommables = Awaited<typeof lectureNommables>;
+	const lus = gestes ? await base.batch([...lectures, lectureMandats, lectureNommables]) : await base.batch(lectures);
 	const [personnes, affectations, tenues, comites, roles, equipes, materiel, messagerie, grades] = lus;
 	const mandats = gestes ? ((lus as unknown as unknown[])[lectures.length] as Mandats) : null;
+	const nommables = gestes ? ((lus as unknown as unknown[])[lectures.length + 1] as Nommables) : [];
 	const agents = agentsDuJour([personnes, affectations, tenues], aujourdhui);
 	const moi = acteur.type === 'super' ? null : agents.find((a) => a.id === acteur.id);
 	if (moi === undefined) throw new RefusDroit('VOIR_ANNUAIRE', { type: 'centre' }, 'Réservé aux agents du centre');
@@ -102,14 +110,17 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 	const estChef = moi !== null && tenues.some((t) => t.personneId === moi.id && t.systeme === 'chef_centre');
 	const peut = regleDAttributionLue(acteur, droits, estChef);
 	const parRole = new Map(roles.map((r) => [r.id, r]));
-	const mandatsValides = (mandats ?? []).filter((m) => nomDe.has(m.personneId) && m.type === parRole.get(m.responsabiliteId)?.portee);
+	// Sur un poste nommable, chaque mandat se voit, même tenu par un suspendu ou un extérieur : on peut le remplacer ou le finir.
+	const nomNommable = new Map(nommables.map((p) => [p.id, `${p.prenom} ${p.nom}`]));
+	const mandatsValides = (mandats ?? []).filter((m) => nomNommable.has(m.personneId) && m.type === parRole.get(m.responsabiliteId)?.portee);
+	const titulaireNommable = (id: number): Titulaire => ({ id, nom: nomNommable.get(id)!, grade: gradeDe.get(id) ?? null, ecrire: nomDe.has(id) && ecrire(id) });
 	// Sur un poste que l'acteur peut nommer : un titulaire par mandat (en cours ou à venir), et ce qu'il y a à pourvoir.
 	const poste = (r: Role, perimetreId: number | null) => {
 		const perimetre = r.portee === 'centre' || perimetreId === null ? ({ type: 'centre' } as const) : { type: r.portee, id: perimetreId };
 		if (mandats === null || !peut(r, perimetre)) return null;
 		const tenus = mandatsValides
 			.filter((m) => m.responsabiliteId === r.id && (r.portee === 'centre' || m.perimetreId === perimetreId))
-			.map((m) => ({ ...titulaire(m.personneId), mandat: { id: m.id, debut: m.debut, fin: m.fin } }));
+			.map((m) => ({ ...titulaireNommable(m.personneId), mandat: { id: m.id, debut: m.debut, fin: m.fin } }));
 		return { titulaires: tenus, nommer: { aPourvoir: r.nature === 'fonction' && tenus.length === 0 } };
 	};
 	const roleTenu = (r: Role): RoleTenu => {
@@ -175,9 +186,10 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 	// L'équipe du jour de chaque agent : les siens passent d'abord quand on nomme dans une équipe.
 	const nomEquipe = new Map(equipes.map((e) => [e.id, e.nom]));
 	const equipeDe = new Map(affectations.filter((a) => nomEquipe.has(a.equipeId)).map((a) => [a.personneId, a.equipeId]));
-	const aNommer = [...agents]
-		.sort((x, y) => ordre.get(x.id)! - ordre.get(y.id)!)
-		.map((a) => ({ id: a.id, nom: nomDe.get(a.id)!, equipeId: equipeDe.get(a.id) ?? null, equipe: nomEquipe.get(equipeDe.get(a.id) ?? -1) ?? null }));
+	const parNom = (x: { nom: string; prenom: string }, y: { nom: string; prenom: string }) => x.nom.localeCompare(y.nom, 'fr') || x.prenom.localeCompare(y.prenom, 'fr');
+	const aNommer = [...nommables]
+		.sort(parNom)
+		.map((p) => ({ id: p.id, nom: nomNommable.get(p.id)!, equipeId: equipeDe.get(p.id) ?? null, equipe: nomEquipe.get(equipeDe.get(p.id) ?? -1) ?? null, exterieur: p.type === 'exterieur' }));
 	return { ...vue, gestes: { agents: aNommer } };
 }
 

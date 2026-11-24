@@ -34,7 +34,7 @@
 	function choixDepart() {
 		const c = niveauxDe(actuels);
 		for (const d of DOMAINES) {
-			const n = Number(saisis?.niveaux?.[d.id] ?? NaN);
+			const n = Number((saisis as { niveaux?: Record<string, string> } | undefined)?.niveaux?.[d.id] ?? NaN);
 			if (Number.isInteger(n) && n >= 0 && n < d.niveaux.length) c[d.id] = n;
 		}
 		return c;

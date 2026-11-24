@@ -4,7 +4,7 @@
 	import Champ from '#lib/ui/Champ.svelte';
 	import Choix from '#lib/ui/Choix.svelte';
 	import { agentsPour, intitule, simple, type Agent, type Poste } from './postes.ts';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { surEnvoi } from './envoi.svelte.ts';
 
@@ -17,12 +17,16 @@
 	const erreurs = $derived(refus?.erreurs ?? {});
 	const proposes = $derived(agentsPour(agents, poste, poste.titulaires.map((t) => t.id)));
 	let recherche = $state('');
-	let choisi = $state(refus?.valeurs?.personneId ?? '');
+	// L'agent choisi : celui d'un refus, sinon aucun ; le volet est recréé à chaque ouverture.
+	let choisi = $state(untrack(() => refus?.valeurs?.personneId ?? ''));
 	// La recherche réduit la liste ; l'agent déjà choisi y reste.
 	const options = $derived(
 		proposes.filter((a) => String(a.id) === choisi || simple(a.nom).includes(simple(recherche))).map((a) => ({ valeur: String(a.id), libelle: a.equipe ? `${a.nom} (${a.equipe})` : a.nom }))
 	);
-	const etat = surEnvoi(() => fermer, onreussite);
+	const etat = surEnvoi(
+		() => fermer,
+		(m) => onreussite(m)
+	);
 	// La recherche ne sert qu'avec JavaScript : sans lui, la liste entière.
 	let monte = $state(false);
 	onMount(() => (monte = true));
