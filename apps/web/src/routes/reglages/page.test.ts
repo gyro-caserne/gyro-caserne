@@ -56,6 +56,12 @@ describe('page Réglages', () => {
 		expect(groupe(page, 'Chefs de garde')).toContain('Chef de garde');
 	});
 
+	it('les listes du centre mènent aux aptitudes, à l’armement, à l’écusson et aux paliers d’ancienneté', () => {
+		const listes = groupe(html(Page, { data }), 'Listes du centre');
+		for (const href of ['/reglages/aptitudes', '/reglages/armement', '/reglages/ecusson', '/reglages/anciennete']) expect(listes).toContain(`href="${href}"`);
+		expect(listes).toMatch(/Paliers d’ancienneté[\s\S]*Les années de service fêtées au centre/);
+	});
+
 	it('une rangée par rôle, qui ouvre sa page : « À pourvoir » en alerte pour une fonction, « Sans titulaire » en neutre pour une mission, « Personnalisé » en pastille', () => {
 		const page = html(Page, { data });
 		expect(ligne(page, 1)).toMatch(/var\(--statut-alerte-fond\)[^>]*>(<!---->)?À pourvoir/);
