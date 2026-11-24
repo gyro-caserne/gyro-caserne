@@ -419,7 +419,7 @@ describe('/agents/[id] : aptitudes', () => {
 		const locals = locaux(base, { type: 'personne', id: chef });
 		expect(await agir('aptitude', locals, agent, { aptitudeId: String(ca1!.id), obtenueLe: '2020-03-01', expireLe: '' })).toEqual({ succes: true, message: 'Aptitude enregistrée', bloc: 'aptitudes' });
 		expect((await lire(locals, agent)).aptitudes).toMatchObject([{ nom: 'CA1', obtenueLe: '2020-03-01', expireLe: null, valide: true, controlee: true }]);
-		expect(await agir('aptitude', locals, agent, { aptitudeId: String(ca1!.id), obtenueLe: '2020-03-01', expireLe: '2019-01-01' })).toMatchObject({ status: 400, data: { message: 'La date d’expiration doit suivre la date d’obtention.', bloc: 'aptitudes' } });
+		expect(await agir('aptitude', locals, agent, { aptitudeId: String(ca1!.id), obtenueLe: '2020-03-01', expireLe: '2019-01-01' })).toMatchObject({ status: 400, data: { message: 'La date d’expiration doit suivre la date d’obtention.', bloc: 'aptitudes', valeurs: { aptitudeId: String(ca1!.id), obtenueLe: '2020-03-01', expireLe: '2019-01-01' } } });
 		await agir('oterAptitude', locals, agent, { aptitudeId: String(ca1!.id) });
 		expect(await base.select().from(aptitudeAgent)).toEqual([]);
 		await expect(agir('aptitude', locaux(base, { type: 'personne', id: agent }), agent, { aptitudeId: String(ca1!.id), obtenueLe: '2020-03-01' })).rejects.toMatchObject({ status: 403 });

@@ -49,6 +49,9 @@
 		};
 	};
 
+	// Le formulaire d'aptitude reprend la saisie refusée.
+	const saisieAptitude = (cle: string, defaut: string) => (generale?.bloc === 'aptitudes' ? (valeurs[cle] ?? defaut) : defaut);
+
 	const nominations = $derived(data.peutAttribuer);
 	const saisie = (cle: string, defaut: string) => (concerne('attribuer') ? (form?.valeurs?.[cle] ?? defaut) : defaut);
 	let responsabiliteChoisie = $derived(saisie('responsabiliteId', nominations[0] ? String(nominations[0].responsabiliteId) : ''));
@@ -455,9 +458,9 @@
 				{#if !data.raison && data.aptitudesDuCentre.length > 0}
 					<form method="POST" action={action('aptitude')} class="nomination">
 						<h3>Ajouter ou corriger une aptitude</h3>
-						<Choix id="aptitude" name="aptitudeId" libelle="Aptitude" valeur={String(data.aptitudesDuCentre[0]!.id)} options={data.aptitudesDuCentre.map((a) => ({ valeur: String(a.id), libelle: a.nom }))} />
-						<Champ id="obtenue" name="obtenueLe" type="date" libelle="Obtenue le" requis valeur={aujourdhuiIso} />
-						<Champ id="expire" name="expireLe" type="date" libelle="Expire le" aide="Facultative. Sans date, l’aptitude vaut jusqu’à ce qu’on la retire." />
+						<Choix id="aptitude" name="aptitudeId" libelle="Aptitude" valeur={saisieAptitude('aptitudeId', String(data.aptitudesDuCentre[0]!.id))} options={data.aptitudesDuCentre.map((a) => ({ valeur: String(a.id), libelle: a.nom }))} />
+						<Champ id="obtenue" name="obtenueLe" type="date" libelle="Obtenue le" requis valeur={saisieAptitude('obtenueLe', aujourdhuiIso)} />
+						<Champ id="expire" name="expireLe" type="date" libelle="Expire le" aide="Facultative. Sans date, l’aptitude vaut jusqu’à ce qu’on la retire." valeur={saisieAptitude('expireLe', '')} />
 						<Bouton type="submit">Enregistrer l’aptitude</Bouton>
 					</form>
 				{/if}

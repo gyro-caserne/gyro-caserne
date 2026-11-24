@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { dePlage } from '@gyro-caserne/socle';
 	import { heure } from '#lib/murs/quand.ts';
 	import { jourLong } from '#lib/planning/dates.ts';
 	import Bouton from '#lib/ui/Bouton.svelte';
@@ -24,7 +25,7 @@
 	});
 	const durees = $derived([{ valeur: '2', libelle: '2 h' }, ...(max === 3 ? [{ valeur: '3', libelle: '3 h' }] : [])]);
 	const fin = $derived(debut ? new Date(Date.parse(`${debut}:00Z`) + Number(duree) * 3_600_000).toISOString().slice(0, 16) : '');
-	const recap = $derived(debut ? `Remplacement de ${heure(debut)} à ${heure(fin)}${debut.slice(0, 10) === jour ? '' : `, ${jourLong(debut)}`}, ouvert à tous les disponibles.` : '');
+	const recap = $derived(debut ? `Remplacement ${dePlage({ debut, fin })}${debut.slice(0, 10) === jour ? '' : `, ${jourLong(debut)}`}, ouvert à tous les disponibles.` : '');
 </script>
 
 <svelte:head>

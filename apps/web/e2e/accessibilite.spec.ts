@@ -1068,9 +1068,12 @@ test.describe('qui fait quoi', () => {
 		await page.getByRole('link', { name: new RegExp(`^${premier.nom}`) }).click();
 		const volet = page.getByRole('dialog', { name: premier.nom, exact: true });
 		await expect(volet.getByText(role, { exact: true })).toBeVisible();
-		// « Remplacer » déplie le formulaire sur place.
+		// « Remplacer » déplie le formulaire sur place, puis passe en secondaire : seul « Confirmer le remplacement » reste rouge.
+		await expect(volet.getByRole('button', { name: 'Remplacer', exact: true })).toHaveClass(/\bprincipal\b/);
 		await volet.getByRole('button', { name: 'Remplacer', exact: true }).click();
 		await expect(volet.getByRole('button', { name: 'Remplacer', exact: true })).toHaveAttribute('aria-expanded', 'true');
+		await expect(volet.getByRole('button', { name: 'Remplacer', exact: true })).toHaveClass(/\bsecondaire\b/);
+		await expect(volet.getByRole('button', { name: 'Confirmer le remplacement', exact: true })).toHaveClass(/\bprincipal\b/);
 		await volet.getByLabel('Nouveau titulaire', { exact: true }).selectOption({ label: `${second.nom} (Équipe 1)` });
 		await volet.getByRole('button', { name: 'Confirmer le remplacement', exact: true }).click();
 		await expect(volet).toHaveCount(0);

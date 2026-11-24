@@ -31,6 +31,13 @@ describe('Quelques heures', () => {
 		expect(html).not.toContain('Envoyer la demande');
 	});
 
+	// Demandé à 21 h 45 : le premier début est 22 h, et la plage finit à minuit. La phrase le dit comme le reste de l'appli (la liste
+	// des remplacements, le planning) : un test qui la relit y retrouve la même plage.
+	it('le soir, une plage qui finit à minuit se dit « à minuit », comme ailleurs', () => {
+		expect(page({ debuts: [{ debut: '2026-11-24T22:00', max: 2 }] })).toContain('Remplacement de 22 h à minuit, ouvert à tous les disponibles.');
+		expect(page({ debuts: [{ debut: '2026-11-24T22:15', max: 2 }] })).toContain('Remplacement de 22 h 15 à 0 h 15, ouvert à tous les disponibles.');
+	});
+
 	it('un refus du socle est dit sur la page', () => {
 		expect(page({ debuts }, { message: 'La plage doit tenir dans votre astreinte du jour.' })).toMatch(/role="alert"[^>]*>La plage doit tenir/);
 	});

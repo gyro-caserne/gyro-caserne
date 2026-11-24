@@ -56,6 +56,10 @@ test.describe.serial('remplacement court', () => {
 		await page.goto('/remplacements/court');
 		await expect(page.getByRole('heading', { level: 1, name: 'Quelques heures' })).toBeVisible();
 		await sansViolation(page);
+		// Le deuxième début s'il y en a un : le premier quart d'heure peut passer pendant le test, et la demande serait refusée.
+		const choixDebut = page.getByLabel('Début', { exact: true });
+		const debuts = choixDebut.locator('option');
+		if ((await debuts.count()) > 1) await choixDebut.selectOption({ index: 1 });
 		await page.getByLabel('2 h').check();
 		const phrase = (await page.getByText(/^Remplacement de .* ouvert à tous les disponibles\.$/).textContent()) ?? '';
 		const plage = phrase.match(/de (\d+ h(?: \d+)?) à (\d+ h(?: \d+)?|minuit)/)!;
