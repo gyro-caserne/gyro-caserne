@@ -38,6 +38,11 @@
 		{#if monte}<Champ id="chercher-{poste.cle}" name="recherche" type="search" libelle="Rechercher par nom" bind:valeur={recherche} />{/if}
 		<Choix id="agent-{poste.cle}" name="personneId" libelle="Agent" bind:valeur={choisi} options={[{ valeur: '', libelle: 'Choisissez un agent' }, ...options]} erreur={erreurs.personneId} />
 		<Champ id="debut-{poste.cle}" name="debut" type="date" libelle="À partir du" requis valeur={refus?.valeurs?.debut ?? aujourdhui} erreur={erreurs.debut ?? erreurs.perimetreId ?? erreurs.responsabiliteId} />
+		<!-- Une mission d'une durée connue : sa fin se fixe dès la nomination, comme avant. -->
+		<details class="repli" {...erreurs.fin || refus?.valeurs?.fin ? { open: true } : {}}>
+			<summary>Fixer une date de fin</summary>
+			<Champ id="fin-{poste.cle}" name="fin" type="date" libelle="Dernier jour" aide="Facultatif. Sans date, le mandat dure jusqu’à ce qu’on le finisse." valeur={refus?.valeurs?.fin ?? ''} erreur={erreurs.fin} />
+		</details>
 		<div><Bouton type="submit" desactive={etat.envoi}>Nommer</Bouton></div>
 	</form>
 </Panneau>

@@ -323,9 +323,11 @@ describe('page fiche agent', () => {
 			expect(page).not.toContain('value="99"');
 		});
 
-		it('propose le formulaire d\'attribution seulement s\'il y a quelque chose à attribuer', () => {
+		it('propose « Nommer à un rôle » seulement s\'il y a quelque chose à nommer', () => {
 			expect(html({ data, form: null })).not.toContain('action="?/attribuer"');
 			const page = html({ data: { ...data, peutAttribuer }, form: null });
+			expect(page).toMatch(/<details class="repli nommer[^"]*"><summary[^>]*>Nommer à un rôle<\/summary>/);
+			expect(page).not.toContain('Attribuer une responsabilité');
 			expect(page).toContain('action="?/attribuer"');
 			expect(page).toMatch(/<select[^>]*name="responsabiliteId"/);
 			expect(page).toMatch(/<input[^>]*type="date"[^>]*name="debut"|<input[^>]*name="debut"[^>]*type="date"/);
@@ -340,7 +342,7 @@ describe('page fiche agent', () => {
 
 		it('désactive le bouton pendant l\'envoi (bouton actif au départ)', () => {
 			const page = html({ data: { ...data, peutAttribuer }, form: null });
-			const bouton = page.match(/<button[^>]*>(<!--[^>]*-->)*Attribuer/);
+			const bouton = page.match(/<button[^>]*>(<!--[^>]*-->)*Nommer/);
 			expect(bouton).not.toBeNull();
 			expect(bouton![0]).not.toContain('disabled');
 		});

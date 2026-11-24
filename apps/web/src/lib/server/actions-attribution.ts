@@ -8,7 +8,7 @@ import { maintenantParis } from '#lib/aujourdhui.ts';
 type Contexte = { base: App.Locals['base']; acteur: Acteur; aujourdhui: string; formulaire: FormData; cible: string };
 
 // « Attribuer » : lit et vérifie le formulaire (responsabilité, périmètre, dates), puis laisse le socle trancher.
-// Partagé par la fiche de l'agent et la page « Nominations ». `personneId` est null si l'agent n'est pas choisi.
+// Partagé par la fiche de l'agent et les volets « Nommer » (Qui fait quoi, fiches d'un rôle et d'un comité). `personneId` est null si l'agent n'est pas choisi.
 export async function nommer({ base, acteur, aujourdhui, formulaire, cible }: Contexte, personneId: number | null) {
 	const texte = (cle: string) => String(formulaire.get(cle) ?? '').trim();
 	const valeurs = { responsabiliteId: texte('responsabiliteId'), perimetre: texte('perimetre'), debut: texte('debut'), fin: texte('fin'), personneId: texte('personneId') };
@@ -33,10 +33,10 @@ export async function nommer({ base, acteur, aujourdhui, formulaire, cible }: Co
 	} catch (erreur) {
 		return echecAttribution(erreur, { cible, valeurs });
 	}
-	return { cible, succes: true, message: 'Rôle attribué' };
+	return { cible, succes: true, message: 'Nomination enregistrée.' };
 }
 
-// Rôles visés par « Terminer » et « Changer la date de fin ». `role` (page « Nominations ») place le message dans la carte du rôle.
+// Rôles visés par « Terminer » et « Changer la date de fin », sur la fiche de l'agent.
 // `estVisible` limite les rôles qu'on peut viser depuis la page (un identifiant fabriqué est refusé).
 type Retrait = Omit<Contexte, 'cible'> & { role?: number };
 type EstVisible = (attributionId: number) => Promise<boolean>;
