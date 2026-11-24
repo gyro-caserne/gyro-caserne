@@ -439,3 +439,33 @@ describe('/agents/[id] : passage à un profil extérieur', () => {
 		expect(r).toMatchObject({ status: 400, data: { erreurs: { profilId: 'Le chef de centre et son adjoint restent agents' } } });
 	});
 });
+
+describe('/agents/[id] : personne extérieure', () => {
+	async function avecRene() {
+		const j = await preparer();
+		const [reserve] = await j.base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const [rene] = await j.base.insert(personne).values({ email: 'rene@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: reserve!.id }).returning();
+		return { ...j, rene: rene!.id, locals: locaux(j.base, super_) };
+	}
+
+	it('pas d’équipe : refusé sur le champ, rien d’écrit', async () => {
+		const { base, rene, equipe1, locals } = await avecRene();
+		expect(await agir('equipe', locals, rene, { equipeId: String(equipe1.id) })).toMatchObject({ status: 400, data: { erreurs: { equipeId: 'Une personne extérieure n’a pas d’équipe' } } });
+		expect(await base.select().from(affectationEquipe)).toEqual([]);
+	});
+
+	it('statut : le départ et le retour seulement', async () => {
+		const { base, rene, locals } = await avecRene();
+		expect(await agir('statut', locals, rene, { statut: 'stagiaire' })).toMatchObject({ status: 400, data: { erreurs: { statut: 'Statut sans objet pour une personne extérieure' } } });
+		expect(await agir('statut', locals, rene, { statut: 'parti', confirmation: 'oui' })).toMatchObject({ succes: true });
+		expect(await agir('statut', locals, rene, { statut: 'operationnel' })).toMatchObject({ succes: true, bloc: 'depart' });
+		expect((await lirePersonne(base, rene)).statut).toBe('operationnel');
+	});
+
+	it('grade et dates de parcours envoyés quand même : ignorés', async () => {
+		const { base, rene, locals } = await avecRene();
+		const [unGrade] = await base.select().from(grade).limit(1);
+		expect(await agir('fiche', locals, rene, { gradeId: String(unGrade!.id), entreeCentre: '2020-01-01' })).toMatchObject({ succes: true });
+		expect(await lirePersonne(base, rene)).toMatchObject({ gradeId: null, entreeCentre: null });
+	});
+});

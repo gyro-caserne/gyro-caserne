@@ -311,6 +311,17 @@ describe('apercuImport : erreurs', () => {
 		expect(apercu.operations).toEqual([]);
 	});
 
+	it('personne extérieure : ni équipe, ni statut d’agent', async () => {
+		const { base, acteur } = await jeu();
+		const fichier = await exporter(base, acteur);
+		const ligne = ajouter(fichier, { ...arrivee, Profil: 'Réserve citoyenne', Équipe: 'Équipe 2', Statut: 'Stagiaire' });
+		const apercu = await apercuImport(base, acteur, fichier, aujourdhui, reservees);
+		expect(apercu.erreurs).toEqual([
+			{ ligne, colonne: 'Équipe', message: 'Une personne extérieure n’a pas d’équipe' },
+			{ ligne, colonne: 'Statut', message: 'Statut sans objet pour une personne extérieure' }
+		]);
+	});
+
 	it('e-mail réservé, déjà pris par un autre agent, ou en double dans le fichier', async () => {
 		const { base, acteur, nouvelle } = await jeu();
 		const lea = await nouvelle('Léa', 'Durand');

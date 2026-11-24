@@ -8,7 +8,8 @@
 
 	type Lien = { href: string; titre: string; texte?: string; valeur?: string };
 	const organisation: Lien[] = $derived([
-		{ href: '/agents', titre: 'Agents', valeur: data.agents === undefined ? undefined : pluriel(data.agents, 'agent') },
+		// La liste des agents : pas pour une personne extérieure (réserve citoyenne), venue pour réserver.
+		...(data.exterieur ? [] : [{ href: '/agents', titre: 'Agents', valeur: data.agents === undefined ? undefined : pluriel(data.agents, 'agent') }]),
 		...(data.comites ? [{ href: '/comites', titre: 'Comités et référents', texte: 'Qui fait quoi au centre' }] : []),
 		...(data.peutNominations
 			? [{ href: '/nominations', titre: 'Nominations', texte: 'Qui tient quel rôle', valeur: data.aPourvoir ? `${data.aPourvoir} à pourvoir` : undefined }]
@@ -35,7 +36,7 @@
 <div class="page">
 	<EnTetePage titre="Caserne" />
 	<div class="colonnes">
-		{#each [{ titre: 'Organisation', liens: organisation }, { titre: 'Matériel', liens: materiel }] as g (g.titre)}
+		{#each [{ titre: 'Organisation', liens: organisation }, { titre: 'Matériel', liens: materiel }].filter((g) => g.liens.length > 0) as g (g.titre)}
 			<ListeRangees titre={g.titre}>
 				{#each g.liens as l (l.href)}
 					<li><Rangee href={l.href} titre={l.titre} sous={l.texte} valeur={l.valeur} /></li>

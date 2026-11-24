@@ -8,8 +8,11 @@ const connexion = { href: '/connexion', libelle: 'Connexion', icone: 'connexion'
 const affichage = { href: '/affichage', libelle: 'Affichage', icone: 'affichage' };
 
 // Les droits n'ajoutent pas d'onglet : ils ajoutent des boutons dans les pages.
-export function entreesNavigation(connecte: boolean): EntreeNavigation[] {
-	return connecte ? [accueil, planning, caserne, echanges] : [connexion, affichage];
+// Une personne extérieure (retraité, réserve citoyenne) n'a pas de planning, et Caserne seulement si elle peut réserver.
+export function entreesNavigation(connecte: boolean, { exterieur = false, caserne: avecCaserne = true } = {}): EntreeNavigation[] {
+	if (!connecte) return [connexion, affichage];
+	if (exterieur) return avecCaserne ? [accueil, caserne, echanges] : [accueil, echanges];
+	return [accueil, planning, caserne, echanges];
 }
 
 // Les pages rangées sous un onglet, ou sous « Moi », en plus de la sienne.

@@ -409,11 +409,11 @@ export async function enTeteDe(
 	acteur: Acteur,
 	aujourdhui: string,
 	maintenant = `${aujourdhui}T00:00`
-): Promise<{ nonLues: number; remplacementsAValider: number; signalements: number; aTrancher: number; nonLus: number; suivi: number | null; visage: { prenom: string; nom: string; couleur: string | null } | null; ecusson: number | null }> {
+): Promise<{ nonLues: number; remplacementsAValider: number; signalements: number; aTrancher: number; nonLus: number; suivi: number | null; visage: { prenom: string; nom: string; couleur: string | null } | null; ecusson: number | null; exterieur: boolean }> {
 	exigerDate(aujourdhui);
 	if (acteur.type !== 'personne') {
 		const [signalements, aTrancher, ecusson] = await Promise.all([nombreSignalements(base, acteur, aujourdhui), nombreAValider(base, acteur, aujourdhui), ecussonDuCentre(base)]);
-		return { nonLues: 0, remplacementsAValider: 0, signalements, aTrancher, nonLus: 0, suivi: 0, visage: null, ecusson };
+		return { nonLues: 0, remplacementsAValider: 0, signalements, aTrancher, nonLus: 0, suivi: 0, visage: null, ecusson, exterieur: false };
 	}
 	const qui = sql`"personne"."id"`;
 	const [l] = await base
@@ -430,12 +430,14 @@ export async function enTeteDe(
 			nonLus: sql<number>`${nonLusPour(qui, aujourdhui)}`,
 			// Les nouveautés du suivi du centre (chef, adjoint) : une ligne de la cloche, sans envoi au téléphone.
 			suivi: sql<number | null>`${nouveautesSuiviSql(aujourdhui)}`,
-			ecusson: sql<number | null>`(select ${ecusson.photoId} from ${ecusson})`
+			ecusson: sql<number | null>`(select ${ecusson.photoId} from ${ecusson})`,
+			// Une personne d'un profil extérieur (retraité, réserve citoyenne) : la navigation n'offre pas le planning.
+			exterieur: sql<number>`exists (select 1 from profil pr where pr.id = "personne"."profil_id" and pr.type_personne = 'exterieur')`
 		})
 		.from(personne)
 		.where(eq(personne.id, acteur.id));
-	if (!l) return { nonLues: 0, remplacementsAValider: 0, signalements: 0, aTrancher: 0, nonLus: 0, suivi: null, visage: null, ecusson: await ecussonDuCentre(base) };
-	return { nonLues: l.nonLues, remplacementsAValider: l.aValider, signalements: l.signalements, aTrancher: l.aTrancher, nonLus: l.nonLus, suivi: l.suivi, visage: { prenom: l.prenom, nom: l.nom, couleur: l.couleur }, ecusson: l.ecusson };
+	if (!l) return { nonLues: 0, remplacementsAValider: 0, signalements: 0, aTrancher: 0, nonLus: 0, suivi: null, visage: null, ecusson: await ecussonDuCentre(base), exterieur: false };
+	return { nonLues: l.nonLues, remplacementsAValider: l.aValider, signalements: l.signalements, aTrancher: l.aTrancher, nonLus: l.nonLus, suivi: l.suivi, visage: { prenom: l.prenom, nom: l.nom, couleur: l.couleur }, ecusson: l.ecusson, exterieur: l.exterieur === 1 };
 }
 
 export async function toutMarquerLu(base: Base, acteur: Acteur, maintenant: string): Promise<void> {

@@ -45,6 +45,16 @@ async function exigerProtection(base: Base, acteur: Acteur, personneId: number, 
 
 type Complements = { gradeId?: number | null; dateGrade?: string | null; telephone?: string | null; naissance?: string | null; entreeCentre?: string | null; engagementSpv?: string | null };
 
+// Une personne extérieure (retraité, réserve citoyenne) n'a ni grade ni dates de parcours : envoyés quand même (formulaire sans JavaScript), ils sont ignorés.
+const PARCOURS = ['gradeId', 'dateGrade', 'entreeCentre', 'engagementSpv'] as const;
+function sansParcours<T extends Complements>(donnees: T): T {
+	const reste = { ...donnees };
+	for (const cle of PARCOURS) delete reste[cle];
+	return reste;
+}
+// Et seulement deux statuts : présente, ou partie.
+const STATUTS_EXTERIEUR: readonly StatutOperationnel[] = ['operationnel', 'parti'];
+
 async function exigerComplements(base: Base, c: Complements) {
 	for (const date of [c.dateGrade, c.naissance, c.entreeCentre, c.engagementSpv]) if (date != null) exigerDate(date);
 	if (c.gradeId != null) {
@@ -112,6 +122,10 @@ export async function ajouterPersonne(
 		if (donnees.statut === 'parti') throw new DonneeInvalide('Statut impossible à la création');
 	}
 	const leProfil = await exigerProfil(base, donnees.profilId);
+	if (leProfil.typePersonne === 'exterieur') {
+		const { equipeId: _equipe, statut: _statut, ...reste } = sansParcours(donnees);
+		donnees = reste;
+	}
 
 	// Le chef de garde n'agit que sur un agent de son équipe.
 	const vise: Perimetre = leProfil.typePersonne === 'agent' && donnees.equipeId !== undefined ? { type: 'equipe', id: donnees.equipeId } : centre;
@@ -152,10 +166,15 @@ export async function ajouterPersonne(
 export async function changerStatut(base: Base, basePhotos: BasePhotos, acteur: Acteur, personneId: number, statut: StatutOperationnel, maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	if (!(STATUTS_OPERATIONNELS as readonly string[]).includes(statut)) throw new DonneeInvalide('Statut inconnu');
-	const [fiche] = await base.select({ id: personne.id, email: personne.email, prenom: personne.prenom, nom: personne.nom, profilId: personne.profilId, statut: personne.statut, effaceLe: personne.effaceLe }).from(personne).where(eq(personne.id, personneId));
+	const [fiche] = await base
+		.select({ id: personne.id, email: personne.email, prenom: personne.prenom, nom: personne.nom, profilId: personne.profilId, statut: personne.statut, effaceLe: personne.effaceLe, typePersonne: profil.typePersonne })
+		.from(personne)
+		.leftJoin(profil, eq(profil.id, personne.profilId))
+		.where(eq(personne.id, personneId));
 	if (!fiche) throw new DonneeInvalide('Personne inconnue');
 	// Un agent effacé ne revient pas : s'il revient au centre, on lui refait une fiche.
 	if (fiche.effaceLe !== null) throw new DonneeInvalide('Agent effacé');
+	if (fiche.typePersonne === 'exterieur' && !STATUTS_EXTERIEUR.includes(statut)) throw new DonneeInvalide('Statut sans objet pour une personne extérieure');
 	await exigerProtection(base, acteur, personneId, aujourdhui, {
 		chef: 'Seul un super administrateur change le statut du chef de centre',
 		adjoint: 'Seuls le chef de centre ou un super administrateur changent le statut d’un adjoint'
@@ -235,7 +254,7 @@ export async function modifierFiche(
 	});
 
 	// Seuls ces champs : le statut ou le contact d'urgence ont leurs propres règles.
-	const nouveaux = Object.fromEntries(CHAMPS_FICHE.filter((cle) => champs[cle] !== undefined).map((cle) => [cle, champs[cle]])) as Partial<ChampsFiche>;
+	let nouveaux = Object.fromEntries(CHAMPS_FICHE.filter((cle) => champs[cle] !== undefined).map((cle) => [cle, champs[cle]])) as Partial<ChampsFiche>;
 	const textes = { email: 'Adresse', prenom: 'Prénom', nom: 'Nom' } as const;
 	for (const cle of ['email', 'prenom', 'nom'] as const) {
 		const valeur: unknown = champs[cle];
@@ -248,6 +267,10 @@ export async function modifierFiche(
 	exigerLongueurs(nouveaux);
 	await exigerComplements(base, nouveaux);
 	const nouveauProfil = nouveaux.profilId !== undefined ? await exigerProfil(base, nouveaux.profilId) : null;
+	// Le profil après l'enregistrement : lu seulement si des champs de parcours sont envoyés sans changer de profil.
+	const avecParcours = PARCOURS.some((cle) => nouveaux[cle] !== undefined);
+	const typeFinal = nouveauProfil?.typePersonne ?? (avecParcours && fiche.profilId !== null ? (await base.select({ type: profil.typePersonne }).from(profil).where(eq(profil.id, fiche.profilId)))[0]?.type : undefined);
+	if (typeFinal === 'exterieur') nouveaux = sansParcours(nouveaux);
 
 	const changes = Object.fromEntries(Object.entries(nouveaux).filter(([cle, valeur]) => valeur !== fiche[cle as keyof ChampsFiche])) as Partial<ChampsFiche>;
 	if (Object.keys(changes).length === 0) return;
@@ -279,6 +302,8 @@ async function passageExterieur(base: Base, acteur: Acteur, fiche: typeof person
 	const enCoursHabillement = and(eq(demandeHabillement.demandeurId, fiche.id), notInArray(demandeHabillement.etape, [...FINIES, 'traitee']));
 	return {
 		ecritures: [
+			// Stagiaire ou inapte n'ont pas de sens pour une personne extérieure ; une suspension reste.
+			base.update(personne).set({ statut: 'operationnel' }).where(and(eq(personne.id, fiche.id), inArray(personne.statut, ['stagiaire', 'inapte_temporaire']))),
 			...retraitEquipe(base, acteur, fiche.id, affectations, aujourdhui),
 			...finirOuSupprimer(base, attribution, eq(attribution.personneId, fiche.id), aujourdhui),
 			...groupes.ecritures,
@@ -329,9 +354,10 @@ export async function affecterEquipe(base: Base, acteur: Acteur, personneId: num
 	exigerDate(aujourdhui);
 	exigerDate(debut);
 	await exiger(base, acteur, centre, aujourdhui);
-	const [fiche] = await base.select({ id: personne.id, effaceLe: personne.effaceLe }).from(personne).where(eq(personne.id, personneId));
+	const [fiche] = await base.select({ id: personne.id, effaceLe: personne.effaceLe, typePersonne: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, personneId));
 	if (!fiche) throw new DonneeInvalide('Personne inconnue');
 	if (fiche.effaceLe !== null) throw new DonneeInvalide('Agent effacé');
+	if (fiche.typePersonne === 'exterieur') throw new DonneeInvalide('Une personne extérieure n’a pas d’équipe');
 	await exigerProtection(base, acteur, personneId, aujourdhui, REFUS_EQUIPE);
 	const [uneEquipe] = await base.select().from(equipe).where(eq(equipe.id, equipeId));
 	if (!uneEquipe) throw new DonneeInvalide('Équipe inconnue');

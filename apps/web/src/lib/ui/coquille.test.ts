@@ -158,6 +158,17 @@ describe('entreesNavigation', () => {
 			['/echanges', 'Échanges']
 		]);
 	});
+	it('personne extérieure : ni Planning, ni Caserne sauf si elle peut réserver', () => {
+		expect(entreesNavigation(true, { exterieur: true, caserne: false }).map((e) => e.libelle)).toEqual(['Accueil', 'Échanges']);
+		expect(entreesNavigation(true, { exterieur: true, caserne: true }).map((e) => e.libelle)).toEqual(['Accueil', 'Caserne', 'Échanges']);
+		expect(entreesNavigation(true, { exterieur: false, caserne: true }).map((e) => e.libelle)).toEqual(['Accueil', 'Planning', 'Caserne', 'Échanges']);
+	});
+	it('la coquille d’une personne extérieure : pas de lien vers le planning', () => {
+		const page = render(Coquille, { props: { chemin: '/', connecte: true, exterieur: true, caserne: false, nomCentre: 'CIS Test', children: contenu } }).body;
+		expect(page).not.toContain('href="/planning"');
+		expect(page).not.toContain('href="/caserne"');
+		expect(page).toContain('href="/echanges"');
+	});
 	it('sans connexion : Connexion et Affichage', () => {
 		expect(entreesNavigation(false).map((e) => e.href)).toEqual(['/connexion', '/affichage']);
 	});

@@ -875,3 +875,71 @@ describe('adresse réservée au super administrateur', () => {
 		await expect(modifierFiche(base, superAdmin, id, { email: 'libre@exemple.fr' }, aujourdhui, reservees)).resolves.toBeUndefined();
 	});
 });
+
+// Une personne extérieure (retraité, réserve citoyenne) n'a ni équipe, ni grade, ni statut d'agent, ni dates de parcours.
+describe('personne extérieure', () => {
+	async function avecGrade() {
+		const j = await jeu();
+		const [sap] = await j.base.insert(grade).values({ code: 'SAP', libelle: 'Sapeur', ordre: 1 }).returning();
+		return { ...j, sap: sap! };
+	}
+	const parcours = (gradeId: number) => ({ gradeId, dateGrade: '2025-06-01', entreeCentre: '2020-01-01', engagementSpv: '2019-09-01' });
+
+	it('à l’ajout : équipe, grade, dates de parcours et statut ignorés ; le reste écrit', async () => {
+		const { base, ext, sap } = await avecGrade();
+		const id = await ajouterPersonne(base, superAdmin, { email: 'r@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: ext.id, equipeId: 1, statut: 'stagiaire', telephone: '0600000000', naissance: '1950-01-01', ...parcours(sap.id) }, aujourdhui, []);
+		const [p] = await base.select().from(personne).where(eq(personne.id, id));
+		expect(p).toMatchObject({ statut: 'operationnel', gradeId: null, dateGrade: null, entreeCentre: null, engagementSpv: null, telephone: '0600000000', naissance: '1950-01-01' });
+		expect(await base.select().from(affectationEquipe)).toEqual([]);
+	});
+
+	it('pas d’équipe : l’affectation est refusée', async () => {
+		const { base, ext } = await jeu();
+		const id = await ajouterPersonne(base, superAdmin, { email: 'r@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: ext.id }, aujourdhui, []);
+		await expect(affecterEquipe(base, superAdmin, id, 1, aujourdhui, aujourdhui)).rejects.toThrow(new DonneeInvalide('Une personne extérieure n’a pas d’équipe'));
+		expect(await base.select().from(affectationEquipe)).toEqual([]);
+	});
+
+	it('sur sa fiche : grade et dates de parcours ignorés, même au passage depuis un profil d’agent', async () => {
+		const { base, agent, ext, sap } = await avecGrade();
+		const rene = await ajouterPersonne(base, superAdmin, { email: 'r@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: ext.id }, aujourdhui, []);
+		await modifierFiche(base, superAdmin, rene, { nom: 'Vieux', ...parcours(sap.id) }, aujourdhui, []);
+		const paul = await ajouterPersonne(base, superAdmin, { email: 'p@exemple.fr', prenom: 'Paul', nom: 'Petit', profilId: agent.id }, aujourdhui, []);
+		await modifierFiche(base, superAdmin, paul, { profilId: ext.id, ...parcours(sap.id) }, aujourdhui, [], { basePhotos: base.photos, maintenant: midi });
+		const lignes = await base.select().from(personne).where(eq(personne.prenom, 'René'));
+		expect(lignes[0]).toMatchObject({ nom: 'Vieux', gradeId: null, dateGrade: null, entreeCentre: null, engagementSpv: null });
+		const [p] = await base.select().from(personne).where(eq(personne.id, paul));
+		expect(p).toMatchObject({ profilId: ext.id, gradeId: null, entreeCentre: null });
+	});
+
+	it('un agent garde son grade et ses dates', async () => {
+		const { base, agent, sap } = await avecGrade();
+		const id = await ajouterPersonne(base, superAdmin, { email: 'a@exemple.fr', prenom: 'A', nom: 'B', profilId: agent.id }, aujourdhui, []);
+		await modifierFiche(base, superAdmin, id, parcours(sap.id), aujourdhui, []);
+		const [p] = await base.select().from(personne).where(eq(personne.id, id));
+		expect(p).toMatchObject(parcours(sap.id));
+	});
+
+	it('statut : seulement le départ et le retour', async () => {
+		const { base, ext } = await jeu();
+		const id = await ajouterPersonne(base, superAdmin, { email: 'r@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: ext.id }, aujourdhui, []);
+		for (const statut of ['stagiaire', 'inapte_temporaire', 'suspendu'] as const) await expect(changerStatut(base, base.photos, superAdmin, id, statut, midi)).rejects.toThrow(new DonneeInvalide('Statut sans objet pour une personne extérieure'));
+		await changerStatut(base, base.photos, superAdmin, id, 'parti', midi);
+		await changerStatut(base, base.photos, superAdmin, id, 'operationnel', midi);
+		expect((await base.select().from(personne).where(eq(personne.id, id)))[0]!.statut).toBe('operationnel');
+	});
+
+	it('dans la liste des agents, son ancien grade ne se montre pas', async () => {
+		const { base, ext, sap } = await avecGrade();
+		await base.insert(personne).values({ email: 'r@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: ext.id, gradeId: sap.id });
+		const groupes = await vueEffectif(base, aujourdhui);
+		expect(groupes.find((g) => g.cle === 'exterieurs')!.personnes[0]).toMatchObject({ prenom: 'René', grade: null });
+	});
+
+	it('au passage, un stagiaire devient une personne extérieure ordinaire', async () => {
+		const { base, agent, ext } = await jeu();
+		const id = await ajouterPersonne(base, superAdmin, { email: 'p@exemple.fr', prenom: 'Paul', nom: 'Petit', profilId: agent.id, statut: 'stagiaire' }, aujourdhui, []);
+		await modifierFiche(base, superAdmin, id, { profilId: ext.id }, aujourdhui, [], { basePhotos: base.photos, maintenant: midi });
+		expect((await base.select().from(personne).where(eq(personne.id, id)))[0]!.statut).toBe('operationnel');
+	});
+});

@@ -82,7 +82,7 @@ export async function apercuImport(base: Base, acteur: Acteur, fichier: FichierL
 	const [grades, equipes, profils, responsabilites, comites, personnes, affectations, attributions, recentes, aptitudes, aptitudesAgents] = await base.batch([
 		base.select({ id: grade.id, libelle: grade.libelle }).from(grade),
 		base.select({ id: equipe.id, nom: equipe.nom, active: equipe.active }).from(equipe),
-		base.select({ id: profil.id, nom: profil.nom }).from(profil),
+		base.select({ id: profil.id, nom: profil.nom, typePersonne: profil.typePersonne }).from(profil),
 		base.select().from(responsabilite).where(isNull(responsabilite.archiveeLe)),
 		base.select({ id: comite.id, nom: comite.nom }).from(comite).where(isNull(comite.dissousLe)),
 		// Un agent effacé est inconnu du fichier : une ligne ancienne à son numéro ne le refait pas.
@@ -218,6 +218,11 @@ export async function apercuImport(base: Base, acteur: Acteur, fichier: FichierL
 		const leProfil = profils.find((p) => minuscules(p.nom) === minuscules(nomDuProfil));
 		if (!nomDuProfil) erreur('Profil', 'Indiquez le profil');
 		else if (!leProfil) erreur('Profil', nExistePas(nomDuProfil));
+		// Une personne extérieure (retraité, réserve citoyenne) : ni équipe, ni statut d'agent (un statut déjà en place reste).
+		if (leProfil?.typePersonne === 'exterieur') {
+			if (lEquipe) erreur('Équipe', 'Une personne extérieure n’a pas d’équipe');
+			if (statut && statut !== 'operationnel' && statut !== 'parti' && statut !== fiche?.statut) erreur('Statut', 'Statut sans objet pour une personne extérieure');
+		}
 		const telephone = v('Téléphone') || null;
 		if (telephone && telephone.length > LIMITES.telephone[1]) erreur('Téléphone', LIMITES.telephone[0]);
 

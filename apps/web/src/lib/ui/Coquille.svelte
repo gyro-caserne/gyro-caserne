@@ -13,10 +13,12 @@
 		visage = null,
 		ecusson = null,
 		conversation = false,
+		exterieur = false,
+		caserne = true,
 		children
-	}: { chemin: string; connecte: boolean; nomCentre: string; cloche?: number; nonLus?: number; visage?: { prenom: string; nom: string; couleur: string | null } | null; ecusson?: number | null; conversation?: boolean; children: Snippet } = $props();
+	}: { chemin: string; connecte: boolean; exterieur?: boolean; caserne?: boolean; nomCentre: string; cloche?: number; nonLus?: number; visage?: { prenom: string; nom: string; couleur: string | null } | null; ecusson?: number | null; conversation?: boolean; children: Snippet } = $props();
 
-	const entrees = $derived(entreesNavigation(connecte));
+	const entrees = $derived(entreesNavigation(connecte, { exterieur, caserne }));
 	// Sans connexion, seule la page elle-même est marquée.
 	const actif = $derived(connecte ? rubriqueDe(chemin) : chemin);
 	const courant = (href: string) => (actif === href ? 'page' : undefined);
