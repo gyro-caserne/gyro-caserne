@@ -10,6 +10,7 @@ import { filDeNotifications } from '../src/notifications.ts';
 import { publierAnnee, reglerRoulement } from '../src/planning/annee.ts';
 import { commencerPrise, gestePrise, prisesDeLaReleve, validerPrise } from '../src/prises.ts';
 import { anomalie, anomalieSuivi, attribution, avisAnomalie, engin, equipe, journal, personne, profil, responsabilite } from '../src/schema.ts';
+import { RefusDroit } from '../src/erreurs.ts';
 import { jeuEngins } from './de-test-engins.ts';
 
 const reglage = centreExemple.astreinte;
@@ -466,6 +467,33 @@ describe('qui prévenir, selon la zone', () => {
 		expect(await j.avis(j.referent)).toHaveLength(1);
 		expect(await j.avis(j.chefDeGarde)).toHaveLength(1);
 		expect(await j.avis(j.claire)).toEqual([]);
+	});
+
+	it('un rôle prévenu prend en charge et clôt les anomalies de sa zone, sans décider de l’engin', async () => {
+		const j = await jeuZones();
+		const paula = await nommee(j, 'Paula', { nom: 'Référent pharmacie' });
+		await j.prise([j.radio.ref, j.sac.elements[0]!.ref]);
+		const [radio, brancard] = await j.base.select().from(anomalie).where(eq(anomalie.enginId, j.vsav));
+		expect((await lireAnomalie(j.base, paula, brancard!.id, PLUS_TARD, REGLAGE_ANOMALIES)).gestes).toEqual(['prendre', 'attente', 'reparee', 'clore']);
+		// Hors de sa zone : un agent comme un autre.
+		expect((await lireAnomalie(j.base, paula, radio!.id, PLUS_TARD, REGLAGE_ANOMALIES)).gestes).toEqual(['prendre', 'attente', 'reparee']);
+		await expect(gesteAnomalie(j.base, paula, brancard!.id, { quoi: 'indisponible' }, PLUS_TARD, REGLAGE_ANOMALIES)).rejects.toBeInstanceOf(RefusDroit);
+		await expect(gesteAnomalie(j.base, paula, radio!.id, { quoi: 'clore', texte: '' }, PLUS_TARD, REGLAGE_ANOMALIES)).rejects.toBeInstanceOf(RefusDroit);
+		await gesteAnomalie(j.base, paula, brancard!.id, { quoi: 'prendre' }, PLUS_TARD, REGLAGE_ANOMALIES);
+		await gesteAnomalie(j.base, paula, brancard!.id, { quoi: 'clore', texte: 'Remplacé' }, PLUS_TARD, REGLAGE_ANOMALIES);
+		expect((await j.base.select().from(anomalie).where(eq(anomalie.id, brancard!.id)))[0]).toMatchObject({ closePar: paula.id, closeLe: PLUS_TARD });
+		// Son rôle fini, elle redevient un agent comme un autre.
+		await j.base.update(attribution).set({ fin: '2026-10-30' }).where(eq(attribution.personneId, paula.id));
+		const autre = await j.base.insert(anomalie).values({ enginId: j.vsav, ref: j.sac.elements[1]!.ref, zone: j.sac.nom, libelle: 'Chaise', genre: 'abime', signaleePar: idDe(j.alice), signaleeLe: QUAND }).returning();
+		expect((await lireAnomalie(j.base, paula, autre[0]!.id, PLUS_TARD, REGLAGE_ANOMALIES)).gestes).not.toContain('clore');
+	});
+
+	it('gestes permis (sans base) : prévenu, il prend, vérifie et clôt ; jamais l’engin', () => {
+		const etat: EtatAnomalie = { etape: 'signalee', close: false, preneur: null, reparateur: null, bloquante: false, enginIndisponible: false, enginParti: false };
+		const prevenu = { moi: 1, traite: false, prend: false, prevenu: true };
+		expect(gestesPermis(etat, prevenu, REGLAGE_ANOMALIES)).toEqual(['prendre', 'attente', 'reparee', 'clore']);
+		expect(gestesPermis({ ...etat, etape: 'reparee', preneur: 2, reparateur: 2 }, prevenu, { ...REGLAGE_ANOMALIES, verifiee: true })).toEqual(['verifiee', 'clore']);
+		expect(gestesPermis({ ...etat, close: true, bloquante: true, enginIndisponible: true }, prevenu, REGLAGE_ANOMALIES)).toEqual([]);
 	});
 
 	it('le signalement hors fiche garde la règle d’aujourd’hui', async () => {

@@ -10,10 +10,10 @@ import { voitLesEngins } from './engins.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import { ligneJournal, ligneJournalSi } from './journal.ts';
 import { chefsDuCentre } from './urgences.ts';
-import { ETAPES_ANOMALIE, GENRES_ECART, MOTIFS_ATTENTE, type EtapeAnomalie, type EtatEngin, type GenreEcart, type MotifAttente, type SituationEngin, type SuiviAnomalie } from './listes.ts';
+import { ETAPES_ANOMALIE, GENRES_ECART, MOTIFS_ATTENTE, STATUTS_AVEC_ACCES, type EtapeAnomalie, type EtatEngin, type GenreEcart, type MotifAttente, type SituationEngin, type SuiviAnomalie } from './listes.ts';
 import type { Reglage } from './planning/calendrier.ts';
 import { equipeAstreinte } from './prises.ts';
-import { anomalie, anomalieSuivi, avisAnomalie, engin, personne, responsabiliteDroit, typeEngin } from './schema.ts';
+import { anomalie, anomalieSuivi, attribution, avisAnomalie, engin, ficheElement, ficheVersion, ficheZone, personne, responsabilite, responsabiliteDroit, typeEngin } from './schema.ts';
 
 // Le suivi des anomalies : signalée, prise en charge, en attente (pièce, garage, prestataire), réparée, vérifiée (si le centre
 // le veut), close. L'indisponibilité de l'engin est une décision à part, de ceux qui traitent les anomalies ; jamais automatique.
@@ -39,6 +39,17 @@ export async function traiteLesAnomalies(base: Base, acteur: Acteur, aujourdhui:
 	return acteur.type === 'personne' && droits.some((d) => d.perimetre.type === 'equipe') && occupe(base, acteur.id, 'chef_equipe', aujourdhui);
 }
 
+// L'acteur tient-il, aujourd'hui, un rôle prévenu pour la zone de l'anomalie ? Lu dans la requête de l'anomalie : la zone de son
+// élément dans la dernière version de la fiche, par sa référence. 0 ou 1.
+const prevenuSql = (moi: number | null, aujourdhui: string) => sql<number>`EXISTS (SELECT 1 FROM ${engin} pe
+	JOIN ${ficheElement} pfe ON pfe.ref = ${anomalie.ref} AND pfe.version_id = (SELECT max(pv.id) FROM ${ficheVersion} pv WHERE pv.type_id = pe.type_id)
+	JOIN ${ficheZone} pfz ON pfz.id = pfe.zone_id
+	JOIN json_each(pfz.prevenir) pj
+	JOIN ${responsabilite} pr ON pr.id = pj.value AND pr.archivee_le IS NULL AND pr.type_perimetre = 'centre'
+	JOIN ${attribution} pa ON pa.responsabilite_id = pr.id AND pa.personne_id = ${moi ?? 0} AND pa.perimetre_type = 'centre' AND pa.debut <= ${aujourdhui} AND (pa.fin IS NULL OR pa.fin >= ${aujourdhui})
+	JOIN ${personne} pp ON pp.id = pa.personne_id AND pp.statut IN ${[...STATUTS_AVEC_ACCES]}
+	WHERE pe.id = ${anomalie.enginId})`;
+
 async function droitsAnomalie(base: Base, acteur: Acteur, aujourdhui: string) {
 	const centre = { type: 'centre' } as const;
 	const traite = await traiteLesAnomalies(base, acteur, aujourdhui);
@@ -58,21 +69,24 @@ export type GesteAnomalie =
 export type QuoiGeste = GesteAnomalie['quoi'];
 
 export type EtatAnomalie = { etape: EtapeAnomalie; close: boolean; preneur: number | null; reparateur: number | null; bloquante: boolean; enginIndisponible: boolean; enginParti: boolean };
-type Qui = { moi: number | null; traite: boolean; prend: boolean };
+// `prevenu` : l'acteur tient un rôle prévenu pour la zone de l'anomalie (la pharmacie pour un sac PS).
+type Qui = { moi: number | null; traite: boolean; prend: boolean; prevenu?: boolean };
 
 // Les gestes permis sur une anomalie. Avancer (en attente, réparée) : qui l'a prise en charge, ou qui traite ; depuis « signalée »,
 // qui peut la prendre en charge (il la prend du même coup). Vérifier : un autre que le réparateur. Clore, rendre l'engin
-// indisponible : qui traite. Remettre en service : qui traite, l'anomalie close.
+// indisponible : qui traite. Remettre en service : qui traite, l'anomalie close. Un rôle prévenu pour la zone la prend en charge et la clôt,
+// sans décider de l'engin.
 export function gestesPermis(a: EtatAnomalie, qui: Qui, r: ReglageAnomalies): QuoiGeste[] {
 	if (qui.moi === null) return [];
+	const prend = qui.prend || qui.prevenu === true;
 	if (a.close) return qui.traite && a.bloquante && a.enginIndisponible ? ['remettre'] : [];
 	const gestes: QuoiGeste[] = [];
-	const avance = qui.traite || a.preneur === qui.moi || (a.etape === 'signalee' && qui.prend);
-	if (a.etape === 'signalee' && qui.prend) gestes.push('prendre');
+	const avance = qui.traite || a.preneur === qui.moi || (a.etape === 'signalee' && prend);
+	if (a.etape === 'signalee' && prend) gestes.push('prendre');
 	if (r.enAttente && (a.etape === 'signalee' || a.etape === 'prise_en_charge') && avance) gestes.push('attente');
 	if ((a.etape === 'signalee' || a.etape === 'prise_en_charge' || a.etape === 'en_attente') && avance) gestes.push('reparee');
-	if (a.etape === 'reparee' && qui.prend && a.reparateur !== qui.moi) gestes.push('verifiee');
-	if (qui.traite) gestes.push('clore');
+	if (a.etape === 'reparee' && prend && a.reparateur !== qui.moi) gestes.push('verifiee');
+	if (qui.traite || qui.prevenu) gestes.push('clore');
 	if (qui.traite && !a.bloquante && !a.enginParti) gestes.push('indisponible');
 	return gestes;
 }
@@ -82,7 +96,7 @@ async function lireEtat(base: Base, id: number, moi: number, aujourdhui: string)
 	const bloquantes = sql<number>`(SELECT count(*) FROM ${anomalie} b WHERE b.engin_id = ${engin.id} AND b.bloquante = 1 AND b.close_le IS NULL)`;
 	const [[a], [reparation], [compte], [auteur], chefs] = await base.batch([
 		base
-			.select({ anomalie, nomEngin: sql<string>`${engin.nom}`.as('nom_engin'), etatEngin: engin.etat, situation: engin.situation, bloquantes: bloquantes.as('bloquantes') })
+			.select({ anomalie, nomEngin: sql<string>`${engin.nom}`.as('nom_engin'), etatEngin: engin.etat, situation: engin.situation, bloquantes: bloquantes.as('bloquantes'), prevenu: prevenuSql(moi, aujourdhui).as('prevenu') })
 			.from(anomalie)
 			.innerJoin(engin, eq(engin.id, anomalie.enginId))
 			.where(eq(anomalie.id, id)),
@@ -101,7 +115,7 @@ async function lireEtat(base: Base, id: number, moi: number, aujourdhui: string)
 		enginIndisponible: a.etatEngin === 'indisponible',
 		enginParti: a.situation === 'parti'
 	};
-	return { a: a.anomalie, nomEngin: a.nomEngin, etatEngin: a.etatEngin, bloquantes: a.bloquantes, etat, suivis: compte?.n ?? 0, nom: nomDe(auteur), chefs: chefs.map((c) => c.id) };
+	return { a: a.anomalie, nomEngin: a.nomEngin, etatEngin: a.etatEngin, bloquantes: a.bloquantes, etat, suivis: compte?.n ?? 0, nom: nomDe(auteur), chefs: chefs.map((c) => c.id), prevenu: a.prevenu === 1 };
 }
 
 const SUIVI: Record<QuoiGeste, SuiviAnomalie> = { prendre: 'prise_en_charge', attente: 'en_attente', reparee: 'reparee', verifiee: 'verifiee', clore: 'close', indisponible: 'indisponible', remettre: 'remise_en_service' };
@@ -112,11 +126,12 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	if (acteur.type !== 'personne') throw new DonneeInvalide('Réservé aux agents');
 	const moi = acteur.id;
-	const qui = await droitsAnomalie(base, acteur, aujourdhui);
 	const lu = await lireEtat(base, id, moi, aujourdhui);
+	const qui = { ...(await droitsAnomalie(base, acteur, aujourdhui)), prevenu: lu.prevenu };
 	if (!gestesPermis(lu.etat, qui, r).includes(geste.quoi)) {
-		if (['clore', 'indisponible', 'remettre'].includes(geste.quoi) && !qui.traite) throw new RefusDroit('TRAITER_ANOMALIE', { type: 'centre' });
-		if (!qui.prend) throw new RefusDroit('PRENDRE_EN_CHARGE_ANOMALIE', { type: 'centre' });
+		if (['indisponible', 'remettre'].includes(geste.quoi) && !qui.traite) throw new RefusDroit('TRAITER_ANOMALIE', { type: 'centre' });
+		if (geste.quoi === 'clore' && !qui.traite && !qui.prevenu) throw new RefusDroit('TRAITER_ANOMALIE', { type: 'centre' });
+		if (!qui.prend && !qui.prevenu) throw new RefusDroit('PRENDRE_EN_CHARGE_ANOMALIE', { type: 'centre' });
 		throw new DonneeInvalide('Geste impossible');
 	}
 	const texte = 'texte' in geste ? propre(geste.texte) : '';
@@ -254,7 +269,7 @@ export async function lireAnomalie(base: Base, acteur: Acteur, id: number, maint
 	const gens = sql`${personne.id} IN (SELECT signalee_par FROM ${anomalie} WHERE ${anomalie.id} = ${id} UNION SELECT prise_en_charge_par FROM ${anomalie} WHERE ${anomalie.id} = ${id} UNION SELECT close_par FROM ${anomalie} WHERE ${anomalie.id} = ${id})`;
 	const lectures = [
 		base
-			.select({ anomalie, nomEngin: sql<string>`${engin.nom}`.as('nom_engin'), type: sql<string>`${typeEngin.nom}`.as('type'), etatEngin: engin.etat, situation: engin.situation })
+			.select({ anomalie, nomEngin: sql<string>`${engin.nom}`.as('nom_engin'), type: sql<string>`${typeEngin.nom}`.as('type'), etatEngin: engin.etat, situation: engin.situation, prevenu: prevenuSql(qui.moi, aujourdhui).as('prevenu') })
 			.from(anomalie)
 			.innerJoin(engin, eq(engin.id, anomalie.enginId))
 			.innerJoin(typeEngin, eq(typeEngin.id, engin.typeId))
@@ -303,7 +318,7 @@ export async function lireAnomalie(base: Base, acteur: Acteur, id: number, maint
 		signaleePar: nom(a.signaleePar)!,
 		prisePar: nom(a.priseEnChargePar),
 		historique,
-		gestes: gestesPermis(etat, qui, r),
+		gestes: gestesPermis(etat, { ...qui, prevenu: l.prevenu === 1 }, r),
 		autresBloquantes: autres?.n ?? 0
 	};
 }
