@@ -532,7 +532,7 @@ async function nommer(page: Page, fiche: string, role: string, dates: { debut?: 
 async function ouvrirGroupe(page: Page, titre: string) {
 	// Le titre est dans le résumé du dépliage : on le vise par sa balise.
 	const groupe = page.locator('details.groupe', { has: page.locator('summary h2', { hasText: new RegExp(`^${titre}$`) }) });
-	if ((await groupe.getAttribute('open')) === null) await groupe.locator('summary').click();
+	if ((await groupe.getAttribute('open')) === null) await groupe.locator(':scope > summary').click();
 	return groupe;
 }
 
