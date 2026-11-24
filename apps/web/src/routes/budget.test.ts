@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import centre from '$centre';
-import { journal, affectationEquipe, engin, typeEngin, ajouterRessource, pourDemander, attribution, chargerJeuDeDepart, semaineChangee, comite, periodeParDefaut, plageEte, reglerEte, enregistrerManoeuvre, equipe, preparerAnnee, publierAnnee, reglerRoulement, reserver, ressource, commentaire, creerGroupe, envoyer, message, personne, prendreConnaissance, profil, publication, publier, responsabilite, signaler } from '@gyro-caserne/socle';
+import { ancienneteDuMatin, journal, affectationEquipe, engin, typeEngin, ajouterRessource, pourDemander, attribution, chargerJeuDeDepart, semaineChangee, comite, periodeParDefaut, plageEte, reglerEte, enregistrerManoeuvre, equipe, preparerAnnee, publierAnnee, reglerRoulement, reserver, ressource, commentaire, creerGroupe, envoyer, message, personne, prendreConnaissance, profil, publication, publier, responsabilite, signaler } from '@gyro-caserne/socle';
 import { baseDeTest } from '@gyro-caserne/socle/base-de-test';
 import { aujourdhuiParis, maintenantParis, septJoursPlusTard } from '#lib/aujourdhui.ts';
 import { jpeg, requeteFormulaire } from './echanges/de-test.ts';
@@ -49,6 +49,7 @@ import { load as eteDeLAnnee } from './planning/ete/+layout.server';
 import { actions as actionsEte, load as pageEte } from './planning/ete/+page.server';
 import { load as mesVacancesPage } from './moi/vacances/+page.server';
 import { load as reglagesArmement } from './reglages/armement/+page.server';
+import { actions as actionsAnciennete, load as reglagesAnciennete } from './reglages/anciennete/+page.server';
 import { GET as donneesPlanning } from './planning/preparer/fichier/donnees/+server';
 import { POST as apercuPlanning } from './planning/preparer/fichier/apercu/+server';
 import { POST as appliquerPlanning } from './planning/preparer/fichier/appliquer/+server';
@@ -547,6 +548,36 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 			expect(data.aujourdhui.anniversaires.find((a: { id: number }) => a.id === fetes[0]).geste).toBe('souhaite');
 		});
 		expect(n).toBeLessThanOrEqual(BUDGET);
+	});
+
+	it('ancienneté : 30 paliers du jour ; Féliciter puis l’accueil et Échanges rechargés ; le réglage des paliers ; le réveil', async () => {
+		const { base, locals, agent, compter } = await centreDe150();
+		const jour = aujourdhuiParis();
+		const fetes = (await base.select({ id: personne.id }).from(personne)).slice(1, 31).map((p) => p.id);
+		for (const id of fetes) await base.update(personne).set({ engagementSpv: `${Number(jour.slice(0, 4)) - 10}${jour.slice(4)}`, entreeCentre: '2018-01-01' }).where(eq(personne.id, id));
+		const deLAgent = { ...locals, acteur: { type: 'personne' as const, id: agent.id } };
+		const cible = fetes.find((id) => id !== agent.id)!;
+		const request = new Request('http://localhost/echanges?/feliciter', { method: 'POST', body: new URLSearchParams({ id: String(cible), retour: '/' }) });
+		const n = await compter(async () => {
+			await expect((actionsEchanges.feliciter as any)({ locals: deLAgent, request })).rejects.toMatchObject({ status: 303 });
+			await (racine as any)({ depends: () => {}, locals: deLAgent });
+			const data = await (accueil as any)({ locals: deLAgent, url: new URL('http://localhost/') });
+			expect(data.paliers.find((p: { id: number }) => p.id === cible).geste).toBe('felicite');
+		});
+		expect(n).toBeLessThanOrEqual(BUDGET);
+		const e = await compter(async () => {
+			await (racine as any)({ depends: () => {}, locals: deLAgent });
+			expect((await (echanges as any)({ locals: deLAgent, url: new URL('http://localhost/echanges') })).aujourdhui.paliers.length).toBeGreaterThanOrEqual(29);
+		});
+		expect(e).toBeLessThanOrEqual(BUDGET);
+		const r = await compter(async () => {
+			await (racine as any)({ depends: () => {}, locals });
+			await (reglagesAnciennete as any)({ locals });
+			await (actionsAnciennete.enregistrer as any)({ locals, request: new Request('http://localhost/reglages/anciennete?/enregistrer', { method: 'POST', body: new URLSearchParams([['palier', '10'], ['palier', '20']]) }) });
+			await (reglagesAnciennete as any)({ locals });
+		});
+		expect(r).toBeLessThanOrEqual(BUDGET);
+		expect(await compter(() => ancienneteDuMatin(base, `${jour}T08:00`))).toBeLessThanOrEqual(3);
 	});
 
 	it('/echanges/[mur] : 300 publications', async () => {
