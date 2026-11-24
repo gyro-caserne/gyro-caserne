@@ -15,7 +15,7 @@ Tout ce qui concerne l'agent, et seulement cela, jamais à l'auteur lui-même :
 - **un avis** de remplacement, de l'été ou d'anomalie (voir [Remplacements](remplacements-et-echanges.md), [Planning d'été](planning-d-ete.md), [Anomalies](anomalies.md)) ;
 - **un souhait d'anniversaire** d'un collègue, le jour de son anniversaire (voir [Murs](salons.md#anniversaires)) ; seul « tout » le coupe ;
 - **la vigilance rouge**, à tous les agents, quand le département y passe (voir [Météo et vigilance](meteo-et-vigilance.md)) ;
-- **une nomination** faite à la main (fiche de l'agent, Nominations) : « Vous êtes nommé Chef de garde », le périmètre et qui a nommé. Pas pour l'import du fichier de l'effectif, ni pour un retrait (voir [Accès et attributions](acces-et-attributions.md)) ;
+- **une nomination** faite à la main (fiche de l'agent, Qui fait quoi, fiche d'un rôle ou d'un comité) : « Vous êtes nommé Chef de garde », le périmètre et qui a nommé. Pas pour l'import du fichier de l'effectif, ni pour un retrait (voir [Accès et attributions](acces-et-attributions.md)) ;
 - **une urgence du centre**, pour le chef de centre et l'adjoint (plus bas).
 
 Seul qui peut lire la publication ou la conversation **au moment de l'envoi** est prévenu.
@@ -28,7 +28,7 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 |---|---|---|
 | « VTU indisponible » | un engin rendu indisponible (anomalie bloquante) | la page de l'engin |
 | Remplacement sans remplaçant | la relance de la veille, à 8 h, d'une demande sans remplaçant | la demande |
-| « Équipe 2 sans chef de garde demain » | la veille de la relève, à 8 h, quand l'équipe d'astreinte n'a pas de chef de garde nommé (d'après le roulement et le planning publié, sans tenir compte des groupes d'été) | Nominations |
+| « Équipe 2 sans chef de garde demain » | la veille de la relève, à 8 h, quand l'équipe d'astreinte n'a pas de chef de garde nommé (d'après le roulement et le planning publié, sans tenir compte des groupes d'été) | Qui fait quoi |
 
 - Chaque urgence a aussi sa ligne dans la cloche (anomalie, remplacement, ou suivi du centre pour l'équipe sans chef).
 - Moi → Notifications, en premier : « Urgences du centre », avec son interrupteur. « Tout couper » les coupe aussi ; l'écran prévient alors : « Vous ne recevrez plus les urgences du centre (engin indisponible…) ».
