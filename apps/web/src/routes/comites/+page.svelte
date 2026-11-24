@@ -2,7 +2,7 @@
 	import { untrack, type Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { murDuComite } from '#lib/murs/phrases.ts';
-	import LignesPoste from '#lib/nommer/LignesPoste.svelte';
+	import CarteRole from '#lib/nommer/CarteRole.svelte';
 	import Volets from '#lib/nommer/Volets.svelte';
 	import { adresseVolet, aPourvoir, cleDePoste, intitule, postesDe, posteVise, resume, voletVise, type Poste } from '#lib/nommer/postes.ts';
 	import { pluriel } from '#lib/pluriel.ts';
@@ -96,15 +96,6 @@
 	</li>
 {/snippet}
 
-<!-- Un poste : ses gestes pour qui peut y nommer, sinon la ligne lue. -->
-{#snippet poste(p: Poste, titre: string, titulaires: Titulaire[], icone?: NomIcone, demande?: number)}
-	{#if p.nommer}
-		<LignesPoste poste={p} libelle={titre} aujourdhui={data.aujourdhui} />
-	{:else}
-		{@render lu(titre, titulaires, icone, demande)}
-	{/if}
-{/snippet}
-
 <!-- Un groupe replié, avec sa ligne de résumé ; il s'ouvre quand on vise l'un de ses postes. -->
 {#snippet groupe(titre: string, sommaire: string, cles: string[], contenu: Snippet)}
 	<details class="repli groupe" {...ouvert(cles)} {@attach garderOuvert(cles)}>
@@ -116,9 +107,13 @@
 <!-- Un rôle tenu équipe par équipe. -->
 {#snippet parEquipe(r: (typeof data.equipes)[number])}
 	{#snippet lignes()}
-		<ul role="list" class="lignes">
-			{#each r.parEquipe as e (e.equipeId)}{@render poste(posteDe(r.id, e.equipeId), e.equipe, e.titulaires)}{/each}
-		</ul>
+		{#if data.gestes}
+			<CarteRole titre={r.nom} postes={r.parEquipe.map((e) => posteDe(r.id, e.equipeId))} aujourdhui={data.aujourdhui} parPerimetre />
+		{:else}
+			<ul role="list" class="lignes">
+				{#each r.parEquipe as e (e.equipeId)}{@render lu(e.equipe, e.titulaires)}{/each}
+			</ul>
+		{/if}
 	{/snippet}
 	{@render groupe(r.systeme === 'chef_equipe' ? 'Chefs de garde' : r.nom, resumeEquipes(r), r.parEquipe.map((e) => cleDePoste(r.id, e.equipeId)), lignes)}
 {/snippet}
@@ -126,50 +121,67 @@
 {#snippet comites()}
 	{#each data.comites as c (c.id)}
 		{@const nommables = (c.postes ?? []).map((p) => posteDe(p.id, c.id))}
-		{@const tenus = new Set(nommables.flatMap((p) => p.titulaires.map((t) => t.id)))}
-		{@const autres = nommables.length > 0 ? c.membres.filter((m) => !tenus.has(m.id)) : c.membres}
-		<ListeRangees titre={c.nom} compte={c.membres.length} niveau={3}>
-			{#if c.membres.length > 0 || nommables.length > 0}<li class="intertitre"><h4>Membres</h4></li>{/if}
-			{#each nommables as p (p.cle)}<LignesPoste poste={p} libelle={p.role} aujourdhui={data.aujourdhui} />{/each}
-			{#each autres as m (m.id)}
-				<li>
-					<Rangee titre={m.nom} grade={m.grade} sous={m.roles.join(', ')}>
-						{#snippet droite()}{#if m.ecrire}{@render ecrire(m)}{/if}{/snippet}
-					</Rangee>
-				</li>
-			{:else}
-				{#if nommables.length === 0}<li><Rangee titre="Aucun membre pour l’instant" discret /></li>{/if}
-			{/each}
-			{#if c.mur}
-				<li><Rangee href="/echanges/comite:{c.id}" titre={murDuComite(c.nom)} /></li>
-			{/if}
-			{#if c.ressources.length > 0}<li class="intertitre"><h4>À réserver</h4></li>{/if}
-			{#each c.ressources as r (r.id)}
-				<li><Rangee href="/reservations/{r.id}" titre={r.nom} /></li>
-			{/each}
-		</ListeRangees>
+		{#if nommables.length > 0}
+			<!-- Pour qui y nomme : une carte par rôle du comité, puis le mur, le matériel et les autres membres. -->
+			{@const tenus = new Set(nommables.flatMap((p) => p.titulaires.map((t) => t.id)))}
+			{@const autres = c.membres.filter((m) => !tenus.has(m.id))}
+			<section class="comite" aria-labelledby="comite-{c.id}">
+				<h3 id="comite-{c.id}" class="titre-groupe">{c.nom}</h3>
+				{#each nommables as p (p.cle)}<CarteRole titre={p.role} postes={[p]} aujourdhui={data.aujourdhui} niveau={4} />{/each}
+				{#if autres.length > 0 || c.mur || c.ressources.length > 0}
+					<ul role="list" class="lignes">
+						{#each autres as m (m.id)}
+							<li>
+								<Rangee titre={m.nom} grade={m.grade} sous={m.roles.join(', ')}>
+									{#snippet droite()}{#if m.ecrire}{@render ecrire(m)}{/if}{/snippet}
+								</Rangee>
+							</li>
+						{/each}
+						{#if c.mur}<li><Rangee href="/echanges/comite:{c.id}" titre={murDuComite(c.nom)} /></li>{/if}
+						{#each c.ressources as r (r.id)}<li><Rangee href="/reservations/{r.id}" titre={r.nom} sous="À réserver" /></li>{/each}
+					</ul>
+				{/if}
+			</section>
+		{:else}
+			<ListeRangees titre={c.nom} compte={c.membres.length} niveau={3}>
+				{#if c.membres.length > 0}<li class="intertitre"><h4>Membres</h4></li>{/if}
+				{#each c.membres as m (m.id)}
+					<li>
+						<Rangee titre={m.nom} grade={m.grade} sous={m.roles.join(', ')}>
+							{#snippet droite()}{#if m.ecrire}{@render ecrire(m)}{/if}{/snippet}
+						</Rangee>
+					</li>
+				{:else}
+					<li><Rangee titre="Aucun membre pour l’instant" discret /></li>
+				{/each}
+				{#if c.mur}
+					<li><Rangee href="/echanges/comite:{c.id}" titre={murDuComite(c.nom)} /></li>
+				{/if}
+				{#if c.ressources.length > 0}<li class="intertitre"><h4>À réserver</h4></li>{/if}
+				{#each c.ressources as r (r.id)}
+					<li><Rangee href="/reservations/{r.id}" titre={r.nom} /></li>
+				{/each}
+			</ListeRangees>
+		{/if}
 	{:else}
 		<ul role="list" class="lignes"><li><Rangee titre="Aucun comité pour l’instant" discret /></li></ul>
 	{/each}
 {/snippet}
 
-{#snippet commandement()}
-	<ul role="list" class="lignes">
-		{#each data.commandement as r (r.id)}{@render poste(posteDe(r.id, null), r.nom, r.titulaires)}{/each}
-	</ul>
+<!-- Les rôles du centre d'un groupe : pour qui nomme, une carte par rôle ; sinon, une ligne par rôle dans une seule carte. -->
+{#snippet rolesDuCentre(roles: { id: number; nom: string; icone?: NomIcone; titulaires: Titulaire[]; demandes?: boolean }[])}
+	{#if data.gestes}
+		{#each roles as r (r.id)}<CarteRole titre={r.nom} postes={[posteDe(r.id, null)]} aujourdhui={data.aujourdhui} demande={data.peutDemander && r.demandes ? r.id : undefined} />{/each}
+	{:else}
+		<ul role="list" class="lignes">
+			{#each roles as r (r.id)}{@render lu(r.nom, r.titulaires, r.icone, data.peutDemander && r.demandes ? r.id : undefined)}{/each}
+		</ul>
+	{/if}
 {/snippet}
 
-{#snippet fonctions()}
-	<ul role="list" class="lignes">
-		{#each data.fonctions as r (r.id)}{@render poste(posteDe(r.id, null), r.nom, r.titulaires, r.icone, data.peutDemander && r.demandes ? r.id : undefined)}{/each}
-	</ul>
-{/snippet}
-
-{#snippet missions()}
-	<ul role="list" class="lignes">
-		{#each data.missions as r (r.id)}{@render poste(posteDe(r.id, null), r.nom, r.titulaires, r.icone, data.peutDemander && r.demandes ? r.id : undefined)}{/each}
-	</ul>
-{/snippet}
+{#snippet commandement()}{@render rolesDuCentre(data.commandement.map((r) => ({ ...r, icone: undefined, demandes: false })))}{/snippet}
+{#snippet fonctions()}{@render rolesDuCentre(data.fonctions)}{/snippet}
+{#snippet missions()}{@render rolesDuCentre(data.missions)}{/snippet}
 
 <div class="page">
 	<EnTetePage titre="Qui fait quoi" retour={{ href: '/caserne', libelle: 'Caserne' }}>
@@ -219,8 +231,7 @@
 		font-size: var(--texte-15);
 	}
 	.page,
-	.colonne,
-	.contenu {
+	.colonne {
 		display: flex;
 		flex-direction: column;
 		gap: var(--espace-16);
@@ -253,8 +264,22 @@
 		font-weight: 400;
 		font-size: var(--texte-15);
 	}
+	/* Laisser respirer : un espacement franc entre les cartes de rôle, comme entre deux groupes. */
+	.contenu,
+	.comite {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-24);
+	}
 	.contenu {
-		padding-top: var(--espace-8);
+		padding-top: var(--espace-12);
+		padding-bottom: var(--espace-12);
+	}
+	.comite {
+		gap: var(--espace-16);
+	}
+	.comite > h3 {
+		margin: 0;
 	}
 	/* Les parties d'une carte de comité. */
 	.intertitre h4 {

@@ -390,7 +390,9 @@ for (const theme of ['auto', 'sombre']) {
 				await sansViolation(page);
 				await page.keyboard.press('Escape');
 				await expect(page.getByRole('dialog')).toHaveCount(0);
-				await ouvrirGroupe(page, 'Autres fonctions');
+				// Le référent technique est une mission : sa carte est dans « Missions », déjà ouvert. Au-delà de cinq titulaires
+				// (les e2e en nomment beaucoup), les autres sont sous « Voir les N titulaires » : tout est déplié.
+				await page.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
 				await page.getByRole('link', { name: new RegExp(`^${agent.nom}`) }).click();
 				await expect(page.getByRole('dialog', { name: agent.nom, exact: true })).toBeVisible();
 				await sansViolation(page);
