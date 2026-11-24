@@ -12,6 +12,9 @@
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import Pastille from '#lib/ui/Pastille.svelte';
 	import ReglageEtapes from '#lib/demandes/ReglageEtapes.svelte';
+	import BlocTitulaires from '#lib/nommer/BlocTitulaires.svelte';
+	import { resume } from '#lib/nommer/postes.ts';
+	import { pluriel } from '#lib/pluriel.ts';
 	import ChoixIcone from '../../ChoixIcone.svelte';
 	import Domaines from '../../Domaines.svelte';
 	import { NATURES, optionsAttributeur, PORTEES, quiAttribue, valeurAttributeur } from '../../roles.ts';
@@ -83,6 +86,8 @@
 	const erreurs = (cible: string): Record<string, string> => (concerne(cible) ? (form?.erreurs ?? {}) : {});
 	const saisie = (champ: 'nom' | 'nature' | 'attributeur', defaut: string) => (concerne('role') ? (form?.valeurs?.[champ] ?? defaut) : defaut);
 	const porteeLibelle = $derived(PORTEES.find((p) => p.valeur === role.portee)?.libelle ?? role.portee);
+	const blocTitulaires = $derived(data.titulairesDuRole);
+	const resumeTitulaires = $derived(blocTitulaires ? resume(pluriel(blocTitulaires.postes.reduce((n, p) => n + p.titulaires.length, 0), 'titulaire'), blocTitulaires.postes) : '');
 	const avertissement = (n: number) =>
 		n === 0 ? 'Personne ne tient ce rôle aujourd’hui.' : n === 1 ? 'La personne qui tient ce rôle le perd aujourd’hui, avec ses droits.' : `Les ${n} personnes qui tiennent ce rôle le perdent aujourd’hui, avec ses droits.`;
 </script>
@@ -111,6 +116,18 @@
 		{#if role.archiveeLe !== null}<Pastille ton="neutre">Archivé</Pastille>{/if}
 	</div>
 </div>
+
+{#if blocTitulaires}
+	<BlocTitulaires
+		postes={blocTitulaires.postes}
+		resume={resumeTitulaires}
+		question={data.nouveau ? 'Qui le tiendra ?' : undefined}
+		gestes={blocTitulaires.gestes}
+		aujourdhui={data.aujourdhui}
+		fiches={blocTitulaires.fiches}
+		{form}
+	/>
+{/if}
 
 {#if data.raison}<p class="raison">{data.raison}</p>{/if}
 {@render retour('role')}

@@ -39,4 +39,5 @@ export function envoyer(actions: Record<string, unknown>, nom: string, locals: u
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const charger = (load: unknown, locals: unknown, params: Record<string, string> = {}, url = 'http://x/') => (load as any)({ locals, params, url: new URL(url) });
+// `parent` : ce que donnent les layouts (le droit de nommer, pour le bloc « Titulaires »).
+export const charger = (load: unknown, locals: unknown, params: Record<string, string> = {}, url = 'http://x/', peutNominations = false) => (load as any)({ locals, params, url: new URL(url), parent: async () => ({ peutNominations }) });

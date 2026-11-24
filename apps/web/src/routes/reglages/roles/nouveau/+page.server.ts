@@ -51,6 +51,6 @@ export const actions: Actions = {
 		} catch (erreur) {
 			return echec(erreur, cible, valeurs);
 		}
-		redirect(303, `/reglages/roles/${id}`);
+		redirect(303, `/reglages/roles/${id}?nouveau`);
 	}
 };

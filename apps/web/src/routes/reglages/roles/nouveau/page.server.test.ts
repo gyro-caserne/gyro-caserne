@@ -36,7 +36,7 @@ describe('nouveau rôle', () => {
 	it('crée depuis « Référent pharmacie » avec les droits du modèle, puis ouvre sa page', async () => {
 		const { base, referent, resp, droitsDe } = await preparer();
 		// Les droits envoyés par le formulaire sont ignorés : seuls comptent ceux du modèle.
-		await expect(creer(locaux(base, referent), corps('referent_pharmacie', [['droits', 'GERER_PLANNING']]))).rejects.toMatchObject({ status: 303, location: expect.stringMatching(/^\/reglages\/roles\/\d+$/) });
+		await expect(creer(locaux(base, referent), corps('referent_pharmacie', [['droits', 'GERER_PLANNING']]))).rejects.toMatchObject({ status: 303, location: expect.stringMatching(/^\/reglages\/roles\/\d+\?nouveau$/) });
 		const cree = await resp('Pharmacie bis');
 		expect(cree).toMatchObject({ modele: 'referent_pharmacie', icone: 'croix', typePerimetre: 'centre' });
 		expect(await droitsDe(cree.id)).toEqual(['GERER_STOCK']);

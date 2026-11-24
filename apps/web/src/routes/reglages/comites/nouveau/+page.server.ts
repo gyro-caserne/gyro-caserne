@@ -23,6 +23,6 @@ export const actions: Actions = {
 		} catch (erreur) {
 			return echec(erreur, 'comite-nouveau', valeurs);
 		}
-		redirect(303, `/reglages/comites/${id}`);
+		redirect(303, `/reglages/comites/${id}?nouveau`);
 	}
 };

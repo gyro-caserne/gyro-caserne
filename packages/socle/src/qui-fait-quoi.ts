@@ -36,7 +36,7 @@ export type QuiFaitQuoi = {
 };
 
 // « Rapporteur de comité » se lit « Rapporteur » sous le nom du comité.
-const roleCourt = (nom: string) => nom.replace(/\s+(de|du) comité$/i, '') || nom;
+export const roleCourt = (nom: string) => nom.replace(/\s+(de|du) comité$/i, '') || nom;
 
 // Caserne → Qui fait quoi : qui tient quoi aujourd'hui, sans les droits. Pour les agents qui ont accès et le super administrateur.
 // Les titulaires sont les agents qui ont accès (ni partis, ni suspendus, ni extérieurs), comme les membres des murs. Un batch, plus les droits de l'acteur (déjà lus par le layout).

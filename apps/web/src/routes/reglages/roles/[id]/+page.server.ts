@@ -11,8 +11,12 @@ import {
 	MODELES,
 	modifierResponsabilite,
 	recoitPossible,
+	roleCourt,
 	type Droit
 } from '@gyro-caserne/socle';
+import { postesDuRole } from '#lib/nommer/postes.ts';
+import { actionsNommerApres } from '#lib/server/actions-nommer.ts';
+import { lireQuiFaitQuoi } from '#lib/server/qui-fait-quoi.ts';
 import { estMessageReglage, phraseReglage } from '#lib/demandes/textes.ts';
 import { apercuReglage, reglageDeLaSaisie, saisieDuFormulaire } from '#lib/server/reglage-demandes.ts';
 import { maintenantParis } from '#lib/aujourdhui.ts';
@@ -44,10 +48,16 @@ function raison(role: Awaited<ReturnType<typeof lireRole>>['role']): string | nu
 	return null;
 }
 
-export const load: PageServerLoad = async ({ locals, params }) => {
-	const { base, pouvoir, role } = await lireRole(locals, params.id);
+export const load: PageServerLoad = async ({ locals, params, parent, url }) => {
+	const { acteur, base, aujourdhui, role } = await lireRole(locals, params.id);
 	const modele = MODELES.find((m) => m.id === role.modele) ?? null;
+	// Le bloc « Titulaires » : qui tient le rôle, et pour qui peut le nommer, les mêmes gestes que Qui fait quoi (un envoi de plus).
+	const qfq = role.archiveeLe === null ? await lireQuiFaitQuoi(base, acteur, aujourdhui, (await parent()).peutNominations) : null;
 	return {
+		aujourdhui,
+		titulairesDuRole: qfq && { postes: postesDuRole(qfq.vue, role, roleCourt(role.nom)), gestes: qfq.vue.gestes, fiches: qfq.fiches },
+		// Juste après « Créer le rôle » : le bloc s'ouvre et demande qui le tiendra.
+		nouveau: url.searchParams.has('nouveau'),
 		role,
 		modele: modele && { id: modele.id, nom: modele.nom, droits: modele.droits },
 		comitesChoix: await comitesChoix(base),
@@ -85,6 +95,9 @@ const pouvoirDe = (droits: Droit[]) => droits.filter(estDroitPouvoir);
 const sansPouvoir = (droits: Droit[]) => droits.filter((d) => !estDroitPouvoir(d));
 
 export const actions: Actions = {
+	// Nommer, remplacer, finir : les gestes du bloc « Titulaires », pour qui ouvre cette page.
+	...actionsNommerApres(({ locals, params }) => lireRole(locals, params.id ?? '')),
+
 	// Nom, icône, qui attribue, et les niveaux des domaines.
 	enregistrer: async ({ locals, params, request }) => {
 		const { acteur, base, aujourdhui, role } = await lireRole(locals, params.id);

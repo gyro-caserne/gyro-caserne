@@ -22,7 +22,7 @@ export { MODELES, REGLAGE_HABILLEMENT, type Modele } from './modeles.ts';
 export { creerProfil, enregistrerProfil, listerProfils, modifierDroitsProfil, modifierMursOuverts, renommerProfil, supprimerProfil } from './actions/profils.ts';
 export { accueilDe, aDecider, casquettesDe, type Accueil, type ADecider, type Casquette, type ContenuCasquette } from './casquettes.ts';
 export { apercusDesMurs, type Apercu as ApercuMur } from './apercus.ts';
-export { ouvreQuiFaitQuoi, quiFaitQuoi, type QuiFaitQuoi, type RoleTenu } from './qui-fait-quoi.ts';
+export { ouvreQuiFaitQuoi, quiFaitQuoi, roleCourt, type QuiFaitQuoi, type RoleTenu } from './qui-fait-quoi.ts';
 export { audiences, equipesConvoquees, exigerMur, lireMursOuverts, mursDe, mursEtAppartenances, NIVEAUX_OUVERTS, type CleMur, type Convocation, type Mur, type NiveauOuvert } from './murs.ts';
 export { TAILLE_PHOTO_MAX, type Photo } from './commun.ts';
 export { effacerPhotosOrphelines } from './photos-orphelines.ts';

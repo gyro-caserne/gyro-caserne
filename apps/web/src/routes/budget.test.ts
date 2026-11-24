@@ -145,9 +145,9 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 		const { base, locals, compter } = await centreDe150();
 		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent engins'));
 		const n = await compter(async () => {
-			await (racine as any)({ depends: () => {}, locals });
-			await (reglages as any)({ locals });
-			await (role as any)({ locals, params: { id: String(r!.id) } });
+			const r1 = await (racine as any)({ depends: () => {}, locals });
+			const r2 = await (reglages as any)({ locals });
+			await (role as any)({ locals, params: { id: String(r!.id) }, parent: async () => ({ ...r1, ...r2 }), url: new URL(`http://localhost/reglages/roles/${r!.id}`) });
 		});
 		expect(n).toBeLessThanOrEqual(BUDGET);
 	});

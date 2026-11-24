@@ -88,3 +88,30 @@ export function posteVise(postes: Poste[], vise: ReturnType<typeof voletVise>) {
 	}
 	return null;
 }
+
+// Le bloc « Titulaires » de la fiche d'un rôle : ses postes. Un rôle de comité, comité par comité : les gestes là où l'acteur
+// peut nommer, sinon les membres qui le tiennent, lus.
+type Vue = Pick<QuiFaitQuoi, 'comites' | 'commandement' | 'equipes' | 'fonctions' | 'missions'>;
+export function postesDuRole(vue: Vue, role: { id: number; nom: string; nature: 'fonction' | 'mission'; portee: string }, court: string): Poste[] {
+	const tous = postesDe(vue).filter((p) => p.roleId === role.id);
+	if (role.portee !== 'comite') return tous;
+	return vue.comites.map(
+		(c) =>
+			tous.find((p) => p.perimetre.id === c.id) ?? {
+				cle: cleDePoste(role.id, c.id),
+				roleId: role.id,
+				role: court,
+				nature: role.nature,
+				perimetre: { type: 'comite', id: c.id, nom: c.nom },
+				titulaires: c.membres.filter((m) => m.roles.includes(court))
+			}
+	);
+}
+
+// Le bloc « Titulaires » de la fiche d'un comité : ses postes nommables, et les membres qu'ils ne montrent pas, lus.
+export function postesDuComite(vue: Vue, comiteId: number) {
+	const carte = vue.comites.find((c) => c.id === comiteId);
+	const postes = postesDe(vue).filter((p) => p.perimetre.type === 'comite' && p.perimetre.id === comiteId);
+	const tenus = new Set(postes.flatMap((p) => p.titulaires.map((t) => t.id)));
+	return { postes, autres: (carte?.membres ?? []).filter((m) => !tenus.has(m.id)) };
+}
