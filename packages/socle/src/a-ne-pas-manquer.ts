@@ -143,19 +143,22 @@ export async function fetesDuJourAuCentre(base: Base, acteur: Acteur, aujourdhui
 	const moi = acteur.type === 'personne' ? acteur.id : null;
 	const souhaite = sql<number>`exists (select 1 from ${souhaitAnniversaire} where ${souhaitAnniversaire.personneId} = ${personne.id} and ${souhaitAnniversaire.jour} = ${aujourdhui} and ${souhaitAnniversaire.auteurId} = ${moi ?? 0})`;
 	const felicite = sql<number>`exists (select 1 from ${avisAnciennete} where ${avisAnciennete.personneId} = ${personne.id} and ${avisAnciennete.jour} = ${aujourdhui} and ${avisAnciennete.auteurId} = ${moi ?? 0})`;
+	// Chaque condition construite une fois : le serveur a 10 ms de calcul par requête.
+	const anniversaire = fetesDuJour(aujourdhui);
+	const palier = palierDuJour(aujourdhui);
 	const lignes = await base
 		.select({
 			id: personne.id,
 			prenom: personne.prenom,
 			nom: personne.nom,
-			anniversaire: sql<number>`case when ${fetesDuJour(aujourdhui)} then 1 else 0 end`.as('anniversaire'),
-			annees: sql<number | null>`case when ${palierDuJour(aujourdhui)} then ${anneesDeService(aujourdhui)} end`.as('annees'),
+			anniversaire: sql<number>`case when ${anniversaire} then 1 else 0 end`.as('anniversaire'),
+			annees: sql<number | null>`case when ${palier} then ${anneesDeService(aujourdhui)} end`.as('annees'),
 			souhaite: souhaite.as('souhaite'),
 			felicite: felicite.as('felicite')
 		})
 		.from(personne)
 		.leftJoin(profil, eq(profil.id, personne.profilId))
-		.where(or(fetesDuJour(aujourdhui), palierDuJour(aujourdhui)))
+		.where(or(anniversaire, palier))
 		.orderBy(asc(personne.nom), asc(personne.prenom));
 	const pourAutrui = (id: number) => moi !== null && id !== moi;
 	return {
