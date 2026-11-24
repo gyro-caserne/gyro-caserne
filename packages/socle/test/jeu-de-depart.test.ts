@@ -80,7 +80,7 @@ describe('chargerJeuDeDepart', () => {
 			['Référent engins', 'mission', null, 'centre', idCentre, [['TRAITER_ANOMALIE', 0], ['GERER_FICHES', 0]]],
 			['Référent pharmacie', 'mission', null, 'centre', idCentre, [['GERER_STOCK', 0]]],
 			['Référent habillement', 'mission', null, 'centre', idCentre, []],
-			['Référent technique', 'fonction', null, 'centre', null, [['GERER_LISTES', 0], ['GERER_COMITES', 0]]]
+			['Référent technique', 'mission', null, 'centre', null, [['GERER_LISTES', 0], ['GERER_COMITES', 0]]]
 		];
 		const responsabilites = await base.select().from(responsabilite).orderBy(responsabilite.id);
 		expect(responsabilites.map((r) => [r.nom, r.nature, r.systeme, r.typePerimetre, r.comiteAttributeurId])).toEqual(attendu.map(([nom, nature, systeme, perimetre, attributeur]) => [nom, nature, systeme, perimetre, attributeur]));

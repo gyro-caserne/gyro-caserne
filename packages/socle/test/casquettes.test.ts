@@ -165,12 +165,11 @@ describe('aDecider', () => {
 		await nouvelle('Parti', { complete: false, statut: 'parti' });
 		await nouvelle('Exterieur', { complete: false, exterieur: true });
 
-		// Seules les fonctions vacantes sont listées : les missions (référents habillement et pharmacie, rôles de comité) non. En septembre, pas encore de planning à préparer.
+		// Seules les fonctions vacantes sont listées : les missions (référents, dont le référent technique, rôles de comité) non. En septembre, pas encore de planning à préparer.
 		expect(await aDecider(base, acteur(chef), '2026-09-25')).toEqual([
 			{ texte: 'Équipe 2 sans chef de garde', lien: '/comites' },
 			{ texte: 'Équipe 3 sans chef de garde', lien: '/comites' },
 			{ texte: 'Équipe 4 sans chef de garde', lien: '/comites' },
-			{ texte: 'Référent technique sans titulaire', lien: '/comites' },
 			{ texte: '2 fiches à compléter (grade ou date d’entrée manquants)', lien: '/agents?filtre=a-completer' }
 		]);
 	});
@@ -186,9 +185,10 @@ describe('aDecider', () => {
 
 	it('une fonction archivée n’est pas listée', async () => {
 		const { base, role } = await jeu();
-		await base.update(responsabilite).set({ archiveeLe: '2026-06-01' }).where(eq(responsabilite.id, role('Référent technique')));
+		await base.insert(responsabilite).values({ nom: 'Référent sécurité', nature: 'fonction', typePerimetre: 'centre', archiveeLe: '2026-06-01' });
 		const textes = (await aDecider(base, superAdmin, '2026-09-25')).map((e) => e.texte);
-		expect(textes).not.toContain('Référent technique sans titulaire');
+		expect(textes).not.toContain('Référent sécurité sans titulaire');
+		void role;
 	});
 
 	it('une équipe inactive n’est pas listée', async () => {
