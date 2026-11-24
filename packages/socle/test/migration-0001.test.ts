@@ -49,7 +49,7 @@ describe('migration 0001', () => {
 		const base = await baseDeTest();
 		await chargerJeuDeDepart(base, centreExemple);
 		const lignes = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent technique'));
-		expect(lignes.map((r) => [r.nature, r.typePerimetre, r.comiteAttributeurId, r.systeme, r.archiveeLe])).toEqual([['fonction', 'centre', null, null, null]]);
+		expect(lignes.map((r) => [r.nature, r.typePerimetre, r.comiteAttributeurId, r.systeme, r.archiveeLe])).toEqual([['mission', 'centre', null, null, null]]);
 		const droits = await base.select().from(responsabiliteDroit).where(eq(responsabiliteDroit.responsabiliteId, lignes[0]!.id));
 		expect(droits.map((d) => [d.droit, d.verrouille]).sort()).toEqual([['GERER_COMITES', 0], ['GERER_LISTES', 0]]);
 	});

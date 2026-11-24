@@ -120,6 +120,7 @@
 {#if blocTitulaires}
 	<BlocTitulaires
 		postes={blocTitulaires.postes}
+		role={role.nom}
 		resume={resumeTitulaires}
 		question={data.nouveau ? 'Qui le tiendra ?' : undefined}
 		gestes={blocTitulaires.gestes}

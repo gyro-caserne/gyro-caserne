@@ -23,9 +23,15 @@ La page se lit sans aucun geste : les titulaires du jour, ou « Personne pour l'
 
 ## Pour qui nomme
 
-Sur chaque poste qu'il peut nommer :
-- **la ligne d'un titulaire** : son nom et une flèche ; toute la ligne ouvre le **volet de la personne**. Un mandat qui commence plus tard le dit (« à partir du 3 déc. 2026 ») ;
-- **une ligne vide** : « À pourvoir » (fonction) ou « Personne pour l'instant » (mission), et **Nommer**. Une mission garde « Nommer » sous ses titulaires, pour en ajouter un.
+Il voit **une carte par rôle**, et les groupes laissent de l'air entre elles :
+- en tête de la carte, le nom du rôle et au plus un bouton :
+  - **un rôle à titulaire unique** (une fonction, comme le chef de centre ou un chef de garde, ou un rôle qui donne le droit de nommer, comme le rapporteur) : **Nommer** tant que personne ne le tient, puis rien. Pour changer de titulaire, on ouvre la personne, puis **Remplacer** ;
+  - **un rôle à plusieurs titulaires** (les membres d'un comité, les missions comme les référents) : **Nommer** s'il est vide, **Ajouter** sinon, et toujours **Ajouter un membre** pour les membres d'un comité ;
+- dessous, ses titulaires, une ligne par personne avec la flèche qui ouvre son **volet**, ou une ligne « À pourvoir » (fonction) ou « Personne pour l'instant » (mission) s'il n'y a personne. Un mandat qui commence plus tard le dit (« à partir du 3 déc. 2026 ») ;
+- au-delà de cinq titulaires, les autres se déplient par « Voir les N titulaires » ;
+- **un rôle d'équipe** (chef de garde) : une seule carte, une ligne par équipe, avec le titulaire, ou « À pourvoir » et **Nommer** sur la ligne, chaque équipe ayant son poste ;
+- **un comité** : son nom, puis une carte par rôle du comité, au nom du rôle (Rapporteur, Membre, Président…), puis son mur et son matériel ;
+- un rôle qu'il ne nomme pas garde sa carte, sans geste.
 
 Le **volet de la personne** dit son rôle, l'équipe ou le comité, et « Depuis le … ». Dessous, une rangée de gestes visibles :
 - **Remplacer**, l'action principale : il déplie sur place la recherche, le nouveau titulaire et sa date de début, puis **Confirmer le remplacement**. Le mandat en cours finit la veille, le nouveau commence à la date choisie, en une seule écriture ;
@@ -42,7 +48,7 @@ Les règles ne changent pas ([Accès et attributions](acces-et-attributions.md))
 
 ## Ailleurs
 
-- **La fiche d'un rôle** et **la fiche d'un comité** (Réglages) ont un bloc **Titulaires** en tête, avec les mêmes lignes et les mêmes volets. Après « Créer le rôle », la fiche s'ouvre avec ce bloc ouvert et « Qui le tiendra ? » ; après « Créer le comité », « Qui seront son rapporteur et ses membres ? ».
+- **La fiche d'un rôle** et **la fiche d'un comité** (Réglages) ont un bloc **Titulaires** en tête, avec les mêmes cartes et les mêmes volets : une carte pour le rôle (une ligne par équipe ou par comité s'il en a), une carte par rôle pour un comité. Après « Créer le rôle », la fiche s'ouvre avec ce bloc ouvert et « Qui le tiendra ? » ; après « Créer le comité », « Qui seront son rapporteur et ses membres ? ».
 - **La fiche d'un agent** garde son bloc « Rôles », avec **Nommer à un rôle**.
 - **Caserne** : « Qui fait quoi », avec le nombre de postes à pourvoir pour qui peut nommer.
 

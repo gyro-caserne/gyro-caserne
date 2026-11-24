@@ -16,8 +16,9 @@ import { attribution, comite, equipe, grade, personne, profil, responsabilite, r
 // `mandat` : seulement pour qui peut nommer sur ce poste (option `gestes`) : l'attribution, pour la remplacer ou la finir.
 export type Mandat = { id: number; debut: string; fin: string | null };
 export type Titulaire = { id: number; nom: string; grade: string | null; ecrire: boolean; mandat?: Mandat };
-// Sur un poste que l'acteur peut nommer : `aPourvoir`, une fonction que personne ne tient ni ne tiendra.
-export type Nommer = { aPourvoir: boolean };
+// Sur un poste que l'acteur peut nommer : `aPourvoir`, une fonction que personne ne tient ni ne tiendra ;
+// `unique`, un rôle tenu par une seule personne : une fonction, ou un rôle qui donne le droit de nommer (le rapporteur).
+export type Nommer = { aPourvoir: boolean; unique: boolean };
 type Nature = 'fonction' | 'mission';
 // `demandes` : le rôle reçoit des demandes ; on peut lui en faire une depuis sa ligne.
 export type RoleTenu = { id: number; nom: string; icone: NomIcone; titulaires: Titulaire[]; demandes: boolean; nommer?: Nommer };
@@ -56,7 +57,8 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 				comiteAttributeurId: responsabilite.comiteAttributeurId,
 				icone: responsabilite.icone,
 				modele: responsabilite.modele,
-				demandes: sql<number>`${responsabilite.demandes} is not null`.as('demandes')
+				demandes: sql<number>`${responsabilite.demandes} is not null`.as('demandes'),
+				nommeur: sql<number>`exists (select 1 from responsabilite_droit d where d.responsabilite_id = ${responsabilite.id} and d.droit = 'ATTRIBUER_RESPONSABILITE')`.as('nommeur')
 			})
 			.from(responsabilite)
 			.where(isNull(responsabilite.archiveeLe))
@@ -121,7 +123,7 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 		const tenus = mandatsValides
 			.filter((m) => m.responsabiliteId === r.id && (r.portee === 'centre' || m.perimetreId === perimetreId))
 			.map((m) => ({ ...titulaireNommable(m.personneId), mandat: { id: m.id, debut: m.debut, fin: m.fin } }));
-		return { titulaires: tenus, nommer: { aPourvoir: r.nature === 'fonction' && tenus.length === 0 } };
+		return { titulaires: tenus, nommer: { aPourvoir: r.nature === 'fonction' && tenus.length === 0, unique: r.nature === 'fonction' || Boolean(r.nommeur) } };
 	};
 	const roleTenu = (r: Role): RoleTenu => {
 		const tenu: RoleTenu = { id: r.id, nom: r.nom, icone: iconeDuRole(r), titulaires: titulaires((t) => t.responsabiliteId === r.id), demandes: Boolean(r.demandes) };

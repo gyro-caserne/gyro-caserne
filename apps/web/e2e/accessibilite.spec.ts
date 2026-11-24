@@ -385,12 +385,14 @@ for (const theme of ['auto', 'sombre']) {
 				await page.goto('/comites');
 				await page.waitForLoadState('networkidle');
 				await ouvrirGroupe(page, 'Missions');
-				await page.getByRole('link', { name: 'Nommer (Référent pharmacie)', exact: true }).click();
+				await page.getByRole('link', { name: 'Ajouter (Référent pharmacie)', exact: true }).click();
 				await expect(page.getByRole('dialog', { name: 'Nommer', exact: true })).toBeVisible();
 				await sansViolation(page);
 				await page.keyboard.press('Escape');
 				await expect(page.getByRole('dialog')).toHaveCount(0);
-				await ouvrirGroupe(page, 'Autres fonctions');
+				// Le référent technique est une mission : sa carte est dans « Missions », déjà ouvert. Au-delà de cinq titulaires
+				// (les e2e en nomment beaucoup), les autres sont sous « Voir les N titulaires » : tout est déplié.
+				await page.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
 				await page.getByRole('link', { name: new RegExp(`^${agent.nom}`) }).click();
 				await expect(page.getByRole('dialog', { name: agent.nom, exact: true })).toBeVisible();
 				await sansViolation(page);
@@ -530,7 +532,7 @@ async function nommer(page: Page, fiche: string, role: string, dates: { debut?: 
 async function ouvrirGroupe(page: Page, titre: string) {
 	// Le titre est dans le résumé du dépliage : on le vise par sa balise.
 	const groupe = page.locator('details.groupe', { has: page.locator('summary h2', { hasText: new RegExp(`^${titre}$`) }) });
-	if ((await groupe.getAttribute('open')) === null) await groupe.locator('summary').click();
+	if ((await groupe.getAttribute('open')) === null) await groupe.locator(':scope > summary').click();
 	return groupe;
 }
 
@@ -1098,7 +1100,7 @@ test.describe('qui fait quoi', () => {
 		await page.goto('/comites');
 		await page.waitForLoadState('networkidle');
 		await ouvrirGroupe(page, 'Missions');
-		const ouvrir = page.getByRole('link', { name: 'Nommer (Référent pharmacie)', exact: true });
+		const ouvrir = page.getByRole('link', { name: 'Ajouter (Référent pharmacie)', exact: true });
 		const volet = page.getByRole('dialog', { name: 'Nommer', exact: true });
 		await ouvrir.focus();
 		await page.keyboard.press('Enter');

@@ -70,7 +70,7 @@ const RESPONSABILITES: {
 	// La migration 0022 l'ajoute aux bases déjà remplies, et la 0037 le règle.
 	{ nom: 'Référent habillement', nature: 'mission', typePerimetre: 'centre', parComiteCentre: true, verrouilles: false, droits: [], demandes: REGLAGE_HABILLEMENT },
 	// Attribué par le chef de centre. La migration 0001 l'ajoute aux bases déjà remplies.
-	{ nom: 'Référent technique', nature: 'fonction', typePerimetre: 'centre', parComiteCentre: false, verrouilles: false, droits: ['GERER_LISTES', 'GERER_COMITES'] }
+	{ nom: 'Référent technique', nature: 'mission', typePerimetre: 'centre', parComiteCentre: false, verrouilles: false, droits: ['GERER_LISTES', 'GERER_COMITES'] }
 ];
 
 // Ne fait rien si un profil existe déjà ; sinon écrit tout d'un bloc.

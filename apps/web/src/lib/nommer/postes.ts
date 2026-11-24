@@ -10,7 +10,7 @@ export type Poste = {
 	nature: 'fonction' | 'mission';
 	perimetre: { type: 'centre' | 'equipe' | 'comite'; id: number | null; nom: string | null };
 	titulaires: Titulaire[];
-	nommer?: { aPourvoir: boolean };
+	nommer?: { aPourvoir: boolean; unique?: boolean };
 };
 export type Agent = { id: number; nom: string; equipeId: number | null; equipe: string | null; exterieur?: boolean };
 

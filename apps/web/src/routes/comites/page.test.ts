@@ -200,18 +200,18 @@ describe('/comites', () => {
 		const mandat = (id: number, debut = '2026-01-01') => ({ id, debut, fin: null });
 		const chef = {
 			...vue,
-			commandement: [vue.commandement[0], { ...vue.commandement[1], nommer: { aPourvoir: true } }],
+			commandement: [vue.commandement[0], { ...vue.commandement[1], nommer: { aPourvoir: true, unique: true } }],
 			equipes: [
 				{
 					...vue.equipes[0],
 					parEquipe: [
-						{ equipeId: 1, equipe: 'Équipe 1', titulaires: [{ id: 5, nom: 'Bruno Petit', grade: 'Sergent', ecrire: true, mandat: mandat(31) }], nommer: { aPourvoir: false } },
-						{ equipeId: 2, equipe: 'Équipe 2', titulaires: [], nommer: { aPourvoir: true } }
+						{ equipeId: 1, equipe: 'Équipe 1', titulaires: [{ id: 5, nom: 'Bruno Petit', grade: 'Sergent', ecrire: true, mandat: mandat(31) }], nommer: { aPourvoir: false, unique: true } },
+						{ equipeId: 2, equipe: 'Équipe 2', titulaires: [], nommer: { aPourvoir: true, unique: true } }
 					]
 				}
 			],
-			missions: [vue.missions[0], { ...vue.missions[1], nommer: { aPourvoir: false } }],
-			comites: [{ ...vue.comites[0], postes: [{ id: 12, nom: 'Rapporteur', nature: 'mission', titulaires: [{ id: 5, nom: 'Bruno Petit', grade: 'Sergent', ecrire: true, mandat: mandat(40, '2026-12-10') }], nommer: { aPourvoir: false } }] }, vue.comites[1]],
+			missions: [{ ...vue.missions[0], titulaires: vue.missions[0]!.titulaires.map((t, i) => ({ ...t, mandat: mandat(50 + i) })), nommer: { aPourvoir: false, unique: false } }, { ...vue.missions[1], nommer: { aPourvoir: false, unique: false } }],
+			comites: [{ ...vue.comites[0], postes: [{ id: 12, nom: 'Rapporteur', nature: 'mission', titulaires: [{ id: 5, nom: 'Bruno Petit', grade: 'Sergent', ecrire: true, mandat: mandat(40, '2026-12-10') }], nommer: { aPourvoir: false, unique: true } }] }, vue.comites[1]],
 			gestes: {
 				agents: [
 					{ id: 4, nom: 'Alice Bernard', equipeId: 1, equipe: 'Équipe 1' },
@@ -234,14 +234,71 @@ describe('/comites', () => {
 			expect(tete).not.toContain('nommer=1-centre');
 		});
 
-		it('la ligne d’un titulaire : son nom et une flèche, toute la ligne ouvre son volet ; un mandat à venir le dit', () => {
+		it('une carte par rôle : son nom en tête avec un seul « Nommer », puis ses titulaires, sans ligne intercalée', () => {
 			const page = html(chef);
-			expect(page).toMatch(/<a class="rangee[^"]*" href="\?mandat=31"[^>]*>[\s\S]*?Bruno Petit[\s\S]*?Équipe 1[\s\S]*?class="chevron"/);
-			expect(page).toMatch(/href="\?mandat=40"[\s\S]*?Rapporteur, à partir du 10 déc\. 2026/);
-			// Une mission garde « Nommer » sous ses titulaires ; le chef de centre, qu'il ne nomme pas, reste lu.
-			expect(page).toMatch(/Référent engins[\s\S]*?href="\?nommer=7-centre"/);
-			expect(page).toMatch(/Chef de centre(<!--[^>]*-->)*<\/span>[\s\S]*?Claire Martin/);
+			const carte = (titre: string) => {
+				const debut = page.lastIndexOf('<ul role="list" class="lignes carte-role', page.indexOf(`>${titre}</h`));
+				return page.slice(debut, page.indexOf('</ul>', debut));
+			};
+			// Une mission déjà tenue : « Ajouter » en tête, puis une ligne par titulaire, qui ouvre son volet.
+			const pharmacie = carte('Référent pharmacie');
+			expect(pharmacie).toMatch(/<h3[^>]*>Référent pharmacie<\/h3>\s*<a class="lien-secondaire geste" href="\?nommer=6-centre">Ajouter<span/);
+			expect(pharmacie).toMatch(/href="\?mandat=50"[\s\S]*?Alice Bernard[\s\S]*?href="\?mandat=51"[\s\S]*?Denis Roux/);
+			// Personne ne la tient : « Nommer ».
+			const engins = carte('Référent engins');
+			expect(engins.match(/>Nommer<span/g)).toHaveLength(1);
+			expect(engins).toMatch(/<h3[^>]*>Référent engins<\/h3>\s*<a class="lien-secondaire geste" href="\?nommer=7-centre">Nommer/);
+			expect(engins).toContain('Personne pour l’instant');
+			// Une fonction vide (l'adjoint) : « Nommer ».
+			expect(carte('Chef de centre adjoint')).toMatch(/href="\?nommer=2-centre">Nommer/);
+			// Le chef de centre, qu'il ne nomme pas : sa carte, sans geste, avec son titulaire.
+			expect(carte('Chef de centre')).toContain('Claire Martin');
+			expect(carte('Chef de centre')).not.toContain('nommer=');
 			expect(page).not.toContain('?mandat=undefined');
+		});
+
+		it('un rôle d’équipe : une carte, une ligne par équipe, le titulaire ou « À pourvoir » avec « Nommer » sur la ligne', () => {
+			const page = html(chef);
+			const debut = page.lastIndexOf('<ul role="list" class="lignes carte-role', page.indexOf('>Chef de garde</h3>'));
+			const carte = page.slice(debut, page.indexOf('</ul>', debut));
+			expect(carte).toMatch(/<a class="rangee[^"]*" href="\?mandat=31"[^>]*>[\s\S]*?Bruno Petit[\s\S]*?Équipe 1[\s\S]*?class="chevron"/);
+			expect(carte).toMatch(/Équipe 2[\s\S]*?À pourvoir[\s\S]*?href="\?nommer=3-2"/);
+			// Pas de « Nommer » en tête : chaque équipe a son poste.
+			expect(carte).toMatch(/<li class="tete[^"]*"><h3[^>]*>Chef de garde<\/h3>\s*<\/li>/);
+		});
+
+		it('un comité : une carte par rôle, au nom du rôle ; « Ajouter un membre » pour les membres ; un mandat à venir le dit', () => {
+			const avecMembres = {
+				...chef,
+				comites: [
+					{
+						...chef.comites[0],
+						postes: [
+							...(chef.comites[0] as { postes: unknown[] }).postes,
+							{ id: 13, nom: 'Membre', nature: 'mission', titulaires: [{ id: 4, nom: 'Alice Bernard', grade: null, ecrire: false, mandat: mandat(41) }], nommer: { aPourvoir: false, unique: false } },
+							{ id: 14, nom: 'Président', nature: 'fonction', titulaires: [], nommer: { aPourvoir: true, unique: true } }
+						]
+					},
+					chef.comites[1]
+				]
+			};
+			const page = html(avecMembres);
+			const amicale = page.slice(page.indexOf('<section class="comite'), page.indexOf('</section>', page.indexOf('<section class="comite')));
+			expect(amicale).toMatch(/<h3[^>]*>Amicale<\/h3>/);
+			// Le rapporteur, titulaire unique, déjà tenu : pas de geste en tête ; on passe par la personne, puis « Remplacer ».
+			expect(amicale).toMatch(/<h4[^>]*>Rapporteur<\/h4>\s*<\/li>/);
+			expect(amicale).not.toContain('nommer=12-2');
+			expect(amicale).toMatch(/href="\?mandat=40"[\s\S]*?à partir du 10 déc\. 2026/);
+			expect(amicale).toMatch(/<h4[^>]*>Membre<\/h4>\s*<a[^>]*href="\?nommer=13-2">Ajouter un membre/);
+			// Une ligne vide porte « À pourvoir », jamais le nom du comité.
+			expect(amicale).toMatch(/<h4[^>]*>Président<\/h4>[\s\S]*?À pourvoir/);
+			expect(amicale.match(/>Amicale</g)).toHaveLength(1);
+		});
+
+		it('plus de cinq titulaires : les cinq premiers, puis « Voir les N titulaires »', () => {
+			const nombreux = Array.from({ length: 7 }, (_, i) => ({ id: 100 + i, nom: `Agent ${i}`, grade: null, ecrire: false, mandat: mandat(200 + i) }));
+			const page = html({ ...chef, missions: [{ ...chef.missions[0], titulaires: nombreux, nommer: { aPourvoir: false } }, chef.missions[1]] });
+			expect(page).toMatch(/Agent 4[\s\S]*?<details class="repli"><summary[^>]*>Voir les 7 titulaires<\/summary>[\s\S]*?Agent 5/);
 		});
 
 		it('le volet de la personne : son rôle et depuis quand, puis des gestes visibles, sans « Plus »', () => {
