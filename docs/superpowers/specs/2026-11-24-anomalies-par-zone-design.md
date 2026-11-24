@@ -15,7 +15,7 @@ Aujourd'hui, une anomalie signalée sur un engin prévient ceux qui ont le droit
 
 ## Ce qui change
 
-**Sur chaque zone d'une fiche de prise de garde** (Cabine, Coffres, Sac PS, Tiroir rouge…), on choisit **qui est prévenu** : un ou plusieurs rôles du centre, par exemple « Référent pharmacie », ou « Référent engins » avec « Parc matériel ».
+**Sur chaque zone d'une fiche de prise de garde** (Cabine, Coffres, Sac PS, Tiroir rouge…), on choisit **qui est prévenu** : un ou plusieurs rôles du centre, par exemple « Référent pharmacie » ou « Référent engins ».
 - Le réglage se fait au même endroit que la fiche :
   - à l'écran (Engins, puis Fiches de prise de garde), sur la ligne de la zone : « Prévenir : Référent pharmacie », qui ouvre un volet de choix des rôles ;
   - dans le fichier Excel des fiches : une colonne « Prévenir », avec les noms des rôles séparés par des virgules. Un rôle inconnu est refusé à l'import, avec la ligne en cause.
