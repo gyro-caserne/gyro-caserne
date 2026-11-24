@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Groupe from '#lib/ui/Groupe.svelte';
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 	import { untrack } from 'svelte';
 	import type { Droit } from '@gyro-caserne/socle';
@@ -36,6 +37,17 @@
 		{ libelle: 'Écriture', phrase: cle === 'centre' ? 'Aussi commenter, voter et répondre.' : 'Aussi commenter, voter, répondre et publier.' }
 	];
 	const niveauDe = (cle: string) => Math.max(0, NIVEAUX.indexOf((data.profil.mursOuverts as Record<string, string>)[cle] ?? 'aucun'));
+	// Les choix en cours, une valeur par mur (un bind sur `undefined` ferait échouer l'hydratation).
+	let niveaux = $state<Record<string, number>>(untrack(() => Object.fromEntries(murs.map((m) => [m.cle, niveauDe(m.cle)]))));
+	let mursOuverts = $state(false);
+	// Sous « Murs ouverts », replié : combien, et lesquels, d'après les choix en cours.
+	const resumeMurs = $derived.by(() => {
+		const ouverts = murs.filter((m) => (niveaux[m.cle] ?? niveauDe(m.cle)) > 0).map((m) => m.nom);
+		const modifie = murs.some((m) => (niveaux[m.cle] ?? niveauDe(m.cle)) !== niveauDe(m.cle)) ? ', modifié' : '';
+		if (ouverts.length === 0) return `Aucun mur ouvert${modifie}`;
+		const noms = ouverts.length === 1 ? ouverts[0] : `${ouverts.slice(0, -1).join(', ')} et ${ouverts.at(-1)}`;
+		return `${ouverts.length === 1 ? '1 mur ouvert' : `${ouverts.length} murs ouverts`}, ${noms}${modifie}`;
+	});
 </script>
 
 {#snippet retour(cible: string)}
@@ -59,21 +71,20 @@
 
 <p class="intro">Ce que ce profil donne à chaque personne qui l’a, domaine par domaine. Les droits de base (voir le planning, les engins…) ne se règlent pas ici.</p>
 
-<form method="POST" class="formulaire">
+<form method="POST" action="?/enregistrer" class="formulaire">
 	<Domaines droits={droits} bind:choix profil />
 	{#if exterieur}
-		<section class="carte" aria-labelledby="titre-murs">
-			<h2 id="titre-murs" class="titre-groupe">Murs ouverts</h2>
+		<Groupe titre="Murs ouverts" resume={resumeMurs} bind:ouvert={mursOuverts}>
 			<p class="aide">En lecture, on voit les publications et on en est prévenu. En écriture, on peut aussi commenter, voter, répondre et publier (sauf sur Le centre). Un comité ouvert en écriture donne la messagerie avec ses membres.</p>
 			<ul class="murs" role="list">
 				{#each murs as m (m.cle)}
 					<li>
 						<p class="mur" aria-hidden="true">{m.nom}</p>
-						<SelecteurNiveaux name="mur-{m.cle}" legende={m.nom} niveaux={niveauxDuMur(m.cle)} valeur={niveauDe(m.cle)} segments />
+						<SelecteurNiveaux name="mur-{m.cle}" legende={m.nom} niveaux={niveauxDuMur(m.cle)} bind:valeur={niveaux[m.cle]} segments />
 					</li>
 				{/each}
 			</ul>
-		</section>
+		</Groupe>
 	{/if}
 	<BarreActions {message}>
 		<Bouton type="submit">Enregistrer</Bouton>
@@ -124,19 +135,8 @@
 	.formulaire > :global(button) {
 		align-self: flex-start;
 	}
-	h2 {
-		margin: 0;
-	}
 	.aide {
 		color: var(--doux);
-	}
-	.carte {
-		background: var(--surface);
-		border-radius: var(--rayon-grand);
-		padding: var(--espace-16);
-		display: flex;
-		flex-direction: column;
-		gap: var(--espace-12);
 	}
 	.murs {
 		list-style: none;
