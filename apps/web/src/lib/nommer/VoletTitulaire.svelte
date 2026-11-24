@@ -12,7 +12,7 @@
 
 	// Le volet de la personne : son rôle et depuis quand, puis une rangée de gestes visibles. « Remplacer » et « Finir le mandat »
 	// (ou « Annuler la nomination ») déplient leur formulaire sur place ; le geste grave demande toujours « Je confirme ».
-	// Sans JavaScript, les formulaires sont dépliés d'emblée.
+	// Sans JavaScript, les formulaires sont dépliés d'emblée. Formulaire Remplacer déplié, seul son envoi reste rouge.
 	type Reponse = { cible?: string; message?: string; erreurs?: Record<string, string>; valeurs?: Record<string, string> } | null | undefined;
 	type Titulaire = Poste['titulaires'][number] & { mandat: NonNullable<Poste['titulaires'][number]['mandat']> };
 	let {
@@ -64,7 +64,7 @@
 
 		<!-- La rangée de gestes, visibles. Un mandat qui n'a pas commencé ne se remplace pas : on l'annule. -->
 		<div class="gestes">
-			{#if monte && !aVenir}<Bouton etendu={deplie === 'remplacer'} controle="remplacer-{m.id}" onclick={() => basculer('remplacer')}>Remplacer</Bouton>{/if}
+			{#if monte && !aVenir}<Bouton variante={deplie === 'remplacer' ? 'secondaire' : 'principal'} etendu={deplie === 'remplacer'} controle="remplacer-{m.id}" onclick={() => basculer('remplacer')}>Remplacer</Bouton>{/if}
 			{#if fiches}<a class="lien-secondaire" href="/agents/{t.id}">Voir sa fiche</a>{/if}
 			{#if t.ecrire}<a class="lien-secondaire" href="/echanges/messages/a/{t.id}">Écrire<span class="masque">{` à ${t.nom}`}</span></a>{/if}
 			{#if monte}<Bouton variante="grave" etendu={deplie === 'finir'} controle="finir-{m.id}" onclick={() => basculer('finir')}>{aVenir ? 'Annuler la nomination' : 'Finir le mandat'}</Bouton>{/if}
