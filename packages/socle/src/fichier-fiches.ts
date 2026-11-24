@@ -55,7 +55,8 @@ function lireFeuille(fiche: Fiche, lignes: { numero: number; cellules: string[] 
 		if (ref !== null) vues.add(ref);
 		let zone = zones.find((z) => memeNom(z.nom, zoneBrute));
 		if (!zone) {
-			zone = { ref: fiche.zones.find((z) => memeNom(z.nom, zoneBrute))?.ref ?? refs.zone++, nom: zoneBrute, elements: [] };
+			const connue = fiche.zones.find((z) => memeNom(z.nom, zoneBrute));
+			zone = { ref: connue?.ref ?? refs.zone++, nom: zoneBrute, prevenir: connue?.prevenir ?? [], elements: [] };
 			zones.push(zone);
 		}
 		zone.elements.push({ ref: ref ?? refs.element++, libelle: libelleBrut, quantite });

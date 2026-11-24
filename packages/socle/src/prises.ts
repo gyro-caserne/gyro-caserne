@@ -6,7 +6,7 @@ import { ajouterJours, enCours, exigerDateHeure } from './dates.ts';
 import { aLeDroit, type Acteur } from './droits.ts';
 import { lireEngin, voitLesEngins, type EnginVu } from './engins.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
-import type { ElementFiche, ZoneFiche } from './fiches.ts';
+import { lirePrevenir, type ElementFiche, type ZoneFiche } from './fiches.ts';
 import { avisAnomalies, quiTraite } from './anomalies-avis.ts';
 import { ligneJournalSi } from './journal.ts';
 import { GENRES_ECART, STATUTS_AVEC_ACCES, type EtapeAnomalie, type EtatPrise, type GenreEcart, type MotifAttente } from './listes.ts';
@@ -146,12 +146,12 @@ async function exigerPrise(base: Base, acteur: Acteur, maintenant: string): Prom
 // Les zones et éléments d'une version de fiche (celle de la prise, ou la dernière du type), à placer dans un batch.
 function lecturesVersion(base: Base, version: SQL<number>) {
 	return [
-		base.select({ id: ficheZone.id, ref: ficheZone.ref, nom: ficheZone.nom }).from(ficheZone).where(eq(ficheZone.versionId, version)).orderBy(asc(ficheZone.ordre)),
+		base.select({ id: ficheZone.id, ref: ficheZone.ref, nom: ficheZone.nom, prevenir: ficheZone.prevenir }).from(ficheZone).where(eq(ficheZone.versionId, version)).orderBy(asc(ficheZone.ordre)),
 		base.select({ zoneId: ficheElement.zoneId, ref: ficheElement.ref, libelle: ficheElement.libelle, quantite: ficheElement.quantite }).from(ficheElement).where(eq(ficheElement.versionId, version)).orderBy(asc(ficheElement.ordre))
 	] as const;
 }
-function zonesDe(zones: { id: number; ref: number; nom: string }[], elements: ({ zoneId: number } & ElementFiche)[]): ZoneFiche[] {
-	return zones.map((z) => ({ ref: z.ref, nom: z.nom, elements: elements.filter((e) => e.zoneId === z.id).map(({ ref, libelle, quantite }) => ({ ref, libelle, quantite })) }));
+function zonesDe(zones: { id: number; ref: number; nom: string; prevenir: string | null }[], elements: ({ zoneId: number } & ElementFiche)[]): ZoneFiche[] {
+	return zones.map((z) => ({ ref: z.ref, nom: z.nom, prevenir: lirePrevenir(z.prevenir), elements: elements.filter((e) => e.zoneId === z.id).map(({ ref, libelle, quantite }) => ({ ref, libelle, quantite })) }));
 }
 
 const colonnesAnomalie = {

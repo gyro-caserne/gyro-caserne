@@ -1,16 +1,17 @@
-import { and, asc, eq, inArray, max, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 import { instruction, type Base } from './base.ts';
 import { exigerDateHeure } from './dates.ts';
 import { droitsDe, occupe, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import { ligneJournal } from './journal.ts';
 import { nomActeur } from './actions/personnes.ts';
-import { ficheElement, ficheVersion, ficheZone, personne, typeEngin } from './schema.ts';
+import { ficheElement, ficheVersion, ficheZone, personne, responsabilite, typeEngin } from './schema.ts';
 
 // Les fiches de prise de garde : une par type d'engin, rangée par zone. `ref` suit une zone ou un élément d'une version à l'autre.
 
 export type ElementFiche = { ref: number; libelle: string; quantite: number | null };
-export type ZoneFiche = { ref: number; nom: string; elements: ElementFiche[] };
+// `prevenir` : les rôles prévenus d'une anomalie de la zone ; vide, ceux qui traitent les anomalies.
+export type ZoneFiche = { ref: number; nom: string; prevenir: number[]; elements: ElementFiche[] };
 // `marque` change à chaque réécriture de la version (les lignes reçoivent de nouveaux identifiants) : elle repère une écriture concurrente.
 export type VersionFiche = { id: number; numero: number; auteur: string; creeLe: string; utilisee: boolean; marque: string };
 export type Fiche = { typeId: number; type: string; version: VersionFiche; zones: ZoneFiche[] };
@@ -44,14 +45,36 @@ async function nomsAuteurs(base: Base, auteurs: string[]): Promise<Map<string, s
 	return new Map(auteurs.map((a) => [a, nom(a)]));
 }
 
+// Les rôles qu'une zone peut prévenir : ceux du centre, non archivés.
+const rolesDuCentre = (base: Base) =>
+	base
+		.select({ id: responsabilite.id, nom: responsabilite.nom })
+		.from(responsabilite)
+		.where(and(eq(responsabilite.typePerimetre, 'centre'), isNull(responsabilite.archiveeLe)));
+
+export async function rolesAPrevenir(base: Base): Promise<{ id: number; nom: string }[]> {
+	return (await rolesDuCentre(base)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+}
+
+// La colonne `prevenir` lue : des identifiants, parmi les rôles encore valables s'ils sont donnés (un rôle archivé est ignoré).
+export function lirePrevenir(brut: string | null, valables?: Set<number>): number[] {
+	if (!brut) return [];
+	try {
+		const lu: unknown = JSON.parse(brut);
+		return Array.isArray(lu) ? lu.filter((x): x is number => Number.isInteger(x) && (!valables || valables.has(x))) : [];
+	} catch {
+		return [];
+	}
+}
+
 // Toutes les fiches (dernière version de chaque type), dans l'ordre des types. Une seule requête comptée.
 export async function lireFiches(base: Base): Promise<Fiche[]> {
-	const [types, versions, zones, elements] = await base.batch([
+	const [types, versions, zones, elements, roles] = await base.batch([
 		base.select().from(typeEngin).orderBy(asc(typeEngin.ordre), asc(typeEngin.id)),
 		// Les seules dernières versions, leurs zones et leurs éléments.
 		base.select().from(ficheVersion).where(sql`${ficheVersion.id} IN (SELECT max(${ficheVersion.id}) FROM ${ficheVersion} GROUP BY ${ficheVersion.typeId})`),
 		base
-			.select({ versionId: ficheZone.versionId, ref: ficheZone.ref, nom: ficheZone.nom, id: ficheZone.id })
+			.select({ versionId: ficheZone.versionId, ref: ficheZone.ref, nom: ficheZone.nom, id: ficheZone.id, prevenir: ficheZone.prevenir })
 			.from(ficheZone)
 			.where(sql`${ficheZone.versionId} IN (SELECT max(${ficheVersion.id}) FROM ${ficheVersion} GROUP BY ${ficheVersion.typeId})`)
 			.orderBy(asc(ficheZone.ordre)),
@@ -59,8 +82,10 @@ export async function lireFiches(base: Base): Promise<Fiche[]> {
 			.select({ id: ficheElement.id, zoneId: ficheElement.zoneId, ref: ficheElement.ref, libelle: ficheElement.libelle, quantite: ficheElement.quantite })
 			.from(ficheElement)
 			.where(sql`${ficheElement.versionId} IN (SELECT max(${ficheVersion.id}) FROM ${ficheVersion} GROUP BY ${ficheVersion.typeId})`)
-			.orderBy(asc(ficheElement.ordre))
+			.orderBy(asc(ficheElement.ordre)),
+		rolesDuCentre(base)
 	]);
+	const valables = new Set(roles.map((r) => r.id));
 	const noms = await nomsAuteurs(base, versions.map((v) => v.auteur));
 	return types.flatMap((t) => {
 		const v = versions.find((x) => x.typeId === t.id);
@@ -73,7 +98,7 @@ export async function lireFiches(base: Base): Promise<Fiche[]> {
 				typeId: t.id,
 				type: t.nom,
 				version: { id: v.id, numero: v.numero, auteur: noms.get(v.auteur) ?? v.auteur, creeLe: v.creeLe, utilisee: v.utilisee === 1, marque },
-				zones: siennes.map((z) => ({ ref: z.ref, nom: z.nom, elements: elements.filter((e) => e.zoneId === z.id).map(({ ref, libelle, quantite }) => ({ ref, libelle, quantite })) }))
+				zones: siennes.map((z) => ({ ref: z.ref, nom: z.nom, prevenir: lirePrevenir(z.prevenir, valables), elements: elements.filter((e) => e.zoneId === z.id).map(({ ref, libelle, quantite }) => ({ ref, libelle, quantite })) }))
 			}
 		];
 	});
@@ -147,7 +172,7 @@ export function appliquerGeste(zones: ZoneFiche[], geste: Geste, refs: { zone: n
 	let resultat: ZoneFiche[];
 	switch (geste.quoi) {
 		case 'ajouter_zone':
-			resultat = [...zones, { ref: refs.zone, nom: nomZone(geste.nom), elements: [] }];
+			resultat = [...zones, { ref: refs.zone, nom: nomZone(geste.nom), prevenir: [], elements: [] }];
 			break;
 		case 'renommer_zone': {
 			const i = iZone(geste.zone);
@@ -218,12 +243,12 @@ export function ecrituresFiche(base: Base, fiche: Fiche, zones: ZoneFiche[], aut
 				base.delete(ficheZone).where(eq(ficheZone.versionId, v.id)),
 				base.update(ficheVersion).set({ auteur, creeLe: maintenant }).where(eq(ficheVersion.id, v.id))
 			];
-	const lignesZones = JSON.stringify(zones.map((z) => ({ ref: z.ref, nom: z.nom })));
+	const lignesZones = JSON.stringify(zones.map((z) => ({ ref: z.ref, nom: z.nom, prevenir: z.prevenir.length ? JSON.stringify(z.prevenir) : null })));
 	const lignesElements = JSON.stringify(zones.flatMap((z) => z.elements.map((e, j) => ({ zone: z.ref, ref: e.ref, libelle: e.libelle, quantite: e.quantite, ordre: j + 1 }))));
 	return [
 		garde,
 		...preparation,
-		instruction(base, sql`INSERT INTO ${ficheZone} (version_id, ref, nom, ordre) SELECT ${idVersion}, json_extract(value, '$.ref'), json_extract(value, '$.nom'), key + 1 FROM json_each(${lignesZones})`),
+		instruction(base, sql`INSERT INTO ${ficheZone} (version_id, ref, nom, ordre, prevenir) SELECT ${idVersion}, json_extract(value, '$.ref'), json_extract(value, '$.nom'), key + 1, json_extract(value, '$.prevenir') FROM json_each(${lignesZones})`),
 		instruction(
 		base,
 			sql`INSERT INTO ${ficheElement} (version_id, zone_id, ref, libelle, quantite, ordre)
@@ -257,6 +282,26 @@ export async function modifierFicheEngin(base: Base, acteur: Acteur, typeId: num
 			ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_fiche', cibleType: 'type_engin', cibleId: typeId, details: { geste } }, maintenant)
 		])
 	);
+}
+
+// Qui prévenir d'une anomalie de la zone : un réglage de la dernière version, écrit sur place (ce n'est pas le contenu de la fiche,
+// pas de version de plus), puis recopié avec la zone. Liste vide : ceux qui traitent les anomalies, comme sans réglage.
+export async function reglerPrevenir(base: Base, acteur: Acteur, typeId: number, zone: number, roles: number[], maintenant: string): Promise<void> {
+	await exigerGestionEngins(base, acteur, maintenant);
+	const [fiche, valables] = await Promise.all([lireFiche(base, typeId), rolesDuCentre(base)]);
+	const z = fiche.zones.find((x) => x.ref === zone);
+	if (!z) throw new DonneeInvalide('Zone inconnue');
+	const choisis = [...new Set(roles)];
+	if (choisis.some((r) => !valables.some((v) => v.id === r))) throw new DonneeInvalide('Rôle inconnu');
+	if (JSON.stringify(choisis) === JSON.stringify(z.prevenir)) return;
+	const derniere = sql`(SELECT max(${ficheVersion.id}) FROM ${ficheVersion} WHERE ${ficheVersion.typeId} = ${typeId})`;
+	await base.batch([
+		base
+			.update(ficheZone)
+			.set({ prevenir: choisis.length ? JSON.stringify(choisis) : null })
+			.where(and(sql`${ficheZone.versionId} = ${derniere}`, eq(ficheZone.ref, zone))),
+		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_fiche', cibleType: 'type_engin', cibleId: typeId, details: { geste: { quoi: 'prevenir_zone', zone, roles: choisis } } }, maintenant)
+	]);
 }
 
 // Un nouveau type d'engin, avec sa fiche vide (version 1).

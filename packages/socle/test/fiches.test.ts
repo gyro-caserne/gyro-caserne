@@ -1,15 +1,15 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
-import { appliquerGeste, creerTypeEngin, ecrireOuRefuser, ecrituresFiche, gereLesEngins, lireFiche, lireFiches, modifierFicheEngin, type ZoneFiche } from '../src/fiches.ts';
+import { appliquerGeste, creerTypeEngin, ecrireOuRefuser, ecrituresFiche, gereLesEngins, lireFiche, lireFiches, modifierFicheEngin, reglerPrevenir, rolesAPrevenir, type ZoneFiche } from '../src/fiches.ts';
 import { attribution, comite, responsabilite, responsabiliteDroit } from '../src/schema.ts';
 import { aujourdhui } from './de-test-engins.ts';
 import { ficheElement, ficheVersion, journal } from '../src/schema.ts';
 import { jeuEngins, maintenant } from './de-test-engins.ts';
 
 const zones: ZoneFiche[] = [
-	{ ref: 1, nom: 'Cabine', elements: [{ ref: 10, libelle: 'Radio', quantite: null }, { ref: 11, libelle: 'Lampes', quantite: 2 }] },
-	{ ref: 2, nom: 'Coffres', elements: [{ ref: 12, libelle: 'Bâches', quantite: null }] }
+	{ ref: 1, nom: 'Cabine', prevenir: [], elements: [{ ref: 10, libelle: 'Radio', quantite: null }, { ref: 11, libelle: 'Lampes', quantite: 2 }] },
+	{ ref: 2, nom: 'Coffres', prevenir: [7], elements: [{ ref: 12, libelle: 'Bâches', quantite: null }] }
 ];
 const refs = { zone: 3, element: 13 };
 const vue = (z: ZoneFiche[]) => z.map((x) => `${x.nom}: ${x.elements.map((e) => e.libelle + (e.quantite ? ` ×${e.quantite}` : '')).join(', ')}`);
@@ -121,6 +121,65 @@ describe('écritures concurrentes', () => {
 		await modifierFicheEngin(base, referent, types.VTU, { quoi: 'renommer_zone', zone: avant.zones[0]!.ref, nom: 'Cabine' }, maintenant);
 		expect(await base.select().from(ficheVersion).where(eq(ficheVersion.typeId, types.VTU))).toHaveLength(1);
 		expect((await base.select().from(journal)).filter((j) => j.action === 'modifier_fiche')).toEqual([]);
+	});
+});
+
+describe('qui prévenir, par zone', () => {
+	const roleNomme = async (base: Awaited<ReturnType<typeof jeuEngins>>['base'], nom: string) => (await base.select().from(responsabilite).where(eq(responsabilite.nom, nom)))[0]!.id;
+
+	it('les rôles du centre, non archivés, dans l’ordre des noms ; pas le chef de garde', async () => {
+		const { base } = await jeuEngins();
+		const roles = await rolesAPrevenir(base);
+		expect(roles.map((r) => r.nom)).toContain('Référent pharmacie');
+		expect(roles.map((r) => r.nom)).not.toContain('Chef de garde');
+		expect(roles.map((r) => r.nom)).toEqual([...roles.map((r) => r.nom)].sort((a, b) => a.localeCompare(b, 'fr')));
+		await base.update(responsabilite).set({ archiveeLe: '2026-10-01' }).where(eq(responsabilite.nom, 'Référent pharmacie'));
+		expect((await rolesAPrevenir(base)).map((r) => r.nom)).not.toContain('Référent pharmacie');
+	});
+
+	it('réglé sur place, sans version de plus, même déjà utilisée ; au journal ; recopié à la version suivante', async () => {
+		const { base, referent, types } = await jeuEngins();
+		const pharmacie = await roleNomme(base, 'Référent pharmacie');
+		const engins = await roleNomme(base, 'Référent engins');
+		const avant = await lireFiche(base, types.VSAV);
+		expect(avant.zones.every((z) => z.prevenir.length === 0)).toBe(true);
+		await base.update(ficheVersion).set({ utilisee: 1 }).where(eq(ficheVersion.id, avant.version.id));
+		const zone = avant.zones[1]!.ref;
+		await reglerPrevenir(base, referent, types.VSAV, zone, [pharmacie, engins, pharmacie], maintenant);
+		const apres = await lireFiche(base, types.VSAV);
+		expect(apres.version.id).toBe(avant.version.id);
+		expect(apres.zones[1]!.prevenir).toEqual([pharmacie, engins]);
+		const ligne = (await base.select().from(journal)).filter((l) => l.action === 'modifier_fiche').at(-1)!;
+		expect(ligne).toMatchObject({ cibleType: 'type_engin', cibleId: types.VSAV });
+		expect(JSON.parse(ligne.details)).toEqual({ geste: { quoi: 'prevenir_zone', zone, roles: [pharmacie, engins] } });
+		// Une autre modification crée la version 2 : le réglage suit la zone.
+		await modifierFicheEngin(base, referent, types.VSAV, { quoi: 'renommer_zone', zone, nom: 'Sac PS' }, maintenant);
+		const v2 = await lireFiche(base, types.VSAV);
+		expect(v2.version.numero).toBe(2);
+		expect(v2.zones[1]).toMatchObject({ nom: 'Sac PS', prevenir: [pharmacie, engins] });
+		// Rien : la règle d'aujourd'hui.
+		await reglerPrevenir(base, referent, types.VSAV, zone, [], maintenant);
+		expect((await lireFiche(base, types.VSAV)).zones[1]!.prevenir).toEqual([]);
+	});
+
+	it('réservé à qui gère les engins ; refusé pour une zone ou un rôle inconnus, archivés ou d’équipe', async () => {
+		const { base, alice, referent, types } = await jeuEngins();
+		const pharmacie = await roleNomme(base, 'Référent pharmacie');
+		const zone = (await lireFiche(base, types.VSAV)).zones[0]!.ref;
+		await expect(reglerPrevenir(base, alice, types.VSAV, zone, [pharmacie], maintenant)).rejects.toBeInstanceOf(RefusDroit);
+		await expect(reglerPrevenir(base, referent, types.VSAV, 9999, [pharmacie], maintenant)).rejects.toThrow(new DonneeInvalide('Zone inconnue'));
+		await expect(reglerPrevenir(base, referent, types.VSAV, zone, [await roleNomme(base, 'Chef de garde')], maintenant)).rejects.toThrow(new DonneeInvalide('Rôle inconnu'));
+		await base.update(responsabilite).set({ archiveeLe: '2026-10-01' }).where(eq(responsabilite.id, pharmacie));
+		await expect(reglerPrevenir(base, referent, types.VSAV, zone, [pharmacie], maintenant)).rejects.toThrow(new DonneeInvalide('Rôle inconnu'));
+	});
+
+	it('un rôle archivé après coup est ignoré à la lecture', async () => {
+		const { base, referent, types } = await jeuEngins();
+		const pharmacie = await roleNomme(base, 'Référent pharmacie');
+		const zone = (await lireFiche(base, types.VSAV)).zones[0]!.ref;
+		await reglerPrevenir(base, referent, types.VSAV, zone, [pharmacie], maintenant);
+		await base.update(responsabilite).set({ archiveeLe: '2026-10-01' }).where(eq(responsabilite.id, pharmacie));
+		expect((await lireFiche(base, types.VSAV)).zones[0]!.prevenir).toEqual([]);
 	});
 });
 
