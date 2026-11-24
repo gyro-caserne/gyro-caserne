@@ -32,7 +32,7 @@ const sections = {
 	autres: [tuile('comite:1', 'Comité A', 'comite', { icone: 'groupe' }), tuile('comite:2', 'Comité B', 'comite', { icone: 'groupe' }), tuile('comite:3', 'Comité C', 'comite', { icone: 'groupe' })],
 	supervision: [tuile('equipe:2', 'Équipe 2', 'equipe', { membre: false, couleur: '#1565c0', numero: 2 })]
 };
-const aujourdhui = { anniversaires: [{ id: 12, prenom: 'Thomas', nom: 'Aubry', geste: 'souhaiter' }], evenement: { id: 7, cle: 'centre', titre: 'Manœuvre désincarcération', debut: '2026-11-05T19:00' } };
+const aujourdhui = { anniversaires: [{ id: 12, prenom: 'Thomas', nom: 'Aubry', geste: 'souhaiter' }], paliers: [], evenement: { id: 7, cle: 'centre', titre: 'Manœuvre désincarcération', debut: '2026-11-05T19:00' } };
 const contenu = createRawSnippet(() => ({ render: () => '<h1>Vie du centre</h1>' }));
 
 const aVenir = [
@@ -93,7 +93,7 @@ describe('liste des murs', () => {
 
 	it('sans rien aujourd’hui, ni groupe, ni supervision : pas de section vide', () => {
 		etat.page.params = {};
-		const page = html({ sections: { ...sections, groupes: [], autres: [], supervision: [] }, aujourdhui: { anniversaires: [], evenement: null } });
+		const page = html({ sections: { ...sections, groupes: [], autres: [], supervision: [] }, aujourdhui: { anniversaires: [], paliers: [], evenement: null } });
 		expect(page).not.toContain('Aujourd’hui au centre');
 		expect(page).not.toContain('Mes groupes');
 		expect(page).not.toContain('Supervision');
@@ -132,18 +132,31 @@ describe('liste des murs', () => {
 
 	it('deux anniversaires d’homonymes : deux lignes, deux liens « Souhaiter »', () => {
 		etat.page.params = {};
-		const page = html({ aujourdhui: { anniversaires: [{ id: 1, prenom: 'Thomas', nom: 'Agent', geste: 'souhaiter' }, { id: 2, prenom: 'Thomas', nom: 'Agent', geste: 'souhaiter' }], evenement: null } });
+		const page = html({ aujourdhui: { anniversaires: [{ id: 1, prenom: 'Thomas', nom: 'Agent', geste: 'souhaiter' }, { id: 2, prenom: 'Thomas', nom: 'Agent', geste: 'souhaiter' }], paliers: [], evenement: null } });
 		expect(texte(page).match(/Thomas Agent fête son anniversaire/g)).toHaveLength(2);
 		expect(page).toContain('name="id" value="1"');
 		expect(page).toContain('name="id" value="2"');
 	});
 
+	it('un palier d’ancienneté : l’insigne de l’échelon, « Féliciter », puis « Félicité » ; rien pour soi', () => {
+		etat.page.params = {};
+		const page = html({ aujourdhui: { anniversaires: [], paliers: [{ id: 5, prenom: 'Thomas', nom: 'Agent', annees: 10, geste: 'feliciter' }, { id: 6, prenom: 'Julie', nom: 'Bernard', annees: 20, geste: 'felicite' }, { id: 7, prenom: 'Alice', nom: 'Test', annees: 5, geste: null }], evenement: null } });
+		expect(texte(page)).toContain('Aujourd’hui au centre');
+		expect(texte(page)).toContain('Thomas Agent fête ses 10 ans de service Féliciter Thomas Agent');
+		expect(page).toMatch(/action="\/echanges\?\/feliciter"[\s\S]*?name="id" value="5"[\s\S]*?name="retour" value="\/echanges"/);
+		expect(texte(page)).toContain('Julie Bernard fête ses 20 ans de service Félicité Julie Bernard');
+		expect(texte(page)).toMatch(/Alice Test fête ses 5 ans de service\s*$|Alice Test fête ses 5 ans de service(?! Féliciter)/);
+		expect(page).toMatch(/<svg class="insigne bronze[^"]*"/);
+		expect(page).toMatch(/<svg class="insigne argent[^"]*"/);
+		expect(page).toMatch(/<svg class="insigne neutre[^"]*"/);
+	});
+
 	it('déjà souhaité : « Souhaité », sans bouton ; son propre anniversaire : ni l’un ni l’autre', () => {
 		etat.page.params = {};
-		const deja = html({ aujourdhui: { anniversaires: [{ id: 12, prenom: 'Thomas', nom: 'Aubry', geste: 'souhaite' }], evenement: null } });
+		const deja = html({ aujourdhui: { anniversaires: [{ id: 12, prenom: 'Thomas', nom: 'Aubry', geste: 'souhaite' }], paliers: [], evenement: null } });
 		expect(texte(deja)).toContain('Thomas Aubry fête son anniversaire Souhaité');
 		expect(deja).not.toContain('?/souhaiter');
-		const soi = html({ aujourdhui: { anniversaires: [{ id: 12, prenom: 'Thomas', nom: 'Aubry', geste: null }], evenement: null } });
+		const soi = html({ aujourdhui: { anniversaires: [{ id: 12, prenom: 'Thomas', nom: 'Aubry', geste: null }], paliers: [], evenement: null } });
 		expect(texte(soi)).toContain('Thomas Aubry fête son anniversaire');
 		expect(soi).not.toContain('?/souhaiter');
 		expect(texte(soi)).not.toContain('Souhaité');
@@ -216,7 +229,7 @@ describe('liste des murs', () => {
 
 	it('sur un mur, rien aujourd’hui ni à venir : pas de colonne', () => {
 		etat.page.params = { mur: 'vie' };
-		expect(html({ aujourdhui: { anniversaires: [], evenement: null }, aVenir: [] })).not.toContain('<aside');
+		expect(html({ aujourdhui: { anniversaires: [], paliers: [], evenement: null }, aVenir: [] })).not.toContain('<aside');
 	});
 
 	it('sur /echanges : pas de colonne Aujourd’hui à part', () => {
