@@ -1,0 +1,1 @@
+ALTER TABLE `fiche_zone` ADD `prevenir` text;
