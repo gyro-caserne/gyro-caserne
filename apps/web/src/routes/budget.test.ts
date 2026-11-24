@@ -26,7 +26,7 @@ import { load as listeAgents } from './agents/+layout.server';
 import { actions as actionsFiche, load as fiche } from './agents/[id]/+page.server';
 import { load as nominations } from './nominations/+page.server';
 import { load as caserne } from './caserne/+page.server';
-import { load as comites } from './comites/+page.server';
+import { actions as actionsComites, load as comites } from './comites/+page.server';
 import { load as moi } from './moi/+page.server';
 import { load as reglages } from './reglages/+layout.server';
 import { load as pageReglages } from './reglages/+page.server';
@@ -194,12 +194,41 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 		for (const acteur of [locals.acteur, { type: 'personne' as const, id: agent.id }]) {
 			const ici = { ...locals, acteur };
 			const n = await compter(async () => {
-				await (racine as any)({ depends: () => {}, locals: ici });
-				const data = await (comites as any)({ locals: ici });
+				const r = await (racine as any)({ depends: () => {}, locals: ici });
+				const data = await (comites as any)({ locals: ici, parent: async () => r });
 				expect(data.comites.find((c: { nom: string }) => c.nom === 'Amicale').membres).toHaveLength(40);
 			});
 			expect(n).toBeLessThanOrEqual(BUDGET);
 		}
+	});
+
+	it('/comites, pour le chef : nommer, remplacer, finir, chaque fois avec le rechargement', async () => {
+		const { base, locals, agent, compter } = await centreDe150();
+		const [cg] = await base.select().from(responsabilite).where(eq(responsabilite.systeme, 'chef_equipe'));
+		const [e] = await base.select().from(equipe).orderBy(equipe.ordreRotation);
+		const autres = (await base.select().from(personne)).slice(10, 12);
+		const page = async () => {
+			const r = await (racine as any)({ depends: () => {}, locals });
+			return (comites as any)({ locals, parent: async () => r });
+		};
+		const geste = async (nom: string, corps: Record<string, string>) => (actionsComites[nom] as any)({ locals, request: new Request('http://localhost', { method: 'POST', body: new URLSearchParams(corps) }) });
+		expect(await compter(page)).toBeLessThanOrEqual(BUDGET);
+		const n = await compter(async () => {
+			expect(await geste('nommer', { poste: 'x', responsabiliteId: String(cg!.id), perimetre: String(e!.id), personneId: String(agent.id), debut: '2026-01-02' })).toMatchObject({ succes: expect.any(String) });
+			await page();
+		});
+		expect(n).toBeLessThanOrEqual(BUDGET);
+		const [mandat] = await base.select().from(attribution).where(eq(attribution.personneId, agent.id));
+		const m = await compter(async () => {
+			expect(await geste('remplacer', { attributionId: String(mandat!.id), personneId: String(autres[0]!.id), debut: aujourdhuiParis() })).toMatchObject({ succes: expect.any(String) });
+			await page();
+		});
+		expect(m).toBeLessThanOrEqual(BUDGET);
+		const f = await compter(async () => {
+			expect(await geste('finir', { attributionId: String(mandat!.id), fin: '2026-01-03', confirmation: 'oui' })).toMatchObject({ succes: expect.any(String) });
+			await page();
+		});
+		expect(f).toBeLessThanOrEqual(BUDGET);
 	});
 
 	it('/planning/ete : tout un été proposé pour 150 agents ; proposer, ajuster, publier ; Mes vacances, armement', async () => {

@@ -22,7 +22,7 @@ type Nature = 'fonction' | 'mission';
 // `demandes` : le rôle reçoit des demandes ; on peut lui en faire une depuis sa ligne.
 export type RoleTenu = { id: number; nom: string; icone: NomIcone; titulaires: Titulaire[]; demandes: boolean; nommer?: Nommer };
 // Un rôle de comité dans un comité, pour qui peut y nommer : son nom court (« Rapporteur »).
-export type PosteDeComite = { id: number; nom: string; titulaires: Titulaire[]; nommer: Nommer };
+export type PosteDeComite = { id: number; nom: string; nature: Nature; titulaires: Titulaire[]; nommer: Nommer };
 export type QuiFaitQuoi = {
 	comites: { id: number; nom: string; icone: NomIcone; mur: boolean; membres: (Titulaire & { roles: string[] })[]; ressources: { id: number; nom: string; icone: NomIcone }[]; postes?: PosteDeComite[] }[];
 	commandement: RoleTenu[];
@@ -32,7 +32,7 @@ export type QuiFaitQuoi = {
 	// L'acteur peut faire une demande (un agent, pas le super administrateur).
 	peutDemander: boolean;
 	// Avec l'option `gestes`, pour qui peut nommer au moins un poste : les agents qu'on peut nommer (nom, équipe). Sinon null.
-	gestes: { agents: { id: number; nom: string; equipeId: number | null }[] } | null;
+	gestes: { agents: { id: number; nom: string; equipeId: number | null; equipe: string | null }[] } | null;
 };
 
 // « Rapporteur de comité » se lit « Rapporteur » sous le nom du comité.
@@ -145,7 +145,7 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 			if (mandats === null) return carte;
 			const postes = rolesDeComite.flatMap((r) => {
 				const p = poste(r, c.id);
-				return p ? [{ id: r.id, nom: roleCourt(r.nom), ...p }] : [];
+				return p ? [{ id: r.id, nom: roleCourt(r.nom), nature: r.nature, ...p }] : [];
 			});
 			return { ...carte, postes };
 		}),
@@ -173,8 +173,11 @@ export async function quiFaitQuoi(base: Base, acteur: Acteur, aujourdhui: string
 	const nommeQuelqueChose = [...vue.commandement, ...vue.fonctions, ...vue.missions].some((r) => r.nommer) || vue.equipes.some((r) => r.parEquipe.some((l) => l.nommer)) || vue.comites.some((c) => (c.postes ?? []).length > 0);
 	if (!nommeQuelqueChose) return vue;
 	// L'équipe du jour de chaque agent : les siens passent d'abord quand on nomme dans une équipe.
-	const equipeDe = new Map(affectations.map((a) => [a.personneId, a.equipeId]));
-	const aNommer = [...agents].sort((x, y) => ordre.get(x.id)! - ordre.get(y.id)!).map((a) => ({ id: a.id, nom: nomDe.get(a.id)!, equipeId: equipeDe.get(a.id) ?? null }));
+	const nomEquipe = new Map(equipes.map((e) => [e.id, e.nom]));
+	const equipeDe = new Map(affectations.filter((a) => nomEquipe.has(a.equipeId)).map((a) => [a.personneId, a.equipeId]));
+	const aNommer = [...agents]
+		.sort((x, y) => ordre.get(x.id)! - ordre.get(y.id)!)
+		.map((a) => ({ id: a.id, nom: nomDe.get(a.id)!, equipeId: equipeDe.get(a.id) ?? null, equipe: nomEquipe.get(equipeDe.get(a.id) ?? -1) ?? null }));
 	return { ...vue, gestes: { agents: aNommer } };
 }
 

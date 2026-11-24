@@ -229,7 +229,7 @@ describe('quiFaitQuoi, avec les gestes de qui nomme', () => {
 			['Membre', ['Alice Bernard']]
 		]);
 		// Les agents à nommer : nom et équipe, dans l'ordre des noms.
-		expect(vue.gestes!.agents.find((a) => a.id === bruno)).toEqual({ id: bruno, nom: 'Bruno Petit', equipeId: null });
+		expect(vue.gestes!.agents.find((a) => a.id === bruno)).toEqual({ id: bruno, nom: 'Bruno Petit', equipeId: null, equipe: null });
 		expect(vue.gestes!.agents.map((a) => a.nom)).toEqual([...vue.gestes!.agents.map((a) => a.nom)].sort((x, y) => x.split(' ')[1]!.localeCompare(y.split(' ')[1]!, 'fr') || x.localeCompare(y, 'fr')));
 	});
 
