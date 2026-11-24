@@ -58,7 +58,8 @@ L'ancienneté se compte en **années de service**, depuis la date d'engagement S
   - migration qui ne fait qu'ajouter.
 - **E-mails** : par le circuit Brevo déjà en place, avec le même gabarit que les autres e-mails aux chefs. Pas d'envoi si aucun palier n'arrive dans 30 jours.
 - **Écrans et finitions** :
-  - charte stricte, sans aucun marqueur d'interface générée ;
+  - charte stricte ;
+  - **aucun marqueur de texte généré**, règle stricte du porteur : pas de « · », « — », « → » ni « | » comme séparateurs, pas d'emoji décoratif (l'insigne est une icône dessinée), pas de deux-points entre deux idées, pas de majuscules espacées. Les textes restent simples, comme les écrirait un chef (« 12 ans de service », « Prochain palier, 15 ans le 3 mars 2029 »). Fiche, carte, e-mail et notifications sont relus avec cette règle ;
   - gestes dans `ACTIONS` ;
   - téléphone et ordinateur, avec captures téléphone en clair et ordinateur en sombre ;
   - doc (fiche agent, accueil, réglages, e-mails), une page d'aide et une décision ;
