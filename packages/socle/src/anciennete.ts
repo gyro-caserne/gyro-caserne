@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, isNull, notExists, sql } from 'drizzle-orm';
 import { anneesDeService, palierDuJour } from './a-ne-pas-manquer.ts';
 import { nomActeur } from './actions/personnes.ts';
-import { PALIER_MAX, PALIERS_PAR_DEFAUT } from './anciennete-calcul.ts';
+import { anciennete, PALIER_MAX, PALIERS_PAR_DEFAUT, type Anciennete } from './anciennete-calcul.ts';
 import type { Base } from './base.ts';
 import type { Courriel } from './courriels.ts';
 import { ajouterJours, exigerDateHeure, formatDeDate } from './dates.ts';
@@ -21,6 +21,15 @@ export const ANNONCE_JOURS = 30;
 export async function lirePaliers(base: Base): Promise<number[]> {
 	const [ligne] = await base.select({ paliers: reglageAnciennete.paliers }).from(reglageAnciennete).where(eq(reglageAnciennete.id, 1));
 	return ligne ? (JSON.parse(ligne.paliers) as number[]) : PALIERS_PAR_DEFAUT;
+}
+
+// L'ancienneté d'un agent, pour Moi : ses dates et les paliers du centre, en une requête.
+export async function ancienneteDe(base: Base, personneId: number, aujourdhui: string): Promise<Anciennete> {
+	const [[p], [r]] = await base.batch([
+		base.select({ engagement: personne.engagementSpv, entree: personne.entreeCentre }).from(personne).where(eq(personne.id, personneId)),
+		base.select({ paliers: reglageAnciennete.paliers }).from(reglageAnciennete).where(eq(reglageAnciennete.id, 1))
+	]);
+	return anciennete(p?.engagement ?? null, p?.entree ?? null, aujourdhui, r ? (JSON.parse(r.paliers) as number[]) : PALIERS_PAR_DEFAUT);
 }
 
 // Les paliers du centre, avec ceux qui gèrent les listes du centre : de 1 à 60 ans, rangés, sans doublon. Au moins un.

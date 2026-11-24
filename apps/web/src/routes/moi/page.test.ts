@@ -35,6 +35,15 @@ describe('/moi', () => {
 		expect(page).not.toContain('Adjudant');
 	});
 
+	it('son ancienneté, sous la carte d’identité ; rien pour une personne extérieure ni sans date', () => {
+		const anciennete = { annees: 12, auCentre: 8, echelon: 'bronze', prochain: { annees: 15, jour: '2029-03-03', part: 0.55 } };
+		const page = html({ estPersonne: true, anciennete });
+		expect(page.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')).toContain('12 ans de service, dont 8 au centre Échelon bronze Prochain palier, 15 ans le 3 mars 2029');
+		expect(page).not.toContain('Date d’engagement à compléter');
+		expect(html({ estPersonne: true, exterieur: true, anciennete })).not.toContain('class="anciennete');
+		expect(html({ estPersonne: true, anciennete: { annees: null, auCentre: null, echelon: null, prochain: null } })).not.toContain('class="anciennete');
+	});
+
 	it('carte d’identité : visage à la couleur de l’équipe, nom, grade et équipe', () => {
 		const page = html({ estPersonne: true, identite: { prenom: 'Claire', nom: 'Chef', grade: 'Lieutenant', equipe: { nom: 'Équipe 1', couleur: '#d4a017' } } });
 		expect(page).toMatch(/class="visage[^"]*"[^>]*style="background: #d4a017;/);
@@ -68,8 +77,8 @@ describe('/moi', () => {
 		const { base, alice } = await preparer();
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const charger = (acteur: unknown) => (load as any)({ locals: { base, acteur } });
-		expect(await charger(alice)).toEqual({ identite: { prenom: 'Alice', nom: 'Test', grade: null, role: null, equipe: { nom: expect.any(String), couleur: expect.stringMatching(/^#/) } }, aptitudes: [] });
-		expect(await charger({ type: 'super', email: 'a@b.fr' })).toEqual({ identite: null, aptitudes: [] });
+		expect(await charger(alice)).toEqual({ identite: { prenom: 'Alice', nom: 'Test', grade: null, role: null, equipe: { nom: expect.any(String), couleur: expect.stringMatching(/^#/) } }, aptitudes: [], anciennete: { annees: null, auCentre: null, echelon: null, prochain: null } });
+		expect(await charger({ type: 'super', email: 'a@b.fr' })).toEqual({ identite: null, aptitudes: [], anciennete: null });
 	});
 
 	it('super administrateur : pas de « Mon profil »', () => {

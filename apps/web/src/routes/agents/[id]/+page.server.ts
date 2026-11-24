@@ -2,6 +2,8 @@ import { error, fail } from '@sveltejs/kit';
 import { asc, eq } from 'drizzle-orm';
 import {
 	affecterEquipe,
+	anciennete,
+	lirePaliers,
 	annuaire,
 	aptitudesEtListe,
 	donnerAptitude,
@@ -63,17 +65,20 @@ async function peutEcrire(locals: App.Locals, acteur: Acteur, id: number, aujour
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const { acteur, aujourdhui, fiche } = await lireFiche(locals, params.id);
 	const { base } = locals;
-	const [[grades, profils, equipes], aptitudes] = await Promise.all([
+	const [[grades, profils, equipes], aptitudes, paliers] = await Promise.all([
 		base.batch([
 			base.select({ id: grade.id, libelle: grade.libelle }).from(grade).orderBy(asc(grade.ordre)),
 			base.select({ id: profil.id, nom: profil.nom, typePersonne: profil.typePersonne }).from(profil).orderBy(asc(profil.id)),
 			base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation))
 		]),
-		aptitudesEtListe(base, acteur, fiche.id, aujourdhui)
+		aptitudesEtListe(base, acteur, fiche.id, aujourdhui),
+		lirePaliers(base)
 	]);
 	return {
 		aujourdhui,
 		fiche,
+		// L'ancienneté de service, d'après l'engagement SPV et les paliers du centre (décision 0047).
+		anciennete: anciennete(fiche.engagementSpv, fiche.entreeCentre, aujourdhui, paliers),
 		raison: await raisonDeProtection(locals, acteur, fiche, aujourdhui),
 		ecrire: await peutEcrire(locals, acteur, fiche.id, aujourdhui),
 		// Un agent parti : le jour où la nuit effacera ses données (inconnu s'il est parti avant que l'appli note la date).

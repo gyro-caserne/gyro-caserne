@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
 import { fetesDuJourAuCentre, fetesPourMoi } from '../src/a-ne-pas-manquer.ts';
 import { changerStatut } from '../src/actions/personnes.ts';
-import { ancienneteDuMatin, feliciter, lirePaliers, reglerPaliers } from '../src/anciennete.ts';
+import { ancienneteDe, ancienneteDuMatin, feliciter, lirePaliers, reglerPaliers } from '../src/anciennete.ts';
 import type { Acteur } from '../src/droits.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
@@ -48,6 +48,16 @@ describe('les paliers du centre', () => {
 		await reglerPaliers(base, acteur(claire), [40, 10, 25, 20, 30, 10], maintenant);
 		expect(await lirePaliers(base)).toEqual([10, 20, 25, 30, 40]);
 		expect(await base.select({ action: journal.action, details: journal.details }).from(journal).where(eq(journal.action, 'regler_anciennete'))).toEqual([{ action: 'regler_anciennete', details: JSON.stringify({ paliers: [10, 20, 25, 30, 40] }) }]);
+	});
+
+	it('l’ancienneté d’un agent, pour Moi, en une requête, selon les paliers du centre', async () => {
+		const { base, thomas, claire, paul } = await jeu();
+		base.requetes = 0;
+		expect(await ancienneteDe(base, thomas, '2026-11-24')).toMatchObject({ annees: 9, auCentre: 8, echelon: null, prochain: { annees: 10, jour: '2026-12-12' } });
+		expect(base.requetes).toBe(1);
+		await reglerPaliers(base, acteur(claire), [10, 20, 25, 30, 40], maintenant);
+		expect(await ancienneteDe(base, claire, '2026-11-24')).toMatchObject({ annees: 25, echelon: 'vermeil', prochain: { annees: 30, jour: '2031-03-04' } });
+		expect(await ancienneteDe(base, paul, '2026-11-24')).toEqual({ annees: null, auCentre: null, echelon: null, prochain: null });
 	});
 
 	it('refusés : sans le droit, hors de 1 à 60 ans, liste vide', async () => {

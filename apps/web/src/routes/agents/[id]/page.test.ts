@@ -27,7 +27,7 @@ const fiche = {
 	protection: null
 };
 const aucun = { enCours: [], aVenir: [], passees: [] };
-const data = { aujourdhui: '2026-10-27', attributions: aucun, peutAttribuer: [], fiche, raison: null, grades: [], profils: [{ id: 1, nom: 'Agent' }], equipes: [{ id: 1, nom: 'Équipe 1' }], statuts: ['operationnel', 'suspendu', 'parti'], aptitudes: [], aptitudesDuCentre: [{ id: 1, nom: 'CA2', controlee: true, ordre: 1 }] };
+const data = { aujourdhui: '2026-10-27', attributions: aucun, peutAttribuer: [], fiche, raison: null, grades: [], profils: [{ id: 1, nom: 'Agent' }], equipes: [{ id: 1, nom: 'Équipe 1' }], statuts: ['operationnel', 'suspendu', 'parti'], aptitudes: [], aptitudesDuCentre: [{ id: 1, nom: 'CA2', controlee: true, ordre: 1 }], anciennete: { annees: null, auCentre: null, echelon: null, prochain: null } };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const html = (props: Record<string, unknown>) => render(Page as any, { props }).body;
 // Le bouton d'un bloc (Groupe) : titre et résumé y sont écrits.
@@ -474,5 +474,38 @@ describe('personne extérieure', () => {
 		const page = html({ data: agent, form: { erreurs: { passage: 'Cochez « Je confirme » pour changer de profil.' }, valeurs: { profilId: '2' } } });
 		for (const champ of ['id="grade"', 'id="date-grade"', 'id="entree-centre"', 'id="engagement-spv"']) expect(page, champ).not.toContain(champ);
 		expect(page).toMatch(/name="passage" value="oui"/);
+	});
+
+});
+
+describe('page fiche agent : ancienneté', () => {
+	const texte = (h: string) => h.replace(/<!--.*?-->|<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+	const bloc = (h: string) => h.slice(h.indexOf('<section class="anciennete'), h.indexOf('</section>', h.indexOf('<section class="anciennete')));
+
+	it('avant 5 ans : l’insigne neutre, les années, la barre vers le premier palier', () => {
+		const page = html({ data: { ...data, anciennete: { annees: 3, auCentre: 3, echelon: null, prochain: { annees: 5, jour: '2028-05-01', part: 0.6 } } }, form: null });
+		expect(bloc(page)).toMatch(/<svg class="insigne neutre[^"]*"[^>]*aria-hidden="true"/);
+		expect(texte(bloc(page))).toContain('Ancienneté 3 ans de service au centre Prochain palier, 5 ans le 1er mai 2028');
+		expect(bloc(page)).not.toContain('Échelon');
+		expect(bloc(page)).toMatch(/class="barre[^"]*" aria-hidden="true"><span[^>]*style="width: 60%;"/);
+		// Avant les blocs repliés.
+		expect(page.indexOf('class="anciennete')).toBeLessThan(page.indexOf('Identité et contact'));
+	});
+
+	it('12 ans : échelon bronze écrit, 8 au centre, prochain palier 15 ans ; 25 ans : vermeil', () => {
+		const douze = bloc(html({ data: { ...data, anciennete: { annees: 12, auCentre: 8, echelon: 'bronze', prochain: { annees: 15, jour: '2029-03-03', part: 0.55 } } }, form: null }));
+		expect(douze).toMatch(/<svg class="insigne bronze/);
+		expect(texte(douze)).toContain('12 ans de service, dont 8 au centre Échelon bronze Prochain palier, 15 ans le 3 mars 2029');
+		const vingtCinq = bloc(html({ data: { ...data, anciennete: { annees: 25, auCentre: 25, echelon: 'vermeil', prochain: null } }, form: null }));
+		expect(vingtCinq).toMatch(/<svg class="insigne vermeil/);
+		expect(texte(vingtCinq)).toContain('Échelon vermeil');
+		// Sur le dernier palier réglé, pas de barre.
+		expect(vingtCinq).not.toContain('class="barre');
+	});
+
+	it('sans date d’engagement : « à compléter » pour qui peut modifier la fiche, rien sinon ; rien pour une personne extérieure', () => {
+		expect(texte(bloc(html({ data, form: null })))).toContain('Date d’engagement à compléter');
+		expect(html({ data: { ...data, raison: 'Seul un super administrateur modifie la fiche du chef de centre.' }, form: null })).not.toContain('class="anciennete');
+		expect(html({ data: { ...data, fiche: { ...fiche, profil: { id: 2, nom: 'Retraité', typePersonne: 'exterieur' } }, anciennete: { annees: 30, auCentre: 30, echelon: 'or', prochain: null } }, form: null })).not.toContain('class="anciennete');
 	});
 });
