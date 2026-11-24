@@ -18,10 +18,11 @@ const ENGINS = 'eric.zones@exemple.fr';
 const ZONE = 'Cellule sanitaire';
 
 test.describe('anomalies par zone', () => {
+	// La base est partagée entre téléphone et ordinateur : chaque insertion ne se fait qu'une fois.
 	test.beforeAll(() => {
 		// Une référente pharmacie et un référent engins, le temps du test.
-		executer(`INSERT INTO personne (email, prenom, nom, profil_id) SELECT '${PHARMACIE}', 'Pia', 'Zones', id FROM profil WHERE nom = 'Agent';
-			INSERT INTO personne (email, prenom, nom, profil_id) SELECT '${ENGINS}', 'Éric', 'Zones', id FROM profil WHERE nom = 'Agent';
+		executer(`INSERT INTO personne (email, prenom, nom, profil_id) SELECT '${PHARMACIE}', 'Pia', 'Zones', id FROM profil WHERE nom = 'Agent' AND NOT EXISTS (SELECT 1 FROM personne WHERE email = '${PHARMACIE}');
+			INSERT INTO personne (email, prenom, nom, profil_id) SELECT '${ENGINS}', 'Éric', 'Zones', id FROM profil WHERE nom = 'Agent' AND NOT EXISTS (SELECT 1 FROM personne WHERE email = '${ENGINS}');
 			INSERT INTO attribution (personne_id, responsabilite_id, perimetre_type, perimetre_id, debut, saisie_par, saisie_le) SELECT p.id, r.id, 'centre', NULL, '2026-01-01', '${MARQUE}', '2026-01-01' FROM personne p, responsabilite r WHERE p.email = '${PHARMACIE}' AND r.nom = 'Référent pharmacie';
 			INSERT INTO attribution (personne_id, responsabilite_id, perimetre_type, perimetre_id, debut, saisie_par, saisie_le) SELECT p.id, r.id, 'centre', NULL, '2026-01-01', '${MARQUE}', '2026-01-01' FROM personne p, responsabilite r WHERE p.email = '${ENGINS}' AND r.nom = 'Référent engins';`);
 	});
