@@ -60,7 +60,7 @@ export { remplacementsDuMoment } from './remplacements/moment.ts';
 export { chargerAptitudesFictives, chargerRemplacementsFictifs } from './remplacements/fictif.ts';
 export { AMBIANCES, mettreAJourReleves, relevesDe, vueMeteo, type Ambiance, type VueMeteo } from './meteo.ts';
 export { chargerEnginsFictifs, enregistrerEngin, LIMITES_ENGIN, lireEngin, listerEngins, voitLesEngins, type EnginVu, type SaisieEngin } from './engins.ts';
-export { appliquerGeste, creerTypeEngin, gereLesEngins, LIMITES_FICHE, lireFiche, lireFiches, modifierFicheEngin, reglerPrevenir, rolesAPrevenir, type ElementFiche, type Fiche, type Geste, type ZoneFiche } from './fiches.ts';
+export { appliquerGeste, creerTypeEngin, gereLesEngins, LIMITES_FICHE, lireFiche, lireFiches, modifierFicheEngin, reglerPrevenir, rolesAPrevenir, zonesPrevenues, type ElementFiche, type Fiche, type Geste, type ZoneFiche } from './fiches.ts';
 export { FICHES_PAR_DEFAUT } from './fiches-de-depart.ts';
 export { apercuFiches, appliquerFiches, donneesFichierFiches, ENTETES_FICHES, type ApercuFiches, type ChangementsFiche, type DonneesFichierFiches, type FichierFichesLu } from './fichier-fiches.ts';
 export { anomaliesADecider, bloquanteClose, chargerAnomaliesFictives, etapesDu, gesteAnomalie, gestesPermis, libelleEtape, LIBELLES_ETAPE, LIBELLES_MOTIF, LIMITES_ANOMALIE, lireAnomalie, listerAnomalies, REGLAGE_ANOMALIES, signalerAnomalie, traiteLesAnomalies, type AnomalieListee, type EtapeHistorique, type EtatAnomalie, type GesteAnomalie, type QuoiGeste, type SignalementAnomalie, type VueAnomalie } from './anomalies.ts';

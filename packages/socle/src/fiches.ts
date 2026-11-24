@@ -304,6 +304,31 @@ export async function reglerPrevenir(base: Base, acteur: Acteur, typeId: number,
 	]);
 }
 
+// Les zones pour lesquelles un rôle est prévenu, dans la dernière fiche de chaque type : une ligne par nom de zone, avec ses types
+// (« Sac PS » du VSAV et du CCRM). Dans l'ordre des types, puis des zones. Une requête.
+export async function zonesPrevenues(base: Base, role: number): Promise<{ zone: string; types: string[] }[]> {
+	const lignes = await base
+		.select({ zone: ficheZone.nom, type: typeEngin.nom })
+		.from(ficheZone)
+		.innerJoin(ficheVersion, eq(ficheVersion.id, ficheZone.versionId))
+		.innerJoin(typeEngin, eq(typeEngin.id, ficheVersion.typeId))
+		.where(
+			and(
+				sql`${ficheVersion.id} IN (SELECT max(${ficheVersion.id}) FROM ${ficheVersion} GROUP BY ${ficheVersion.typeId})`,
+				sql`EXISTS (SELECT 1 FROM json_each(${ficheZone.prevenir}) WHERE value = ${role})`
+			)
+		)
+		.orderBy(asc(typeEngin.ordre), asc(typeEngin.id), asc(ficheZone.ordre));
+	const zones: { zone: string; types: string[] }[] = [];
+	for (const l of lignes) {
+		const deja = zones.find((z) => memeNom(z.zone, l.zone));
+		if (deja) {
+			if (!deja.types.includes(l.type)) deja.types.push(l.type);
+		} else zones.push({ zone: l.zone, types: [l.type] });
+	}
+	return zones;
+}
+
 // Un nouveau type d'engin, avec sa fiche vide (version 1).
 export async function creerTypeEngin(base: Base, acteur: Acteur, nom: string, maintenant: string): Promise<number> {
 	await exigerGestionEngins(base, acteur, maintenant);

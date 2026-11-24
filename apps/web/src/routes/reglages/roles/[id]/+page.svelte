@@ -125,6 +125,7 @@
 		gestes={blocTitulaires.gestes}
 		aujourdhui={data.aujourdhui}
 		fiches={blocTitulaires.fiches}
+		prevenu={data.prevenuPour?.length ? `Prévenu pour ${data.prevenuPour.map((z) => `${z.zone} (${z.types.join(', ')})`).join(', ')}` : undefined}
 		{form}
 	/>
 {/if}

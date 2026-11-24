@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
-import { appliquerGeste, creerTypeEngin, ecrireOuRefuser, ecrituresFiche, gereLesEngins, lireFiche, lireFiches, modifierFicheEngin, reglerPrevenir, rolesAPrevenir, type ZoneFiche } from '../src/fiches.ts';
+import { appliquerGeste, creerTypeEngin, ecrireOuRefuser, ecrituresFiche, gereLesEngins, lireFiche, lireFiches, modifierFicheEngin, reglerPrevenir, rolesAPrevenir, zonesPrevenues, type ZoneFiche } from '../src/fiches.ts';
 import { attribution, comite, responsabilite, responsabiliteDroit } from '../src/schema.ts';
 import { aujourdhui } from './de-test-engins.ts';
 import { ficheElement, ficheVersion, journal } from '../src/schema.ts';
@@ -171,6 +171,22 @@ describe('qui prévenir, par zone', () => {
 		await expect(reglerPrevenir(base, referent, types.VSAV, zone, [await roleNomme(base, 'Chef de garde')], maintenant)).rejects.toThrow(new DonneeInvalide('Rôle inconnu'));
 		await base.update(responsabilite).set({ archiveeLe: '2026-10-01' }).where(eq(responsabilite.id, pharmacie));
 		await expect(reglerPrevenir(base, referent, types.VSAV, zone, [pharmacie], maintenant)).rejects.toThrow(new DonneeInvalide('Rôle inconnu'));
+	});
+
+	it('les zones d’un rôle, par nom, avec leurs types ; seulement la dernière version de chaque fiche', async () => {
+		const { base, referent, types } = await jeuEngins();
+		const pharmacie = await roleNomme(base, 'Référent pharmacie');
+		const vsav = await lireFiche(base, types.VSAV);
+		const vtu = await lireFiche(base, types.VTU);
+		await reglerPrevenir(base, referent, types.VSAV, vsav.zones[1]!.ref, [pharmacie], maintenant);
+		await reglerPrevenir(base, referent, types.VSAV, vsav.zones[0]!.ref, [pharmacie, await roleNomme(base, 'Référent engins')], maintenant);
+		await modifierFicheEngin(base, referent, types.VTU, { quoi: 'renommer_zone', zone: vtu.zones[0]!.ref, nom: vsav.zones[1]!.nom }, maintenant);
+		await reglerPrevenir(base, referent, types.VTU, vtu.zones[0]!.ref, [pharmacie], maintenant);
+		expect(await zonesPrevenues(base, pharmacie)).toEqual([
+			{ zone: vsav.zones[0]!.nom, types: ['VSAV'] },
+			{ zone: vsav.zones[1]!.nom, types: ['VSAV', 'VTU'] }
+		]);
+		expect(await zonesPrevenues(base, await roleNomme(base, 'Référent habillement'))).toEqual([]);
 	});
 
 	it('un rôle archivé après coup est ignoré à la lecture', async () => {
