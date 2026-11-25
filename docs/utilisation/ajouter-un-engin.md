@@ -4,7 +4,7 @@ Réservé au chef de centre, à son adjoint, aux chefs de garde et au référent
 
 1. Ouvrez **Caserne**, puis **Engins**.
 2. Touchez **Ajouter un engin**.
-3. Donnez son nom (« VSAV 1 »), son type (il porte la fiche de prise de garde) et, si vous voulez, sa plaque.
+3. Donnez son nom (« VSAV 1 »), son type (il porte la fiche de prise de garde) et, si vous voulez, sa plaque. Pour un type que le centre n'a pas encore, voir [Comment ajouter un engin d'un nouveau type ?](ajouter-un-engin-d-un-nouveau-type.md).
 4. Choisissez sa situation : **Au centre**, ou **Prêté au centre** avec le nom du centre qui le prête.
 5. Touchez **Ajouter l’engin**.
 
