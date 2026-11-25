@@ -135,7 +135,6 @@ export async function ancienneteDuMatin(base: Base, maintenant: string): Promise
 	if (nouveaux.length === 0 || lus.length === 0) return [];
 	// Le chef de centre ; l'adjoint seulement sans lui. Le palier du chef lui-même va à l'adjoint.
 	const lignes = nouveaux.map((p) => ({ p, texte: `Dans ${ANNONCE_JOURS} jours, ${leJour(cible)}, ${`${p.prenom} ${p.nom}`.trim()} atteint ${ans(p.annees)} de service.` }));
-	const chefs = lus;
 	const pour = (agentId: number) => chefPrincipal(lus.filter((c) => c.id !== agentId));
 	// Une ligne par chef et par agent, pas pour son propre palier ; jamais deux fois (un réveil en retard peut croiser le suivant).
 	const ecrites = (await base.batch(
@@ -164,7 +163,7 @@ export async function ancienneteDuMatin(base: Base, maintenant: string): Promise
 		) as [never, ...never[]]
 	)) as { personneId: number; agentId: number }[][];
 	// L'e-mail de chaque chef ne liste que les lignes écrites pour lui à ce réveil.
-	return chefs.flatMap((c) => {
+	return lus.flatMap((c) => {
 		const siennes = lignes.filter((l) => ecrites.flat().some((e) => e.personneId === c.id && e.agentId === l.p.id));
 		if (siennes.length === 0 || c.coupe !== 0 || c.a === '') return [];
 		return [{ a: c.a, titre: siennes.length === 1 ? 'Palier d’ancienneté dans 30 jours' : 'Paliers d’ancienneté dans 30 jours', texte: siennes.map((l) => l.texte).join('\n'), url: siennes.length === 1 ? `/agents/${siennes[0]!.p.id}` : '/agents' }];

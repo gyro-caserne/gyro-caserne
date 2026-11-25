@@ -119,7 +119,7 @@ export async function demanderRemplacementCourt(base: Base, acteur: Acteur, d: {
 			.returning({ id: demandeRemplacement.id }),
 		ecrireDestinataires(base, derniere, destinataires),
 		journalDemande(base, moi, 'demander_remplacement_court', derniere, { duree: d.duree, destinataires: destinataires.length }, maintenant),
-		...avis(base, destinataires, derniere, 'recue', `${nomDe(ctx, moi)}, ${texteDemande([plage])}`, URL_POUR_MOI, maintenant)
+		...avis(base, destinataires, derniere, 'recue', `${nomDe(ctx, moi)}, ${texteDemande([plage])}`, URL_POUR_MOI, maintenant, undefined, 'remplacements', true)
 	]);
 	return lignes[0]!.id;
 }

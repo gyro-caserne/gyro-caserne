@@ -86,8 +86,8 @@ test('couper un mur, le retrouver dans Mes notifications, le réactiver', async 
 	await page.locator('main').getByRole('link', { name: 'Notifications', exact: true }).click();
 	await expect(page.getByRole('heading', { level: 1, name: 'Notifications' })).toBeVisible();
 	await expect(page.getByRole('switch', { name: 'Tout couper au téléphone' })).not.toBeChecked();
-	// Par sujet : la vie du centre, dans la cloche seulement, puis de nouveau au téléphone (un essai précédent a pu la laisser coupée).
-	const vie = page.getByRole('switch', { name: 'Vie du centre', exact: true });
+	// Par sujet : anniversaires et nominations, dans la cloche seulement, puis de nouveau au téléphone (un essai précédent a pu la laisser coupée).
+	const vie = page.getByRole('switch', { name: 'Anniversaires et nominations', exact: true });
 	if (!(await vie.isChecked())) {
 		await vie.check();
 		await expect(vie).toBeChecked();
@@ -95,10 +95,10 @@ test('couper un mur, le retrouver dans Mes notifications, le réactiver', async 
 	await vie.uncheck();
 	await expect(vie).not.toBeChecked();
 	await page.reload();
-	await expect(page.getByRole('switch', { name: 'Vie du centre', exact: true })).not.toBeChecked();
-	await page.getByRole('switch', { name: 'Vie du centre', exact: true }).check();
+	await expect(page.getByRole('switch', { name: 'Anniversaires et nominations', exact: true })).not.toBeChecked();
+	await page.getByRole('switch', { name: 'Anniversaires et nominations', exact: true }).check();
 	await page.reload();
-	await expect(page.getByRole('switch', { name: 'Vie du centre', exact: true })).toBeChecked();
+	await expect(page.getByRole('switch', { name: 'Anniversaires et nominations', exact: true })).toBeChecked();
 	await sansViolation(page);
 	await page.getByRole('button', { name: 'Réactiver Vie du centre' }).click();
 	await expect(page.getByText('Rien n’est coupé.')).toBeVisible();

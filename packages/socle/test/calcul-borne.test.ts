@@ -154,6 +154,10 @@ describe('Le calcul reste borné, avec 60 agents, 6 années publiées et 50 dema
 		const { base, reglage, acteurs } = jeu;
 		const plages = (await eteAPreparer(base, acteurs.chef, 2027, m, reglage)).semaines.flatMap((s) => s.plages).length;
 		expect(plages).toBeGreaterThan(60);
+		// Le nombre gardé à la dernière proposition ou au dernier ajustement, sans écriture plus récente qui le change.
+		const { journal } = await import('../src/schema.ts');
+		const { ACTION_A_REVOIR, plagesARevoir } = await import('../src/planning/repartition.ts');
+		await base.insert(journal).values({ quand: m, acteur: 'planning', action: ACTION_A_REVOIR, cibleType: 'ete', cibleId: 2027, details: JSON.stringify({ aRevoir: await plagesARevoir(base, 2027, m.slice(0, 10), reglage) }) });
 		for (const f of [armement.armement, armement.postesDe, calendrier.calculerAnnee]) vi.mocked(f).mockClear();
 		await accueilDe(base, acteurs.chef, null, m.slice(0, 10), m, reglage);
 		// Avant : le FPT calculé pour chaque plage, les postes de chacun pour chaque jour, toutes les semaines de l'année.
@@ -162,8 +166,6 @@ describe('Le calcul reste borné, avec 60 agents, 6 années publiées et 50 dema
 		// Le nombre gardé à la proposition : rien à recalculer.
 		expect(vi.mocked(calendrier.calculerAnnee).mock.calls, 'nombre gardé').toEqual([]);
 		// Sans nombre gardé (une proposition d'avant ce compte) : seulement les semaines de l'été.
-		const { journal } = await import('../src/schema.ts');
-		const { ACTION_A_REVOIR } = await import('../src/planning/repartition.ts');
 		const gardes = (await base.select().from(journal)).filter((l) => l.action === ACTION_A_REVOIR);
 		await base.delete(journal).where(eq(journal.action, ACTION_A_REVOIR));
 		try {

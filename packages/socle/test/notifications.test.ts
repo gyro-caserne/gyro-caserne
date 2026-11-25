@@ -22,6 +22,7 @@ import {
 	mesNotifications,
 	estCoupe,
 	marquerLue,
+	mettreEnFile,
 	notifierCommentaire,
 	notifierMessage,
 	notifierPublication,
@@ -232,7 +233,7 @@ describe('couper', () => {
 			...avisDEte(base, [alice, bruno], 'semaine', 'Votre semaine change.', '/planning', maintenant),
 			...avisAnomalies(base, [alice, bruno], { titre: 'Radio (FPT)', texte: 'Prise en charge par Chloe Test', url: '/engins/anomalies/1' }, maintenant),
 			...avisAnomalies(base, [bruno], { titre: 'FPT indisponible', texte: 'Radio, décidé par Chloe Test', url: '/engins/1' }, maintenant, undefined, 'urgences')
-		]);
+		] as [never, ...never[]]);
 		expect((await file()).map((e) => [e.a, e.titre])).toEqual([
 			['Alice', 'Planning'],
 			['Alice', 'Radio (FPT)'],
@@ -243,6 +244,23 @@ describe('couper', () => {
 		expect((await mesNotifications(base, acteur(bruno), aujourdhui)).sujets).toEqual({ remplacements: false, engins: false, demandes: false, planning: false, vie: false });
 		await couper(base, acteur(bruno), 'vie', false, maintenant);
 		expect((await mesNotifications(base, acteur(bruno), aujourdhui)).sujets).toMatchObject({ vie: true, planning: false });
+		// Les autres sujets, et une manœuvre (son mur ou « planning ») : rien au téléphone de Bruno, tout à Alice.
+		await base.delete(envoiPush);
+		const donnees = (titre: string) => ({ titre, texte: 'x', url: '/', tag: titre });
+		await base.batch([
+			mettreEnFile(base, [alice, bruno], 'remplacements', donnees('Remplacement'), maintenant),
+			mettreEnFile(base, [alice, bruno], 'demandes', donnees('Demande'), maintenant),
+			mettreEnFile(base, [alice, bruno], 'vie', donnees('Joyeux anniversaire'), maintenant),
+			mettreEnFile(base, [alice, bruno], ['mur:centre', 'planning'], donnees('Manœuvre'), maintenant)
+		]);
+		expect((await file()).map((e) => [e.a, e.titre])).toEqual([
+			['Alice', 'Remplacement'],
+			['Alice', 'Demande'],
+			['Alice', 'Joyeux anniversaire'],
+			['Alice', 'Manœuvre'],
+			// « vie » vient d'être réactivé : il sonne de nouveau.
+			['Bruno', 'Joyeux anniversaire']
+		]);
 		// Un sujet coupé n'est pas listé avec les murs et conversations coupés : il a son interrupteur.
 		expect((await mesNotifications(base, acteur(bruno), aujourdhui)).coupes).toEqual([]);
 	});

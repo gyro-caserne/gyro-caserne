@@ -57,7 +57,14 @@ export async function courrielsDeDemande(base: Base, d: DemandeACourriel, aujour
 		.select({ a: personne.email, titre: t.titre, texte: t.texte, url: t.url })
 		.from(t)
 		.innerJoin(personne, eq(personne.id, t.personneId))
-		// Une anomalie : seulement à qui n'a pas activé les notifications sur un téléphone (sinon, en double).
-		.where(and(quelles, joignable(sql`${t.personneId}`), ne(personne.email, ''), d.genre === 'demande' ? undefined : notExists(sql`(select 1 from ${abonnementPush} where ${abonnementPush.personneId} = ${t.personneId})`)))
+		// Une anomalie : seulement à qui ne la reçoit pas au téléphone (aucun appareil abonné, ou « tout » ou « engins » coupé), sinon en double.
+		.where(
+			and(
+				quelles,
+				joignable(sql`${t.personneId}`),
+				ne(personne.email, ''),
+				d.genre === 'demande' ? undefined : sql`(not exists (select 1 from ${abonnementPush} where ${abonnementPush.personneId} = ${t.personneId}) or exists (select 1 from ${coupure} where ${coupure.personneId} = ${t.personneId} and ${coupure.lieu} in ('tout', 'engins')))`
+			)
+		)
 		.orderBy(t.id);
 }

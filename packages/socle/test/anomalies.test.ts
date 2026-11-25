@@ -6,7 +6,7 @@ import { accueilDe } from '../src/casquettes.ts';
 import { courrielsDeDemande } from '../src/courriels.ts';
 import { enregistrerEngin } from '../src/engins.ts';
 import { lireFiche, reglerPrevenir } from '../src/fiches.ts';
-import { abonner, filDeNotifications } from '../src/notifications.ts';
+import { abonner, couper, filDeNotifications } from '../src/notifications.ts';
 import { publierAnnee, reglerRoulement } from '../src/planning/annee.ts';
 import { commencerPrise, gestePrise, prisesDeLaReleve, validerPrise } from '../src/prises.ts';
 import { anomalie, anomalieSuivi, attribution, avisAnomalie, engin, equipe, journal, personne, profil, responsabilite } from '../src/schema.ts';
@@ -83,6 +83,9 @@ describe('signalement direct', () => {
 		// Les notifications activées sur son téléphone : plus d'e-mail en double.
 		await abonner(j.base, j.referent, { endpoint: 'https://fcm.googleapis.com/fcm/send/ref', p256dh: 'BCle', auth: 'secret', appareil: 'Téléphone' }, QUAND);
 		expect(await courrielsDeDemande(j.base, { genre: 'anomalie', id })).toEqual([]);
+		// Mais les engins coupés au téléphone : l'e-mail repart, sinon il ne saurait rien.
+		await couper(j.base, j.referent, 'engins', true, QUAND);
+		expect(await courrielsDeDemande(j.base, { genre: 'anomalie', id })).toHaveLength(1);
 	});
 
 	it('le seul référent signale lui-même : le chef de centre et l’adjoint sont prévenus à sa place', async () => {

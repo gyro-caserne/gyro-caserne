@@ -105,11 +105,11 @@ describe('exigerMessagerie', () => {
 		}
 	});
 
-	it('un extérieur à qui l’on donne UTILISER_MESSAGERIE : aLeDroit dit oui, la messagerie reste fermée', async () => {
+	it('un extérieur à qui l’on donne UTILISER_MESSAGERIE : aLeDroit dit non, la messagerie reste fermée', async () => {
 		const { base, nouvelle, exterieurId } = await jeu();
 		await base.insert(profilDroit).values({ profilId: exterieurId, droit: 'UTILISER_MESSAGERIE', perimetreType: 'centre', perimetreId: null });
 		const ext = await nouvelle('Ext', 'Rieur', { profilId: exterieurId });
-		expect(await aLeDroit(base, acteur(ext), 'UTILISER_MESSAGERIE', { type: 'centre' }, aujourdhui)).toBe(true);
+		expect(await aLeDroit(base, acteur(ext), 'UTILISER_MESSAGERIE', { type: 'centre' }, aujourdhui)).toBe(false);
 		await expect(exigerMessagerie(base, acteur(ext), aujourdhui)).rejects.toBeInstanceOf(RefusDroit);
 	});
 });

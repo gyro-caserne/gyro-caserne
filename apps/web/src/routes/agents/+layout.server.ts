@@ -10,9 +10,8 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 	if (!(await estGestionnaire(base, acteur, aujourdhui))) {
 		// L'effectif est réservé aux agents du centre, comme les fiches.
-		const [exterieur, groupes] = await Promise.all([estExterieur(base, acteur), vueEffectif(base, aujourdhui)]);
-		if (exterieur) error(403, 'La liste des agents est réservée aux agents du centre.');
-		return { gestion: false as const, groupes };
+		if (await estExterieur(base, acteur)) error(403, 'La liste des agents est réservée aux agents du centre.');
+		return { gestion: false as const, groupes: await vueEffectif(base, aujourdhui) };
 	}
 
 	const texte = url.searchParams.get('texte')?.trim() ?? '';

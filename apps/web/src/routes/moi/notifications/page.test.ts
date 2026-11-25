@@ -34,7 +34,7 @@ describe('page Mes notifications', () => {
 	it('« Par sujet » : un interrupteur par sujet, coché quand il sonne au téléphone ; la cloche garde tout ; les urgences à part', () => {
 		const page = html({ urgences: true });
 		expect(page).toMatch(/Ce téléphone[\s\S]*Par sujet[\s\S]*Tout couper/);
-		for (const [sujet, libelle] of [['remplacements', 'Remplacements'], ['engins', 'Engins'], ['demandes', 'Demandes aux référents'], ['planning', 'Planning'], ['vie', 'Vie du centre']])
+		for (const [sujet, libelle] of [['remplacements', 'Remplacements'], ['engins', 'Engins'], ['demandes', 'Demandes aux référents'], ['planning', 'Planning'], ['vie', 'Anniversaires et nominations']])
 			expect(page, sujet).toMatch(new RegExp(`action="\\?/sujet"[^>]*>(<!---->)?\\s*<input type="hidden" name="sujet" value="${sujet}"[\\s\\S]*?${libelle}`));
 		expect(page).toMatch(/value="vie"[\s\S]*?role="switch" name="oui" value="1"(?![^>]*checked)[^>]*>/);
 		expect(page).toMatch(/value="planning"[\s\S]*?role="switch" name="oui" value="1"[^>]*checked/);

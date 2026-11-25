@@ -286,9 +286,11 @@ const pick = (a: { id: number; prenom: string; nom: string }) => ({ id: a.id, pr
 const journal = (base: Base, acteur: Acteur, action: string, details: object, maintenant: string) => ligneJournal(base, { acteur: nomActeur(acteur), action, cibleType: 'planning', cibleId: null, details }, maintenant);
 
 // Le nombre de plages à revoir, gardé à chaque changement de la répartition : l'accueil du chef n'a plus à refaire l'été (décision 0021).
-// Gardé au journal, sans migration ; hors du suivi du centre (action absente de ses actions).
+// Gardé au journal (cible « ete », l'année), sans migration ; hors du suivi du centre. Une écriture plus récente qui peut le changer
+// (planning, fiche d'un agent, aptitudes, armement, fêtes) le fait recalculer à l'accueil (casquettes.ts).
 export const ACTION_A_REVOIR = 'plages_ete_a_revoir';
-const garderARevoir = (base: Base, annee: number, aRevoir: number, maintenant: string) => ligneJournal(base, { acteur: 'planning', action: ACTION_A_REVOIR, cibleType: 'planning', cibleId: null, details: { annee, aRevoir } }, maintenant);
+export const CIBLES_QUI_CHANGENT_L_ETE = ['planning', 'personne', 'aptitude', 'centre', 'fete_centre'];
+const garderARevoir = (base: Base, annee: number, aRevoir: number, maintenant: string) => ligneJournal(base, { acteur: 'planning', action: ACTION_A_REVOIR, cibleType: 'ete', cibleId: annee, details: { aRevoir } }, maintenant);
 
 // Calcule la proposition et l'enregistre (elle remplace la précédente). Seulement avant la publication.
 export async function proposerEte(base: Base, acteur: Acteur, annee: number, maintenant: string, reglage: Reglage): Promise<{ impossibles: string[] }> {
@@ -416,8 +418,8 @@ export async function analyserFeuilleEte(base: Base, annee: number, entetes: str
 	}
 	const touchees = [...new Set(changements.map((c) => c.debut))];
 	const ecritures = () => [
-		...(touchees.length > 0 ? [garderARevoir(base, annee, compterARevoir(lu, (p) => ecarts.get(p.debut)), maintenant)] : []),
 		...touchees.map((debut) => base.update(plageEte).set({ ajoutes: JSON.stringify(ecarts.get(debut)!.ajoutes), retires: JSON.stringify(ecarts.get(debut)!.retires) }).where(eq(plageEte.debut, debut))),
+		...(touchees.length > 0 ? [garderARevoir(base, annee, compterARevoir(lu, (p) => ecarts.get(p.debut)), maintenant)] : []),
 		// Été publié : chaque agent touché est prévenu une fois.
 		...(lu.e!.publiee ? [...new Set(changements.map((c) => c.personneId))].flatMap((id) => avis(base, [id], 'repartition', 'Vos plages du planning d’été ont changé. Voyez votre planning.', '/planning', maintenant)) : [])
 	];

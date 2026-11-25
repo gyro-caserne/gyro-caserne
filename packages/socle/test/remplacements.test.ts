@@ -100,9 +100,12 @@ describe('demande ouverte', () => {
 		expect(await avisDe(n.bruno)).toEqual(['recue', 'recue']);
 		expect(await base.select().from(envoiPush)).toEqual([]);
 		// Une urgence sonne la nuit ; dès 7 h, le reste aussi.
-		await base.batch([...avisRemplacements(base, [n.bruno], 1, 'informe', 'Urgence', '/remplacements/1', '2026-11-02T23:30', undefined, 'urgences')]);
-		await base.batch([...avisRemplacements(base, [n.bruno], 1, 'informe', 'Matin', '/remplacements/1', '2026-11-03T07:00')]);
-		expect((await base.select().from(envoiPush)).map((e) => (JSON.parse(e.donnees) as { texte: string }).texte)).toEqual(['Urgence', 'Matin']);
+		const lot = (l: ReturnType<typeof avisRemplacements>) => base.batch(l as unknown as [never, ...never[]]);
+		await lot(avisRemplacements(base, [n.bruno], 1, 'informe', 'Urgence', '/remplacements/1', '2026-11-02T23:30', undefined, 'urgences'));
+		// Pressant (une demande courte, une demande expirée) : il sonne aussi la nuit.
+		await lot(avisRemplacements(base, [n.bruno], 1, 'expiree', 'Pressant', '/remplacements/1', '2026-11-02T23:40', undefined, 'remplacements', true));
+		await lot(avisRemplacements(base, [n.bruno], 1, 'informe', 'Matin', '/remplacements/1', '2026-11-03T07:00'));
+		expect((await base.select().from(envoiPush)).map((e) => (JSON.parse(e.donnees) as { texte: string }).texte)).toEqual(['Urgence', 'Pressant', 'Matin']);
 	});
 
 	it('refuse une période qui n’est pas de son astreinte, ou déjà commencée', async () => {

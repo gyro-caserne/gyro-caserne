@@ -6,7 +6,7 @@ import type { Acteur } from '../src/droits.ts';
 import { RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
 import { ajouterRessource, refuser, reserver } from '../src/reservations.ts';
-import { anneePlanning, attribution, comite, equipe, grade, personne, profil, responsabilite, responsabiliteDroit, ressource } from '../src/schema.ts';
+import { anneePlanning, attribution, comite, equipe, grade, journal, personne, profil, responsabilite, responsabiliteDroit, ressource } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 import { periodeParDefaut, reglerEte } from '../src/planning/ete.ts';
 import { ajusterPlage, eteAPreparer, plageAPreparer, plagesARevoir, proposerEte, publierEte } from '../src/planning/repartition.ts';
@@ -418,6 +418,11 @@ describe('À décider : l’été', () => {
 		const m = await plagesARevoir(base, 2027, '2027-04-01', reglage);
 		expect(m).toBe(autre ? n + 1 : n);
 		expect((await ete(base, chef, '2027-04-01'))[0]!.texte).toBe(`Été 2027 : ${m} plages à revoir`);
+		// Une écriture qui peut changer l'été (ici, la fiche d'un agent) : le nombre est recalculé, pas relu.
+		await base.insert(journal).values({ quand: '2027-04-01T11:00', acteur: 'personne:1', action: 'modifier_fiche', cibleType: 'personne', cibleId: 1, details: '{}' });
+		const encore = base.jouees.length;
+		await ete(base, chef, '2027-04-01');
+		expect(base.jouees.slice(encore).some((r) => /from "plage_ete" where/.test(r.sql) && !/distinct/.test(r.sql))).toBe(true);
 	});
 
 	it('l’été de l’an prochain, déjà ouvert et proposé : dit dès maintenant', async () => {

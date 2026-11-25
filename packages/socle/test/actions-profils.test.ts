@@ -117,6 +117,10 @@ describe('modifierDroitsProfil', () => {
 		const { base, chef, droitsDuProfil } = await jeu();
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		await base.insert(profilDroit).values({ profilId: reserve!.id, droit: 'VOIR_PLANNING', perimetreType: 'centre', perimetreId: null });
+		// D'ici là, cette ligne ancienne ne donne rien : un extérieur n'a que RESERVER.
+		const [rc] = await base.insert(personne).values({ email: 'rc@exemple.fr', prenom: 'R', nom: 'C', profilId: reserve!.id }).returning();
+		expect(await aLeDroit(base, { type: 'personne', id: rc!.id }, 'VOIR_PLANNING', { type: 'centre' }, aujourdhui)).toBe(false);
+		expect(await aLeDroit(base, { type: 'personne', id: rc!.id }, 'RESERVER', { type: 'centre' }, aujourdhui)).toBe(true);
 		await enregistrerProfil(base, chef, reserve!.id, { droits: (avant) => avant }, aujourdhui);
 		expect(await droitsDuProfil(reserve!.id)).toEqual(['RESERVER@centre']);
 	});

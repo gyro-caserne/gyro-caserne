@@ -226,17 +226,22 @@ describe('textes visibles', () => {
 			const nom = relative(join(appli, '../../..'), f);
 			if (nom in SANS_GARDE_EMOJI) return [];
 			const source = readFileSync(f, 'utf8');
-			return fautesEmoji(nom, f.endsWith('.svelte') ? textesSvelte(source) : chaines(source), nom in AVIS_CONVIVIAUX);
+			const textes = f.endsWith('.svelte') ? textesSvelte(source) : chaines(source);
+			const permis = AVIS_CONVIVIAUX[nom];
+			return [...fautesEmoji(nom, textes.filter((t) => !permis?.test(t.texte)), false), ...fautesEmoji(nom, textes.filter((t) => permis?.test(t.texte)), true)];
 		});
 		expect(trouvees).toEqual([]);
 	});
 });
 
 // Les avis conviviaux, seuls à pouvoir finir par un emoji (charte, « Les textes », décision du porteur du 25/11/2026).
-const AVIS_CONVIVIAUX: Record<string, string> = {
-	'packages/socle/src/souhaits.ts': 'un souhait d’anniversaire 🎂',
-	'packages/socle/src/anciennete.ts': 'les félicitations d’ancienneté 🎖️',
-	'apps/web/src/routes/notifications/+page.svelte': 'la ligne de cloche d’un souhait d’anniversaire'
+// Par fichier, la forme exacte du texte permis : un emoji ailleurs dans le même fichier reste refusé.
+const AVIS_CONVIVIAUX: Record<string, RegExp> = {
+	// Un souhait d'anniversaire, au téléphone et dans la cloche.
+	'packages/socle/src/souhaits.ts': /^ vous souhaite un joyeux anniversaire 🎂$/,
+	'apps/web/src/routes/notifications/+page.svelte': /^ vous souhaite un joyeux anniversaire 🎂$/,
+	// Les félicitations d'un collègue pour un palier d'ancienneté.
+	'packages/socle/src/anciennete.ts': /^ de service 🎖️$/
 };
 // Pas des textes : les réactions qu'un agent choisit sous une publication.
 const SANS_GARDE_EMOJI: Record<string, string> = { 'packages/socle/src/listes.ts': 'les réactions' };

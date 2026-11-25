@@ -6,5 +6,5 @@ export const NOMS_SUJETS: Record<Sujet, { libelle: string; description: string }
 	engins: { libelle: 'Engins', description: 'Les anomalies et les prises de garde.' },
 	demandes: { libelle: 'Demandes aux référents', description: 'Habillement, pharmacie et matériel, les vôtres et celles adressées à vos rôles.' },
 	planning: { libelle: 'Planning', description: 'L’été, les semaines changées et les manœuvres.' },
-	vie: { libelle: 'Vie du centre', description: 'Les anniversaires, les félicitations et les nominations.' }
+	vie: { libelle: 'Anniversaires et nominations', description: 'Les souhaits d’anniversaire, les félicitations d’ancienneté et les nominations.' }
 };

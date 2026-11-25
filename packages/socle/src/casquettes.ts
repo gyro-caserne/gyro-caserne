@@ -6,13 +6,13 @@ import { iconeDuRole, type NomIcone } from './icones.ts';
 import type { Droit } from './listes.ts';
 import type { Reglage } from './planning/calendrier.ts';
 import { vueEte } from './planning/ete.ts';
-import { ACTION_A_REVOIR, plagesARevoir } from './planning/repartition.ts';
+import { ACTION_A_REVOIR, CIBLES_QUI_CHANGENT_L_ETE, plagesARevoir } from './planning/repartition.ts';
 import { anomaliesADecider, traiteLesAnomalies } from './anomalies.ts';
 import { demandesADecider, lectureDemandesADecider } from './demandes.ts';
 import { prisesEnRetard } from './prises.ts';
 import { periodeCourte } from './reservations-calcul.ts';
 import { remplacementsAValider } from './remplacements/lectures.ts';
-import { anneePlanning, attribution, comite, equipe, ete, journal, personne, plageEte, profil, reservation, responsabilite, responsabiliteDroit, ressource } from './schema.ts';
+import { anneePlanning, attribution, comite, equipe, ete, personne, plageEte, profil, reservation, responsabilite, responsabiliteDroit, ressource } from './schema.ts';
 
 // id : 'centre', 'astreinte', 'equipe:<id>', 'role:<id>' ou 'comite:<id>'.
 export type Casquette = { id: string; nom: string; icone: NomIcone; compte: number };
@@ -205,8 +205,11 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 	// Pas de jointure à noms de colonnes en double : dans un batch, D1 n'en garde qu'une.
 	const annee = Number(aujourdhui.slice(0, 4));
 	const suivante = annee + 1;
-	// Le dernier nombre de plages à revoir gardé pour chaque année (repartition.ts) : quelques lignes du planning au journal.
-	const garde = (a: number) => sql<string | null>`(select ${journal.details} from ${journal} where ${journal.cibleType} = 'planning' and ${journal.action} = ${ACTION_A_REVOIR} and json_extract(${journal.details}, '$.annee') = ${a} order by ${journal.id} desc limit 1)`;
+	// Le dernier nombre de plages à revoir gardé pour chaque année (repartition.ts), par l'index du journal ; nul si une écriture
+	// plus récente peut l'avoir changé.
+	const cibles = sql.raw(CIBLES_QUI_CHANGENT_L_ETE.map((c) => `'${c}'`).join(', '));
+	const garde = (a: number) =>
+		sql<string | null>`(select g.details from journal g where g.id = (select max(id) from journal where cible_type = 'ete' and cible_id = ${a} and action = ${ACTION_A_REVOIR}) and not exists (select 1 from journal k where k.id > g.id and k.cible_type in (${cibles})))`;
 	const [equipes, attributions, responsabilites, personnes, annees, etes, proposes, gardes] = await base.batch([
 		base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation)),
 		base

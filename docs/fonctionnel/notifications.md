@@ -57,7 +57,7 @@ Le chef de centre est le destinataire principal. L'adjoint ne reçoit pas les m�
 
 ## E-mail aux référents
 
-- Une **nouvelle** demande adressée à un référent part aussi par e-mail à chacun de ceux qui la reçoivent en notification : nouvelle demande d'habillement, anomalie signalée (et nouvelles anomalies d'une prise de garde), réservation à valider. Pour une anomalie, seulement à qui n'a activé les notifications sur aucun téléphone : sinon, il la reçoit déjà. Un rôle créé par le chef avec ce droit reçoit donc les e-mails.
+- Une **nouvelle** demande adressée à un référent part aussi par e-mail à chacun de ceux qui la reçoivent en notification : nouvelle demande d'habillement, anomalie signalée (et nouvelles anomalies d'une prise de garde), réservation à valider. Pour une anomalie, seulement à qui ne la reçoit pas au téléphone (aucun appareil abonné, ou « Tout couper » ou le sujet Engins coupé) : sinon, il l'a déjà. Un rôle créé par le chef avec ce droit reçoit donc les e-mails.
 - Texte simple : le titre, ses deux lignes et le lien vers la demande. La suite de la demande (questions, prise en compte) reste dans l'appli.
 - Moi → Notifications → « Recevoir les demandes par e-mail », activé par défaut, pour qui tient un rôle. « Tout couper » ne coupe pas les e-mails.
 - L'e-mail part après la réponse : un échec (adresse refusée, Brevo en panne) n'empêche jamais la demande. Brevo, offre gratuite : 300 e-mails par jour.
@@ -69,7 +69,7 @@ Le chef de centre est le destinataire principal. L'adjoint ne reçoit pas les m�
 - La notification dit le lieu et l'auteur (« Publication d’Élodie Martin (Équipe 2) », « Message de Romain », « Message de Manon dans Départ de Thomas ») et le début du texte. Pas de photo.
 - La toucher ouvre sa page et marque lue sa ligne de la cloche, quelle qu'elle soit. Publications, commentaires, réservations et remplacements : leur page les marque déjà lues. Avis de l'été (dont le rappel des vacances) et anomalies, que leur page ne marque pas : la notification passe par la même adresse que la cloche (`/notifications/ouvrir`). Sans ligne de cloche (un message, une demande de réservation à trancher, une vigilance rouge) : sa page, directement.
 - Plusieurs messages d'une même conversation se remplacent : une seule notification par conversation à l'écran. De même, une demande de remplacement a sa notification, qui porte son numéro : deux demandes ne se remplacent pas.
-- **De 22 h à 7 h**, un avis de remplacement ne sonne pas au téléphone : la ligne de la cloche suffit. Les urgences sonnent toujours.
+- **De 22 h à 7 h**, un avis de remplacement ne sonne pas au téléphone : la ligne de la cloche suffit. Une demande courte, une demande expirée (le titulaire reste d'astreinte) et les urgences sonnent toujours.
 - Plusieurs semaines changées d'équipe d'un coup : **un seul avis** par personne, qui les dit toutes, avec ses remplacements touchés.
 - Délai : tout de suite (quelques secondes) jusqu'à 20 téléphones ; au-delà, le reste dans les dix minutes, puis dix minutes de plus par tranche de 40 (« Le centre » avec 100 appareils : 20 tout de suite, le reste en 20 minutes au plus). Une notification refusée par le téléphone n'est pas renvoyée. Un envoi interrompu de notre côté (coupure de Cloudflare) n'est pas perdu : il repart 5 à 15 minutes plus tard (plus tôt si quelqu'un publie entre-temps). Il remplace la notification encore affichée au lieu de s'ajouter, et ne recouvre jamais une notification plus récente de la même conversation ou publication.
 
@@ -90,7 +90,7 @@ Le chef de centre est le destinataire principal. L'adjoint ne reçoit pas les m�
 
 ## Couper
 
-- **Par sujet** : Moi → Notifications → « Par sujet », un interrupteur par sujet. **Remplacements** ; **Engins** (anomalies et prises de garde) ; **Demandes aux référents** ; **Planning** (l'été, les semaines changées, les manœuvres) ; **Vie du centre** (anniversaires, félicitations, nominations). Coupé, le sujet ne sonne plus au téléphone et reste dans la cloche (cloche seule, sans téléphone). Les urgences du centre ne se coupent pas avec ces sujets : elles ont leur interrupteur.
+- **Par sujet** : Moi, puis Notifications, puis « Par sujet », un interrupteur par sujet. **Remplacements** ; **Engins** (anomalies et prises de garde) ; **Demandes aux référents** ; **Planning** (l'été, les semaines changées, les manœuvres) ; **Anniversaires et nominations** (anniversaires, félicitations, nominations). Coupé, le sujet ne sonne plus au téléphone et reste dans la cloche (cloche seule, sans téléphone). Les urgences du centre ne se coupent pas avec ces sujets : elles ont leur interrupteur.
 - **Un mur ou une conversation** : le haut-parleur dans son en-tête (barré quand c'est coupé). Une seule cloche à l'écran : celle de l'appli. Une coupure vaut pour tout ce qui vient de ce lieu, commentaires sous ses propres publications compris.
 - **Tout** : l'interrupteur « Tout couper au téléphone » de Moi → Notifications, qui liste aussi ce qui est coupé, avec « Réactiver ». Il coupe aussi les urgences du centre.
 - **Les urgences du centre** (chef, adjoint) et **les e-mails des demandes** (qui tient un rôle) : leurs interrupteurs dans Moi → Notifications.
@@ -109,7 +109,7 @@ Le chef de centre est le destinataire principal. L'adjoint ne reçoit pas les m�
 
 - Les notifications de plus de 30 jours sont effacées chaque nuit.
 - Au départ d'un agent, ses appareils, ses notifications et ses coupures sont effacés. Se déconnecter désabonne l'appareil : un téléphone partagé ne reçoit plus les notifications du compte qui l'a quitté.
-- Pas d'heures calmes réglables : de 22 h à 7 h, seuls les avis de remplacement attendent la cloche ; pour le reste, le mode « Ne pas déranger » du téléphone s'en charge. Pas d'alerte opérationnelle : c'est le rôle du CTA-CODIS.
+- Pas d'heures calmes réglables : de 22 h à 7 h, les avis de remplacement ne sonnent pas au téléphone (la ligne de la cloche reste, rien ne part au matin), sauf une demande courte, une demande expirée et les urgences ; pour le reste, le mode « Ne pas déranger » du téléphone s'en charge. Pas d'alerte opérationnelle : c'est le rôle du CTA-CODIS.
 
 ## Ce que la fonction ne fait pas (encore)
 

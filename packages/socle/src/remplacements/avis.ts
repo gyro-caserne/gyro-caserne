@@ -14,7 +14,8 @@ const parmi = (ids: number[]) => sql`(select value from json_each(${JSON.stringi
 
 // Écritures à placer dans le batch de l'action. `demandeId` : un nombre, ou la demande créée dans le même batch.
 // `si` : une condition vérifiée à l'écriture (la décision a bien été prise). `lieu` : « urgences » pour le chef de centre et l'adjoint.
-export function avis(base: Base, ids: number[], demandeId: number | SQL, quoi: AvisRemplacement, texte: string, url: string, maintenant: string, si?: SQL, lieu: 'remplacements' | 'urgences' = 'remplacements') {
+// `pressant` : sonne aussi la nuit (une demande courte, une demande expirée : le titulaire reste d'astreinte).
+export function avis(base: Base, ids: number[], demandeId: number | SQL, quoi: AvisRemplacement, texte: string, url: string, maintenant: string, si?: SQL, lieu: 'remplacements' | 'urgences' = 'remplacements', pressant = false) {
 	if (ids.length === 0) return [];
 	const qui = and(inArray(personne.id, parmi(ids)), si);
 	const prefixe = `${lieu === 'urgences' ? 'urgence:' : ''}remplacement:`;
@@ -32,8 +33,8 @@ export function avis(base: Base, ids: number[], demandeId: number | SQL, quoi: A
 				.from(personne)
 				.where(qui)
 		),
-		// De 22 h à 7 h, la cloche suffit : rien au téléphone, sauf une urgence.
-		...(lieu !== 'urgences' && nuit(maintenant)
+		// De 22 h à 7 h, la cloche suffit : rien au téléphone, sauf une urgence ou un avis pressant.
+		...(lieu !== 'urgences' && !pressant && nuit(maintenant)
 			? []
 			: [
 					mettreEnFile(
