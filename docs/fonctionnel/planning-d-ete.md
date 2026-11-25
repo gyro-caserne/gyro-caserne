@@ -31,7 +31,7 @@ La correspondance est fixe : les équipes actives, **dans l'ordre du roulement d
 
 ## Armer le FPT
 
-Les règles d'armement sont dans Réglages → « Armement des engins » (droit `GERER_LISTES`) : une rangée par engin (« VSAV · 3 postes : CA 1 agrès, CE, agent ») ; « Modifier » ouvre un panneau avec des boutons − et + par poste. La correspondance des aptitudes est repliée en dessous.
+Les règles d'armement sont dans Réglages, « Armement des engins » (droit `GERER_LISTES`), avec une rangée par engin (« VSAV, 3 postes, CA 1 agrès, CE, agent ») ; « Modifier » ouvre un panneau avec des boutons − et + par poste. La correspondance des aptitudes est repliée en dessous. Chaque type du centre y a sa rangée ; un type ajouté par le centre compte un CA 1 agrès, un CE et un agent tant qu'il n'est pas réglé.
 
 | Engin | Équipage par défaut |
 |---|---|

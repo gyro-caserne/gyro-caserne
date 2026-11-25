@@ -1,11 +1,11 @@
-import { inArray, isNull, and } from 'drizzle-orm';
+import { asc, inArray, isNull, and } from 'drizzle-orm';
 import type { Base } from './base.ts';
 import { exigerDateHeure } from './dates.ts';
 import { aLeDroit, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import { ligneJournal } from './journal.ts';
 import { nomActeur } from './actions/personnes.ts';
-import { aptitude, reglageArmement } from './schema.ts';
+import { aptitude, reglageArmement, typeEngin } from './schema.ts';
 
 // Les règles d'armement du centre : par engin, les postes de l'équipage ; et les aptitudes du centre reliées aux niveaux.
 // Un agent plus qualifié tient un poste en dessous de son niveau. Une personne tient un seul poste.
@@ -31,6 +31,8 @@ const ENGINS_PAR_DEFAUT: Engin[] = [
 	{ nom: 'VTU', postes: { ca2: 0, ca1: 1, ce: 1, cod1: 0, agent: 1 } },
 	{ nom: 'FPT', postes: { ca2: 1, ca1: 0, ce: 2, cod1: 1, agent: 2 } }
 ];
+// Un type ajouté par le centre (CCF…), tant que son armement n'est pas réglé.
+const POSTES_NOUVEAU_TYPE: Postes = { ca2: 0, ca1: 1, ce: 1, cod1: 0, agent: 1 };
 // Seul le FPT est calculé : s'il est armé, les autres le sont.
 export const ENGIN_CALCULE = 'FPT';
 const POSTES_MAX = 8;
@@ -94,10 +96,19 @@ export async function lireArmement(base: Base): Promise<ReglageArmement> {
 	return { engins: ENGINS_PAR_DEFAUT, niveaux: { ca2: parNom('CA2'), ca1: parNom('CA1'), ce: parNom('CE'), cod2: parNom('COD2'), cod1: parNom('COD1') } };
 }
 
+// Pour la page d'armement : chaque type du centre, ceux d'origine d'abord. Le planning garde lireArmement, qui suffit au FPT.
+export async function armementDuCentre(base: Base): Promise<ReglageArmement> {
+	const [r, types] = await Promise.all([lireArmement(base), base.select({ nom: typeEngin.nom }).from(typeEngin).orderBy(asc(typeEngin.ordre), asc(typeEngin.id))]);
+	return { ...r, engins: [...r.engins, ...enginsAjoutes(types, r.engins)] };
+}
+
+const enginsAjoutes = (types: { nom: string }[], connus: Engin[]): Engin[] => types.filter((t) => !connus.some((e) => e.nom === t.nom)).map((t) => ({ nom: t.nom, postes: { ...POSTES_NOUVEAU_TYPE } }));
+
 export async function enregistrerArmement(base: Base, acteur: Acteur, r: ReglageArmement, maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	if (!(await aLeDroit(base, acteur, 'GERER_LISTES', { type: 'centre' }, aujourdhui))) throw new RefusDroit('GERER_LISTES', { type: 'centre' });
-	const engins = ENGINS_PAR_DEFAUT.map((defaut) => {
+	const types = await base.select({ nom: typeEngin.nom }).from(typeEngin).orderBy(asc(typeEngin.ordre), asc(typeEngin.id));
+	const engins = [...ENGINS_PAR_DEFAUT, ...enginsAjoutes(types, ENGINS_PAR_DEFAUT)].map((defaut) => {
 		const e = r.engins.find((x) => x.nom === defaut.nom) ?? defaut;
 		const postes = Object.fromEntries(POSTES.map((p) => [p, e.postes[p]])) as Postes;
 		if (!POSTES.every((p) => Number.isInteger(postes[p]) && postes[p] >= 0) || places(postes).length > POSTES_MAX || places(postes).length === 0) throw new DonneeInvalide(`${defaut.nom}, de 1 à ${POSTES_MAX} postes`);

@@ -8,6 +8,8 @@ Réservé à qui gère les responsabilités du centre : le chef de centre, son a
 4. Réglez chaque poste avec − et + (CA tout engins, CA 1 agrès, conducteur, CE, agent) : de 1 à 8 postes en tout.
 5. Appuyez sur « Enregistrer ». Le message « Règles d'armement enregistrées. » apparaît.
 
-Le FPT guide le planning d'été : s'il est armé, les autres le sont.
+Le FPT guide le planning d'été. S'il est armé, les autres le sont.
+
+Un type ajouté par le centre (un CCF, par exemple) a aussi sa ligne. Tant qu'il n'est pas réglé, il compte un CA 1 agrès, un CE et un agent. Depuis la page d'un engin à la fiche vide, **Régler son armement** ouvre directement son réglage.
 
 Pour dire quelle aptitude du centre donne chaque niveau (chef d'agrès, chef d'équipe, conducteur) : ouvrez « Correspondance des aptitudes », choisissez une aptitude par niveau, puis appuyez sur « Enregistrer la correspondance ».

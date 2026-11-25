@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import centre from '$centre';
-import { gesteAnomalie, REGLAGE_ANOMALIES, signalerAnomalie } from '@gyro-caserne/socle';
+import { enregistrerEngin, gesteAnomalie, REGLAGE_ANOMALIES, signalerAnomalie } from '@gyro-caserne/socle';
+import { maintenantParis } from '#lib/aujourdhui.ts';
 import { load } from './+page.server';
 import { load as chargerModifier, actions } from './modifier/+page.server';
 import { locaux, preparer } from '../de-test.ts';
@@ -29,6 +30,15 @@ describe('/engins/[id]', () => {
 		await gesteAnomalie(base, chef, id, { quoi: 'indisponible' }, '2026-10-30T18:10', REGLAGE_ANOMALIES);
 		await gesteAnomalie(base, chef, id, { quoi: 'clore', texte: '' }, '2026-10-30T18:10', REGLAGE_ANOMALIES);
 		expect(await charger(locaux(base, alice), vsav)).toMatchObject({ aRemettre: id, ouvertes: [], engin: { etat: 'indisponible' } });
+	});
+
+	it('fiche vide : les suites pour qui gère, « Régler son armement » pour qui gère aussi les listes', async () => {
+		const { base, alice, chef, vsav } = await preparer();
+		const ccf = await enregistrerEngin(base, chef, { nom: 'CCF 1', typeId: 0, nouveauType: 'CCF', immatriculation: '', situation: 'centre', provenance: '' }, maintenantParis());
+		expect(await charger(locaux(base, chef), ccf)).toMatchObject({ suites: { armement: false } });
+		expect(await charger(locaux(base, { type: 'super', email: 'admin@exemple.fr' }), ccf)).toMatchObject({ suites: { armement: true } });
+		expect((await charger(locaux(base, alice), ccf)).suites).toBeNull();
+		expect((await charger(locaux(base, chef), vsav)).suites).toBeNull();
 	});
 
 	it('404 pour un engin inconnu', async () => {

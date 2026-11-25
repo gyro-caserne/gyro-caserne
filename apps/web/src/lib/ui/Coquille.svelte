@@ -226,9 +226,10 @@
 		object-fit: contain;
 		vertical-align: -0.3em;
 	}
+	/* Au téléphone, le bas de la page reste visible au-dessus de la barre du bas (et de la zone de sécurité de l'iPhone). */
 	main {
 		flex: 1;
-		padding: 1rem 1rem 6rem;
+		padding: var(--espace-16) var(--espace-16) calc(var(--hauteur-navigation) + env(safe-area-inset-bottom) + var(--espace-24));
 	}
 	main:focus {
 		outline: none;
@@ -245,7 +246,7 @@
 	nav a {
 		position: relative;
 		flex: 1;
-		min-height: 4rem;
+		min-height: var(--hauteur-navigation);
 		min-width: var(--cible);
 		display: flex;
 		flex-direction: column;

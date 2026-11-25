@@ -22,4 +22,14 @@ describe('/engins/nouveau', () => {
 		expect(reponse.location).toMatch(/^\/engins\/\d+$/);
 		expect(await ajouter(locaux(base, chef), [['nom', 'vtu'], ['type', String(types.VTU)], ['situation', 'centre']])).toMatchObject({ status: 400, data: { message: 'Ce nom est déjà pris par un engin du centre.' } });
 	});
+	it('« Nouveau type » : le type et l’engin créés ensemble ; un refus garde la saisie', async () => {
+		const { base, chef } = await preparer();
+		const refus = await ajouter(locaux(base, chef), [['nom', 'CCF 1'], ['type', 'nouveau'], ['nouveauType', 'vsav'], ['situation', 'centre']]);
+		expect(refus).toMatchObject({ status: 400, data: { message: 'Ce type d’engin existe déjà.', valeurs: { typeId: 'nouveau', nouveauType: 'vsav' } } });
+		expect(await ajouter(locaux(base, chef), [['nom', 'CCF 1'], ['type', 'nouveau'], ['nouveauType', ''], ['situation', 'centre']])).toMatchObject({ status: 400, data: { message: 'Indiquez le nom du nouveau type.' } });
+		const reponse = await ajouter(locaux(base, chef), [['nom', 'CCF 1'], ['type', 'nouveau'], ['nouveauType', 'ccf'], ['situation', 'centre']]).catch((e) => e);
+		expect(reponse).toMatchObject({ status: 303 });
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		expect((await (load as any)({ locals: locaux(base, chef) })).types.map((t: { nom: string }) => t.nom)).toEqual(['VSAV', 'FPT', 'VTU', 'CCF']);
+	});
 });

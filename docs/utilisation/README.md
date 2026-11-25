@@ -61,6 +61,7 @@ Format d'une page :
 - [Comment échanger ma place à une manœuvre ?](echanger-une-manoeuvre.md)
 - [Comment saisir les aptitudes d'un agent ?](saisir-les-aptitudes.md)
 - [Comment ajouter un engin ou un engin prêté ?](ajouter-un-engin.md)
+- [Comment ajouter un engin d'un nouveau type ?](ajouter-un-engin-d-un-nouveau-type.md)
 - [Comment régler l'armement des engins ?](regler-l-armement-des-engins.md)
 - [Comment mettre l'écusson du centre ?](mettre-l-ecusson-du-centre.md)
 - [Comment modifier la fiche de prise de garde d'un engin ?](modifier-une-fiche-de-prise-de-garde.md)

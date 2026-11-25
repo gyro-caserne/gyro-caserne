@@ -17,7 +17,7 @@ async function lireRole(locals: App.Locals, brut: string) {
 	}
 }
 
-// Les demandes reçues par un rôle : en cours (les nouvelles d'abord), puis terminées. Sous « Plus », le réglage de ses étapes,
+// Les demandes reçues par un rôle : en cours (les nouvelles d'abord), puis terminées. En tête, la carte de ses étapes et leur réglage,
 // pour ses titulaires et qui gère les rôles.
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const { role, aujourdhui, ...liste } = await lireRole(locals, params.id);

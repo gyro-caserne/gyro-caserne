@@ -19,7 +19,10 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			engin.etat === 'indisponible' ? bloquanteClose(base, engin.id) : null
 		]);
 		const p = vue.prise;
+		// Fiche encore vide (un engin d'un nouveau type) : les suites, pour qui gère. Le droit sur l'armement n'est lu qu'alors.
+		const suites = gere && fiche.zones.length === 0 && engin.situation !== 'parti' ? { armement: await aLeDroit(base, acteur, 'GERER_LISTES', { type: 'centre' }, aujourdhui) } : null;
 		return {
+			suites,
 			engin,
 			gere,
 			fiche,

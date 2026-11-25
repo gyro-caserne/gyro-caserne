@@ -65,3 +65,6 @@ export function titreDeDemande(texte: string, max = 60): string {
 	const fin = coupe.lastIndexOf(' ');
 	return `${(fin > max / 2 ? coupe.slice(0, fin) : ligne.slice(0, max)).replace(/[\s,;:.!?-]+$/, '')}…`;
 }
+
+// Les étapes du rôle, dans l'ordre d'une demande, en une ligne (« Demandée, Prise en compte, Commandée, Livrée »).
+export const etapesEnUneLigne = (r: { etapes: { nom: string }[]; derniere: string }) => ['Demandée', 'Prise en compte', ...r.etapes.map((e) => e.nom), r.derniere].join(', ');

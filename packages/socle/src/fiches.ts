@@ -331,9 +331,9 @@ export async function zonesPrevenues(base: Base, role: number): Promise<{ zone: 
 	return zones;
 }
 
-// Un nouveau type d'engin, avec sa fiche vide (version 1).
-export async function creerTypeEngin(base: Base, acteur: Acteur, nom: string, maintenant: string): Promise<number> {
-	await exigerGestionEngins(base, acteur, maintenant);
+// Le nom d'un nouveau type contrôlé, et les écritures qui le créent avec sa fiche vide (version 1).
+// `id` désigne le type dans les écritures qui suivent, dans le même lot.
+export async function preparerTypeEngin(base: Base, acteur: Acteur, nom: string, maintenant: string) {
 	const propre = nom.trim().replace(/\s+/g, ' ').toUpperCase();
 	if (!propre) throw new DonneeInvalide('Nom vide');
 	if (propre.length > LIMITES_FICHE.nomType) throw new DonneeInvalide('Nom trop long');
@@ -341,12 +341,20 @@ export async function creerTypeEngin(base: Base, acteur: Acteur, nom: string, ma
 	if (/[:\\/?*[\]]/.test(propre)) throw new DonneeInvalide('Caractère interdit dans le type');
 	const types = await base.select({ nom: typeEngin.nom, ordre: typeEngin.ordre }).from(typeEngin);
 	if (types.some((t) => memeNom(t.nom, propre))) throw new DonneeInvalide('Type déjà présent');
-	const idType = sql<number>`(SELECT ${typeEngin.id} FROM ${typeEngin} WHERE ${typeEngin.nom} = ${propre})`;
-	await base.batch([
+	const id = sql<number>`(SELECT ${typeEngin.id} FROM ${typeEngin} WHERE ${typeEngin.nom} = ${propre})`;
+	const ecritures = [
 		base.insert(typeEngin).values({ nom: propre, ordre: Math.max(0, ...types.map((t) => t.ordre)) + 1 }),
-		base.insert(ficheVersion).values({ typeId: idType, numero: 1, auteur: nomActeur(acteur), creeLe: maintenant }),
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'creer_type_engin', cibleType: 'type_engin', cibleId: idType, details: { nom: propre } }, maintenant)
-	]);
-	const [cree] = await base.select({ id: typeEngin.id }).from(typeEngin).where(and(eq(typeEngin.nom, propre)));
+		base.insert(ficheVersion).values({ typeId: id, numero: 1, auteur: nomActeur(acteur), creeLe: maintenant }),
+		ligneJournal(base, { acteur: nomActeur(acteur), action: 'creer_type_engin', cibleType: 'type_engin', cibleId: id, details: { nom: propre } }, maintenant)
+	] as const;
+	return { nom: propre, id, ecritures };
+}
+
+// Un nouveau type d'engin, avec sa fiche vide (version 1).
+export async function creerTypeEngin(base: Base, acteur: Acteur, nom: string, maintenant: string): Promise<number> {
+	await exigerGestionEngins(base, acteur, maintenant);
+	const type = await preparerTypeEngin(base, acteur, nom, maintenant);
+	await base.batch(type.ecritures);
+	const [cree] = await base.select({ id: typeEngin.id }).from(typeEngin).where(and(eq(typeEngin.nom, type.nom)));
 	return cree!.id;
 }

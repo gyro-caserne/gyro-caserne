@@ -8,7 +8,7 @@
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 	import Pastille from '#lib/ui/Pastille.svelte';
 
-	type Donnees = { engin: EnginVu; gere: boolean; fiche: Fiche; releve?: Releve; peutFaire?: boolean; prise?: PriseDeLaReleve['prise']; ouvertes?: AnomalieVue[]; historique?: PriseHistorique[]; peutSignaler?: boolean; aRemettre?: number | null };
+	type Donnees = { engin: EnginVu; gere: boolean; fiche: Fiche; releve?: Releve; peutFaire?: boolean; prise?: PriseDeLaReleve['prise']; ouvertes?: AnomalieVue[]; historique?: PriseHistorique[]; peutSignaler?: boolean; aRemettre?: number | null; suites?: { armement: boolean } | null };
 	let { data }: { data: Donnees } = $props();
 	const e = $derived(data.engin);
 	const etat = $derived(etatPrise(data.prise ?? null));
@@ -41,6 +41,18 @@
 				<p>Ses anomalies sont closes. La remise en service attend la décision du référent engins ou d’un chef.</p>
 				{#if data.aRemettre}<div><a class="lien-secondaire" href="/engins/anomalies/{data.aRemettre}">Voir l’anomalie et remettre en service</a></div>{/if}
 			{/if}
+		</section>
+	{/if}
+
+	<!-- Un engin d'un nouveau type : ses suites, en vue dès l'arrivée, tant que la fiche de son type est vide. -->
+	{#if data.suites}
+		<section class="panneau" aria-labelledby="titre-suites">
+			<h2 id="titre-suites">À compléter</h2>
+			<p class="doux">La fiche de prise de garde de son type est encore vide.</p>
+			<div class="gestes">
+				<a class="lien-secondaire" href="/engins/fiches/{e.typeId}">Compléter sa fiche de prise de garde</a>
+				{#if data.suites.armement}<a class="lien-secondaire" href="/reglages/armement?engin={encodeURIComponent(e.type)}">Régler son armement</a>{/if}
+			</div>
 		</section>
 	{/if}
 
@@ -91,7 +103,7 @@
 				<p class="doux">{compteFiche(data.fiche.zones)}. Version {data.fiche.version.numero} du {dateCourte(data.fiche.version.creeLe)} ({data.fiche.version.auteur}).</p>
 			</div>
 			{#if data.fiche.zones.length === 0}
-				<p class="doux">Cette fiche est encore vide.{data.gere ? ' Ajoutez ses zones et ses éléments depuis « Modifier la fiche ».' : ''}</p>
+				<p class="doux">Cette fiche est encore vide.</p>
 			{:else}
 				<ZonesFiche zones={data.fiche.zones} />
 			{/if}

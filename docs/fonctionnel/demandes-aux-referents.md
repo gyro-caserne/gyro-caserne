@@ -8,7 +8,7 @@ Un agent demande ce qu'il lui faut à un référent, en texte libre, et suit sa 
 
 ## Le réglage, par rôle
 
-- **Où** : Réglages, Rôles, la page du rôle, bloc **Demandes**. Les titulaires du rôle règlent aussi ses étapes depuis sa liste de demandes (**Régler les étapes**).
+- **Où** : Réglages, Rôles, la page du rôle, bloc **Demandes**. Les titulaires du rôle règlent aussi ses étapes depuis sa liste de demandes : en tête, la carte **Étapes de vos demandes** les donne en une ligne (« Demandée, Prise en compte, Commandée, Livrée ») et porte **Régler les étapes**, qui se déplie sur place. Elle n'apparaît qu'à qui peut régler, que le rôle ait des demandes ou non.
 - **Reçoit des demandes** : une case, pour un rôle de tout le centre. Jamais un rôle système (chef de centre, adjoint, chef de garde). Le référent habillement reçoit des demandes depuis C2, avec ses étapes En stock et Commandée au SDIS, puis Livrée.
 - **Étapes** : de 0 à 6 étapes intermédiaires, de 30 caractères au plus, qu'on ajoute, renomme, monte, descend ou retire. La **dernière étape** se renomme (« Faite » par défaut, par exemple « Livrée »).
 - **Étapes fixes** : « Demandée » et « Prise en compte » au début, « Refusée » et « Annulée » à la fin. Elles ne se renomment pas, et une étape réglée ne prend pas leur nom.

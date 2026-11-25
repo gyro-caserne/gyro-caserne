@@ -85,7 +85,7 @@ describe('page fiche agent', () => {
 			expect(bloc(page, 'Équipe et statut')[0]).toContain('Aucune équipe, opérationnel');
 			expect(bloc(page, 'Rôles')[0]).toContain('Aucun rôle en cours');
 			expect(bloc(page, 'Aptitudes')[0]).toContain('Aucune aptitude');
-			expect(bloc(page, 'Départ du centre')[0]).toContain('Fin des rôles, données personnelles effacées');
+			expect(bloc(page, 'Départ du centre')[0]).toContain('Quitter le centre ou partir à la retraite');
 		});
 
 		it('les résumés disent le téléphone, le grade et l’entrée, les rôles en cours', () => {
@@ -154,6 +154,36 @@ describe('page fiche agent', () => {
 		expect(depart).toContain("Sa date de naissance et son contact d'urgence seront effacés, et ses rôles prendront fin aujourd'hui.");
 		expect(depart).toMatch(/<input[^>]*type="checkbox"[^>]*name="confirmation"[^>]*value="oui"/);
 		expect(depart).toMatch(/>(<!--[^>]*-->)*Déclarer le départ</);
+	});
+
+	it('« Départ du centre » : deux choix, « Quitte le centre » d’abord ; ni pour une personne extérieure, ni pour le chef ou l’adjoint', () => {
+		const depart = (d: Record<string, unknown>) => { const page = html({ data: { ...data, ...d }, form: null }); return page.slice(page.indexOf('>Départ du centre<')); };
+		const page = depart({});
+		expect(page).toMatch(/<input type="radio" name="depart" value="quitte"[^>]*checked/);
+		expect(page).toMatch(/value="retraite"[\s\S]*?Part à la retraite, reste dans l’appli/);
+		expect(page).toContain('Déclarer le départ');
+		expect(depart({ fiche: { ...fiche, profil: { id: 2, nom: 'Retraités', typePersonne: 'exterieur' } } })).not.toContain('value="retraite"');
+		expect(depart({ fiche: { ...fiche, protection: 'adjoint' } })).not.toContain('value="retraite"');
+	});
+
+	it('« Part à la retraite » : le profil des retraités choisi d’avance, la confirmation ; sans profil extérieur, le chemin vers les profils', () => {
+		const profils = [{ id: 1, nom: 'Agent', typePersonne: 'agent' }, { id: 5, nom: 'Réserve citoyenne', typePersonne: 'exterieur' }, { id: 6, nom: 'Retraités', typePersonne: 'exterieur' }];
+		const form = { bloc: 'depart', erreurs: { retraite: 'Cochez « Je confirme » pour le passage à la retraite.' }, valeurs: { retraiteProfilId: '' } };
+		const page = html({ data: { ...data, profils }, form });
+		expect(ouvert(page, 'Départ du centre')).toBe(true);
+		expect(ouvert(page, 'Parcours')).toBe(false);
+		const retraite = page.slice(page.indexOf('action="?/retraite"'));
+		expect(retraite).toMatch(/<option value="6"[^>]*selected/);
+		expect(retraite).not.toContain('value="1"');
+		expect(retraite).toMatch(/name="confirmation" value="oui"[^>]*aria-describedby="retraite-avertissement retraite-erreur"/);
+		expect(retraite).toContain('Cochez « Je confirme » pour le passage à la retraite.');
+		expect(retraite).toMatch(/>(<!--[^>]*-->)*Passer à la retraite</);
+		const choixManquant = html({ data: { ...data, profils }, form: { bloc: 'depart', erreurs: { retraiteProfil: 'Choisissez un profil extérieur.' }, valeurs: { retraiteProfilId: '' } } });
+		expect(choixManquant).toMatch(/aria-describedby="retraite-profil-erreur"[\s\S]*?Choisissez un profil extérieur\.|Choisissez un profil extérieur\.[\s\S]*?name="profilId"/);
+		const sans = html({ data: { ...data, profils: [profils[0]] }, form });
+		expect(sans).not.toContain('action="?/retraite"');
+		expect(sans).toContain('Il faut d’abord créer un profil extérieur, pour les retraités par exemple, dans Réglages, Profils.');
+		expect(sans).toMatch(/<a class="lien-secondaire" href="\/reglages\/profils">Ouvrir les profils<\/a>/);
 	});
 
 	it('sans « Je confirme », « Départ du centre » s’ouvre avec l’erreur reliée à la case', () => {

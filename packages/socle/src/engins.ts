@@ -2,7 +2,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import type { Base } from './base.ts';
 import { aLeDroit, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
-import { exigerGestionEngins, gereLesEngins } from './fiches.ts';
+import { exigerGestionEngins, gereLesEngins, preparerTypeEngin } from './fiches.ts';
 import { ligneJournal } from './journal.ts';
 import { nomActeur } from './actions/personnes.ts';
 import type { EtatEngin, SituationEngin } from './listes.ts';
@@ -60,7 +60,8 @@ export async function lireEngin(base: Base, acteur: Acteur, id: number, aujourdh
 const propre = (texte: string) => texte.trim().replace(/\s+/g, ' ');
 
 // Sans `id` : un nouvel engin. Passer « parti » le sort de la liste à la date du jour ; le remettre au centre l'y fait revenir.
-export async function enregistrerEngin(base: Base, acteur: Acteur, saisie: SaisieEngin & { id?: number }, maintenant: string): Promise<number> {
+// Avec `nouveauType` (un nouvel engin seulement) : son type est créé avec lui, d'un bloc, aux mêmes règles que creerTypeEngin.
+export async function enregistrerEngin(base: Base, acteur: Acteur, saisie: SaisieEngin & { id?: number; nouveauType?: string }, maintenant: string): Promise<number> {
 	const aujourdhui = await exigerGestionEngins(base, acteur, maintenant);
 	const nom = propre(saisie.nom);
 	const immatriculation = propre(saisie.immatriculation).toUpperCase() || null;
@@ -73,7 +74,8 @@ export async function enregistrerEngin(base: Base, acteur: Acteur, saisie: Saisi
 	if (provenance && provenance.length > LIMITES_ENGIN.provenance) throw new DonneeInvalide('Provenance trop longue');
 
 	const [types, existants] = await base.batch([base.select({ id: typeEngin.id }).from(typeEngin), base.select({ id: engin.id, nom: engin.nom, situation: engin.situation, partiLe: engin.partiLe }).from(engin)]);
-	if (!types.some((t) => t.id === saisie.typeId)) throw new DonneeInvalide('Type inconnu');
+	const nouveau = saisie.nouveauType === undefined || saisie.id !== undefined ? null : await typeAvecLEngin(base, acteur, saisie.nouveauType, maintenant);
+	if (!nouveau && !types.some((t) => t.id === saisie.typeId)) throw new DonneeInvalide('Type inconnu');
 	const avant = saisie.id === undefined ? null : existants.find((e) => e.id === saisie.id);
 	if (avant === undefined) throw new DonneeInvalide('Engin inconnu');
 	// Deux engins présents ne portent pas le même nom ; un parti libère le sien.
@@ -82,6 +84,16 @@ export async function enregistrerEngin(base: Base, acteur: Acteur, saisie: Saisi
 	const partiLe = saisie.situation !== 'parti' ? null : avant?.situation === 'parti' ? avant.partiLe : aujourdhui;
 	const valeurs = { nom, immatriculation, typeId: saisie.typeId, situation: saisie.situation, provenance, partiLe };
 
+	if (avant === null && nouveau) {
+		// Le type, sa fiche, puis l'engin et son journal, d'un bloc (le journal suit l'engin : last_insert_rowid() le désigne).
+		const { typeId: _, ...details } = valeurs;
+		const resultats = await base.batch([
+			...nouveau.ecritures,
+			base.insert(engin).values({ ...valeurs, typeId: nouveau.id, creeLe: maintenant }).returning({ id: engin.id }),
+			ligneJournal(base, { acteur: nomActeur(acteur), action: 'ajouter_engin', cibleType: 'engin', cibleId: sql`last_insert_rowid()`, details: { ...details, type: nouveau.nom } }, maintenant)
+		]);
+		return (resultats[nouveau.ecritures.length] as { id: number }[])[0]!.id;
+	}
 	if (avant === null) {
 		// L'engin et son journal d'un bloc.
 		const [[cree]] = await base.batch([
@@ -95,6 +107,17 @@ export async function enregistrerEngin(base: Base, acteur: Acteur, saisie: Saisi
 		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_engin', cibleType: 'engin', cibleId: avant.id, details: valeurs }, maintenant)
 	]);
 	return avant.id;
+}
+
+// Le type demandé avec l'engin. Ses refus disent « Type », pour ne pas les confondre avec ceux du nom de l'engin.
+async function typeAvecLEngin(base: Base, acteur: Acteur, nom: string, maintenant: string) {
+	try {
+		return await preparerTypeEngin(base, acteur, nom, maintenant);
+	} catch (erreur) {
+		if (erreur instanceof DonneeInvalide && erreur.message === 'Nom vide') throw new DonneeInvalide('Type vide');
+		if (erreur instanceof DonneeInvalide && erreur.message === 'Nom trop long') throw new DonneeInvalide('Type trop long');
+		throw erreur;
+	}
 }
 
 // Données fictives (préprod et développement local) : quelques engins, dont un prêté. Relançable, sans doublon.

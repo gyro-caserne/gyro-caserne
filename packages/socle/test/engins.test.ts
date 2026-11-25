@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { enregistrerEngin, lireEngin, listerEngins, voitLesEngins } from '../src/engins.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { gereLesEngins } from '../src/fiches.ts';
+import { lireFiche, lireFiches } from '../src/fiches.ts';
 import { journal } from '../src/schema.ts';
 import { aujourdhui, jeuEngins, maintenant } from './de-test-engins.ts';
 
@@ -76,6 +77,34 @@ describe('enregistrerEngin', () => {
 		await expect(enregistrerEngin(base, referent, saisie(999, 'X'), maintenant)).rejects.toThrow(new DonneeInvalide('Type inconnu'));
 		await expect(enregistrerEngin(base, referent, { id: 999, ...saisie(types.VSAV, 'X') }, maintenant)).rejects.toThrow(new DonneeInvalide('Engin inconnu'));
 		await expect(lireEngin(base, referent, 999, aujourdhui)).rejects.toThrow(new DonneeInvalide('Engin inconnu'));
+	});
+});
+
+describe('un engin d’un nouveau type', () => {
+	it('le type, sa fiche vide et l’engin, écrits ensemble et journalisés', async () => {
+		const { base, referent } = await jeuEngins();
+		const id = await enregistrerEngin(base, referent, { ...saisie(0, 'CCF 1'), nouveauType: ' ccf ' }, maintenant);
+		const { engin } = await lireEngin(base, referent, id, aujourdhui);
+		expect(engin).toMatchObject({ nom: 'CCF 1', type: 'CCF' });
+		expect(await lireFiche(base, engin.typeId)).toMatchObject({ type: 'CCF', zones: [], version: { numero: 1 } });
+		const actions = (await base.select().from(journal)).map((j) => j.action);
+		expect(actions.filter((a) => a === 'creer_type_engin')).toHaveLength(1);
+		const ajout = (await base.select().from(journal)).find((j) => j.action === 'ajouter_engin')!;
+		expect(ajout.cibleId).toBe(id);
+		expect(JSON.parse(ajout.details!)).toMatchObject({ nom: 'CCF 1', type: 'CCF' });
+	});
+
+	it('mêmes règles pour le type ; un refus n’écrit ni le type ni l’engin', async () => {
+		const { base, referent, alice } = await jeuEngins();
+		const avec = (type: string, nom = 'CCF 1') => ({ ...saisie(0, nom), nouveauType: type });
+		await expect(enregistrerEngin(base, alice, avec('CCF'), maintenant)).rejects.toBeInstanceOf(RefusDroit);
+		await expect(enregistrerEngin(base, referent, avec('vsav'), maintenant)).rejects.toThrow(new DonneeInvalide('Type déjà présent'));
+		await expect(enregistrerEngin(base, referent, avec('  '), maintenant)).rejects.toThrow(new DonneeInvalide('Type vide'));
+		await expect(enregistrerEngin(base, referent, avec('X'.repeat(21)), maintenant)).rejects.toThrow(new DonneeInvalide('Type trop long'));
+		await expect(enregistrerEngin(base, referent, avec('CCF/2'), maintenant)).rejects.toThrow(new DonneeInvalide('Caractère interdit dans le type'));
+		await expect(enregistrerEngin(base, referent, avec('CCF', ' '), maintenant)).rejects.toThrow(new DonneeInvalide('Nom vide'));
+		expect((await lireFiches(base)).map((f) => f.type)).toEqual(['VSAV', 'FPT', 'VTU']);
+		expect((await base.select().from(journal)).filter((j) => j.action === 'ajouter_engin')).toHaveLength(0);
 	});
 });
 

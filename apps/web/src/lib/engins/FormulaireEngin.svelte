@@ -8,7 +8,8 @@
 	import Champ from '#lib/ui/Champ.svelte';
 
 	// Ajouter ou modifier un engin : nom, type, plaque, situation (prêté : par quel centre). « Parti » seulement pour un engin existant.
-	type Valeurs = { nom: string; typeId: string; immatriculation: string; situation: SituationEngin; provenance: string };
+	// À l'ajout, « Nouveau type » crée le type avec l'engin : son nom se tape sur place.
+	type Valeurs = { nom: string; typeId: string; nouveauType?: string; immatriculation: string; situation: SituationEngin; provenance: string };
 	let { types, valeurs, existant, message, envoi }: { types: { id: number; nom: string }[]; valeurs: Valeurs; existant: boolean; message?: string; envoi: string } = $props();
 
 	// Valeurs de départ (puis tapées) ; après un envoi refusé, la page les renvoie et le formulaire repart d'elles.
@@ -16,6 +17,9 @@
 	let immatriculation = $state(untrack(() => valeurs.immatriculation));
 	let provenance = $state(untrack(() => valeurs.provenance));
 	let situation = $state<SituationEngin>(untrack(() => valeurs.situation));
+	let typeChoisi = $state(untrack(() => valeurs.typeId));
+	let nouveauType = $state(untrack(() => valeurs.nouveauType ?? ''));
+	const OPTIONS_TYPE = $derived([...types.map((t) => ({ valeur: String(t.id), libelle: t.nom })), ...(existant ? [] : [{ valeur: 'nouveau', libelle: 'Nouveau type' }])]);
 	const SITUATIONS: { valeur: SituationEngin; titre: string; texte: string }[] = $derived([
 		{ valeur: 'centre', titre: 'Au centre', texte: 'Un engin du centre.' },
 		{ valeur: 'prete', titre: 'Prêté au centre', texte: 'Prêté par un autre centre, le temps d’une réparation. Il a sa fiche et sa prise de garde.' },
@@ -26,7 +30,11 @@
 <form method="POST" use:enhance class="formulaire">
 	<Champ id="nom" name="nom" libelle="Nom" aide="Comme sur l’engin : « VSAV 1 », « FPT »." requis maxlength={30} bind:valeur={nom} />
 
-	<Choix id="type" name="type" libelle="Type" aide="Le type porte la fiche de prise de garde." requis valeur={valeurs.typeId} options={types.map((t) => ({ valeur: String(t.id), libelle: t.nom }))} />
+	<Choix id="type" name="type" libelle="Type" aide="Le type porte la fiche de prise de garde." requis bind:valeur={typeChoisi} options={OPTIONS_TYPE} />
+
+	{#if typeChoisi === 'nouveau'}
+		<Champ id="nouveau-type" name="nouveauType" libelle="Nom du nouveau type" aide="Court, comme sur l’engin : « CCF ». Sa fiche de prise de garde commence vide." requis maxlength={20} bind:valeur={nouveauType} />
+	{/if}
 
 	<Champ id="immatriculation" name="immatriculation" libelle="Immatriculation (facultative)" maxlength={12} bind:valeur={immatriculation} />
 

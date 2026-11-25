@@ -78,7 +78,7 @@ describe('/demandes/[id]', () => {
 });
 
 describe('/demandes/role/[id]', () => {
-	it('en cours puis terminées ; sans titulaire, la phrase ; le titulaire règle les étapes sous « Plus »', () => {
+	it('en cours puis terminées ; sans titulaire, la phrase ; le titulaire règle les étapes', () => {
 		const data = { role: { id: 7, nom: 'Référent pharmacie', icone: 'croix', demandes: { etapes: [{ id: 'ea', nom: 'Commandée' }], derniere: 'Livrée' } }, titulaire: true, sansTitulaire: false, enCours: [ligne({ etape: 'demandee', nomEtape: 'Demandée', prisePar: null })], terminees: [], regler: 'etapes' };
 		const page = propre(render(Role as any, { props: { data, form: null } }).body);
 		expect(page).toMatch(/<h1[^>]*>Demandes reçues<\/h1>/);
@@ -89,5 +89,20 @@ describe('/demandes/role/[id]', () => {
 		const sans = propre(render(Role as any, { props: { data: { ...data, sansTitulaire: true, regler: null }, form: null } }).body);
 		expect(sans).toContain('Ce rôle n’a pas de titulaire.');
 		expect(sans).not.toContain('Régler les étapes');
+	});
+	it('la carte « Étapes de vos demandes » en tête, vide ou non, pour qui règle seulement ; le réglage se déplie dedans', () => {
+		const data = { role: { id: 7, nom: 'Référent pharmacie', icone: 'croix', demandes: { etapes: [{ id: 'ea', nom: 'Commandée' }], derniere: 'Livrée' } }, titulaire: true, sansTitulaire: false, enCours: [], terminees: [], regler: 'etapes' };
+		const vide = propre(render(Role as any, { props: { data, form: null } }).body);
+		const carte = vide.match(/<section[^>]*class="etapes[^"]*"[\s\S]*?<\/section>/)![0];
+		expect(carte).toMatch(/<h2[^>]*>Étapes de vos demandes<\/h2>/);
+		expect(carte).toContain('Demandée, Prise en compte, Commandée, Livrée');
+		expect(carte).toMatch(/<details class="plus"><summary>Régler les étapes<\/summary>[\s\S]*?action="\?\/demandes"/);
+		// En tête : avant l'écran vide, puis avant la liste.
+		expect(vide.indexOf('Étapes de vos demandes')).toBeLessThan(vide.indexOf('Aucune demande'));
+		const avec = propre(render(Role as any, { props: { data: { ...data, enCours: [ligne()] }, form: null } }).body);
+		expect(avec.indexOf('Étapes de vos demandes')).toBeLessThan(avec.indexOf('En cours'));
+		expect(propre(render(Role as any, { props: { data: { ...data, regler: null }, form: null } }).body)).not.toContain('Étapes de vos demandes');
+		const apres = propre(render(Role as any, { props: { data, form: { cible: 'demandes', succes: 'Étapes enregistrées.' } } }).body);
+		expect(apres).toMatch(/<details class="plus" open[^>]*><summary>Régler les étapes/);
 	});
 });

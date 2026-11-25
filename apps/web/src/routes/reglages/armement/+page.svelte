@@ -64,7 +64,7 @@
 					<p class="titre">{e.nom}{#if e.nom === 'FPT'}<span class="doux">{' '}(calculé pour l’été)</span>{/if}</p>
 					<p class="doux">{texteEngin(e.postes)}</p>
 				</div>
-				<a class="lien-bouton" href="?engin={e.nom}" data-sveltekit-reset="false">Modifier<span class="masque">{' '}l’armement de {e.nom}</span></a>
+				<a class="lien-bouton" href="?engin={encodeURIComponent(e.nom)}" data-sveltekit-reset="false">Modifier<span class="masque">{' '}l’armement de {e.nom}</span></a>
 			</li>
 		{/each}
 	</ul>
@@ -85,7 +85,7 @@
 
 {#if ouvert}
 	<Panneau titre={ouvert.nom} fermer="?">
-		<form method="POST" action="?/enregistrer&engin={ouvert.nom}" use:enhance={fermer} class="formulaire">
+		<form method="POST" action="?/enregistrer&engin={encodeURIComponent(ouvert.nom)}" use:enhance={fermer} class="formulaire">
 			<p class="doux">De 1 à {POSTES_MAX} postes ({total} aujourd’hui).</p>
 			<ul class="compteurs" role="list">
 				{#each POSTES as p (p)}
