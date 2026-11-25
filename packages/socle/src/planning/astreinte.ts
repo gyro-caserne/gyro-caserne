@@ -14,6 +14,9 @@ export type Astreinte = { debut: string; fin: string; equipe: EquipePlanning; en
 // À l'Accueil, en plus : mes plages courtes cédées du jour, pas encore finies (qui me remplace quelques heures).
 export type AstreinteAccueil = Astreinte & { courtsCedes: (Periode & { remplacant: string })[] };
 
+// La fenêtre cherchée d'abord, en semaines après aujourd'hui.
+const FENETRE_SEMAINES = 8;
+
 // La carte de l'Accueil : avec une équipe, sa semaine en cours ou la prochaine (cette année et la suivante, publiées) ;
 // sans équipe, l'équipe de la semaine en cours. Rien sans année publiée, ni pour qui ne voit pas le planning (un profil extérieur).
 export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string, reglage: Reglage): Promise<AstreinteAccueil | null> {
@@ -46,22 +49,30 @@ export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string
 	// encore en cours : elle finit au plus tard 7 jours après sa relève (un jour de marge).
 	const finAvant = ajouterJours(semainesDe(annee - 1, reglage).at(-1)!.debut, 8);
 	const publiees = annees.filter((a) => a.publieeLe !== null && (a.annee >= annee || m.slice(0, 10) <= finAvant)).sort((a, b) => a.annee - b.annee);
-	let courante: SemaineCalculee | undefined;
-	let mienne: SemaineCalculee | undefined;
-	for (const a of publiees) {
-		const semaines = appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglage), fetes);
-		courante ??= semaines.find((s) => s.periodes[0]!.debut <= m && fin(s) > m);
-		if (peutAvoir)
-			for (const s of semaines) {
-				// Avec une équipe : mes heures (en été publié, mes plages ; un renfort compte aussi).
-				const periodes = heuresDe(s, equipeLe(affectations, s.debut), moi, plages);
-				if (periodes.length > 0 && periodes.at(-1)!.fin > m) {
-					mienne = { ...s, periodes };
-					break;
+	// D'abord les seules semaines de la fenêtre utile (la semaine en cours et les huit suivantes : décision 0021) ; sans rien
+	// y trouver, les années entières, comme avant. Les semaines sont lues dans l'ordre : la première trouvée est la même.
+	const chercher = (entre?: Periode) => {
+		let courante: SemaineCalculee | undefined;
+		let mienne: SemaineCalculee | undefined;
+		for (const a of publiees) {
+			const semaines = appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglage, entre), fetes);
+			courante ??= semaines.find((s) => s.periodes[0]!.debut <= m && fin(s) > m);
+			if (peutAvoir)
+				for (const s of semaines) {
+					// Avec une équipe : mes heures (en été publié, mes plages ; un renfort compte aussi).
+					const periodes = heuresDe(s, equipeLe(affectations, s.debut), moi, plages);
+					if (periodes.length > 0 && periodes.at(-1)!.fin > m) {
+						mienne = { ...s, periodes };
+						break;
+					}
 				}
-			}
-		if (mienne || (!peutAvoir && courante)) break;
-	}
+			if (mienne || (!peutAvoir && courante)) break;
+		}
+		return { courante, mienne, trouve: mienne !== undefined || (!peutAvoir && courante !== undefined) };
+	};
+	const jour = m.slice(0, 10);
+	const proche = chercher({ debut: ajouterJours(jour, -8), fin: ajouterJours(jour, FENETRE_SEMAINES * 7) });
+	const { courante, mienne } = proche.trouve ? proche : chercher();
 	const aMoi = avecEquipe || mienne !== undefined;
 	const semaine = aMoi ? mienne : courante;
 	if (!semaine) return null;
