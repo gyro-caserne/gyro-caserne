@@ -202,7 +202,7 @@ describe('dissoudreComite', () => {
 		await base.insert(responsabilite).values({ nom: 'Archivée', nature: 'mission', typePerimetre: 'comite', comiteAttributeurId: amicale.id, archiveeLe: '2026-01-01' });
 		await base.insert(responsabilite).values({ nom: 'Délégué', nature: 'mission', typePerimetre: 'comite', comiteAttributeurId: amicale.id });
 		const avant = await base.select().from(journal);
-		await expect(dissoudreComite(base, superAdmin, amicale.id, aujourdhui)).rejects.toThrow(new DonneeInvalide('Changez d’abord qui attribue « Délégué »'));
+		await expect(dissoudreComite(base, superAdmin, amicale.id, aujourdhui)).rejects.toThrow(new DonneeInvalide('Changez d’abord qui nomme au rôle « Délégué »'));
 		expect((await comite_('Amicale')).dissousLe).toBeNull();
 		expect(await base.select().from(journal)).toHaveLength(avant.length);
 		// Une fois archivée, la dissolution passe.

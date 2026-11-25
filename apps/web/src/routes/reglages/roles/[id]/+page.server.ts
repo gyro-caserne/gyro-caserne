@@ -24,17 +24,18 @@ import { maintenantParis } from '#lib/aujourdhui.ts';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import { appliquerNiveaux, DOMAINES, niveauxDe, type DomaineId } from '#lib/paquets.ts';
 import { accesReglages, attributeurDe, comitesChoix, echec, manque, niveauxChoisis, numero, texte, type Reponse, type Valeurs } from '#lib/server/formulaire-reglages.ts';
+import { natureDe } from '../../roles.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 type Nature = 'fonction' | 'mission';
 type Portee = 'centre' | 'equipe' | 'comite';
 const SYSTEME = 'Ce rôle fait partie du système. Ses droits sont fixés, il ne se modifie pas.';
 
-// Le rôle demandé, pour qui gère les responsabilités ; 404 s'il n'existe pas.
+// Le rôle demandé, pour qui gère les rôles ; 404 s'il n'existe pas.
 async function lireRole(locals: App.Locals, brut: string) {
 	const aujourdhui = aujourdhuiParis();
 	const acces = await accesReglages(locals, aujourdhui);
-	if (!acces.listes) error(403, 'Accès réservé à qui gère les responsabilités du centre');
+	if (!acces.listes) error(403, 'Accès réservé à qui gère les rôles du centre');
 	const id = numero(brut);
 	const role = id === null ? undefined : (await listerResponsabilites(acces.base, acces.acteur, aujourdhui)).find((r) => r.id === id);
 	if (!role) error(404, 'Rôle introuvable');
@@ -75,7 +76,7 @@ export const load: PageServerLoad = async ({ locals, params, parent, url }) => {
 function valeursDe(formulaire: FormData): Valeurs {
 	return {
 		nom: texte(formulaire, 'nom') ?? '',
-		nature: texte(formulaire, 'nature'),
+		nature: natureDe(formulaire),
 		portee: texte(formulaire, 'portee'),
 		attributeur: texte(formulaire, 'attributeur'),
 		icone: texte(formulaire, 'icone'),
@@ -101,7 +102,7 @@ export const actions: Actions = {
 	// Nommer, remplacer, finir : les gestes du bloc « Titulaires », pour qui ouvre cette page.
 	...actionsNommerApres(({ locals, params }) => lireRole(locals, params.id ?? '')),
 
-	// Nom, icône, qui attribue, et les niveaux des domaines.
+	// L'identité (nom, toujours tenu, pour qui, qui nomme, icône) et les niveaux des domaines.
 	enregistrer: async ({ locals, params, request }) => {
 		const { acteur, base, aujourdhui, role } = await lireRole(locals, params.id);
 		const formulaire = await request.formData();

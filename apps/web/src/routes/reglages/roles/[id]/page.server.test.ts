@@ -6,7 +6,8 @@ import { actions, load } from './+page.server';
 
 const agir = (nom: string, locals: unknown, id: number, corps: [string, string][]) => envoyer(actions, nom, locals, corps, { id: String(id) });
 // Le formulaire principal tel qu'envoyé par la page, sans les niveaux.
-const fiche = (nom: string, attributeur = 'chef_centre'): [string, string][] => [['nom', nom], ['nature', 'mission'], ['attributeur', attributeur]];
+// « Doit toujours être tenu » décoché : la case n'est pas envoyée.
+const fiche = (nom: string, attributeur = 'chef_centre'): [string, string][] => [['nom', nom], ['attributeur', attributeur]];
 
 describe('page d’un rôle', () => {
 	it('refuse un agent ordinaire, au chargement et pour chaque action ; 404 pour un rôle inconnu', async () => {
@@ -102,8 +103,17 @@ describe('page d’un rôle', () => {
 		const { base, chef, resp, droitsDe } = await preparer();
 		const rap = await resp('Rapporteur de comité');
 		const r = await agir('enregistrer', locaux(base, chef), rap.id, [...fiche('Rapporteur de comité', 'comite_vise'), ['administration', 'oui'], ['admin', 'ATTRIBUER_RESPONSABILITE'], ['admin', 'GERER_ACCES']]);
-		expect(r).toMatchObject({ status: 400, data: { cible: 'role', message: expect.stringContaining('ne se donnent qu’à un rôle de portée « Tout le centre »') } });
+		expect(r).toMatchObject({ status: 400, data: { cible: 'role', message: expect.stringContaining('ne se donnent qu’à un rôle tenu pour tout le centre') } });
 		expect(await droitsDe(rap.id)).toEqual(['ATTRIBUER_RESPONSABILITE']);
+	});
+
+	it('« Doit toujours être tenu » : coché, une fonction ; décoché, une mission', async () => {
+		const { base, referent, resp } = await preparer();
+		const engins = await resp('Référent engins');
+		expect(await agir('enregistrer', locaux(base, referent), engins.id, [...fiche('Référent engins'), ['toujours', '1']])).toMatchObject({ succes: expect.any(String) });
+		expect((await resp('Référent engins')).nature).toBe('fonction');
+		expect(await agir('enregistrer', locaux(base, referent), engins.id, fiche('Référent engins'))).toMatchObject({ succes: expect.any(String) });
+		expect((await resp('Référent engins')).nature).toBe('mission');
 	});
 
 	it('met l’erreur du nom sur le champ', async () => {

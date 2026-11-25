@@ -1305,18 +1305,18 @@ test.describe('réglages', () => {
 		const acces = admin.getByLabel('Gérer les accès');
 		const nommer = admin.getByLabel('Nommer');
 		await acces.check();
-		await expect(admin.getByText('Réservé à un rôle du centre')).toHaveCount(0);
+		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toHaveCount(0);
 
 		await page.getByLabel('Portée').selectOption({ label: 'Une équipe' });
 		await expect(acces).toBeDisabled();
 		await expect(acces).not.toBeChecked();
 		await expect(nommer).toBeEnabled();
-		await expect(admin.getByText('Réservé à un rôle du centre')).toBeVisible();
+		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toBeVisible();
 
 		await page.getByLabel('Portée').selectOption({ label: 'Tout le centre' });
 		await expect(acces).toBeEnabled();
 		await expect(acces).toBeChecked();
-		await expect(admin.getByText('Réservé à un rôle du centre')).toHaveCount(0);
+		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toHaveCount(0);
 
 		// Enregistré en équipe : la case retirée ne part pas, et le serveur accepte.
 		await page.getByLabel('Portée').selectOption({ label: 'Une équipe' });

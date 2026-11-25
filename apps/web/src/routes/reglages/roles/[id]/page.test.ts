@@ -36,10 +36,10 @@ const base = {
 const html = (data: Record<string, unknown>, form: unknown = null) => render(Page as any, { props: { data: { ...base, ...data }, form } }).body;
 
 describe('page d’un rôle', () => {
-	it('en-tête : nom, portée, qui attribue, modèle et « Personnalisé »', () => {
+	it('en-tête : nom, pour qui il est tenu, qui nomme, modèle et « Personnalisé »', () => {
 		const page = html({});
 		expect(page).toMatch(/<h1[^>]*>Référent engins<\/h1>/);
-		expect(page).toContain('Tout le centre, nommé par le chef de centre');
+		expect(page).toContain('Tenu pour tout le centre, nommé par le chef de centre');
 		expect(page).toContain('Créé à partir du modèle Référent matériel');
 		expect(page).toMatch(/>(<!---->)?Personnalisé/);
 		expect(html({ role: role({ droits: [droit('TRAITER_ANOMALIE'), droit('GERER_FICHES')] }) })).not.toContain('Personnalisé');
@@ -86,7 +86,7 @@ describe('page d’un rôle', () => {
 	});
 
 	describe('droits réservés à un rôle du centre', () => {
-		const PHRASE = 'Réservé à un rôle du centre';
+		const PHRASE = 'Réservé à un rôle tenu pour tout le centre';
 		const RESERVES = ['GERER_ACCES', 'GERER_COMITES', 'GERER_LISTES'];
 		const grisee = (page: string, nom: string, droit: string) => new RegExp(`<input type="checkbox" name="${nom}" value="${droit}"[^>]*disabled`).test(page);
 		const cochee = (page: string, nom: string, droit: string) => new RegExp(`<input type="checkbox" name="${nom}" value="${droit}"[^>]*checked`).test(page);
@@ -98,8 +98,8 @@ describe('page d’un rôle', () => {
 				expect(grisee(page, nom, 'ATTRIBUER_RESPONSABILITE')).toBe(false);
 			}
 			expect(page.match(new RegExp(PHRASE, 'g'))).toHaveLength(2);
-			expect(page).toMatch(/<p id="admin-centre"[^>]*>Réservé à un rôle du centre/);
-			expect(page).toMatch(/<p id="detail-centre"[^>]*>Réservé à un rôle du centre/);
+			expect(page).toMatch(/<p id="admin-centre"[^>]*>Réservé à un rôle tenu pour tout le centre/);
+			expect(page).toMatch(/<p id="detail-centre"[^>]*>Réservé à un rôle tenu pour tout le centre/);
 			// La phrase est reliée à chaque case qu'elle concerne, et à elles seules.
 			for (const d of RESERVES) {
 				expect(page).toMatch(new RegExp(`name="admin" value="${d}"[^>]*aria-describedby="admin-centre"`));
@@ -124,8 +124,8 @@ describe('page d’un rôle', () => {
 
 		it('un rôle d’équipe tenu : portée fixe, sans liste, cases grisées quand même', () => {
 			const page = html({ peutPouvoir: true, role: role({ portee: 'equipe', titulaires: 2 }) });
-			expect(page).not.toContain('id="role-portee"');
-			expect(page).toContain('Elle ne change pas tant que le rôle est tenu.');
+			expect(page).not.toContain('name="portee"');
+			expect(page).toContain('Tenu pour chaque équipe. Ne change pas tant que le rôle a un titulaire.');
 			expect(grisee(page, 'admin', 'GERER_ACCES')).toBe(true);
 			expect(page).toContain(PHRASE);
 		});
@@ -142,7 +142,7 @@ describe('page d’un rôle', () => {
 
 		it('après un refus du serveur sans JavaScript : la portée envoyée grise les cases du formulaire, le détail suit la portée enregistrée', () => {
 			const page = html({ peutPouvoir: true, role: role({ titulaires: 0 }) }, { cible: 'role', message: 'Refusé', valeurs: { nom: 'X', portee: 'equipe', admin: ['GERER_ACCES', 'ATTRIBUER_RESPONSABILITE'] } });
-			expect(page).toMatch(/<option value="equipe" selected/);
+			expect(page).toMatch(/<input type="radio" name="portee" value="equipe"[^>]*checked/);
 			expect(grisee(page, 'admin', 'GERER_ACCES')).toBe(true);
 			expect(cochee(page, 'admin', 'GERER_ACCES')).toBe(false);
 			expect(cochee(page, 'admin', 'ATTRIBUER_RESPONSABILITE')).toBe(true);
@@ -195,10 +195,41 @@ describe('page d’un rôle', () => {
 		expect(page).toContain('3 domaines modifiés, pas encore enregistrés');
 	});
 
-	it('archiver demande « Je confirme »', () => {
+	it('archiver : un geste grave en bas de page, sans menu « Plus », qui demande « Je confirme »', () => {
 		const page = html({});
 		expect(page).toContain('Les 2 personnes qui tiennent ce rôle le perdent aujourd’hui, avec ses droits.');
-		expect(page).toMatch(/action="\?\/archiver"[\s\S]*name="confirmation" value="oui"/);
+		expect(page).toMatch(/action="\?\/archiver"[\s\S]*name="confirmation" value="oui"[\s\S]*Confirmer l’archivage/);
+		// Sans JavaScript, la confirmation reste repliée sous « Archiver le rôle ».
+		expect(page).toMatch(/<details class="repli[^"]*"><summary[^>]*>Archiver le rôle<\/summary>/);
+		expect(page).not.toContain('class="plus');
+		expect(page).not.toMatch(/>Plus</);
+	});
+
+	it('l’ordre de la fiche : titulaires, identité, ce qu’il peut faire, demandes, puis le détail et l’archivage en bas', () => {
+		const titulairesDuRole = { postes: [], gestes: null, fiches: false };
+		const page = html({ titulairesDuRole, aujourdhui: '2026-11-24', nouveau: false, role: role({ demandes: null, demandesGardees: null }), demandesPossibles: true });
+		const reperes = ['Titulaires</h2>', '>Identité<', 'Ce qu’il peut faire', '>Demandes</summary>', '>Enregistrer', '>Détail droit par droit</summary>', '>Archiver le rôle</summary>'].map((r) => page.indexOf(r));
+		expect(reperes.every((i) => i >= 0)).toBe(true);
+		expect(reperes).toEqual([...reperes].sort((a, b) => a - b));
+	});
+
+	it('identité : nom, « Doit toujours être tenu », « Tenu pour », « Qui nomme », sans les anciens mots', () => {
+		const page = html({ role: role({ titulaires: 0 }) });
+		expect(page).toMatch(/id="role-nom"[^>]*value="Référent engins"/);
+		expect(page).toContain('Doit toujours être tenu');
+		expect(page).toContain('Signalé à pourvoir dès qu’il n’a plus de titulaire.');
+		expect(page).toMatch(/<input type="checkbox" role="switch" name="toujours" value="1"/);
+		expect(page).not.toMatch(/name="toujours"[^>]*checked/);
+		expect(page).toMatch(/<legend[^>]*>Tenu pour<\/legend>/);
+		expect(page).toMatch(/<input type="radio" name="portee" value="centre"[^>]*checked/);
+		expect(page).toContain('Ses titulaires sont nommés équipe par équipe.');
+		expect(page).toMatch(/<label[^>]*>Qui nomme<\/label>/);
+		expect(page).toContain('Peut rester sans titulaire');
+		expect(page).not.toMatch(/Nature|Portée|Qui attribue|responsabilit|Nom, icône/);
+		// Une fonction : l'interrupteur est coché, et le résumé le dit.
+		const fonction = html({ role: role({ nature: 'fonction' }) });
+		expect(fonction).toMatch(/name="toujours" value="1"[^>]*checked/);
+		expect(fonction).toMatch(/class="resume[^"]*">Doit toujours être tenu</);
 	});
 
 	it('choix de l’icône dans la liste fixe, celle du modèle par défaut', () => {
@@ -241,7 +272,7 @@ describe('page d’un rôle', () => {
 			fiches: false
 		};
 		const page = html({ titulairesDuRole, aujourdhui: '2026-11-24', nouveau: false });
-		expect(page.indexOf('Titulaires')).toBeLessThan(page.indexOf('Ce que ce rôle peut faire'));
+		expect(page.indexOf('Titulaires')).toBeLessThan(page.indexOf('Ce qu’il peut faire'));
 		expect(page).toMatch(/<details class="repli titulaires[^"]*"><summary/);
 		expect(page).toMatch(/Titulaires<\/h2>(<!---->)?<span[^>]*>1 titulaire<\/span>/);
 		expect(page).toMatch(/href="\?mandat=21"[\s\S]*?Denis Roux/);

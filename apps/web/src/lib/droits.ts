@@ -26,8 +26,8 @@ export const LIBELLES_DROIT: Record<Droit, string> = {
 	RESERVER: 'Réserver une ressource',
 	GERER_RESERVATIONS: 'Gérer les réservations',
 	MODERER_MESSAGERIE: 'Modérer la messagerie',
-	GERER_LISTES: 'Gérer les responsabilités',
+	GERER_LISTES: 'Gérer les rôles',
 	GERER_ACCES: 'Gérer les accès',
 	GERER_COMITES: 'Gérer les comités',
-	ATTRIBUER_RESPONSABILITE: 'Attribuer une responsabilité'
+	ATTRIBUER_RESPONSABILITE: 'Nommer à un rôle'
 };

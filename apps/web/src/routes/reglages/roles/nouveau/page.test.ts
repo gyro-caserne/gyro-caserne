@@ -17,15 +17,30 @@ describe('nouveau rôle', () => {
 		expect(page).toMatch(/Rapporteur de comité[\s\S]*?Réservé au chef de centre/);
 	});
 
-	it('puis le formulaire prérempli : nom, portée, qui attribue, icône du modèle', () => {
+	it('puis le formulaire prérempli, dans l’ordre de la fiche : nom, toujours tenu, tenu pour, qui nomme, icône du modèle', () => {
 		const choisi = modeles.find((m) => m.id === 'membre_comite');
 		const page = html({ data: { ...data, choisi }, form: null });
 		expect(page).toContain('<input type="hidden" name="modele" value="membre_comite"');
 		expect(page).toMatch(/id="nouveau-nom"[^>]*value="Membre de comité"/);
-		expect(page).toMatch(/<option value="comite" selected/);
+		expect(page).toContain('Doit toujours être tenu');
+		expect(page).toContain('Signalé à pourvoir dès qu’il n’a plus de titulaire.');
+		expect(page).toMatch(/<input type="checkbox" role="switch" name="toujours" value="1"/);
+		expect(page).not.toMatch(/name="toujours"[^>]*checked/);
+		expect(page).toMatch(/<legend[^>]*>Tenu pour<\/legend>/);
+		expect(page).toMatch(/<input type="radio" name="portee" value="comite"[^>]*checked/);
+		expect(page).toContain('Chaque équipe');
+		expect(page).toContain('Ses titulaires sont nommés comité par comité.');
+		expect(page).toMatch(/<label[^>]*>Qui nomme<\/label>/);
 		expect(page).toMatch(/<option value="comite_vise" selected/);
 		expect(page).toMatch(/name="icone" value="groupe" checked/);
 		expect(page).toContain('href="/reglages/roles/nouveau"');
+		// Les anciens mots ne reviennent pas.
+		expect(page).not.toMatch(/Nature|Portée|Qui attribue|responsabilité/);
+		const ordre = ['id="nouveau-nom"', 'name="toujours"', 'name="portee"', 'id="nouveau-attributeur"', 'name="icone"', 'Créer le rôle'].map((m) => page.indexOf(m));
+		expect(ordre).toEqual([...ordre].sort((a, b) => a - b));
+		// Un modèle qui est une fonction : l'interrupteur est coché.
+		const fonction = { ...choisi, nature: 'fonction' };
+		expect(html({ data: { ...data, choisi: fonction }, form: null })).toMatch(/name="toujours" value="1"[^>]*checked/);
 	});
 
 	it('vierge : nom vide ; une erreur réaffiche la saisie', () => {
