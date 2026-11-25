@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { drizzle, type SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy';
 import { ecrit, metEnFile, type Base, type BasePhotos } from '../src/base.ts';
 import { oublierDroits } from '../src/droits.ts';
+import { oublierMurs } from '../src/murs.ts';
 
 type Requete = { sql: string; params: unknown[] };
 type Compteurs = { requetes: number; parametresMax: number; misEnFile?: boolean; jouees: Requete[] };
@@ -14,7 +15,10 @@ type Compteurs = { requetes: number; parametresMax: number; misEnFile?: boolean;
 // Comme creerBaseD1, toute écriture dans la base principale fait oublier les droits lus.
 export async function baseDeTest(): Promise<Base & Compteurs & { photos: BasePhotos; plan: (r: Requete) => string[] }> {
 	const base = ouvrir(new URL('../migrations/', import.meta.url), (requetes) => {
-		if (requetes.some(ecrit)) oublierDroits(base);
+		if (requetes.some(ecrit)) {
+			oublierDroits(base);
+			oublierMurs(base);
+		}
 		if (requetes.some(metEnFile)) base.misEnFile = true;
 	}) as Base & Compteurs & { photos: BasePhotos; plan: (r: Requete) => string[] };
 	base.photos = ouvrir(new URL('../migrations-photos/', import.meta.url), () => {}, base) as unknown as BasePhotos;

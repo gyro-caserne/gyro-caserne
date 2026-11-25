@@ -209,6 +209,17 @@ export async function annuaire(base: Base, acteur: Acteur, aujourdhui: string) {
 	return agents.map((a) => ({ ...a, equipe: equipes.get(a.id) ?? null, role: roleDe(tenues, a.id) })).sort(parNom);
 }
 
+// « Écrire » sur la fiche d'un agent : la personne est-elle dans mon annuaire (même règle qu'annuaire) ? Une requête d'une ligne.
+export async function peutEcrireAPersonne(base: Base, acteur: Acteur, id: number, aujourdhui: string): Promise<boolean> {
+	if (acteur.type !== 'personne' || acteur.id === id) return false;
+	const moi = acteur.id;
+	const lignes = await base
+		.select({ id: personne.id })
+		.from(personne)
+		.where(and(eq(personne.id, id), peutEcrireA(moi, personne.id, aujourdhui), aLaMessagerie(moi, aujourdhui)));
+	return lignes.length > 0;
+}
+
 // Une conversation à deux dont l'autre n'est plus joignable (parti, suspendu, plus lié à un profil extérieur) ne sert plus qu'à relire.
 const enLectureSeule = (type: TypeConversation, autres: { acces: number }[]) => type === 'deux' && (autres.length === 0 || autres.some((a) => !a.acces));
 

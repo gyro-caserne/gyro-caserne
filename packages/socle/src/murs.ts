@@ -151,7 +151,31 @@ export async function mursDe(base: Base, acteur: Acteur, aujourdhui: string): Pr
 // Tous les comités, dissous compris : de quoi signer une publication faite au nom de l'un d'eux.
 export type ComiteLu = { id: number; nom: string; dissousLe: string | null; icone: string | null; theme: string };
 
-export async function mursEtAppartenances(base: Base, acteur: Acteur, aujourdhui: string): Promise<{ murs: Mur[]; appartenances: Appartenances; comites: ComiteLu[] }> {
+type MursLus = { murs: Mur[]; appartenances: Appartenances; comites: ComiteLu[] };
+// Les murs déjà lus, par base : une base sert une seule requête HTTP (comme les droits, droits.ts). Toute écriture vide le cache (base.ts).
+const mursLus = new WeakMap<Base, Map<string, Promise<MursLus>>>();
+
+export function oublierMurs(base: Base): void {
+	mursLus.delete(base);
+}
+
+// Lus une fois par requête : le layout, la page et ses gestes les demandent chacun.
+export function mursEtAppartenances(base: Base, acteur: Acteur, aujourdhui: string): Promise<MursLus> {
+	const parActeur = mursLus.get(base) ?? new Map<string, Promise<MursLus>>();
+	mursLus.set(base, parActeur);
+	const cle = `${acteur.type === 'super' ? 'super' : acteur.id}|${aujourdhui}`;
+	const dejaLus = parActeur.get(cle);
+	if (dejaLus) return dejaLus;
+	const lus = lireMurs(base, acteur, aujourdhui);
+	parActeur.set(cle, lus);
+	// Un échec n'est pas gardé.
+	lus.catch(() => {
+		if (parActeur.get(cle) === lus) parActeur.delete(cle);
+	});
+	return lus;
+}
+
+async function lireMurs(base: Base, acteur: Acteur, aujourdhui: string): Promise<MursLus> {
 	const lesEquipes = base.select({ id: equipe.id, nom: equipe.nom, active: equipe.active }).from(equipe).orderBy(asc(equipe.ordreRotation));
 	const lesComites = base.select({ id: comite.id, nom: comite.nom, dissousLe: comite.dissousLe, icone: comite.icone, theme: comite.theme }).from(comite).orderBy(asc(comite.nom));
 

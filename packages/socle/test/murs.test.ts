@@ -58,6 +58,25 @@ async function jeu() {
 
 const resume = (murs: Mur[]) => murs.map((m) => `${m.cle} ${m.peutPublier ? 'P' : '-'}${m.peutModerer ? 'M' : '-'}${m.lectureSeule ? 'L' : '-'}`);
 
+describe('les murs, lus une fois par requête', () => {
+	it('relus sans requête dans la même requête ; une écriture les fait relire', async () => {
+		const { base, nouvelle, affecter, e1, e2 } = await jeu();
+		const id = await nouvelle('Alice');
+		await affecter(id, e1.id);
+		const alice: Acteur = { type: 'personne', id };
+		const avant = base.requetes;
+		const premiers = await mursDe(base, alice, '2026-10-28');
+		await mursDe(base, alice, '2026-10-28');
+		await exigerMur(base, alice, `equipe:${e1.id}`, '2026-10-28', 'lire');
+		expect(base.requetes - avant).toBe(1);
+		// Un autre jour, une autre personne : relus.
+		await mursDe(base, alice, '2026-10-29');
+		expect(base.requetes - avant).toBe(2);
+		await affecter(id, e2.id);
+		expect(resume(await mursDe(base, alice, '2026-10-28'))).not.toEqual(resume(premiers));
+	});
+});
+
 describe('mursDe', () => {
 	it('agent sans équipe ni comité : lit « Le centre », lit et publie dans « Vie du centre »', async () => {
 		const { base, nouvelle } = await jeu();

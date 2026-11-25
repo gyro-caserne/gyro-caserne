@@ -5,7 +5,7 @@ import {
 	anciennete,
 	PALIERS_PAR_DEFAUT,
 	reglageAnciennete,
-	annuaire,
+	peutEcrireAPersonne,
 	aptitudesEtListe,
 	donnerAptitude,
 	oterAptitude,
@@ -21,7 +21,6 @@ import {
 	grade,
 	modifierFiche,
 	profil,
-	RefusDroit,
 	retirerEquipe,
 	STATUTS_OPERATIONNELS,
 	type Acteur,
@@ -53,14 +52,9 @@ async function raisonDeProtection(locals: App.Locals, acteur: Acteur, fiche: Fic
 	return 'Seuls le chef de centre ou un super administrateur modifient la fiche d’un adjoint.';
 }
 
-// « Écrire » par la messagerie : si l'on y a accès, et que la personne y est (ce n'est donc pas soi).
-async function peutEcrire(locals: App.Locals, acteur: Acteur, id: number, aujourdhui: string): Promise<boolean> {
-	try {
-		return (await annuaire(locals.base, acteur, aujourdhui)).some((a) => a.id === id);
-	} catch (erreur) {
-		if (erreur instanceof RefusDroit) return false;
-		throw erreur;
-	}
+// « Écrire » par la messagerie : si l'on y a accès, et que la personne y est (ce n'est donc pas soi). Une requête d'une ligne.
+function peutEcrire(locals: App.Locals, acteur: Acteur, id: number, aujourdhui: string): Promise<boolean> {
+	return peutEcrireAPersonne(locals.base, acteur, id, aujourdhui);
 }
 
 export const load: PageServerLoad = async ({ locals, params }) => {
