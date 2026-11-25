@@ -6,7 +6,7 @@ import { actions, load } from './+page.server';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const charger = (locals: unknown) => (load as any)({ locals });
-const agir = async (nom: 'toutCouper' | 'reactiver' | 'urgences' | 'courriel', locals: unknown, champs: [string, string][]) => (actions[nom] as any)({ locals, request: await requeteFormulaire(champs) });
+const agir = async (nom: 'toutCouper' | 'reactiver' | 'urgences' | 'courriel' | 'sujet', locals: unknown, champs: [string, string][]) => (actions[nom] as any)({ locals, request: await requeteFormulaire(champs) });
 
 describe('/moi/notifications', () => {
 	it('demande la connexion ; le super administrateur, sans fiche, retourne à Moi', async () => {
@@ -18,7 +18,7 @@ describe('/moi/notifications', () => {
 		const { base, e1, alice } = await preparer();
 		await couper(base, alice, `mur:equipe:${e1.id}`, true, maintenantParis());
 		await abonner(base, alice, { endpoint: 'https://fcm.googleapis.com/fcm/send/a', p256dh: 'BCle', auth: 'secret', appareil: '' }, maintenantParis());
-		expect(await charger({ ...locaux(base, alice), clePublique: 'BPub' })).toEqual({ clePublique: 'BPub', tout: false, coupes: [{ lieu: `mur:equipe:${e1.id}`, nom: e1.nom }], appareils: 1, urgences: null, courriel: null });
+		expect(await charger({ ...locaux(base, alice), clePublique: 'BPub' })).toEqual({ clePublique: 'BPub', tout: false, coupes: [{ lieu: `mur:equipe:${e1.id}`, nom: e1.nom }], appareils: 1, urgences: null, courriel: null, sujets: { remplacements: true, engins: true, demandes: true, planning: true, vie: true } });
 		expect((await charger(locaux(base, alice))).clePublique).toBeNull();
 	});
 
@@ -50,5 +50,15 @@ describe('/moi/notifications', () => {
 		expect(await charger(locaux(base, chef))).toMatchObject({ courriel: false, coupes: [] });
 		await agir('courriel', locaux(base, chef), [['oui', '1']]);
 		expect((await charger(locaux(base, chef))).courriel).toBe(true);
+	});
+	it('un sujet : cloche seule, sans téléphone, puis de nouveau au téléphone ; un sujet inconnu est refusé', async () => {
+		const { base, alice } = await preparer();
+		const locals = locaux(base, alice);
+		expect(await agir('sujet', locals, [['sujet', 'remplacements']])).toEqual({ succes: 'Remplacements, dans la cloche seulement.' });
+		expect((await charger(locals)).sujets).toMatchObject({ remplacements: false, engins: true });
+		expect(await agir('sujet', locals, [['sujet', 'remplacements'], ['oui', '1']])).toEqual({ succes: 'Remplacements, de nouveau au téléphone.' });
+		expect((await charger(locals)).sujets.remplacements).toBe(true);
+		expect(await agir('sujet', locals, [['sujet', 'tout']])).toMatchObject({ status: 400 });
+		expect((await mesNotifications(base, alice, aujourdhuiParis())).tout).toBe(false);
 	});
 });

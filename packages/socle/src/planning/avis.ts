@@ -6,7 +6,7 @@ import { avisEte, personne } from '../schema.ts';
 
 const parmi = (ids: number[]) => sql`(select value from json_each(${JSON.stringify(ids)}))`;
 
-// Écritures à placer dans un batch : la ligne de la cloche et l'envoi au téléphone (lieu « planning » : seul « tout » le coupe).
+// Écritures à placer dans un batch : la ligne de la cloche et l'envoi au téléphone (sujet « planning »).
 // `si` : une condition vérifiée à l'écriture (la publication a bien eu lieu).
 export function avis(base: Base, ids: number[], quoi: AvisEte, texte: string, url: string, maintenant: string, si?: SQL) {
 	if (ids.length === 0) return [];

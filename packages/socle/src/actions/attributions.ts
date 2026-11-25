@@ -353,6 +353,6 @@ function avisNomination(base: Base, personneId: number, role: string, perimetre:
 				.from(personne)
 				.where(eq(personne.id, personneId))
 		),
-		mettreEnFile(base, [personneId], 'nominations', { titre, texte: perimetre, url, tag: `nomination:${maintenant}` }, maintenant, undefined, 'nomination')
+		mettreEnFile(base, [personneId], 'vie', { titre, texte: perimetre, url, tag: `nomination:${maintenant}` }, maintenant, undefined, 'nomination')
 	] as const;
 }

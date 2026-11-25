@@ -5,7 +5,7 @@ import { TITRES_AVIS } from './titres.ts';
 import { mettreEnFile } from '../notifications.ts';
 import { avisRemplacement, personne } from '../schema.ts';
 
-// Ce qu'une personne apprend d'une demande : une ligne dans sa cloche et un envoi au téléphone (lieu « remplacements » : seul « tout » le coupe).
+// Ce qu'une personne apprend d'une demande : une ligne dans sa cloche et un envoi au téléphone (sujet « remplacements »).
 
 const parmi = (ids: number[]) => sql`(select value from json_each(${JSON.stringify(ids)}))`;
 

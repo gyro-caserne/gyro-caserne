@@ -89,8 +89,8 @@ export async function feliciter(base: Base, acteur: Acteur, agentId: number, mai
 					.where(leJour)
 			)
 			.onConflictDoNothing(),
-		// Seulement si la ligne vient d'être écrite. Lieu « anciennete » : seul « tout » le coupe.
-		mettreEnFile(base, [agentId], 'anciennete', { titre, texte, url: '/', tag: `anciennete:${acteur.id}` }, maintenant, sql`changes() = 1`, 'anciennete')
+		// Seulement si la ligne vient d'être écrite. Sujet « vie ».
+		mettreEnFile(base, [agentId], 'vie', { titre, texte, url: '/', tag: `anciennete:${acteur.id}` }, maintenant, sql`changes() = 1`, 'anciennete')
 	]);
 }
 
