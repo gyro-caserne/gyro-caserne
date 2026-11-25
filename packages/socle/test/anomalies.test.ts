@@ -6,7 +6,7 @@ import { accueilDe } from '../src/casquettes.ts';
 import { courrielsDeDemande } from '../src/courriels.ts';
 import { enregistrerEngin } from '../src/engins.ts';
 import { lireFiche, reglerPrevenir } from '../src/fiches.ts';
-import { filDeNotifications } from '../src/notifications.ts';
+import { abonner, filDeNotifications } from '../src/notifications.ts';
 import { publierAnnee, reglerRoulement } from '../src/planning/annee.ts';
 import { commencerPrise, gestePrise, prisesDeLaReleve, validerPrise } from '../src/prises.ts';
 import { anomalie, anomalieSuivi, attribution, avisAnomalie, engin, equipe, journal, personne, profil, responsabilite } from '../src/schema.ts';
@@ -80,6 +80,9 @@ describe('signalement direct', () => {
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'prendre' }, PLUS_TARD, REGLAGE_ANOMALIES);
 		expect(await courrielsDeDemande(j.base, { genre: 'anomalie', id })).toHaveLength(1);
 		expect(await courrielsDeDemande(j.base, { genre: 'prise', enginId: j.vtu, quand: PLUS_TARD })).toEqual([]);
+		// Les notifications activées sur son téléphone : plus d'e-mail en double.
+		await abonner(j.base, j.referent, { endpoint: 'https://fcm.googleapis.com/fcm/send/ref', p256dh: 'BCle', auth: 'secret', appareil: 'Téléphone' }, QUAND);
+		expect(await courrielsDeDemande(j.base, { genre: 'anomalie', id })).toEqual([]);
 	});
 
 	it('le seul référent signale lui-même : le chef de centre et l’adjoint sont prévenus à sa place', async () => {
@@ -163,7 +166,7 @@ describe('le suivi', () => {
 		await gesteAnomalie(j.base, j.alice, id, { quoi: 'reparee', texte: 'câble changé' }, PLUS_TARD, REGLAGE_ANOMALIES);
 		const [a] = await j.base.select().from(anomalie).where(eq(anomalie.id, id));
 		expect(a).toMatchObject({ etape: 'reparee', motifAttente: 'garage', priseEnChargePar: idDe(j.alice), closePar: idDe(j.alice), closeLe: PLUS_TARD });
-		expect((await j.avis(j.chefDeGarde)).map((x) => x.texte)).toEqual(['Prise en charge par Alice Fictif', 'En attente (au garage), par Alice Fictif : départ lundi', 'Réparée par Alice Fictif : câble changé']);
+		expect((await j.avis(j.chefDeGarde)).map((x) => x.texte)).toEqual(['Prise en charge par Alice Fictif', 'Réparée par Alice Fictif (câble changé)']);
 		expect(await j.avis(j.alice)).toEqual([]);
 		const vue = await lireAnomalie(j.base, j.chefDeGarde, id, PLUS_TARD, REGLAGE_ANOMALIES);
 		expect(vue.historique.map((h) => [h.quoi, h.par, h.texte])).toEqual([
@@ -195,7 +198,8 @@ describe('le suivi', () => {
 		await expect(gesteAnomalie(j.base, j.alice, id, { quoi: 'indisponible' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow();
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'indisponible' }, QUAND, REGLAGE_ANOMALIES);
 		expect(await j.etatEngin(j.vtu)).toBe('indisponible');
-		expect((await j.avis(j.alice)).at(-1)!.texte).toBe('Engin rendu indisponible par Rémi Fictif');
+		// Le signaleur n'apprend que la prise en charge et la clôture.
+		expect(await j.avis(j.alice)).toEqual([]);
 		// Ouverte, on ne la remet pas en service ; réparée, l'engin reste indisponible jusqu'à la décision.
 		await expect(gesteAnomalie(j.base, j.referent, id, { quoi: 'remettre' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow('Geste impossible');
 		await gesteAnomalie(j.base, j.alice, id, { quoi: 'reparee', texte: '' }, QUAND, REGLAGE_ANOMALIES);
@@ -304,7 +308,7 @@ describe('le suivi', () => {
 		await expect(gesteAnomalie(j.base, j.alice, id, { quoi: 'attente', motif: 'lune' as 'garage', texte: '' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow('Motif inconnu');
 		await expect(gesteAnomalie(j.base, j.alice, id, { quoi: 'clore', texte: '' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow();
 		await gesteAnomalie(j.base, j.referent, id, { quoi: 'clore', texte: 'Signalé deux fois' }, QUAND, REGLAGE_ANOMALIES);
-		expect((await j.avis(j.alice)).at(-1)!.texte).toBe('Close par Rémi Fictif : Signalé deux fois');
+		expect((await j.avis(j.alice)).at(-1)!.texte).toBe('Close par Rémi Fictif (Signalé deux fois)');
 	});
 });
 
