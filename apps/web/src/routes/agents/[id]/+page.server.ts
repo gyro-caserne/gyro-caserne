@@ -166,6 +166,24 @@ export const actions: Actions = {
 		return { succes: true, message: 'Fiche enregistrée', bloc };
 	},
 
+	// « Part à la retraite, reste dans l'appli », depuis « Départ du centre » : le même passage à un profil extérieur qu'au bloc
+	// Parcours (confirmé, mêmes suites, rien d'effacé, refusé au chef et à l'adjoint par le socle).
+	retraite: async ({ locals, params, request }) => {
+		const { acteur, aujourdhui, id } = await lireFiche(locals, params.id);
+		const formulaire = await request.formData();
+		const brut = String(formulaire.get('profilId') ?? '');
+		const valeurs = { retraiteProfilId: brut };
+		const [vise] = /^\d+$/.test(brut) ? await locals.base.select({ type: profil.typePersonne }).from(profil).where(eq(profil.id, Number(brut))) : [];
+		if (vise?.type !== 'exterieur') return fail<Reponse>(400, { bloc: 'depart', erreurs: { retraite: 'Choisissez un profil extérieur.' }, valeurs });
+		if (formulaire.get('confirmation') !== 'oui') return fail<Reponse>(400, { bloc: 'depart', erreurs: { retraite: 'Cochez « Je confirme » pour le passage à la retraite.' }, valeurs });
+		try {
+			await modifierFiche(locals.base, acteur, id, { profilId: Number(brut) }, aujourdhui, locals.superAdmins, { basePhotos: locals.basePhotos, maintenant: maintenantParis() });
+		} catch (erreur) {
+			return echec(erreur, { bloc: 'depart', valeurs }, { 'Le chef de centre et son adjoint restent agents': 'retraite', 'Profil inconnu': 'retraite' });
+		}
+		return { succes: true, message: 'Passage à la retraite enregistré', bloc: 'depart' };
+	},
+
 	equipe: async ({ locals, params, request }) => {
 		const { acteur, aujourdhui, id } = await lireFiche(locals, params.id);
 		const brut = String((await request.formData()).get('equipeId') ?? '');

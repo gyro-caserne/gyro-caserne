@@ -37,7 +37,7 @@ const locaux = (base: { photos: unknown }, acteur: unknown) => ({ base, basePhot
 const lire = (locals: unknown, id: number) =>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	(load as any)({ locals, params: { id: String(id) } });
-const agir = (nom: 'fiche' | 'equipe' | 'statut' | 'effacer' | 'attribuer' | 'terminer' | 'finir' | 'aptitude' | 'oterAptitude', locals: unknown, id: number, corps: Record<string, string>) =>
+const agir = (nom: 'fiche' | 'equipe' | 'statut' | 'retraite' | 'effacer' | 'attribuer' | 'terminer' | 'finir' | 'aptitude' | 'oterAptitude', locals: unknown, id: number, corps: Record<string, string>) =>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	(actions[nom] as any)({ locals, params: { id: String(id) }, request: new Request('http://x', { method: 'POST', body: new URLSearchParams(corps) }) });
 const lirePersonne = async (base: Awaited<ReturnType<typeof baseDeTest>>, id: number) => (await base.select().from(personne).where(eq(personne.id, id)))[0]!;
@@ -446,6 +446,27 @@ describe('/agents/[id] : passage à un profil extérieur', () => {
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		const r = await agir('fiche', locaux(base, super_), adjoint, { profilId: String(reserve!.id), passage: 'oui' });
 		expect(r).toMatchObject({ status: 400, data: { erreurs: { profilId: 'Le chef de centre et son adjoint restent agents' } } });
+	});
+});
+
+describe('/agents/[id] : ?/retraite, depuis « Départ du centre »', () => {
+	it('le même passage qu’au bloc Parcours : confirmé, profil extérieur, équipe quittée, rien d’effacé', async () => {
+		const { base, chef, agent, equipe1, profilAgent } = await preparer();
+		const [retraite] = await base.insert(profil).values({ nom: 'Retraité', typePersonne: 'exterieur' }).returning();
+		await base.insert(affectationEquipe).values({ personneId: agent, equipeId: equipe1.id, debut: '2020-01-01' });
+		const locals = locaux(base, { type: 'personne', id: chef });
+		expect(await agir('retraite', locals, agent, { profilId: String(retraite!.id) })).toMatchObject({ status: 400, data: { bloc: 'depart', erreurs: { retraite: 'Cochez « Je confirme » pour le passage à la retraite.' } } });
+		expect(await agir('retraite', locals, agent, { profilId: String(profilAgent.id), confirmation: 'oui' })).toMatchObject({ status: 400, data: { erreurs: { retraite: 'Choisissez un profil extérieur.' } } });
+		expect((await lirePersonne(base, agent)).profilId).toBe(profilAgent.id);
+		expect(await agir('retraite', locals, agent, { profilId: String(retraite!.id), confirmation: 'oui' })).toEqual({ succes: true, message: 'Passage à la retraite enregistré', bloc: 'depart' });
+		expect(await lirePersonne(base, agent)).toMatchObject({ profilId: retraite!.id, statut: 'operationnel', naissance: '1990-05-01', contactUrgence: 'Maman 06 00 00 00 00' });
+		expect((await base.select().from(affectationEquipe).where(eq(affectationEquipe.personneId, agent)))[0]!.fin).not.toBeNull();
+	});
+
+	it('refusé pour l’adjoint, avec le message du socle dans le bloc', async () => {
+		const { base, adjoint } = await preparer();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		expect(await agir('retraite', locaux(base, super_), adjoint, { profilId: String(reserve!.id), confirmation: 'oui' })).toMatchObject({ status: 400, data: { bloc: 'depart', erreurs: { retraite: 'Le chef de centre et son adjoint restent agents' } } });
 	});
 });
 

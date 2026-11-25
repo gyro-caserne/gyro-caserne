@@ -7,6 +7,7 @@
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import Champ from '#lib/ui/Champ.svelte';
 	import Choix from '#lib/ui/Choix.svelte';
+	import ChoixRadio from '#lib/ui/ChoixRadio.svelte';
 	import Groupe from '#lib/ui/Groupe.svelte';
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import PastilleEquipe from '#lib/ui/PastilleEquipe.svelte';
@@ -89,6 +90,16 @@
 		const qui = `${fiche.prenom} ${fiche.nom}`;
 		return quitte.length > 0 ? `${qui} ${quitte.join(' et ')}.` : `${qui} n’a ni équipe ni rôle à quitter.`;
 	});
+	// « Départ du centre » : quitter le centre, ou partir à la retraite en restant dans l'appli (un profil extérieur).
+	// Pas pour une personne déjà extérieure, ni pour le chef ou l'adjoint, qui restent agents.
+	const retraitePossible = $derived(!exterieur && fiche.protection === null);
+	const exterieurs = $derived(data.profils.filter((p) => p.typePersonne === 'exterieur'));
+	const profilRetraite = $derived(valeurs.retraiteProfilId || String(exterieurs.find((p) => /retrait/i.test(p.nom))?.id ?? ''));
+	const departDeDepart = () => (erreurs.retraite ? 'retraite' : 'quitte');
+	let departChoisi = $state(untrack(departDeDepart));
+	$effect.pre(() => {
+		departChoisi = departDeDepart();
+	});
 	const sousTitre = $derived(exterieur ? '' : [fiche.grade?.libelle, fiche.equipe?.nom].filter(Boolean).join(', '));
 	const resumes = $derived({
 		identite: [fiche.effaceLe ? null : fiche.email, fiche.telephone].filter(Boolean).join(', '),
@@ -105,7 +116,7 @@
 	const blocOuvert = $derived.by(() => {
 		if (form?.cible) return 'roles';
 		if (!generale) return null;
-		if (generale.bloc === 'effacement' || erreurs.effacement) return 'depart';
+		if (generale.bloc === 'effacement' || erreurs.effacement || generale.bloc === 'depart') return 'depart';
 		if (generale.succes || generale.bloc === 'aptitudes') return generale.bloc ?? null;
 		// Les champs en erreur, ou à défaut ceux envoyés, désignent le formulaire.
 		const champs = Object.keys({ ...valeurs, ...erreurs });
@@ -501,6 +512,42 @@
 					</details>
 				{:else}
 					{#if exterieur && fiche.statut === 'suspendu'}{@render retour('Lever la suspension')}{/if}
+					{#if retraitePossible}
+						<ChoixRadio
+							id="depart-choix"
+							legende="Départ"
+							name="depart"
+							disposition="rangees"
+							bind:valeur={departChoisi}
+							options={[
+								{ valeur: 'quitte', libelle: 'Quitte le centre' },
+								{ valeur: 'retraite', libelle: 'Part à la retraite, reste dans l’appli', sous: 'Un profil extérieur garde son accès.' }
+							]}
+						/>
+					{/if}
+					{#if retraitePossible && departChoisi === 'retraite'}
+						{#if exterieurs.length === 0}
+							<p>Il faut d’abord créer un profil extérieur, pour les retraités par exemple, dans Réglages, Profils.</p>
+							<div><a class="lien-secondaire" href="/reglages/profils">Ouvrir les profils</a></div>
+						{:else}
+							<form method="POST" action={action('retraite')}>
+								<Choix id="retraite-profil" name="profilId" libelle="Profil extérieur" requis valeur={profilRetraite} options={[...(profilRetraite ? [] : [{ valeur: '', libelle: 'À choisir' }]), ...exterieurs.map((p) => ({ valeur: String(p.id), libelle: p.nom }))]} />
+								<p id="retraite-avertissement"><strong>{ceQuIlQuitte}</strong> Ses remplacements, échanges et réservations sont annulés, comme ses demandes pas encore avancées, et {fiche.prenom} sort des groupes de messagerie. Sa fiche, ses données et ses conversations à deux restent.</p>
+								<label>
+									<input
+										type="checkbox"
+										name="confirmation"
+										value="oui"
+										aria-invalid={erreurs.retraite ? 'true' : undefined}
+										aria-describedby={erreurs.retraite ? 'retraite-avertissement retraite-erreur' : 'retraite-avertissement'}
+									/>
+									Je confirme
+								</label>
+								{#if erreurs.retraite}<p id="retraite-erreur" class="erreur">{erreurs.retraite}</p>{/if}
+								<Bouton type="submit" variante="grave">Passer à la retraite</Bouton>
+							</form>
+						{/if}
+					{:else}
 					<form method="POST" action={action('statut')}>
 						<input type="hidden" name="statut" value="parti" />
 						<p id="depart-avertissement"><strong>Attention :</strong> Sa date de naissance et son contact d'urgence seront effacés, et ses rôles prendront fin aujourd'hui.</p>
@@ -517,6 +564,7 @@
 						{#if erreurs.confirmation}<p id="confirmation-erreur" class="erreur">{erreurs.confirmation}</p>{/if}
 						<Bouton type="submit" variante="grave">Déclarer le départ</Bouton>
 					</form>
+					{/if}
 				{/if}
 			</div>
 		</Groupe>
