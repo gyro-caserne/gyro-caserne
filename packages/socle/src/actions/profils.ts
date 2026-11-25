@@ -17,6 +17,9 @@ async function exiger(base: Base, acteur: Acteur, aujourdhui: string) {
 	if (!(await geresLePouvoir(base, acteur, aujourdhui))) throw new RefusDroit('GERER_ACCES', { type: 'centre' });
 }
 
+// Le seul droit qu'un profil extérieur peut donner.
+export const DROITS_EXTERIEUR: readonly Droit[] = ['RESERVER'];
+
 // Seuls les droits sur le centre : les autres périmètres (salon…) ne se règlent pas ici.
 const surLeCentre = (id: number) => and(eq(profilDroit.profilId, id), eq(profilDroit.perimetreType, 'centre'));
 
@@ -121,8 +124,11 @@ export async function enregistrerProfil(
 	// Tout est validé avant d'écrire : un mur ou un droit refusé n'enregistre rien.
 	const murs = choix.murs && ligne.typePersonne === 'exterieur' ? murOuvertsValides(choix.murs, new Set(comites.map((c) => `comite:${c.id}`))) : null;
 	const avant = [...new Set(lus.map((l) => l.droit))] as Droit[];
-	const apres = exigerDroits(choix.droits(avant));
+	// Un profil extérieur (retraité, réserve citoyenne) ne donne que le droit de réserver. Un droit d'agent d'avant cette règle n'est pas repris.
+	const exterieur = ligne.typePersonne === 'exterieur';
+	const apres = exigerDroits(choix.droits(exterieur ? avant.filter((d) => DROITS_EXTERIEUR.includes(d)) : avant));
 	if (apres.some(estDroitPouvoir)) throw new DonneeInvalide('Un profil ne donne pas de droit de pouvoir');
+	if (exterieur && apres.some((d) => !DROITS_EXTERIEUR.includes(d))) throw new DonneeInvalide('Un profil extérieur ne donne que le droit de réserver. Le planning, les engins, les remplacements et les autres droits des agents lui sont refusés.');
 	const ajoutes = apres.filter((d) => !avant.includes(d));
 	const retires = avant.filter((d) => !apres.includes(d));
 

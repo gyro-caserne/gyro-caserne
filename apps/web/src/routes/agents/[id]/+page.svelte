@@ -403,7 +403,8 @@
 					</details>
 				{/if}
 
-				{#if choix}
+				<!-- Une personne extérieure ne tient aucun rôle (règle du socle) : pas de « Nommer à un rôle ». -->
+				{#if choix && !exterieur}
 					<!-- « Nommer à un rôle » : le même contenu que le volet Nommer de Qui fait quoi, déplié dans le bloc. -->
 					<details class="repli nommer" {...concerne('attribuer') ? { open: true } : {}}>
 						<summary>Nommer à un rôle</summary>

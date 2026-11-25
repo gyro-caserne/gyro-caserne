@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { affectationEquipe, equipe, personne } from '@gyro-caserne/socle';
+import { affectationEquipe, equipe, personne, profil } from '@gyro-caserne/socle';
 import { baseDeTest } from '@gyro-caserne/socle/base-de-test';
 import { load } from './+layout.server';
 
@@ -36,6 +36,13 @@ describe('load de /agents', () => {
 		for (const statut of ['parti', 'stagiaire', 'operationnel', 'suspendu']) expect(brut).not.toContain(statut);
 		expect(data.comptes).toBeUndefined();
 		expect(data.filtres).toBeUndefined();
+	});
+
+	it('refuse la liste à une personne d’un profil extérieur (403), comme les fiches', async () => {
+		const { base } = await preparer();
+		const [ext] = await base.insert(profil).values({ nom: 'Réserve citoyenne', typePersonne: 'exterieur' }).returning();
+		const [rc] = await base.insert(personne).values({ email: 'rc@exemple.fr', prenom: 'Réserve', nom: 'Citoyenne', profilId: ext!.id }).returning();
+		await expect(appeler({ acteur: { type: 'personne', id: rc!.id }, base })).rejects.toMatchObject({ status: 403 });
 	});
 
 	it('donne au super administrateur la liste par équipe, les comptes et les filtres', async () => {

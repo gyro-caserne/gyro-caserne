@@ -66,11 +66,11 @@ describe('modifierDroitsProfil', () => {
 	it('l’adjoint et le super administrateur modifient aussi ; rien n’est écrit si rien ne change', async () => {
 		const { base, adjoint, agent } = await jeu();
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
-		await modifierDroitsProfil(base, adjoint, reserve!.id, ['VOIR_PLANNING'], aujourdhui);
-		await modifierDroitsProfil(base, superAdmin, reserve!.id, ['VOIR_PLANNING', 'VOIR_PLANNING'], aujourdhui);
+		await modifierDroitsProfil(base, adjoint, reserve!.id, [], aujourdhui);
+		await modifierDroitsProfil(base, superAdmin, reserve!.id, [], aujourdhui);
 		expect(await base.select().from(journal).where(eq(journal.action, 'modifier_droits_profil'))).toHaveLength(1);
 		const personneReserve = (await base.insert(personne).values({ email: 'r@exemple.fr', prenom: 'R', nom: 'C', profilId: reserve!.id }).returning())[0]!;
-		expect(await aLeDroit(base, { type: 'personne', id: personneReserve.id }, 'VOIR_PLANNING', { type: 'centre' }, aujourdhui)).toBe(true);
+		expect(await aLeDroit(base, { type: 'personne', id: personneReserve.id }, 'RESERVER', { type: 'centre' }, aujourdhui)).toBe(false);
 		expect(agent.id).not.toBe(reserve!.id);
 	});
 
@@ -99,6 +99,26 @@ describe('modifierDroitsProfil', () => {
 		const salon = await base.select().from(profilDroit).where(and(eq(profilDroit.profilId, agent.id), eq(profilDroit.perimetreType, 'salon')));
 		expect(salon).toHaveLength(1);
 		expect((await listerProfils(base, chef, aujourdhui))[0]!.droits).toEqual(['VOIR_PLANNING']);
+	});
+
+	it('un profil extérieur ne donne que RESERVER : tout droit d’agent est refusé, avec la raison, et rien n’est écrit', async () => {
+		const { base, chef, droitsDuProfil } = await jeu();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		const message = 'Un profil extérieur ne donne que le droit de réserver. Le planning, les engins, les remplacements et les autres droits des agents lui sont refusés.';
+		for (const droit of ['VOIR_PLANNING', 'GERER_RESERVATIONS', 'VALIDER_REMPLACEMENT', 'TRAITER_ANOMALIE', 'UTILISER_MESSAGERIE'] as const)
+			await expect(modifierDroitsProfil(base, chef, reserve!.id, ['RESERVER', droit], aujourdhui), droit).rejects.toThrow(new DonneeInvalide(message));
+		expect(await droitsDuProfil(reserve!.id)).toEqual(['RESERVER@centre']);
+		await modifierDroitsProfil(base, chef, reserve!.id, [], aujourdhui);
+		await modifierDroitsProfil(base, chef, reserve!.id, ['RESERVER'], aujourdhui);
+		expect(await droitsDuProfil(reserve!.id)).toEqual(['RESERVER@centre']);
+	});
+
+	it('profil extérieur : un droit d’agent d’avant cette règle part au prochain enregistrement de l’écran', async () => {
+		const { base, chef, droitsDuProfil } = await jeu();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		await base.insert(profilDroit).values({ profilId: reserve!.id, droit: 'VOIR_PLANNING', perimetreType: 'centre', perimetreId: null });
+		await enregistrerProfil(base, chef, reserve!.id, { droits: (avant) => avant }, aujourdhui);
+		expect(await droitsDuProfil(reserve!.id)).toEqual(['RESERVER@centre']);
 	});
 
 	it('reste sous le budget de requêtes', async () => {

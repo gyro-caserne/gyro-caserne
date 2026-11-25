@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import type { Base } from '../base.ts';
 import { ajouterJours, exigerDateHeure } from '../dates.ts';
-import type { Acteur } from '../droits.ts';
+import { aLeDroit, type Acteur } from '../droits.ts';
 import { affectationEquipe, anneePlanning, equipe, semaineChangee } from '../schema.ts';
 import { equipeLe, semainesCalculees, type EquipePlanning } from './annee.ts';
 import { appliquerFetes, equipeAuMoment, semainesDe, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
@@ -15,10 +15,11 @@ export type Astreinte = { debut: string; fin: string; equipe: EquipePlanning; en
 export type AstreinteAccueil = Astreinte & { courtsCedes: (Periode & { remplacant: string })[] };
 
 // La carte de l'Accueil : avec une équipe, sa semaine en cours ou la prochaine (cette année et la suivante, publiées) ;
-// sans équipe, l'équipe de la semaine en cours. Rien sans année publiée.
+// sans équipe, l'équipe de la semaine en cours. Rien sans année publiée, ni pour qui ne voit pas le planning (un profil extérieur).
 export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string, reglage: Reglage): Promise<AstreinteAccueil | null> {
 	exigerDateHeure(maintenant, 'Date');
 	const m = maintenant.slice(0, 16);
+	if (!(await aLeDroit(base, acteur, 'VOIR_PLANNING', { type: 'centre' }, m.slice(0, 10)))) return null;
 	const annee = Number(m.slice(0, 4));
 	const moi = acteur.type === 'personne' ? acteur.id : 0;
 	// La semaine en cours a pu commencer l'année d'avant.

@@ -116,8 +116,8 @@ async function preparerNomination(base: Base, acteur: Acteur, a: Nomination, auj
 	const [fiche] = await base.select({ id: personne.id, statut: personne.statut, typePersonne: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, a.personneId));
 	if (!fiche) throw new DonneeInvalide('Personne inconnue');
 	if (fiche.statut === 'parti') throw new DonneeInvalide('Cette personne est partie');
-	// Une personne d'un profil extérieur ne tient pas de rôle de comité : un agent ou le chef anime le comité.
-	if (fiche.typePersonne === 'exterieur' && a.perimetre.type === 'comite') throw new DonneeInvalide('Une personne extérieure ne tient pas de rôle de comité');
+	// Une personne d'un profil extérieur (retraité, réserve citoyenne) ne tient aucun rôle : ni du centre, ni d'équipe, ni de comité.
+	if (fiche.typePersonne === 'exterieur') throw new DonneeInvalide('Une personne extérieure ne tient aucun rôle. Seuls les agents du centre sont nommés.');
 	let nomPerimetre = 'Le centre';
 	if (a.perimetre.type === 'equipe') {
 		const [uneEquipe] = await base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.id, a.perimetre.id));

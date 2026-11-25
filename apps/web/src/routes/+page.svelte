@@ -60,9 +60,9 @@
 		...(data.peutReglages ? [{ href: '/reglages', titre: 'Réglages', icone: 'outil' as const }] : [])
 	]);
 	// Ce qui attend une décision passe avant tout le reste, sur toutes les casquettes.
-	const enTete = $derived(data.contenu.type === 'astreinte' ? [] : data.contenu.aDecider);
-	// Rien à montrer à côté de « À ne pas manquer » : « Mon astreinte », et le chef de garde quand « À décider » est passé en tête.
-	const seule = $derived(data.contenu.type === 'astreinte' || (data.contenu.type === 'equipe' && enTete.length > 0));
+	const enTete = $derived(data.contenu.type === 'astreinte' || data.contenu.type === 'aucune' ? [] : data.contenu.aDecider);
+	// Rien à montrer à côté de « À ne pas manquer » : « Mon astreinte », aucune casquette (un profil extérieur), et le chef de garde quand « À décider » est passé en tête.
+	const seule = $derived(data.contenu.type === 'astreinte' || data.contenu.type === 'aucune' || (data.contenu.type === 'equipe' && enTete.length > 0));
 
 	// « À décider » : les trois premiers, le reste derrière « Voir les autres ».
 	const VISIBLES = 3;

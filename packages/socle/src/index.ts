@@ -14,7 +14,7 @@ export { attribuer, attributionsDe, ceQueJePeuxAttribuer, finirAttribution, peut
 export { apercuImport, type Apercu, type FichierLu, type Operation, type RefPersonne } from './apercu-import.ts';
 export { appliquerOperation } from './appliquer-import.ts';
 export { dateFichier, dateIso, donneesFichier, ENTETES, LIBELLES_STATUT, type DonneesFichier, type Repere } from './fichier-effectif.ts';
-export { estGestionnaire, ficheAgent, FILTRES_GESTION, listeGestion, vueEffectif, type FicheAgent, type FiltreGestion, type GroupeAgents, type LigneGestion, type ListeGestion } from './effectif.ts';
+export { estExterieur, estGestionnaire, ficheAgent, FILTRES_GESTION, listeGestion, vueEffectif, type FicheAgent, type FiltreGestion, type GroupeAgents, type LigneGestion, type ListeGestion } from './effectif.ts';
 export { creerComite, dissoudreComite, listerComites, modifierComite } from './actions/comites.ts';
 export { archiverResponsabilite, creerResponsabilite, listerResponsabilites, modifierResponsabilite, type Attributeur } from './actions/responsabilites.ts';
 export { iconeDuComite, iconeDuRole, NOMS_ICONES, type NomIcone } from './icones.ts';

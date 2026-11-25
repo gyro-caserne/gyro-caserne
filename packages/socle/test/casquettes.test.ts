@@ -58,6 +58,13 @@ async function jeu() {
 }
 
 describe('casquettesDe', () => {
+	it('personne d’un profil extérieur : aucune casquette, pas même « Mon astreinte » ; l’accueil sans contenu de casquette', async () => {
+		const { base, nouvelle } = await jeu();
+		const id = await nouvelle('Retraite', { exterieur: true });
+		expect(await casquettesDe(base, acteur(id), aujourdhui)).toEqual([]);
+		expect(await accueilDe(base, acteur(id), 'astreinte', aujourdhui, `${aujourdhui}T00:00`, centreExemple.astreinte)).toEqual({ casquettes: [], choisie: '', contenu: { type: 'aucune' } });
+	});
+
 	it('agent sans rôle : seulement « Mon astreinte »', async () => {
 		const { base, nouvelle } = await jeu();
 		const id = await nouvelle('David');

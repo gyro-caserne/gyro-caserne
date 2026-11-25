@@ -59,7 +59,7 @@ describe('remplacerTitulaire', () => {
 		const rapp = await nouvelle('rapp@exemple.fr');
 		const mandatRapp = await attribuer(base, superAdmin, { personneId: rapp, responsabiliteId: rapporteur.id, perimetre: { type: 'comite', id: amicale.id }, debut: '2026-01-01' }, aujourdhui);
 		const exterieur = await nouvelle('ext@exemple.fr', reserve.id);
-		await expect(remplacerTitulaire(base, superAdmin, { attributionId: mandatRapp, personneId: exterieur, debut: aujourdhui }, aujourdhui)).rejects.toThrow('Une personne extérieure ne tient pas de rôle de comité');
+		await expect(remplacerTitulaire(base, superAdmin, { attributionId: mandatRapp, personneId: exterieur, debut: aujourdhui }, aujourdhui)).rejects.toThrow('Une personne extérieure ne tient aucun rôle. Seuls les agents du centre sont nommés.');
 		const autre = await nouvelle('autre@exemple.fr');
 		await remplacerTitulaire(base, superAdmin, { attributionId: mandatRapp, personneId: autre, debut: aujourdhui }, aujourdhui);
 		const [fini] = await base.select().from(attribution).where(eq(attribution.id, mandatRapp));

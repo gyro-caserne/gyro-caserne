@@ -112,12 +112,24 @@ describe('passage d’un agent à un profil extérieur', () => {
 	});
 });
 
-describe('pas de rôle de comité pour une personne extérieure', () => {
+describe('aucun rôle pour une personne extérieure', () => {
+	const refus = new DonneeInvalide('Une personne extérieure ne tient aucun rôle. Seuls les agents du centre sont nommés.');
 	it('nommer un extérieur dans un comité : refusé ; un agent, oui', async () => {
 		const { base, chef, marc, retraite, amicale } = await jeu();
 		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Membre de comité'));
 		const [ext] = await base.insert(personne).values({ email: 'rene@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: retraite.id }).returning();
-		await expect(attribuer(base, chef, { personneId: ext!.id, responsabiliteId: r!.id, perimetre: { type: 'comite', id: amicale.id }, debut: aujourdhui }, aujourdhui)).rejects.toThrow(new DonneeInvalide('Une personne extérieure ne tient pas de rôle de comité'));
+		await expect(attribuer(base, chef, { personneId: ext!.id, responsabiliteId: r!.id, perimetre: { type: 'comite', id: amicale.id }, debut: aujourdhui }, aujourdhui)).rejects.toThrow(refus);
 		expect(await attribuer(base, chef, { personneId: marc, responsabiliteId: r!.id, perimetre: { type: 'comite', id: amicale.id }, debut: aujourdhui }, aujourdhui)).toBeGreaterThan(0);
+	});
+
+	it('ni un rôle du centre, ni un rôle d’équipe, même par le super administrateur', async () => {
+		const { base, chef, retraite } = await jeu();
+		const [ext] = await base.insert(personne).values({ email: 'rene@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: retraite.id }).returning();
+		const [referent] = await base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent technique'));
+		const [chefEquipe] = await base.select().from(responsabilite).where(eq(responsabilite.systeme, 'chef_equipe'));
+		const [e] = await base.select().from(equipe).limit(1);
+		await expect(attribuer(base, chef, { personneId: ext!.id, responsabiliteId: referent!.id, perimetre: { type: 'centre' }, debut: aujourdhui }, aujourdhui)).rejects.toThrow(refus);
+		await expect(attribuer(base, superAdmin, { personneId: ext!.id, responsabiliteId: chefEquipe!.id, perimetre: { type: 'equipe', id: e!.id }, debut: aujourdhui }, aujourdhui)).rejects.toThrow(refus);
+		expect(await base.select().from(attribution).where(eq(attribution.personneId, ext!.id))).toEqual([]);
 	});
 });

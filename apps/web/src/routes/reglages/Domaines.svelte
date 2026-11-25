@@ -13,6 +13,7 @@
 		choix = $bindable(),
 		lectureSeule = false,
 		profil = false,
+		exterieur = false,
 		formRevenir,
 		niveauTitre = 2
 	}: {
@@ -21,6 +22,8 @@
 		choix: Record<DomaineId, number | 'sur_mesure'>;
 		lectureSeule?: boolean;
 		profil?: boolean;
+		// Un profil extérieur ne donne que le droit de réserver : seulement « Réservations », sans « Gérer ».
+		exterieur?: boolean;
 		formRevenir?: string;
 		niveauTitre?: 2 | 3;
 	} = $props();
@@ -29,7 +32,8 @@
 	const duModele = $derived(modele ? niveauxDe(modele) : null);
 	const libelle = (d: (typeof DOMAINES)[number], n: number | 'sur_mesure') => (n === 'sur_mesure' ? 'Sur mesure' : d.niveaux[n]!.libelle);
 	// Pour un profil, le premier niveau ne dit pas « comme tout agent ».
-	const niveauxAffiches = (d: (typeof DOMAINES)[number]) => (profil ? d.niveaux.map((n, i) => (i === 0 ? { ...n, phrase: 'Rien dans ce domaine.' } : n)) : d.niveaux);
+	const niveauxAffiches = (d: (typeof DOMAINES)[number]) => (profil ? d.niveaux.map((n, i) => (i === 0 ? { ...n, phrase: 'Rien dans ce domaine.' } : n)) : d.niveaux).slice(0, exterieur ? 2 : undefined);
+	const domaines = $derived(exterieur ? DOMAINES.filter((d) => d.id === 'reservations') : DOMAINES);
 
 	// Une valeur par domaine : un bind sur `undefined` ferait échouer l'hydratation (Groupe a une valeur par défaut).
 	let ouverts = $state<Record<string, boolean>>(Object.fromEntries(DOMAINES.map((d) => [d.id, false])));
@@ -39,7 +43,7 @@
 </script>
 
 <div class="domaines pile">
-	{#each DOMAINES as d (d.id)}
+	{#each domaines as d (d.id)}
 		{@const modifie = choix[d.id] !== depart[d.id]}
 		<Groupe titre={d.nom} resume={libelle(d, choix[d.id]) + (modifie ? ', modifié' : '')} bind:ouvert={ouverts[d.id]} {niveauTitre}>
 			<div class="domaine">

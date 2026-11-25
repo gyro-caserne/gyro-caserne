@@ -20,6 +20,8 @@ export type ADecider = { texte: string; lien: string };
 export type ContenuCasquette =
 	| { type: 'centre'; aDecider: ADecider[] }
 	| { type: 'astreinte' }
+	// Aucune casquette (une personne d'un profil extérieur) : l'accueil n'a que « À ne pas manquer ».
+	| { type: 'aucune' }
 	| { type: 'equipe'; aDecider: ADecider[] }
 	| { type: 'role'; permet: string[]; aDecider: ADecider[]; liens?: ADecider[] }
 	| { type: 'comite'; membres: { personneId: number; prenom: string; nom: string; role: string }[]; aDecider: ADecider[] };
@@ -67,12 +69,15 @@ async function tenues(base: Base, acteur: Acteur, aujourdhui: string): Promise<{
 	const centre = { id: 'centre', nom: 'Le centre', icone: 'etoile' as const };
 	if (acteur.type === 'super') return { liste: [centre], aTraiter: new Map(), recoivent: new Set() };
 
-	const [lignes, equipes, comites, demandes] = await base.batch([
+	const [lignes, equipes, comites, demandes, fiches] = await base.batch([
 		requeteTenues(base, acteur.id, aujourdhui),
 		base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation)),
 		base.select({ id: comite.id, nom: comite.nom }).from(comite).where(isNull(comite.dissousLe)).orderBy(asc(comite.nom)),
-		lectureDemandesADecider(base, acteur.id, aujourdhui)
+		lectureDemandesADecider(base, acteur.id, aujourdhui),
+		base.select({ type: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, acteur.id))
 	]);
+	// Une personne d'un profil extérieur n'a pas d'astreinte.
+	const exterieur = fiches[0]?.type === 'exterieur';
 	const valides = tenuesValides(lignes);
 	const tient = (garde: (l: (typeof valides)[number]) => boolean) => valides.some(garde);
 
@@ -84,7 +89,7 @@ async function tenues(base: Base, acteur: Acteur, aujourdhui: string): Promise<{
 		...equipes
 			.filter((e) => tient((l) => l.systeme === 'chef_equipe' && l.perimetreId === e.id))
 			.map((e) => ({ id: `equipe:${e.id}`, nom: `Chef de garde (${e.nom})`, icone: 'casque' as const })),
-		{ id: 'astreinte', nom: 'Mon astreinte', icone: 'casque' },
+		...(exterieur ? [] : [{ id: 'astreinte', nom: 'Mon astreinte', icone: 'casque' as const }]),
 		...[...referents].map(([id, r]) => ({ id: `role:${id}`, ...r })).sort(parNom),
 		...comites.filter((c) => tient((l) => l.type === 'comite' && l.perimetreId === c.id)).map((c) => ({ id: `comite:${c.id}`, nom: c.nom, icone: 'groupe' as const }))
 	];
@@ -191,7 +196,8 @@ export async function aDecider(base: Base, acteur: Acteur, aujourdhui: string, r
 // L'accueil : la casquette demandée si elle est tenue, sinon celle où quelque chose attend, sinon la principale (la première).
 export async function accueilDe(base: Base, acteur: Acteur, demandee: string | null, aujourdhui: string, maintenant: string, reglage: Reglage): Promise<Accueil> {
 	const { casquettes, aDecider, reservations, recoivent } = await lire(base, acteur, aujourdhui, maintenant, reglage);
-	const choisie = (casquettes.find((c) => c.id === demandee) ?? casquettes.find((c) => c.compte > 0) ?? casquettes[0]!).id;
+	const choisie = (casquettes.find((c) => c.id === demandee) ?? casquettes.find((c) => c.compte > 0) ?? casquettes[0])?.id;
+	if (choisie === undefined) return { casquettes, choisie: '', contenu: { type: 'aucune' } };
 	return { casquettes, choisie, contenu: await contenu(base, choisie, aDecider, reservations.get(choisie) ?? [], aujourdhui, recoivent) };
 }
 

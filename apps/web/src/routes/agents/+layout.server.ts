@@ -1,5 +1,5 @@
-import { redirect } from '@sveltejs/kit';
-import { estGestionnaire, FILTRES_GESTION, listeGestion, vueEffectif } from '@gyro-caserne/socle';
+import { error, redirect } from '@sveltejs/kit';
+import { estExterieur, estGestionnaire, FILTRES_GESTION, listeGestion, vueEffectif } from '@gyro-caserne/socle';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import type { LayoutServerLoad } from './$types';
 
@@ -9,7 +9,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const aujourdhui = aujourdhuiParis();
 
 	if (!(await estGestionnaire(base, acteur, aujourdhui))) {
-		return { gestion: false as const, groupes: await vueEffectif(base, aujourdhui) };
+		// L'effectif est réservé aux agents du centre, comme les fiches.
+		const [exterieur, groupes] = await Promise.all([estExterieur(base, acteur), vueEffectif(base, aujourdhui)]);
+		if (exterieur) error(403, 'La liste des agents est réservée aux agents du centre.');
+		return { gestion: false as const, groupes };
 	}
 
 	const texte = url.searchParams.get('texte')?.trim() ?? '';

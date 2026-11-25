@@ -47,7 +47,7 @@
 			>
 		{/if}
 	</div>
-	{#if phrase}<p class="phrase">{#if desactive}<strong>{nomDuNiveau}</strong> : {/if}{phrase}</p>{/if}
+	{#if phrase}<p class="phrase">{#if desactive}<strong>{nomDuNiveau}</strong>{' : '}{/if}{phrase}</p>{/if}
 </fieldset>
 
 <style>

@@ -38,6 +38,13 @@ export async function estGestionnaire(base: Base, acteur: Acteur, aujourdhui: st
 	return acteur.type === 'super' || aLeDroit(base, acteur, 'GERER_ACCES', { type: 'centre' }, aujourdhui);
 }
 
+// Une personne d'un profil extérieur (retraité, réserve citoyenne). Une requête.
+export async function estExterieur(base: Base, acteur: Acteur): Promise<boolean> {
+	if (acteur.type !== 'personne') return false;
+	const [ligne] = await base.select({ type: profil.typePersonne }).from(personne).innerJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, acteur.id));
+	return ligne?.type === 'exterieur';
+}
+
 async function exigerGestionnaire(base: Base, acteur: Acteur, aujourdhui: string) {
 	if (!(await estGestionnaire(base, acteur, aujourdhui))) throw new RefusDroit('GERER_ACCES', { type: 'centre' });
 }
