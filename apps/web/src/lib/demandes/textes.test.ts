@@ -12,7 +12,7 @@ describe('le titre d’une demande', () => {
 
 describe('les étapes d’un rôle en une ligne', () => {
 	it('Demandée, Prise en compte, les étapes du rôle, la dernière', () => {
-		expect(etapesEnUneLigne({ etapes: [{ id: 'a', nom: 'Commandée' }], derniere: 'Livrée' })).toBe('Demandée, Prise en compte, Commandée, Livrée');
+		expect(etapesEnUneLigne({ etapes: [{ nom: 'Commandée' }], derniere: 'Livrée' })).toBe('Demandée, Prise en compte, Commandée, Livrée');
 		expect(etapesEnUneLigne({ etapes: [], derniere: 'Faite' })).toBe('Demandée, Prise en compte, Faite');
 	});
 });
