@@ -481,7 +481,7 @@ describe('direction B', () => {
 	});
 
 	it('un rôle figé dit le nom de son niveau, et il reste lu', () => {
-		expect(source('lib/ui/SelecteurNiveaux.svelte')).toMatch(/\{#if desactive\}<strong>\{nomDuNiveau\}<\/strong> : \{\/if\}\{phrase\}/);
+		expect(source('lib/ui/SelecteurNiveaux.svelte')).toMatch(/\{#if desactive\}<strong>\{nomDuNiveau\}<\/strong>\{' : '\}\{\/if\}\{phrase\}/);
 	});
 
 	it('un suivi ne ressemble pas à des boutons radio', () => {
