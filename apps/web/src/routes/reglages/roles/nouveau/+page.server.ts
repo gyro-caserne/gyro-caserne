@@ -2,16 +2,17 @@ import { error, redirect } from '@sveltejs/kit';
 import { creerResponsabilite, DonneeInvalide, estDroitPouvoir, MODELES } from '@gyro-caserne/socle';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import { accesReglages, attributeurDe, comitesChoix, echec, texte, type Valeurs } from '#lib/server/formulaire-reglages.ts';
+import { natureDe } from '../../roles.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 async function acces(locals: App.Locals) {
 	const aujourdhui = aujourdhuiParis();
 	const a = await accesReglages(locals, aujourdhui);
-	if (!a.listes) error(403, 'Accès réservé à qui gère les responsabilités du centre');
+	if (!a.listes) error(403, 'Accès réservé à qui gère les rôles du centre');
 	return { ...a, aujourdhui };
 }
 
-// D'abord le modèle (cartes), puis le nom, la portée, qui attribue et l'icône.
+// D'abord le modèle (cartes), puis l'identité : le nom, toujours tenu, pour qui, qui nomme et l'icône.
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const { base, pouvoir } = await acces(locals);
 	const modeles = MODELES.map((m) => ({ ...m, reserve: !pouvoir && m.droits.some(estDroitPouvoir) }));
@@ -29,7 +30,7 @@ export const actions: Actions = {
 		const valeurs: Valeurs & { modele?: string } = {
 			modele: texte(formulaire, 'modele'),
 			nom: texte(formulaire, 'nom') ?? '',
-			nature: texte(formulaire, 'nature'),
+			nature: natureDe(formulaire),
 			portee: texte(formulaire, 'portee'),
 			attributeur: texte(formulaire, 'attributeur'),
 			icone: texte(formulaire, 'icone') || undefined

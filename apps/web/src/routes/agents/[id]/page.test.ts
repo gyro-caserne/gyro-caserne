@@ -321,7 +321,7 @@ describe('page fiche agent', () => {
 			const deux = { enCours: [ligne(1, 'Référent engins', false), ligne(2, 'Chef de garde', false, { type: 'equipe', id: 1, nom: 'Équipe 1' }, 'fonction')], aVenir: [], passees: [] };
 			const roles = (page: string) => page.slice(page.indexOf('>En cours<'), page.indexOf('>Aptitudes<'));
 			const page = roles(html({ data: { ...data, attributions: deux }, form: null }));
-			expect(page).toMatch(/<h4[^>]*>Fonctions<\/h4>[\s\S]*?Chef de garde \(Équipe 1\)[\s\S]*?<h4[^>]*>Missions<\/h4>[\s\S]*?Référent engins/);
+			expect(page).toMatch(/<h4[^>]*>Rôles toujours tenus<\/h4>[\s\S]*?Chef de garde \(Équipe 1\)[\s\S]*?<h4[^>]*>Autres rôles<\/h4>[\s\S]*?Référent engins/);
 			const missions = roles(html({ data: { ...data, attributions: { enCours: [ligne(1, 'Référent engins', false)], aVenir: [], passees: [] } }, form: null }));
 			expect(missions).toContain('Référent engins');
 			expect(missions).not.toContain('<h4');

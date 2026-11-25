@@ -270,8 +270,8 @@ const DOMAINES: [Droit, string][][] = [
 	// Administration : chaque droit est dit à part.
 	[['GERER_ACCES', 'Gérer les accès.']],
 	[['GERER_COMITES', 'Gérer les comités.']],
-	[['GERER_LISTES', 'Gérer les responsabilités.']],
-	[['ATTRIBUER_RESPONSABILITE', 'Nommer aux responsabilités.']]
+	[['GERER_LISTES', 'Gérer les rôles.']],
+	[['ATTRIBUER_RESPONSABILITE', 'Nommer aux rôles.']]
 ];
 
 // Le contenu d'une casquette déjà vérifiée comme tenue.

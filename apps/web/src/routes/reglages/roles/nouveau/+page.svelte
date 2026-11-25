@@ -4,9 +4,11 @@
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import Champ from '#lib/ui/Champ.svelte';
 	import Choix from '#lib/ui/Choix.svelte';
+	import ChoixRadio from '#lib/ui/ChoixRadio.svelte';
+	import Interrupteur from '#lib/ui/Interrupteur.svelte';
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import ChoixIcone from '../../ChoixIcone.svelte';
-	import { NATURES, optionsAttributeur, PORTEES } from '../../roles.ts';
+	import { optionsAttributeur, TENU_POUR, TOUJOURS_TENU } from '../../roles.ts';
 
 	let { data, form } = $props();
 
@@ -66,12 +68,12 @@
 	<form method="POST" class="formulaire">
 		<input type="hidden" name="modele" value={choisi.id} />
 		<Champ id="nouveau-nom" name="nom" libelle="Nom" requis maxlength={60} valeur={saisie('nom', choisi.id === 'vierge' ? '' : choisi.nom)} erreur={erreurs.nom} />
-		<Choix id="nouveau-nature" name="nature" libelle="Nature" valeur={saisie('nature', choisi.nature)} erreur={erreurs.nature} options={NATURES} />
-		<Choix id="nouveau-portee" name="portee" libelle="Portée" valeur={saisie('portee', choisi.portee)} erreur={erreurs.portee} options={PORTEES} />
+		<Interrupteur libelle={TOUJOURS_TENU.libelle} description={TOUJOURS_TENU.description} nom="toujours" coche={saisie('nature', choisi.nature) === 'fonction'} />
+		<ChoixRadio id="nouveau-portee" legende="Tenu pour" name="portee" disposition="rangees" valeur={saisie('portee', choisi.portee)} erreur={erreurs.portee} options={TENU_POUR} />
 		<Choix
 			id="nouveau-attributeur"
 			name="attributeur"
-			libelle="Qui attribue"
+			libelle="Qui nomme"
 			valeur={saisie('attributeur', choisi.portee === 'comite' ? 'comite_vise' : 'chef_centre')}
 			erreur={erreurs.attributeur}
 			options={optionsAttributeur(data.comitesChoix)}

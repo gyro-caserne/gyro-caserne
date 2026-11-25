@@ -132,7 +132,7 @@ export async function dissoudreComite(base: Base, acteur: Acteur, id: number, au
 		.from(responsabilite)
 		.where(and(eq(responsabilite.comiteAttributeurId, id), eq(responsabilite.typePerimetre, 'comite'), isNull(responsabilite.archiveeLe)))
 		.orderBy(responsabilite.nom);
-	if (bloquante) throw new DonneeInvalide(`Changez d’abord qui attribue « ${bloquante.nom} »`);
+	if (bloquante) throw new DonneeInvalide(`Changez d’abord qui nomme au rôle « ${bloquante.nom} »`);
 
 	const duComite = and(eq(attribution.perimetreType, 'comite'), eq(attribution.perimetreId, id));
 	const [{ n }] = await base

@@ -5,10 +5,10 @@ Réservé à qui peut nommer : chef de centre, adjoint, rapporteur d'un comité,
 ## Nommer
 
 1. Ouvrez l'onglet « Caserne », puis « Qui fait quoi ».
-2. Un poste vide qui doit être tenu est en tête, dans « À pourvoir ». Sinon, ouvrez son groupe (par exemple « Missions »).
+2. Un poste vide qui doit être tenu est en tête, dans « À pourvoir ». Sinon, ouvrez son groupe (par exemple « Autres rôles »).
 3. Appuyez sur « Nommer » : un volet s'ouvre.
 4. Choisissez l'agent. Pour un rôle d'équipe, les agents de l'équipe sont en haut ; la recherche trouve un nom.
-5. La date de début est aujourd'hui. Changez-la si besoin. Pour une mission d'une durée connue, ouvrez « Fixer une date de fin ».
+5. La date de début est aujourd'hui. Changez-la si besoin. Pour un rôle d'une durée connue, ouvrez « Fixer une date de fin ».
 6. Appuyez sur « Nommer ». Le volet se ferme et « Nomination enregistrée. » s'affiche.
 
 Vous pouvez aussi nommer depuis la fiche d'un rôle (Réglages, bloc « Titulaires »), ou depuis la fiche d'un agent (bloc « Rôles », « Nommer à un rôle »).

@@ -258,7 +258,7 @@ describe('accueilDe', () => {
 		});
 		expect((await accueilDe(base, acteur(id), `role:${role('Référent technique')}`, aujourdhui, `${aujourdhui}T00:00`, centreExemple.astreinte)).contenu).toEqual({
 			type: 'role',
-			permet: ['Gérer les comités.', 'Gérer les responsabilités.'],
+			permet: ['Gérer les comités.', 'Gérer les rôles.'],
 			aDecider: []
 		});
 	});

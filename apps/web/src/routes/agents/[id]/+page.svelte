@@ -142,15 +142,15 @@
 	<noscript><style>.groupe > [hidden] { display: block !important; } .groupe .chevron { display: none; }</style></noscript>
 </svelte:head>
 
-<!-- Les fonctions puis les missions ; un intertitre seulement s'il y a les deux. -->
+<!-- Les rôles toujours tenus (fonctions) puis les autres (missions) ; un intertitre seulement s'il y a les deux. -->
 {#snippet liste(titre: string, lignes: typeof data.attributions.enCours)}
 	{@const fonctions = lignes.filter((l) => l.responsabilite.nature === 'fonction')}
 	{@const missions = lignes.filter((l) => l.responsabilite.nature !== 'fonction')}
 	<h3>{titre}</h3>
 	{#if fonctions.length > 0 && missions.length > 0}
-		<h4>Fonctions</h4>
+		<h4>Rôles toujours tenus</h4>
 		{@render rangees(fonctions)}
-		<h4>Missions</h4>
+		<h4>Autres rôles</h4>
 		{@render rangees(missions)}
 	{:else}
 		{@render rangees(lignes)}
@@ -385,7 +385,7 @@
 				<!-- Le rôle terminé ou raccourci peut quitter sa liste : le succès s'annonce ici. -->
 				<div role="status">{#if annonceRole}<p class="succes">{annonceRole}</p>{/if}</div>
 				{#if data.attributions.enCours.length === 0}
-					<p>Aucune responsabilité en cours.</p>
+					<p>Aucun rôle en cours.</p>
 				{:else}
 					{@render liste('En cours', data.attributions.enCours)}
 				{/if}

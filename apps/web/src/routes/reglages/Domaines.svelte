@@ -13,7 +13,8 @@
 		choix = $bindable(),
 		lectureSeule = false,
 		profil = false,
-		formRevenir
+		formRevenir,
+		niveauTitre = 2
 	}: {
 		droits: Droit[];
 		modele?: Droit[] | null;
@@ -21,6 +22,7 @@
 		lectureSeule?: boolean;
 		profil?: boolean;
 		formRevenir?: string;
+		niveauTitre?: 2 | 3;
 	} = $props();
 
 	const depart = $derived(niveauxDe(droits));
@@ -39,7 +41,7 @@
 <div class="domaines pile">
 	{#each DOMAINES as d (d.id)}
 		{@const modifie = choix[d.id] !== depart[d.id]}
-		<Groupe titre={d.nom} resume={libelle(d, choix[d.id]) + (modifie ? ', modifié' : '')} bind:ouvert={ouverts[d.id]}>
+		<Groupe titre={d.nom} resume={libelle(d, choix[d.id]) + (modifie ? ', modifié' : '')} bind:ouvert={ouverts[d.id]} {niveauTitre}>
 			<div class="domaine">
 				<SelecteurNiveaux name="niveau-{d.id}" legende={d.nom} niveaux={niveauxAffiches(d)} bind:valeur={choix[d.id]} surMesure={depart[d.id] === 'sur_mesure'} desactive={lectureSeule} />
 				{#if duModele && !lectureSeule && formRevenir && choix[d.id] !== duModele[d.id]}

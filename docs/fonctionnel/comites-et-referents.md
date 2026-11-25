@@ -12,8 +12,8 @@ Puis des **groupes repliés**, chacun avec une ligne de résumé (« 4 équipes,
 - **Comités** (en cours), une carte par comité : ses membres et leur rôle dans le comité (« Rapporteur », « Membre ») ; le lien vers son mur, seulement pour qui peut le lire (ses membres, le chef de centre, l'adjoint, le super administrateur) ; **À réserver**, son matériel, pour qui peut le réserver ou le gère ;
 - **Chef de centre et adjoint** ;
 - **Chefs de garde**, une ligne par équipe active, et de même pour tout rôle d'équipe ;
-- **Autres fonctions** (référent technique…) ;
-- **Missions** (pharmacie, engins, habillement…), puis les missions tenues par équipe.
+- **Autres rôles toujours tenus** (référent technique) ;
+- **Autres rôles** (pharmacie, engins, habillement), puis ceux tenus pour chaque équipe.
 
 Un groupe sans rôle n'apparaît pas. Chaque nom porte l'insigne de son grade. Sont comptés les agents qui ont accès à l'appli : ni partis, ni suspendus, ni comptes extérieurs.
 

@@ -1,6 +1,6 @@
 # Comment régler l'armement des engins ?
 
-Réservé à qui gère les responsabilités du centre : le chef de centre, son adjoint, le référent technique et le super administrateur.
+Réservé à qui gère les rôles du centre : le chef de centre, son adjoint, le référent technique et le super administrateur.
 
 1. Ouvrez l'onglet « Caserne », puis « Réglages ».
 2. Sous « Listes du centre », appuyez sur « Armement des engins ». Chaque engin montre son équipage.

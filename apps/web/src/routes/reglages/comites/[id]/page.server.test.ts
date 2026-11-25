@@ -68,7 +68,7 @@ describe('page d’un comité', () => {
 		const { base, referent, com } = await preparer();
 		const amicale = await com('Amicale');
 		await base.insert(responsabilite).values({ nom: 'Délégué', nature: 'mission', typePerimetre: 'comite', comiteAttributeurId: amicale.id });
-		expect(await agir('dissoudre', locaux(base, referent), amicale.id, [['confirmation', 'oui']])).toMatchObject({ status: 400, data: { message: 'Changez d’abord qui attribue « Délégué »' } });
+		expect(await agir('dissoudre', locaux(base, referent), amicale.id, [['confirmation', 'oui']])).toMatchObject({ status: 400, data: { message: 'Changez d’abord qui nomme au rôle « Délégué »' } });
 	});
 
 	it('dissoudre retire le rôle au rapporteur et le journal le note', async () => {

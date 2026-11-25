@@ -14,7 +14,7 @@ export async function accesReglages(locals: App.Locals, aujourdhui: string) {
 		aLeDroit(base, acteur, 'GERER_LISTES', CENTRE, aujourdhui),
 		acteur.type === 'super' ? true : aLeDroit(base, acteur, 'GERER_ACCES', CENTRE, aujourdhui)
 	]);
-	if (!comites && !listes) error(403, 'Accès réservé à qui gère les comités ou les responsabilités du centre');
+	if (!comites && !listes) error(403, 'Accès réservé à qui gère les comités ou les rôles du centre');
 	return { acteur: acteur as Acteur, base, comites, listes, pouvoir };
 }
 
@@ -66,23 +66,23 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Comité inconnu': { texte: 'Ce comité n’existe pas.' },
 	'Comité dissous': { texte: 'Ce comité est dissous. Il ne peut plus servir ni être modifié.' },
 	'Comité déjà dissous': { texte: 'Ce comité est déjà dissous.' },
-	'Nature inconnue': { champ: 'nature', texte: 'Choisissez la nature : fonction ou mission.' },
-	'Portée inconnue': { champ: 'portee', texte: 'Choisissez la portée : centre, équipe ou comité.' },
+	'Nature inconnue': { champ: 'nature', texte: 'Dites si le rôle doit toujours être tenu.' },
+	'Portée inconnue': { champ: 'portee', texte: 'Choisissez pour qui le rôle est tenu.' },
 	'Droit inconnu': { champ: 'droits', texte: 'Un des droits envoyés n’existe pas.' },
-	'Attributeur inconnu': { champ: 'attributeur', texte: 'Choisissez qui attribue cette responsabilité.' },
-	'Seule une responsabilité de portée « comité » est attribuée par le comité visé': { champ: 'attributeur', texte: 'Le comité visé n’attribue qu’une responsabilité de portée « comité ».' },
+	'Attributeur inconnu': { champ: 'attributeur', texte: 'Choisissez qui nomme à ce rôle.' },
+	'Seule une responsabilité de portée « comité » est attribuée par le comité visé': { champ: 'attributeur', texte: 'Seul un rôle tenu pour chaque comité est nommé par son comité.' },
 	'Une responsabilité de portée « comité » est attribuée par le comité visé ou par un comité désigné': {
 		champ: 'attributeur',
-		texte: 'Une responsabilité de portée « comité » est attribuée par le comité visé ou par un comité désigné, pas par le chef de centre.'
+		texte: 'Un rôle tenu pour chaque comité est nommé par son comité ou par un comité choisi, pas par le chef de centre.'
 	},
-	'Responsabilité inconnue': { texte: 'Cette responsabilité n’existe pas.' },
-	'Responsabilité archivée': { texte: 'Cette responsabilité est archivée. Elle ne peut plus être modifiée.' },
-	'Responsabilité déjà archivée': { texte: 'Cette responsabilité est déjà archivée.' },
-	'La portée d’une responsabilité système ne change pas': { champ: 'portee', texte: 'La portée d’une responsabilité système ne change pas.' },
-	'Portée verrouillée, la responsabilité est tenue': { champ: 'portee', texte: 'La portée ne change pas tant que quelqu’un tient ou tiendra cette responsabilité.' },
+	'Responsabilité inconnue': { texte: 'Ce rôle n’existe pas.' },
+	'Responsabilité archivée': { texte: 'Ce rôle est archivé. Il ne peut plus être modifié.' },
+	'Responsabilité déjà archivée': { texte: 'Ce rôle est déjà archivé.' },
+	'La portée d’une responsabilité système ne change pas': { champ: 'portee', texte: 'Un rôle système reste tenu pour les mêmes.' },
+	'Portée verrouillée, la responsabilité est tenue': { champ: 'portee', texte: 'Pour qui le rôle est tenu ne change pas tant que quelqu’un le tient ou le tiendra.' },
 	'Droit verrouillé, impossible de le retirer': { champ: 'droits', texte: 'Un droit verrouillé ne se retire pas.' },
-	'Une responsabilité système ne s’archive pas': { texte: 'Une responsabilité système (chef de centre, adjoint, chef de garde) ne s’archive pas.' },
-	'Ce rôle reçoit des demandes': { texte: 'Ce rôle reçoit des demandes. Il reste de portée « Tout le centre ».' },
+	'Une responsabilité système ne s’archive pas': { texte: 'Un rôle système (chef de centre, adjoint, chef de garde) ne s’archive pas.' },
+	'Ce rôle reçoit des demandes': { texte: 'Ce rôle reçoit des demandes. Il reste tenu pour tout le centre.' },
 	'Demande changée entre-temps': { texte: 'Le réglage ou une demande vient de changer. Rechargez la page, puis refaites votre geste.' },
 	'Demandes en cours': { texte: 'Des demandes adressées à ce rôle sont en cours. Il s’archive une fois qu’elles sont finies.' },
 	'Icône inconnue': { champ: 'icone', texte: 'Choisissez une icône de la liste.' },
@@ -96,20 +96,20 @@ const DONNEES: Record<string, { champ?: string; texte: string }> = {
 	'Niveau inconnu': { texte: 'Choisissez Aucun accès, Lecture ou Écriture pour chaque mur.' },
 	'Un profil ne donne pas de droit de pouvoir': { texte: 'Un profil ne donne pas de droit d’administration.' },
 	'Droit réservé au centre': {
-		texte: '« Gérer les accès », « Gérer les comités » et « Gérer les responsabilités » valent pour tout le centre. Ils ne se donnent qu’à un rôle de portée « Tout le centre ». Décochez-les ou changez la portée.'
+		texte: '« Gérer les accès », « Gérer les comités » et « Gérer les rôles » valent pour tout le centre. Ils ne se donnent qu’à un rôle tenu pour tout le centre. Décochez-les ou choisissez Tout le centre.'
 	}
 };
 
 const REFUS = [
-	['Seuls le chef de centre ou un super administrateur donnent un droit de pouvoir', 'Seuls le chef de centre, son adjoint ou un super administrateur ajoutent ou retirent un droit de pouvoir.'],
-	['Seuls le chef de centre ou un super administrateur modifient une responsabilité qui donne un droit de pouvoir', 'Seuls le chef de centre, son adjoint ou un super administrateur modifient ou archivent une responsabilité qui donne un droit de pouvoir.']
+	['Seuls le chef de centre ou un super administrateur donnent un droit de pouvoir', 'Seuls le chef de centre, son adjoint ou un super administrateur ajoutent ou retirent un droit d’administration.'],
+	['Seuls le chef de centre ou un super administrateur modifient une responsabilité qui donne un droit de pouvoir', 'Seuls le chef de centre, son adjoint ou un super administrateur modifient ou archivent un rôle qui donne un droit d’administration.']
 ] as const;
 
 function refus(erreur: RefusDroit): string {
 	const connu = REFUS.find(([brut]) => brut === erreur.message);
 	if (connu) return connu[1];
 	if (erreur.droit === 'GERER_COMITES') return 'Vous n’avez pas le droit de gérer les comités.';
-	if (erreur.droit === 'GERER_LISTES') return 'Vous n’avez pas le droit de gérer les responsabilités.';
+	if (erreur.droit === 'GERER_LISTES') return 'Vous n’avez pas le droit de gérer les rôles.';
 	return 'Vous n’avez pas le droit de faire cette action.';
 }
 

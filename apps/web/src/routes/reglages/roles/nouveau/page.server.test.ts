@@ -5,7 +5,7 @@ import { actions, load } from './+page.server';
 
 const creer = (locals: unknown, corps: [string, string][]) => envoyer(actions, 'default', locals, corps);
 const corps = (modele: string, extra: [string, string][] = []): [string, string][] => {
-	const defauts: [string, string][] = [['modele', modele], ['nom', 'Pharmacie bis'], ['nature', 'mission'], ['portee', 'centre'], ['attributeur', 'chef_centre']];
+	const defauts: [string, string][] = [['modele', modele], ['nom', 'Pharmacie bis'], ['portee', 'centre'], ['attributeur', 'chef_centre']];
 	const remplaces = new Set(extra.map(([cle]) => cle));
 	return [...defauts.filter(([cle]) => !remplaces.has(cle)), ...extra];
 };
@@ -42,6 +42,14 @@ describe('nouveau rôle', () => {
 		expect(await droitsDe(cree.id)).toEqual(['GERER_STOCK']);
 	});
 
+	it('« Doit toujours être tenu » coché : une fonction ; sinon une mission', async () => {
+		const { base, referent, resp } = await preparer();
+		await expect(creer(locaux(base, referent), corps('vierge', [['nom', 'Référent tenu'], ['toujours', '1']]))).rejects.toMatchObject({ status: 303 });
+		expect(await resp('Référent tenu')).toMatchObject({ nature: 'fonction' });
+		await expect(creer(locaux(base, referent), corps('vierge', [['nom', 'Référent libre']]))).rejects.toMatchObject({ status: 303 });
+		expect(await resp('Référent libre')).toMatchObject({ nature: 'mission' });
+	});
+
 	it('garde l’icône choisie', async () => {
 		const { base, referent, resp } = await preparer();
 		await expect(creer(locaux(base, referent), corps('vierge', [['nom', 'Référent sport'], ['icone', 'ballon']]))).rejects.toMatchObject({ status: 303 });
@@ -60,7 +68,7 @@ describe('nouveau rôle', () => {
 		const { base, chef } = await preparer();
 		const avant = (await base.select().from(responsabilite)).length;
 		const r = await creer(locaux(base, chef), corps('referent_technique', [['nom', 'Technique de garde'], ['portee', 'equipe']]));
-		expect(r).toMatchObject({ status: 400, data: { message: expect.stringContaining('« Gérer les accès », « Gérer les comités » et « Gérer les responsabilités »') } });
+		expect(r).toMatchObject({ status: 400, data: { message: expect.stringContaining('« Gérer les accès », « Gérer les comités » et « Gérer les rôles »') } });
 		expect(await base.select().from(responsabilite)).toHaveLength(avant);
 	});
 

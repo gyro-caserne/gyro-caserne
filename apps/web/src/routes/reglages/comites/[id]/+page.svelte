@@ -22,7 +22,7 @@
 
 	const blocTitulaires = $derived(data.titulairesDuComite);
 	const resumeTitulaires = $derived(blocTitulaires ? resume(pluriel(c.membresEnCours, 'membre'), blocTitulaires.postes) : '');
-	const SUITE = 'les nominations à venir sont annulées. Les responsabilités qu’il attribuait seront attribuées par le chef de centre.';
+	const SUITE = 'les nominations à venir sont annulées. Le chef de centre nommera aux rôles qu’il nommait.';
 	const avertissement = (n: number) =>
 		n === 0
 			? `Personne ne tient de rôle dans ce comité aujourd’hui ; ${SUITE}`
@@ -36,11 +36,14 @@
 </svelte:head>
 
 {#snippet retour(cible: string)}
+	<!-- Les deux zones lues ensemble : vides, elles ne prennent qu'un écart. -->
+	<div class="retours">
 	<div role="alert">
 		{#if concerne(cible) && (form?.message || form?.erreurs)}<p class="echec">{form?.message ?? 'Le formulaire contient des erreurs.'}</p>{/if}
 	</div>
 	<div role="status">
 		{#if concerne(cible) && form?.succes}<p class="succes">{form.succes}</p>{/if}
+	</div>
 	</div>
 {/snippet}
 
@@ -64,7 +67,7 @@
 
 {#if c.dissousLe === null}
 	<section class="carte" aria-labelledby="titre-comite">
-		<h2 id="titre-comite">Nom et thème</h2>
+		<h2 id="titre-comite" class="rubrique">Nom et thème</h2>
 		{@render retour('comite')}
 		<form method="POST" action="?/modifier" class="formulaire">
 			{#if c.estCentre}
@@ -104,6 +107,10 @@
 	}
 	.aide {
 		color: var(--doux);
+	}
+	.retours {
+		display: flex;
+		flex-direction: column;
 	}
 	.carte,
 	.pli {

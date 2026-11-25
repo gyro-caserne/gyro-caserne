@@ -54,7 +54,7 @@ export const DOMAINES: Domaine[] = [
 export const ADMINISTRATION: { droit: Droit; libelle: string }[] = [
 	{ droit: 'GERER_ACCES', libelle: 'Gérer les accès' },
 	{ droit: 'GERER_COMITES', libelle: 'Gérer les comités' },
-	{ droit: 'GERER_LISTES', libelle: 'Gérer les responsabilités' },
+	{ droit: 'GERER_LISTES', libelle: 'Gérer les rôles' },
 	{ droit: 'ATTRIBUER_RESPONSABILITE', libelle: 'Nommer' }
 ];
 
