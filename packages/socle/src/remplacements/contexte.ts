@@ -1,4 +1,3 @@
-import { chefPrincipal } from '../droits.ts';
 import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import type { Base } from '../base.ts';
 import { ajouterJours, existeAParis } from '../dates.ts';
@@ -205,13 +204,6 @@ export function valideurs(chefs: Chef[], equipeId: number | null, demandeurId: n
 	const ids = (garde: (c: Chef) => boolean) => [...new Set(chefs.filter((c) => garde(c) && c.personneId !== demandeurId && c.personneId !== remplacantId).map((c) => c.personneId))];
 	const deLEquipe = ids((c) => c.systeme === 'chef_equipe' && c.equipeId === equipeId);
 	return deLEquipe.length > 0 ? deLEquipe : ids((c) => c.systeme === 'chef_centre' || c.systeme === 'chef_centre_adjoint');
-}
-
-// Qui est prévenu (hors urgence) : les valideurs ; sans chef de garde, le chef de centre seul, l'adjoint seulement sans lui.
-export function aPrevenir(chefs: Chef[], equipeId: number | null, demandeurId: number, remplacantId: number | null = null): number[] {
-	const ids = valideurs(chefs, equipeId, demandeurId, remplacantId);
-	if (chefs.some((c) => c.systeme === 'chef_equipe' && c.equipeId === equipeId && ids.includes(c.personneId))) return ids;
-	return chefPrincipal(chefs.filter((c) => ids.includes(c.personneId)).map((c) => ({ id: c.personneId, systeme: c.systeme })));
 }
 
 // Les tranches d'astreinte de la personne dans les douze semaines à venir, par semaine ; `prise` : déjà dans une demande en cours.

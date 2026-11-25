@@ -15,6 +15,7 @@ Ce lot suit trois audits faits en lecture seule le 25/11/2026 : les accès des e
 
 - **Couper par sujet** : dans Moi, puis Notifications, on peut couper séparément `remplacements`, `engins` (anomalies, prises), `demandes`, `planning` (été, semaines changées, manœuvres) et `vie` (anniversaires, félicitations, nominations). On peut aussi choisir « cloche seule, sans téléphone ». Les urgences restent à part et ne se coupent pas avec ces sujets.
 - **Chef et adjoint** : le chef de centre est le destinataire principal. L'adjoint ne reçoit plus les mêmes lignes en double, sauf les urgences ou quand le chef de centre n'a pas de titulaire en cours. Sont concernés : remplacements sans chef de garde, anomalies d'une zone sans titulaire, paliers d'ancienneté, été, réouverture de prise.
+  - **Révisé par le porteur (25/11)** : l'adjoint est un chef de centre. Les deux reçoivent les mêmes notifications ; le second qui agit reçoit « Déjà traité par… », sans rien écrire.
 - **Anomalies** : le signaleur n'est prévenu qu'à la prise en charge et à la clôture. L'e-mail aux référents ne part qu'à ceux qui n'ont pas activé les notifications sur leur téléphone.
 - **Demandes de remplacement** : une notification par demande, avec un tag qui contient l'identifiant de la demande. Entre 22 h et 7 h, pas de notification sur le téléphone : la ligne de cloche suffit, sauf pour les urgences. Les semaines changées d'équipe sont regroupées en un seul avis par personne.
 - **Nomination** : le même texte en cloche et sur le téléphone.

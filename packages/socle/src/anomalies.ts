@@ -132,7 +132,7 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 		if (['indisponible', 'remettre'].includes(geste.quoi) && !qui.traite) throw new RefusDroit('TRAITER_ANOMALIE', { type: 'centre' });
 		if (geste.quoi === 'clore' && !qui.traite && !qui.prevenu) throw new RefusDroit('TRAITER_ANOMALIE', { type: 'centre' });
 		if (!qui.prend && !qui.prevenu) throw new RefusDroit('PRENDRE_EN_CHARGE_ANOMALIE', { type: 'centre' });
-		throw new DonneeInvalide('Geste impossible');
+		throw await dejaTraite(base, id, moi, 'Geste impossible');
 	}
 	const texte = 'texte' in geste ? propre(geste.texte) : '';
 	if (texte.length > LIMITES_ANOMALIE.note) throw new DonneeInvalide('Texte trop long');
@@ -199,7 +199,19 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 		base.select({ ok: sql<number>`${fait}` }).from(anomalie).where(eq(anomalie.id, id))
 	]);
 	const [verif] = resultats.at(-1) as { ok: number }[];
-	if (!verif?.ok) throw new DonneeInvalide('Anomalie changée entre-temps');
+	if (!verif?.ok) throw await dejaTraite(base, id, moi, 'Anomalie changée entre-temps');
+}
+
+// Un geste refusé parce qu'un autre (le chef de centre et l'adjoint agissent tous les deux) vient d'agir : qui, d'après le dernier suivi.
+async function dejaTraite(base: Base, id: number, moi: number, sinon: string): Promise<DonneeInvalide> {
+	const [dernier] = await base
+		.select({ par: anomalieSuivi.par, prenom: personne.prenom, nom: personne.nom })
+		.from(anomalieSuivi)
+		.leftJoin(personne, eq(personne.id, anomalieSuivi.par))
+		.where(eq(anomalieSuivi.anomalieId, id))
+		.orderBy(desc(anomalieSuivi.id))
+		.limit(1);
+	return new DonneeInvalide(dernier && dernier.par !== moi && dernier.prenom !== null ? `Déjà traité par ${`${dernier.prenom} ${dernier.nom}`.trim()}` : sinon);
 }
 
 export type SignalementAnomalie = { enginId: number; libelle: string; genre: GenreEcart; note: string; photo?: Photo | null };

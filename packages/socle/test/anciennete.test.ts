@@ -160,44 +160,45 @@ describe('le jour J', () => {
 describe('30 jours avant, au réveil', () => {
 	const huit = '2026-11-12T08:00';
 
-	it('une ligne de cloche par agent au chef de centre seul (l’adjoint, sans avis en double), et un e-mail qui les liste ; jamais deux fois', async () => {
+	it('une ligne de cloche par agent au chef et à l’adjoint, et un e-mail chacun qui les liste ; jamais deux fois', async () => {
 		const { base, nouvelle, thomas, claire, paul, envois } = await jeu();
 		const julie = await nouvelle('Julie', { nom: 'Bernard', engagementSpv: '2006-12-12' });
 		base.requetes = 0;
 		const courriels = await ancienneteDuMatin(base, huit);
 		expect(base.requetes).toBe(2);
 		const texte = 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10\u00a0ans de service.\nDans 30 jours, le 12 décembre, Julie Bernard atteint 20\u00a0ans de service.';
-		expect(courriels).toEqual([{ a: 'claire@exemple.fr', titre: 'Paliers d’ancienneté dans 30 jours', texte, url: '/agents' }]);
+		expect(courriels).toEqual([
+			{ a: 'claire@exemple.fr', titre: 'Paliers d’ancienneté dans 30 jours', texte, url: '/agents' },
+			{ a: 'paul@exemple.fr', titre: 'Paliers d’ancienneté dans 30 jours', texte, url: '/agents' }
+		]);
 		const lignes = await base.select({ personneId: avisAnciennete.personneId, agentId: avisAnciennete.agentId, texte: avisAnciennete.texte, url: avisAnciennete.url }).from(avisAnciennete);
-		expect(lignes).toHaveLength(2);
-		expect(lignes.some((l) => l.personneId === paul)).toBe(false);
+		expect(lignes).toHaveLength(4);
 		expect(lignes).toContainEqual({ personneId: claire, agentId: thomas, texte: 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10\u00a0ans de service.', url: `/agents/${thomas}` });
-		expect(lignes).toContainEqual({ personneId: claire, agentId: julie, texte: 'Dans 30 jours, le 12 décembre, Julie Bernard atteint 20\u00a0ans de service.', url: `/agents/${julie}` });
+		expect(lignes).toContainEqual({ personneId: paul, agentId: julie, texte: 'Dans 30 jours, le 12 décembre, Julie Bernard atteint 20\u00a0ans de service.', url: `/agents/${julie}` });
 		expect((await filDeNotifications(base, acteur(claire), `${huit}:00`)).lignes.map((l) => l.type)).toEqual(['anciennete', 'anciennete']);
 		// Pas d'envoi au téléphone : la cloche et l'e-mail suffisent.
 		expect((await envois('anciennete')).length).toBe(0);
 		// Le passage de 8 h 10 ne refait rien.
 		expect(await ancienneteDuMatin(base, '2026-11-12T08:10')).toEqual([]);
-		expect(await base.select().from(avisAnciennete)).toHaveLength(2);
+		expect(await base.select().from(avisAnciennete)).toHaveLength(4);
 	});
 
 	it('un seul agent : l’e-mail mène à sa fiche ; « courriel » coupé, pas d’e-mail mais la cloche ; rien sans palier', async () => {
 		const { base, thomas, claire, paul } = await jeu();
-		await couper(base, acteur(claire), 'courriel', true, huit);
-		expect(await ancienneteDuMatin(base, huit)).toEqual([]);
-		expect((await base.select({ personneId: avisAnciennete.personneId }).from(avisAnciennete)).map((l) => l.personneId)).toEqual([claire]);
-		expect(paul).not.toBe(claire);
+		await couper(base, acteur(paul), 'courriel', true, huit);
+		expect(await ancienneteDuMatin(base, huit)).toEqual([{ a: 'claire@exemple.fr', titre: 'Palier d’ancienneté dans 30 jours', texte: 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10\u00a0ans de service.', url: `/agents/${thomas}` }]);
+		expect((await base.select({ personneId: avisAnciennete.personneId }).from(avisAnciennete)).map((l) => l.personneId).sort()).toEqual([claire, paul].sort());
 		expect(await ancienneteDuMatin(base, '2026-11-13T08:00')).toEqual([]);
 		await toutMarquerLu(base, acteur(claire), maintenant);
 		expect((await enTeteDe(base, acteur(claire), aujourdhui)).nonLues).toBe(0);
 		// Les lignes des chefs suivent la conservation des notifications.
 		await effacerSouhaitsPasses(base, '2026-12-20');
-		expect(await base.select().from(avisAnciennete)).toHaveLength(1);
+		expect(await base.select().from(avisAnciennete)).toHaveLength(2);
 		await effacerVieillesNotifications(base, '2026-11-13');
 		expect(await base.select().from(avisAnciennete)).toEqual([]);
 	});
 
-	it('deux réveils qui se croisent : chaque ligne et chaque e-mail une seule fois ; le palier du chef de centre va à l’adjoint', async () => {
+	it('deux réveils qui se croisent : chaque ligne et chaque e-mail une seule fois ; le chef n’est pas prévenu de son propre palier', async () => {
 		const { base, claire, paul } = await jeu();
 		await base.update(personne).set({ engagementSpv: '2006-12-12' }).where(eq(personne.id, claire));
 		const [a, b] = await Promise.all([ancienneteDuMatin(base, huit), ancienneteDuMatin(base, '2026-11-12T08:10')]);
@@ -206,15 +207,15 @@ describe('30 jours avant, au réveil', () => {
 		expect(courriels.find((c) => c.a === 'claire@exemple.fr')!.texte).toBe('Dans 30 jours, le 12 décembre, Thomas Agent atteint 10\u00a0ans de service.');
 		expect(courriels.find((c) => c.a === 'paul@exemple.fr')!.texte).toContain('Claire Martin atteint 20\u00a0ans de service.');
 		const lignes = await base.select({ personneId: avisAnciennete.personneId, agentId: avisAnciennete.agentId }).from(avisAnciennete);
-		expect(lignes).toHaveLength(2);
+		expect(lignes).toHaveLength(3);
 		expect(lignes).not.toContainEqual({ personneId: claire, agentId: claire });
-		expect(lignes.filter((l) => l.personneId === paul)).toEqual([{ personneId: paul, agentId: claire }]);
+		expect(lignes.filter((l) => l.personneId === paul)).toHaveLength(2);
 	});
 
 	it('engagé un 29 février : annoncé 30 jours avant le 28 février d’une année non bissextile', async () => {
 		const { base, nouvelle } = await jeu();
 		await nouvelle('Leon', { nom: 'Bissextile', engagementSpv: '2016-02-29' });
 		// 30 jours avant le 28 février 2026 : le 29 janvier.
-		expect((await ancienneteDuMatin(base, '2026-01-29T08:00')).map((c) => c.texte)).toEqual(['Dans 30 jours, le 28 février, Leon Bissextile atteint 10\u00a0ans de service.']);
+		expect((await ancienneteDuMatin(base, '2026-01-29T08:00')).map((c) => c.texte)).toEqual(['Dans 30 jours, le 28 février, Leon Bissextile atteint 10\u00a0ans de service.', 'Dans 30 jours, le 28 février, Leon Bissextile atteint 10\u00a0ans de service.']);
 	});
 });

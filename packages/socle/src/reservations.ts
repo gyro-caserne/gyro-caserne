@@ -5,7 +5,7 @@ import { ajouterJours, exigerDate, exigerDateHeure } from './dates.ts';
 import { accorde, droitsDe, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import { NOMS_ICONES, type NomIcone } from './icones.ts';
-import { ligneJournal } from './journal.ts';
+import { ligneJournal, ligneJournalSi } from './journal.ts';
 import { STATUTS_AVEC_ACCES, type EtatReservation, type FormeRessource } from './listes.ts';
 import { marquerAvisLus, mettreEnFile } from './notifications.ts';
 import { chevauche, jourCourt, periodeCourte, restantParJour, tientUnePlace } from './reservations-calcul.ts';
@@ -340,7 +340,7 @@ function prevenir(base: Base, acteur: Acteur, l: { id: number; personneId: numbe
 async function lireReservation(base: Base, acteur: Acteur, id: number, aujourdhui: string) {
 	if (!Number.isInteger(id) || id < 1) throw new DonneeInvalide('Réservation introuvable');
 	const [ligne] = await base
-		.select({ ...champsReservation, stock: ressource.stock, jeGere: sql<number>`${jeGereSql(acteur, aujourdhui)}`.as('je_gere') })
+		.select({ ...champsReservation, trancheePar: reservation.trancheePar, stock: ressource.stock, jeGere: sql<number>`${jeGereSql(acteur, aujourdhui)}`.as('je_gere') })
 		.from(reservation)
 		.innerJoin(ressource, eq(ressource.id, reservation.ressourceId))
 		.innerJoin(personne, eq(personne.id, reservation.personneId))
@@ -351,11 +351,25 @@ async function lireReservation(base: Base, acteur: Acteur, id: number, aujourdhu
 
 const tranchee = (acteur: Acteur, maintenant: string) => ({ trancheePar: auteurDe(acteur), trancheeLe: maintenant });
 
+// Déjà tranchée par un autre gestionnaire (le chef de centre et l'adjoint agissent tous les deux) : par qui.
+async function dejaTranchee(base: Base, trancheePar: string | null): Promise<DonneeInvalide> {
+	const id = /^personne:(\d+)$/.exec(trancheePar ?? '')?.[1];
+	const [p] = id ? await base.select({ prenom: personne.prenom, nom: personne.nom }).from(personne).where(eq(personne.id, Number(id))) : [];
+	return new DonneeInvalide(p ? `Déjà traité par ${`${p.prenom} ${p.nom}`.trim()}` : 'Cette demande a déjà été traitée');
+}
+// Après le geste : rien d'écrit (un autre l'a tranchée à la même minute), il l'apprend.
+async function exigerTranchee(base: Base, id: number, qui: { trancheePar: string; trancheeLe: string }) {
+	const [apres] = await base.select({ par: reservation.trancheePar, le: reservation.trancheeLe }).from(reservation).where(eq(reservation.id, id));
+	if (apres?.par !== qui.trancheePar || apres.le !== qui.trancheeLe) throw await dejaTranchee(base, apres?.par ?? null);
+}
+const ecriteParMoi = (id: number, etat: 'acceptee' | 'refusee', qui: { trancheePar: string; trancheeLe: string }) =>
+	sql`exists (select 1 from ${reservation} where ${reservation.id} = ${id} and ${reservation.etat} = ${etat} and ${reservation.trancheePar} = ${qui.trancheePar} and ${reservation.trancheeLe} = ${qui.trancheeLe})`;
+
 export async function accepter(base: Base, acteur: Acteur, id: number, maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const l = await lireReservation(base, acteur, id, aujourdhui);
 	if (l.jeGere !== 1) throw refusGestion(l.ressourceId);
-	if (l.etat !== 'attente') throw new DonneeInvalide('Cette demande a déjà été traitée');
+	if (l.etat !== 'attente') throw await dejaTranchee(base, l.trancheePar);
 	const autres = await base
 		.select({ id: reservation.id, personneId: reservation.personneId, debut: reservation.debut, fin: reservation.fin, quantite: reservation.quantite, etat: reservation.etat })
 		.from(reservation)
@@ -372,25 +386,27 @@ export async function accepter(base: Base, acteur: Acteur, id: number, maintenan
 		base
 			.update(reservation)
 			.set({ etat: 'annulee', motif: MOTIF_CONFLIT, ...qui })
-			.where(and(inArray(reservation.id, enConflit.length > 0 ? enConflit : [0]), eq(reservation.etat, 'acceptee'))),
-		ligneJournal(base, { acteur: qui.trancheePar, action: 'accepter_reservation', cibleType: 'reservation', cibleId: id, details: { annulees: enConflit } }, maintenant),
+			.where(and(inArray(reservation.id, enConflit.length > 0 ? enConflit : [0]), eq(reservation.etat, 'acceptee'), ecriteParMoi(id, 'acceptee', qui))),
+		ligneJournalSi(base, { acteur: qui.trancheePar, action: 'accepter_reservation', cibleType: 'reservation', cibleId: id, details: { annulees: enConflit } }, maintenant, ecriteParMoi(id, 'acceptee', qui)),
 		...prevenir(base, acteur, l, 'acceptee', null, maintenant),
 		...ecartees.flatMap((a) => prevenir(base, acteur, { ...l, ...a }, 'annulee', MOTIF_CONFLIT, maintenant))
 	]);
+	await exigerTranchee(base, id, qui);
 }
 
 export async function refuser(base: Base, acteur: Acteur, id: number, motif: string | null, maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const l = await lireReservation(base, acteur, id, aujourdhui);
 	if (l.jeGere !== 1) throw refusGestion(l.ressourceId);
-	if (l.etat !== 'attente') throw new DonneeInvalide('Cette demande a déjà été traitée');
+	if (l.etat !== 'attente') throw await dejaTranchee(base, l.trancheePar);
 	const qui = tranchee(acteur, maintenant);
 	const propre = texteFacultatif(motif, 'Motif', 200);
 	await base.batch([
 		base.update(reservation).set({ etat: 'refusee', motif: propre, ...qui }).where(and(eq(reservation.id, id), eq(reservation.etat, 'attente'))),
-		ligneJournal(base, { acteur: qui.trancheePar, action: 'refuser_reservation', cibleType: 'reservation', cibleId: id }, maintenant),
+		ligneJournalSi(base, { acteur: qui.trancheePar, action: 'refuser_reservation', cibleType: 'reservation', cibleId: id }, maintenant, ecriteParMoi(id, 'refusee', qui)),
 		...prevenir(base, acteur, l, 'refusee', propre, maintenant)
 	]);
+	await exigerTranchee(base, id, qui);
 }
 
 // Le demandeur annule la sienne tant qu'elle n'a pas commencé ; qui gère annule une réservation en cours de validité, avec un mot.

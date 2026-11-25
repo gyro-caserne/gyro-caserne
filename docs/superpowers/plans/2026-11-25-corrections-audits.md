@@ -17,7 +17,7 @@ Design : [2026-11-25-corrections-audits-design.md](../specs/2026-11-25-correctio
 ## 2. Notifications
 
 1. Sujets coupables au téléphone : remplacements, engins, demandes, planning, vie ; la cloche garde tout. Écran Moi, puis Notifications.
-2. Chef et adjoint : l'adjoint seulement sans chef de centre en cours (sauf urgences), aux endroits relevés.
+2. Chef et adjoint (révisé) : les mêmes notifications ; le second qui agit reçoit « Déjà traité par… », sans double écriture.
 3. Anomalies : le signaleur prévenu à la prise en charge et à la clôture ; e-mail seulement sans téléphone abonné.
 4. Remplacements : tag avec l'identifiant de la demande ; de 22 h à 7 h, cloche seule (sauf urgences) ; semaines changées regroupées par personne.
 5. Nomination : même texte en cloche et au téléphone.

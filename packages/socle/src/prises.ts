@@ -3,7 +3,7 @@ import type { BatchItem } from 'drizzle-orm/batch';
 import { instruction, type Base, type BasePhotos } from './base.ts';
 import { avecPhotos, effacerPhotos, exigerPhotos, lireOctets, type Photo } from './commun.ts';
 import { ajouterJours, enCours, exigerDateHeure } from './dates.ts';
-import { aLeDroit, chefPrincipal, type Acteur } from './droits.ts';
+import { aLeDroit, type Acteur } from './droits.ts';
 import { lireEngin, voitLesEngins, type EnginVu } from './engins.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import { lirePrevenir, type ElementFiche, type ZoneFiche } from './fiches.ts';
@@ -562,7 +562,16 @@ async function ecrireValidee(base: Base, v: Awaited<ReturnType<typeof lireValide
 			.returning({ id: priseGarde.id }),
 		...apres(ecrite)
 	]);
-	if (ecrit.length === 0) throw new DonneeInvalide('Prise changée entre-temps');
+	if (ecrit.length === 0) {
+		const relue = await lireBrouillon(base, v.prise.id);
+		throw (maj.rouvrir && relue.prise.etat !== 'validee' ? dejaRouverte(relue, v.moi) : null) ?? new DonneeInvalide('Prise changée entre-temps');
+	}
+}
+
+// « Déjà traité par… » quand un autre a rouvert la prise ; nul sinon.
+function dejaRouverte(b: { traces: TracesPrise; noms: Map<number, string> }, moi: number): DonneeInvalide | null {
+	const r = b.traces.rouverte;
+	return r && r.par !== moi ? new DonneeInvalide(`Déjà traité par ${b.noms.get(r.par) ?? 'un ancien agent'}`) : null;
 }
 
 const journalPrise = (base: Base, v: { moi: number; prise: { enginId: number } }, action: string, maintenant: string, si: SQL, details?: object) =>
@@ -581,7 +590,11 @@ export async function modifierParticipantsPrise(base: Base, acteur: Acteur, id: 
 // Rouvrir une prise validée, jusqu'à la relève suivante, avec un motif : par le chef de garde de l'équipe d'astreinte, le chef de centre
 // ou l'adjoint. Elle redevient en cours (zones vues gardées, écarts modifiables) ; une demande en attente est effacée.
 export async function rouvrirPrise(base: Base, acteur: Acteur, id: number, motif: string, maintenant: string, reglage: Reglage, enginId?: number): Promise<void> {
-	const v = await lireValidee(base, acteur, id, maintenant, reglage, enginId);
+	// Rouverte par un autre chef (le chef de centre et l'adjoint agissent tous les deux) : le second l'apprend.
+	const v = await lireValidee(base, acteur, id, maintenant, reglage, enginId).catch(async (e: unknown) => {
+		if (e instanceof DonneeInvalide && e.message === 'Prise pas encore validée' && acteur.type === 'personne') throw dejaRouverte(await lireBrouillon(base, id, enginId), acteur.id) ?? e;
+		throw e;
+	});
 	if (!v.chef) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé au chef de garde, au chef de centre et à l’adjoint');
 	// Sinon il rouvrirait une prise qu'il ne pourrait pas corriger.
 	if (!(await peutFairePrise(base, acteur, maintenant.slice(0, 10)))) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé à qui fait la prise de garde');
@@ -597,8 +610,7 @@ export async function demanderReouverture(base: Base, acteur: Acteur, id: number
 	if (!v.saisie.participants.includes(v.moi) && !v.deLEquipe) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé aux participants et à l’équipe d’astreinte');
 	const texte = motifDe(motif);
 	const deGarde = v.chefs.filter((c) => c.systeme === 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
-	// À défaut, le chef de centre ; l'adjoint seulement sans lui.
-	const prevenus = deGarde.length ? deGarde : chefPrincipal(v.chefs.filter((c) => c.systeme !== 'chef_equipe' && c.id !== v.moi));
+	const prevenus = deGarde.length ? deGarde : v.chefs.filter((c) => c.systeme !== 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
 	if (prevenus.length === 0) throw new DonneeInvalide('Aucun chef à prévenir');
 	const qui = v.noms.get(v.moi) ?? 'Un agent';
 	const avis = { titre: `Réouverture demandée par ${qui}`, texte: `${v.nomEngin}, motif « ${texte} »`, url: `/engins/${v.prise.enginId}/prise` };

@@ -169,17 +169,26 @@ describe('demande de réouverture', () => {
 		expect(await tracesDe(j)).toEqual({ rouverte: { par: idDe(j.chefDeGarde), le: APRES, motif: 'Radio', valideeLe: PENDANT } });
 	});
 
-	it('sans chef de garde en fonction : au chef de centre (l’adjoint seulement sans lui) ; refusée à qui n’est ni participant ni d’astreinte', async () => {
+	it('chef de centre et adjoint rouvrent pareil : le second apprend « Déjà traité par… », sans rien écrire', async () => {
+		const j = await preparer();
+		const [adjoint] = await j.base.select().from(responsabilite).where(eq(responsabilite.systeme, 'chef_centre_adjoint'));
+		await j.base.insert(attribution).values({ personneId: idDe(j.referent), responsabiliteId: adjoint!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		await rouvrirPrise(j.base, j.chefCentre, j.id, 'Oubli', APRES, reglage);
+		await expect(rouvrirPrise(j.base, j.referent, j.id, 'Oubli aussi', APRES, reglage)).rejects.toThrow('Déjà traité par Claire Fictif');
+		expect((await j.base.select().from(journal)).filter((l) => l.action === 'rouvrir_prise')).toHaveLength(1);
+	});
+
+	it('sans chef de garde en fonction : au chef de centre et à l’adjoint ; refusée à qui n’est ni participant ni d’astreinte', async () => {
 		const j = await preparer();
 		await j.base.delete(attribution).where(eq(attribution.personneId, idDe(j.chefDeGarde)));
 		await expect(demanderReouverture(j.base, j.referent, j.id, 'Oubli', APRES, reglage)).rejects.toThrow(RefusDroit);
 		await expect(demanderReouverture(j.base, j.alice, j.id, ' ', APRES, reglage)).rejects.toThrow('Motif manquant');
 		await expect(demanderReouverture(j.base, j.alice, j.id, 'Oubli', SUIVANTE, reglage)).rejects.toThrow('Relève passée');
-		// Un adjoint en fonction : le chef de centre seul est prévenu, sans avis en double.
+		// Un adjoint en fonction : il est prévenu comme le chef de centre.
 		const [adjoint] = await j.base.select().from(responsabilite).where(eq(responsabilite.systeme, 'chef_centre_adjoint'));
 		await j.base.insert(attribution).values({ personneId: idDe(j.referent), responsabiliteId: adjoint!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
 		await demanderReouverture(j.base, j.alice, j.id, 'Oubli', APRES, reglage);
-		expect((await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`))).map((a) => a.personneId)).toEqual([j.chefCentre.id]);
+		expect((await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`))).map((a) => a.personneId).sort()).toEqual([j.chefCentre.id, idDe(j.referent)].sort());
 	});
 });
 
@@ -294,7 +303,7 @@ describe('garde-fous', () => {
 			await rouvrirPrise(j.base, j.chefCentre, j.id, 'Par Claire', APRES, reglage);
 			return r;
 		}) as never);
-		await expect(rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Par Chloé', APRES, reglage)).rejects.toThrow('Prise changée entre-temps');
+		await expect(rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Par Chloé', APRES, reglage)).rejects.toThrow('Déjà traité par Claire Fictif');
 		espion.mockRestore();
 		expect(await tracesDe(j)).toMatchObject({ rouverte: { motif: 'Par Claire' } });
 		expect(await j.base.select().from(journal).where(eq(journal.action, 'rouvrir_prise'))).toHaveLength(1);

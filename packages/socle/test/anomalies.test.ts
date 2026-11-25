@@ -10,7 +10,7 @@ import { abonner, couper, filDeNotifications } from '../src/notifications.ts';
 import { publierAnnee, reglerRoulement } from '../src/planning/annee.ts';
 import { commencerPrise, gestePrise, prisesDeLaReleve, validerPrise } from '../src/prises.ts';
 import { anomalie, anomalieSuivi, attribution, avisAnomalie, engin, equipe, journal, personne, profil, responsabilite } from '../src/schema.ts';
-import { RefusDroit } from '../src/erreurs.ts';
+import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { jeuEngins } from './de-test-engins.ts';
 
 const reglage = centreExemple.astreinte;
@@ -70,6 +70,31 @@ describe('signalement direct', () => {
 		await j.signaler(j.alice, 'Rétroviseur');
 		expect(await j.avis(claire)).toHaveLength(1);
 		expect(await j.avis(paul)).toHaveLength(1);
+	});
+
+	it('chef de centre et adjoint : le second qui agit apprend « Déjà traité par… », sans rien écrire', async () => {
+		const j = await jeu();
+		const nommer = async (prenom: string, systeme: string) => {
+			const [p] = await j.base.insert(personne).values({ email: `${prenom.toLowerCase()}@exemple.fr`, prenom, nom: 'Chef', profilId: (await j.base.select().from(profil).where(eq(profil.nom, 'Agent')))[0]!.id }).returning();
+			const [r] = await j.base.select().from(responsabilite).where(eq(responsabilite.systeme, systeme as 'chef_centre'));
+			await j.base.insert(attribution).values({ personneId: p!.id, responsabiliteId: r!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+			return { type: 'personne' as const, id: p!.id };
+		};
+		const claire = await nommer('Claire', 'chef_centre');
+		const paul = await nommer('Paul', 'chef_centre_adjoint');
+		const id = await j.signaler();
+		await gesteAnomalie(j.base, claire, id, { quoi: 'prendre' }, QUAND, REGLAGE_ANOMALIES);
+		await expect(gesteAnomalie(j.base, paul, id, { quoi: 'prendre' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow(new DonneeInvalide('Déjà traité par Claire Chef'));
+		await gesteAnomalie(j.base, claire, id, { quoi: 'clore', texte: '' }, QUAND, REGLAGE_ANOMALIES);
+		await expect(gesteAnomalie(j.base, paul, id, { quoi: 'clore', texte: '' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow(new DonneeInvalide('Déjà traité par Claire Chef'));
+		const suivis = await j.base.select().from(anomalieSuivi).where(eq(anomalieSuivi.anomalieId, id));
+		expect(suivis.map((x) => x.quoi)).toEqual(['prise_en_charge', 'close']);
+		// En même temps : un seul l'emporte, l'autre l'apprend.
+		const autre = await j.signaler(j.alice, 'Rétroviseur');
+		const r = await Promise.allSettled([gesteAnomalie(j.base, claire, autre, { quoi: 'indisponible' }, QUAND, REGLAGE_ANOMALIES), gesteAnomalie(j.base, paul, autre, { quoi: 'indisponible' }, QUAND, REGLAGE_ANOMALIES)]);
+		expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+		expect((r.find((x) => x.status === 'rejected') as PromiseRejectedResult).reason.message).toMatch(/^Déjà traité par (Claire|Paul) Chef$/);
+		expect((await j.base.select().from(anomalieSuivi).where(eq(anomalieSuivi.anomalieId, autre))).map((x) => x.quoi)).toEqual(['indisponible']);
 	});
 
 	it('l’e-mail : une anomalie signalée, à ceux qui la reçoivent ; une prise de garde, ses nouvelles anomalies', async () => {
@@ -243,7 +268,7 @@ describe('le suivi', () => {
 		const j = await jeu();
 		const id = await j.signaler();
 		await gesteAnomalie(j.base, j.alice, id, { quoi: 'prendre' }, QUAND, REGLAGE_ANOMALIES);
-		await expect(gesteAnomalie(j.base, j.chefDeGarde, id, { quoi: 'prendre' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow('Geste impossible');
+		await expect(gesteAnomalie(j.base, j.chefDeGarde, id, { quoi: 'prendre' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow('Déjà traité par Alice Fictif');
 		expect((await lireAnomalie(j.base, j.referent, id, QUAND, REGLAGE_ANOMALIES)).historique).toHaveLength(2);
 	});
 
@@ -260,7 +285,7 @@ describe('le suivi', () => {
 			}
 			return batch(requetes);
 		});
-		await expect(gesteAnomalie(j.base, j.alice, id, { quoi: 'prendre' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow('Anomalie changée entre-temps');
+		await expect(gesteAnomalie(j.base, j.alice, id, { quoi: 'prendre' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow('Déjà traité par Rémi Fictif');
 		espion.mockRestore();
 		expect(await j.base.select().from(anomalieSuivi)).toHaveLength(1);
 		expect((await j.base.select().from(anomalie).where(eq(anomalie.id, id)))[0]!.priseEnChargePar).toBe(idDe(j.referent));
@@ -299,7 +324,7 @@ describe('le suivi', () => {
 			if (appel++ === 1) await j.base.update(anomalie).set({ bloquante: 1 }).where(eq(anomalie.id, seconde));
 			return batch(requetes);
 		});
-		await expect(gesteAnomalie(j.base, j.chefDeGarde, premiere, { quoi: 'remettre' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow('Anomalie changée entre-temps');
+		await expect(gesteAnomalie(j.base, j.chefDeGarde, premiere, { quoi: 'remettre' }, QUAND, REGLAGE_ANOMALIES)).rejects.toThrow('Déjà traité par Rémi Fictif');
 		espion.mockRestore();
 		expect(await j.etatEngin(j.vtu)).toBe('indisponible');
 		expect((await j.base.select().from(anomalie).where(eq(anomalie.id, seconde)))[0]!.bloquante).toBe(1);
@@ -458,21 +483,21 @@ describe('qui prévenir, selon la zone', () => {
 		expect((await courrielsDeDemande(j.base, { genre: 'prise', enginId: j.vsav, quand: QUAND })).map((c) => c.a).sort()).toEqual(['cdg@exemple.fr', 'paula@exemple.fr', 'ref@exemple.fr']);
 	});
 
-	it('personne ne tient le rôle choisi : le chef de centre à sa place, sans avis en double à l’adjoint', async () => {
+	it('personne ne tient le rôle choisi : le chef de centre et l’adjoint, à sa place', async () => {
 		const j = await jeuZones();
 		await j.prise([j.sac.elements[0]!.ref]);
 		expect(await j.avis(j.claire)).toHaveLength(1);
-		expect(await j.avis(j.paul)).toEqual([]);
+		expect(await j.avis(j.paul)).toHaveLength(1);
 		expect(await j.avis(j.chefDeGarde)).toHaveLength(1);
 		expect(await j.avis(j.referent)).toEqual([]);
 	});
 
-	it('l’auteur seul titulaire du rôle choisi : le chef de centre à sa place, l’adjoint seulement sans lui', async () => {
+	it('l’auteur seul titulaire du rôle choisi : le chef de centre et l’adjoint, à sa place', async () => {
 		const j = await jeuZones();
 		await j.base.insert(attribution).values({ personneId: idDe(j.alice), responsabiliteId: j.pharmacie, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
 		await j.prise([j.sac.elements[0]!.ref]);
 		expect(await j.avis(j.claire)).toHaveLength(1);
-		expect(await j.avis(j.paul)).toEqual([]);
+		expect(await j.avis(j.paul)).toHaveLength(1);
 		expect(await j.avis(j.alice)).toEqual([]);
 	});
 
@@ -484,7 +509,7 @@ describe('qui prévenir, selon la zone', () => {
 		expect(await j.avis(j.claire)).toEqual([]);
 	});
 
-	it('deux rôles, l’un tenu, l’autre sans titulaire : ses titulaires, et le chef de centre pour l’autre', async () => {
+	it('deux rôles, l’un tenu, l’autre sans titulaire : ses titulaires, et le chef et l’adjoint pour l’autre', async () => {
 		const j = await jeuZones();
 		const paula = await nommee(j, 'Paula', { nom: 'Référent pharmacie' });
 		const [habillement] = await j.base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
@@ -492,7 +517,7 @@ describe('qui prévenir, selon la zone', () => {
 		await j.prise([j.sac.elements[0]!.ref]);
 		expect(await j.avis(paula)).toHaveLength(1);
 		expect(await j.avis(j.claire)).toHaveLength(1);
-		expect(await j.avis(j.paul)).toEqual([]);
+		expect(await j.avis(j.paul)).toHaveLength(1);
 		expect(await j.avis(j.referent)).toEqual([]);
 	});
 

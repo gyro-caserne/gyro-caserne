@@ -14,7 +14,7 @@ Tout ce qui concerne l'agent, et seulement cela, jamais à l'auteur lui-même :
 - **une réservation** : une demande à trancher chez qui gère la ressource, l'accord, le refus ou l'annulation chez le demandeur (voir [Réservations](reservations.md)) ;
 - **un avis** de remplacement, de l'été ou d'anomalie (voir [Remplacements](remplacements-et-echanges.md), [Planning d'été](planning-d-ete.md), [Anomalies](anomalies.md)) ;
 - **un souhait d'anniversaire** d'un collègue, le jour de son anniversaire (voir [Murs](salons.md#anniversaires)), « … vous souhaite un joyeux anniversaire 🎂 » ;
-- **une félicitation** d'un collègue, le jour d'un palier d'ancienneté, « … vous félicite pour vos 10 ans de service 🎖️ ». Le chef de centre lit aussi dans la cloche les paliers dans 30 jours, sans envoi au téléphone, avec un e-mail ; l'adjoint seulement sans chef de centre en cours, ou pour le palier du chef (voir [Ancienneté](anciennete.md)) ;
+- **une félicitation** d'un collègue, le jour d'un palier d'ancienneté, « … vous félicite pour vos 10 ans de service 🎖️ ». Le chef de centre et l'adjoint lisent aussi dans la cloche les paliers dans 30 jours, sans envoi au téléphone, avec un e-mail (voir [Ancienneté](anciennete.md)) ;
 - **la vigilance rouge**, à tous les agents, quand le département y passe (voir [Météo et vigilance](meteo-et-vigilance.md)) ;
 - **une nomination** faite à la main (fiche de l'agent, Qui fait quoi, fiche d'un rôle ou d'un comité) : « Vous êtes nommé Chef de garde », le périmètre et qui a nommé, le même texte dans la cloche et au téléphone. Pas pour l'import du fichier de l'effectif, ni pour un retrait (voir [Accès et attributions](acces-et-attributions.md)) ;
 - **une urgence du centre**, pour le chef de centre et l'adjoint (plus bas).
@@ -47,7 +47,7 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 
 ## Chef de centre et adjoint
 
-Le chef de centre est le destinataire principal. L'adjoint ne reçoit pas les mêmes lignes en double, sauf les urgences, ou quand il n'y a pas de chef de centre en cours (ou que c'est lui l'auteur). C'est le cas d'un remplacement sans chef de garde (informé, à valider, désistement, relance), des anomalies d'une zone dont le rôle n'a pas de titulaire, des paliers d'ancienneté dans 30 jours, des vacances changées après la publication de l'été et d'une réouverture de prise demandée sans chef de garde. L'adjoint garde tous ses droits : il valide toujours un remplacement.
+L'adjoint est un chef de centre : il reçoit exactement les mêmes notifications et peut faire les mêmes gestes. Si l'un agit avant l'autre (valider ou refuser un remplacement, annuler une demande, prendre en charge ou clore une anomalie, rouvrir une prise, prendre en compte une demande à un référent sans titulaire, trancher une réservation), le second reçoit un message clair, « Déjà traité par Claire Martin », et rien n'est écrit deux fois. Si aucun des deux n'agit, la ligne reste dans la cloche : à eux de s'organiser.
 
 ## Chefs et demandes adressées aux référents
 

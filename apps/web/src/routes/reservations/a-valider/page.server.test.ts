@@ -33,7 +33,7 @@ describe('/reservations/a-valider', () => {
 		expect(await etat(base, b)).toMatchObject({ etat: 'refusee', motif: 'Déjà prêtés' });
 		expect(await agir('annuler', locaux(base, bruno), [['id', String(a)], ['mot', 'Bancs cassés']])).toEqual({ succes: 'Réservation annulée. Le demandeur est prévenu.' });
 		expect(await etat(base, a)).toMatchObject({ etat: 'annulee', motif: 'Bancs cassés' });
-		expect(await agir('accepter', locaux(base, bruno), [['id', String(a)]])).toMatchObject({ status: 400, data: { message: 'Cette demande a déjà été traitée.' } });
+		expect(await agir('accepter', locaux(base, bruno), [['id', String(a)]])).toMatchObject({ status: 400, data: { message: expect.stringMatching(/^Déjà traité par Bruno /) } });
 		expect(await agir('accepter', locaux(base, alice), [['id', String(b)]])).toMatchObject({ status: 403 });
 	});
 
