@@ -226,16 +226,26 @@ export async function avisSemainesChangees(base: Base, changements: { semaine: S
 	]);
 	const demandes = await demandesDeSemaines(base, changements.map((c) => c.semaine));
 	const nomEquipe = (id: number) => equipes.find((e) => e.id === id)?.nom ?? 'une autre équipe';
-	return changements.flatMap(({ semaine: s, apres }) => {
-		const phrase = `la semaine du ${jourEnLettres(s.debut)} passe de l’${nomEquipe(s.equipeId)} à l’${nomEquipe(apres)}`;
+	// Un seul avis par personne, quel que soit le nombre de semaines changées : pour chaque semaine qui la regarde,
+	// ses remplacements touchés, puis le changement.
+	const parPersonne = new Map<number, { phrase: string; quand: string[] }[]>();
+	for (const { semaine: s, apres } of changements) {
+		const phrase = `La semaine du ${jourEnLettres(s.debut)} passe de l’${nomEquipe(s.equipeId)} à l’${nomEquipe(apres)}.`;
 		const touchees = demandes.filter((d) => d.semaine === s.debut);
-		// Qui a un remplacement touché reçoit cet avis-là, pas en plus celui de son équipe.
-		const parRemplacement = new Set(touchees.flatMap((d) => d.personnes));
-		const ids = agents.filter((a) => !parRemplacement.has(a.id) && [s.equipeId, apres].includes(equipeLe(affectations.filter((x) => x.personneId === a.id), s.debut) ?? 0)).map((a) => a.id);
-		return [
-			...avis(base, ids, 'semaine', `${phrase[0]!.toUpperCase()}${phrase.slice(1)}.`, '/planning', maintenant),
-			...touchees.flatMap((d) => avis(base, [...new Set(d.personnes)], 'semaine', `Votre remplacement (${d.quand}) est touché : ${phrase}. Voyez-le avec votre chef de garde.`, '/remplacements', maintenant))
-		];
+		const deLEquipe = agents.filter((a) => [s.equipeId, apres].includes(equipeLe(affectations.filter((x) => x.personneId === a.id), s.debut) ?? 0)).map((a) => a.id);
+		for (const id of new Set([...deLEquipe, ...touchees.flatMap((d) => d.personnes)])) {
+			const quand = [...new Set(touchees.filter((d) => d.personnes.includes(id)).map((d) => d.quand))];
+			parPersonne.set(id, [...(parPersonne.get(id) ?? []), { phrase, quand }]);
+		}
+	}
+	return [...parPersonne].flatMap(([id, semaines]) => {
+		const touches = semaines.reduce((n, x) => n + x.quand.length, 0);
+		const touche = touches > 0;
+		const texte = [
+			...semaines.map(({ phrase, quand }) => (quand.length === 0 ? phrase : `${quand.length > 1 ? `Vos remplacements (${quand.join(', ')}) sont touchés` : `Votre remplacement (${quand[0]}) est touché`}. ${phrase}`)),
+			...(touche ? [touches > 1 ? 'Voyez-les avec votre chef de garde.' : 'Voyez-le avec votre chef de garde.'] : [])
+		].join(' ');
+		return avis(base, [id], 'semaine', texte, touche ? '/remplacements' : '/planning', maintenant);
 	});
 }
 

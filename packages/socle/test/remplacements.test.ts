@@ -12,6 +12,7 @@ import { aNePasManquer } from '../src/a-ne-pas-manquer.ts';
 import { accueilDe } from '../src/casquettes.ts';
 import { changerStatut } from '../src/actions/personnes.ts';
 import { remplacementsDuMoment } from '../src/remplacements/moment.ts';
+import { avis as avisRemplacements } from '../src/remplacements/avis.ts';
 import { chargerAptitudesFictives } from '../src/remplacements/fictif.ts';
 import { repondreEvenement } from '../src/actions/interactions.ts';
 import { bandesDe, lireContexte, disponibles, mesTranches } from '../src/remplacements/contexte.ts';
@@ -80,6 +81,28 @@ describe('demande ouverte', () => {
 		expect(await avisDe(n.david)).toEqual([]);
 		// Déjà demandée : plus proposée.
 		await expect(demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: null }, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Période déjà dans une demande'));
+	});
+
+	it('une notification par demande : son tag porte l’identifiant de la demande', async () => {
+		const { base, alice, n } = await jeu();
+		await abonner(base, { type: 'personne', id: n.bruno }, { endpoint: 'https://fcm.googleapis.com/fcm/send/b', p256dh: 'BCle', auth: 'secret', appareil: '' }, maintenant);
+		const un = await demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: null }, maintenant, reglage);
+		const deux = await demanderRemplacement(base, alice, { periodes: [nuitMardi10], cibleId: null }, maintenant, reglage);
+		const tags = (await base.select().from(envoiPush)).map((e) => (JSON.parse(e.donnees) as { tag: string }).tag);
+		expect(tags).toEqual([`remplacement:${un}:recue`, `remplacement:${deux}:recue`]);
+	});
+
+	it('de 22 h à 7 h : la cloche seule, sans téléphone ; dès 7 h, le téléphone', async () => {
+		const { base, alice, n, avisDe } = await jeu();
+		await abonner(base, { type: 'personne', id: n.bruno }, { endpoint: 'https://fcm.googleapis.com/fcm/send/b', p256dh: 'BCle', auth: 'secret', appareil: '' }, maintenant);
+		await demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: null }, '2026-11-01T22:00', reglage);
+		await demanderRemplacement(base, alice, { periodes: [nuitMardi10], cibleId: null }, '2026-11-02T06:59', reglage);
+		expect(await avisDe(n.bruno)).toEqual(['recue', 'recue']);
+		expect(await base.select().from(envoiPush)).toEqual([]);
+		// Une urgence sonne la nuit ; dès 7 h, le reste aussi.
+		await base.batch([...avisRemplacements(base, [n.bruno], 1, 'informe', 'Urgence', '/remplacements/1', '2026-11-02T23:30', undefined, 'urgences')]);
+		await base.batch([...avisRemplacements(base, [n.bruno], 1, 'informe', 'Matin', '/remplacements/1', '2026-11-03T07:00')]);
+		expect((await base.select().from(envoiPush)).map((e) => (JSON.parse(e.donnees) as { texte: string }).texte)).toEqual(['Urgence', 'Matin']);
 	});
 
 	it('refuse une période qui n’est pas de son astreinte, ou déjà commencée', async () => {

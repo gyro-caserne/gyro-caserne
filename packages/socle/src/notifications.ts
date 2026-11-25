@@ -123,14 +123,17 @@ function ecrireFil(base: Base, ids: number[], publicationId: number, commentaire
 // dans le même batch, quand la page d'arrivée ne la marque pas lue (avis d'été), ou pour plus de sûreté (anomalies, demandes) ; chaque envoi porte celle de sa
 // personne (sa plus récente), pour que la toucher la marque lue. Les autres pages marquent déjà lu ce qu'elles montrent.
 // `lieu` : un lieu, ou plusieurs (une manœuvre vient de son mur et du sujet « planning ») ; une coupure de l'un d'eux suffit.
-export function mettreEnFile(base: Base, ids: number[] | SQLWrapper, lieu: string | string[], donnees: DonneesPush, maintenant: string, si?: SQL, ligne?: 'ete' | 'anomalie' | 'demande' | 'nomination' | 'anniversaire' | 'anciennete') {
+// `calcules` : un tag ou un texte calculés à l'écriture (une demande créée dans le même batch, le nom de l'auteur), à la place de ceux de `donnees`.
+export function mettreEnFile(base: Base, ids: number[] | SQLWrapper, lieu: string | string[], donnees: DonneesPush, maintenant: string, si?: SQL, ligne?: 'ete' | 'anomalie' | 'demande' | 'nomination' | 'anniversaire' | 'anciennete', calcules: { tag?: SQL; texte?: SQL } = {}) {
 	const coupe = base
 		.select({ un: sql`1` })
 		.from(coupure)
 		.where(and(eq(coupure.personneId, abonnementPush.personneId), inArray(coupure.lieu, ['tout', ...(Array.isArray(lieu) ? lieu : [lieu])])));
 	const json = JSON.stringify(donnees);
 	const t = ligne === undefined ? null : TABLES[ligne];
-	const contenu = t === null ? sql<string>`${json}` : sql<string>`json_set(${json}, '$.lue', json_object('genre', ${ligne}, 'id', (select max(${t.id}) from ${t} where ${t.personneId} = "abonnement_push"."personne_id")))`;
+	let brut = sql`${json}`;
+	for (const [cle, valeur] of Object.entries(calcules)) brut = sql`json_set(${brut}, ${`$.${cle}`}, ${valeur})`;
+	const contenu = t === null ? sql<string>`${brut}` : sql<string>`json_set(${brut}, '$.lue', json_object('genre', ${ligne}, 'id', (select max(${t.id}) from ${t} where ${t.personneId} = "abonnement_push"."personne_id")))`;
 	return base.insert(envoiPush).select(
 		base
 			.select({ id: sql<number | null>`null`.as('id'), abonnementId: abonnementPush.id, donnees: contenu.as('donnees'), creeLe: sql<string>`${maintenant}`.as('cree_le'), jeton: sql<string | null>`null`.as('jeton'), reserveeLe: sql<string | null>`null`.as('reservee_le'), essais: sql<number>`0`.as('essais') })

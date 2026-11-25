@@ -308,7 +308,7 @@ describe('attribuer : l’agent nommé est prévenu', () => {
 		const avis = await base.select().from(avisNomination).where(eq(avisNomination.personneId, simpleId));
 		expect(avis).toMatchObject([{ titre: 'Vous êtes nommé Chef de garde', texte: `${equipes[1]!.nom}, par Chef Test`, url: `/agents/${simpleId}`, creeLe: midi, lueLe: null }]);
 		const [envoi] = await base.select().from(envoiPush);
-		expect(JSON.parse(envoi!.donnees)).toMatchObject({ titre: 'Vous êtes nommé Chef de garde', url: `/agents/${simpleId}` });
+		expect(JSON.parse(envoi!.donnees)).toMatchObject({ titre: 'Vous êtes nommé Chef de garde', texte: `${equipes[1]!.nom}, par Chef Test`, url: `/agents/${simpleId}` });
 		expect((await filDeNotifications(base, { type: 'personne', id: simpleId }, midi)).lignes[0]).toMatchObject({ type: 'nomination', titre: 'Vous êtes nommé Chef de garde' });
 		// Un retrait ne prévient pas l'agent.
 		await finirAttribution(base, chef, id, aujourdhui, aujourdhui);

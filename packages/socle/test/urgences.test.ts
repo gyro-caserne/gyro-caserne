@@ -47,8 +47,8 @@ describe('urgence : un engin indisponible', () => {
 			expect(await j.envois(chef)).toEqual([expect.objectContaining({ titre: 'VTU indisponible', texte: 'Treuil HS, décidé par Rémi Fictif', url: `/engins/${j.vtu}` })]);
 			expect(await j.cloche(chef)).toEqual(['VTU indisponible']);
 		}
-		// Le déclarant garde son avis habituel.
-		expect((await j.envois(j.alice)).map((e) => e.titre)).toEqual(['Treuil HS (VTU)']);
+		// Le signaleur n'est prévenu qu'à la prise en charge et à la clôture.
+		expect(await j.envois(j.alice)).toEqual([]);
 	});
 
 	it('le chef qui rend l’engin indisponible n’est pas prévenu de son propre geste ; l’adjoint l’est', async () => {

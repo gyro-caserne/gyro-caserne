@@ -332,12 +332,14 @@ export async function peutAttribuerQuelqueChose(base: Base, acteur: Acteur, aujo
 	return responsabilites.some((r) => perimetres[r.typePerimetre].some((p) => peutAttribuer(contexte, r, perimetreDeLigne(p.type, p.id))));
 }
 
-// L'agent nommé : une ligne dans sa cloche et un envoi au téléphone (lieu « nominations » : seul « tout » le coupe).
+// L'agent nommé : une ligne dans sa cloche et un envoi au téléphone (sujet « vie »).
 // Écritures à placer dans le batch de l'attribution ; le nom de l'auteur est lu à l'écriture.
 function avisNomination(base: Base, personneId: number, role: string, perimetre: string, acteur: Acteur, maintenant: string) {
 	const par = acteur.type === 'super' ? sql<string>`'Super administrateur'` : sql<string>`coalesce((select p.prenom || ' ' || p.nom from personne p where p.id = ${acteur.id}), 'un ancien agent')`;
 	const titre = `Vous êtes nommé ${role}`;
 	const url = `/agents/${personneId}`;
+	// Le même texte dans la cloche et au téléphone.
+	const texte = sql<string>`${perimetre} || ', par ' || ${par}`;
 	return [
 		base.insert(avisNominationTable).select(
 			base
@@ -345,7 +347,7 @@ function avisNomination(base: Base, personneId: number, role: string, perimetre:
 					id: sql<number | null>`null`.as('id'),
 					personneId: personne.id,
 					titre: sql<string>`${titre}`.as('titre'),
-					texte: sql<string>`${perimetre} || ', par ' || ${par}`.as('texte'),
+					texte: sql<string>`${texte}`.as('texte'),
 					url: sql<string>`${url}`.as('url'),
 					creeLe: sql<string>`${maintenant}`.as('cree_le'),
 					lueLe: sql<string | null>`null`.as('lue_le')
@@ -353,6 +355,6 @@ function avisNomination(base: Base, personneId: number, role: string, perimetre:
 				.from(personne)
 				.where(eq(personne.id, personneId))
 		),
-		mettreEnFile(base, [personneId], 'vie', { titre, texte: perimetre, url, tag: `nomination:${maintenant}` }, maintenant, undefined, 'nomination')
+		mettreEnFile(base, [personneId], 'vie', { titre, texte: perimetre, url, tag: `nomination:${maintenant}` }, maintenant, undefined, 'nomination', { texte })
 	] as const;
 }
