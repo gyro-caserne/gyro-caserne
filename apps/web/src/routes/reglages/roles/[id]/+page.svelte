@@ -1,6 +1,6 @@
 <script lang="ts">
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
-	import { onMount, untrack } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { estDroitDuCentre, estDroitPouvoir, estSansEffet, iconeDuRole, type Droit } from '@gyro-caserne/socle';
 	import { LIBELLES_DROIT } from '#lib/droits.ts';
 	import { ADMINISTRATION, appliquerNiveaux, DOMAINES, estPersonnalise, niveauxDe, type DomaineId } from '#lib/paquets.ts';
@@ -19,7 +19,7 @@
 	import { pluriel } from '#lib/pluriel.ts';
 	import ChoixIcone from '../../ChoixIcone.svelte';
 	import Domaines from '../../Domaines.svelte';
-	import { optionsAttributeur, quiAttribue, TENU_POUR, tenuPour, TOUJOURS_TENU, valeurAttributeur } from '../../roles.ts';
+	import { NOMS_ICONES, optionsAttributeur, quiAttribue, TENU_POUR, tenuPour, TOUJOURS_TENU, valeurAttributeur } from '../../roles.ts';
 
 	let { data, form } = $props();
 
@@ -29,7 +29,7 @@
 	const peutAdmin = $derived(data.peutPouvoir && !lectureSeule);
 
 	const adminDe = (droits: Droit[]) => droits.filter(estDroitPouvoir);
-	const RESERVE_AU_CENTRE = 'Réservé à un rôle tenu pour tout le centre : gérer les accès, les comités et les rôles.';
+	const RESERVE_AU_CENTRE = 'Gérer les accès, les comités et les rôles est réservé à un rôle tenu pour tout le centre.';
 
 	// Après un refus, la saisie revient du serveur : on la réaffiche.
 	const saisis = $derived(form?.cible === 'role' && !form?.succes ? form?.valeurs : undefined);
@@ -53,6 +53,7 @@
 		choix = choixDepart();
 		admin = adminDepart();
 		portee = porteeDepart();
+		toujours = saisie('nature', role.nature) === 'fonction';
 	});
 
 	// Hors du centre, ces droits sont grisés et décochés : une case grisée n'est pas envoyée, le droit part à l'enregistrement.
@@ -87,15 +88,25 @@
 	const ouvert = (cible: string) => (concerne(cible) && !form?.succes ? { open: true } : {});
 	const erreurs = (cible: string): Record<string, string> => (concerne(cible) ? (form?.erreurs ?? {}) : {});
 	const saisie = (champ: 'nom' | 'nature' | 'attributeur', defaut: string) => (concerne('role') ? (form?.valeurs?.[champ] ?? defaut) : defaut);
-	// L'identité s'ouvre d'emblée à l'ordinateur, comme les domaines.
-	let identiteOuverte = $state(false);
+	// L'identité s'ouvre d'emblée à l'ordinateur, comme les domaines, et partout après un refus de l'enregistrement.
+	let identiteOuverte = $state(untrack(() => concerne('role') && !form?.succes));
+	// L'interrupteur à l'écran : le résumé de l'identité le suit avant l'enregistrement.
+	let toujours = $state(untrack(() => saisie('nature', role.nature) === 'fonction'));
 	// « Archiver le rôle » déplie sa confirmation sur place ; sans JavaScript, un repli simple.
 	let monte = $state(false);
 	let archivage = $state(untrack(() => concerne('archiver') && !form?.succes));
 	onMount(() => {
 		monte = true;
+		// On ouvre, on ne referme jamais ce qui est ouvert.
 		if (matchMedia('(min-width: 1024px)').matches) identiteOuverte = true;
 	});
+	async function basculerArchivage() {
+		archivage = !archivage;
+		if (!archivage) return;
+		await tick();
+		document.querySelector<HTMLInputElement>('#archiver input[name="confirmation"]')?.focus();
+	}
+	const nommePar = $derived(optionsAttributeur(data.comitesChoix).find((o) => o.valeur === valeurAttributeur(role.attributeur))?.libelle ?? 'Le chef de centre');
 	const blocTitulaires = $derived(data.titulairesDuRole);
 	const resumeTitulaires = $derived(blocTitulaires ? resume(pluriel(blocTitulaires.postes.reduce((n, p) => n + p.titulaires.length, 0), 'titulaire'), blocTitulaires.postes) : '');
 	const avertissement = (n: number) =>
@@ -149,18 +160,27 @@
 
 <svelte:element this={lectureSeule ? 'div' : 'form'} class="formulaire" {...lectureSeule ? {} : { method: 'POST', action: '?/enregistrer', id: 'role' }}>
 	{#if !lectureSeule}
-		<Groupe titre="Identité" resume={saisie('nature', role.nature) === 'fonction' ? 'Doit toujours être tenu' : 'Peut rester sans titulaire'} bind:ouvert={identiteOuverte}>
+		<Groupe titre="Identité" resume={toujours ? 'Doit toujours être tenu' : 'Peut rester sans titulaire'} bind:ouvert={identiteOuverte}>
 			<div class="champs">
 				<Champ id="role-nom" name="nom" libelle="Nom" requis maxlength={60} valeur={saisie('nom', role.nom)} erreur={erreurs('role').nom} />
-				<Interrupteur libelle={TOUJOURS_TENU.libelle} description={TOUJOURS_TENU.description} nom="toujours" coche={saisie('nature', role.nature) === 'fonction'} />
+				<Interrupteur libelle={TOUJOURS_TENU.libelle} description={TOUJOURS_TENU.description} nom="toujours" bind:coche={toujours} />
 				{#if role.titulaires > 0}
 					<p class="aide">{tenuPour(role.portee)}. Ne change pas tant que le rôle a un titulaire.</p>
 				{:else}
 					<ChoixRadio id="role-portee" legende="Tenu pour" name="portee" disposition="rangees" bind:valeur={portee} erreur={erreurs('role').portee} options={TENU_POUR} />
 				{/if}
 				<Choix id="role-attributeur" name="attributeur" libelle="Qui nomme" valeur={saisie('attributeur', valeurAttributeur(role.attributeur))} erreur={erreurs('role').attributeur} options={optionsAttributeur(data.comitesChoix)} />
-				<ChoixIcone valeur={(saisis?.icone as ReturnType<typeof iconeDuRole> | undefined) ?? iconeDuRole(role)} erreur={erreurs('role').icone} />
+				{#key role.id}<ChoixIcone valeur={(saisis?.icone as ReturnType<typeof iconeDuRole> | undefined) ?? iconeDuRole(role)} erreur={erreurs('role').icone} />{/key}
 			</div>
+		</Groupe>
+	{:else}
+		<!-- Rôle système ou archivé : l'identité se lit, sans geste. -->
+		<Groupe titre="Identité" resume={role.nature === 'fonction' ? 'Doit toujours être tenu' : 'Peut rester sans titulaire'}>
+			<dl class="identite">
+				<div><dt>Tenu pour</dt><dd>{TENU_POUR.find((t) => t.valeur === role.portee)?.libelle ?? role.portee}</dd></div>
+				<div><dt>Qui nomme</dt><dd>{nommePar}</dd></div>
+				<div><dt>Icône</dt><dd class="icone"><IconeRole icone={iconeDuRole(role)} taille={28} />{NOMS_ICONES[iconeDuRole(role)]}</dd></div>
+			</dl>
 		</Groupe>
 	{/if}
 
@@ -260,7 +280,7 @@
 		{/snippet}
 		{#if monte}
 			<div class="archiver">
-				<div><Bouton variante="grave" etendu={archivage} controle="archiver" onclick={() => (archivage = !archivage)}>Archiver le rôle</Bouton></div>
+				<div><Bouton variante="grave" etendu={archivage} controle="archiver" onclick={basculerArchivage}>Archiver le rôle</Bouton></div>
 				{@render confirmerArchivage()}
 			</div>
 		{:else}
@@ -309,6 +329,25 @@
 	}
 	.bas {
 		margin-top: var(--espace-8);
+	}
+	.identite {
+		margin: 0;
+		padding: var(--espace-12) var(--espace-16) var(--espace-16);
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-12);
+	}
+	dt {
+		font-weight: 600;
+	}
+	dd {
+		margin: 0;
+		color: var(--doux);
+	}
+	dd.icone {
+		display: flex;
+		align-items: center;
+		gap: var(--espace-8);
 	}
 	.retours {
 		display: flex;

@@ -1272,7 +1272,7 @@ test.describe('réglages', () => {
 		await page.getByRole('radio', { name: 'Ballon', exact: true }).click();
 		await expect(changer).toHaveAttribute('aria-expanded', 'false');
 		await expect(page.getByRole('radio', { name: 'Ballon', exact: true })).toBeChecked();
-		await expect(page.locator('fieldset.icones').getByText('Ballon', { exact: true })).toBeVisible();
+		await expect(page.locator('fieldset.icones .choisie')).toHaveText('Ballon');
 		await page.getByRole('button', { name: 'Créer le rôle' }).click();
 		await expect(page).toHaveURL(/\/reglages\/roles\/\d+\?nouveau$/);
 		await expect(page.getByRole('heading', { level: 1, name: role })).toBeVisible();
@@ -1287,7 +1287,41 @@ test.describe('réglages', () => {
 		await expect(page.getByText(`Le rôle « ${role} » est enregistré.`)).toBeVisible();
 		const pageRole = page.url();
 
+		// D'un rôle à l'autre sans recharger (la liste des réglages, à l'ordinateur) : l'icône affichée suit le rôle ouvert.
+		const autre = page.locator('main a', { hasText: 'Référent engins' }).first();
+		if (await autre.isVisible()) {
+			await autre.click();
+			await expect(page.getByRole('heading', { level: 1, name: 'Référent engins', exact: true })).toBeVisible();
+			await expect(page.locator('fieldset.icones .choisie')).toHaveText('Camion');
+			await page.goto(pageRole);
+		}
+
+		// Sur la fiche du comité, l'icône du mur est repliée ; la choisir referme la grille.
 		await page.goto(pageComite);
+		await page.waitForLoadState('networkidle');
+		const icone = page.locator('fieldset.icones');
+		const changerMur = icone.getByRole('button', { name: 'Changer d’icône', exact: true });
+		await expect(icone.getByRole('radio', { name: 'Sifflet', exact: true })).toBeHidden();
+		// Au clavier : les flèches parcourent sans refermer ; Entrée choisit et referme sans envoyer le formulaire ; Espace aussi.
+		for (const touche of ['Enter', 'Space']) {
+			await changerMur.click();
+			await page.keyboard.press('Tab');
+			await page.keyboard.press('ArrowRight');
+			await expect(changerMur).toHaveAttribute('aria-expanded', 'true');
+			await page.keyboard.press(touche);
+			await expect(changerMur).toHaveAttribute('aria-expanded', 'false');
+			await expect(changerMur).toBeFocused();
+		}
+		await expect(page.getByText(`Le comité « ${comite} » est enregistré.`, { exact: true })).toHaveCount(0);
+		await changerMur.click();
+		await icone.getByRole('radio', { name: 'Sifflet', exact: true }).click();
+		await expect(changerMur).toHaveAttribute('aria-expanded', 'false');
+		await expect(changerMur).toBeFocused();
+		await expect(icone.locator('.choisie')).toHaveText('Sifflet');
+		await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+		await expect(page.getByText(`Le comité « ${comite} » est enregistré.`, { exact: true })).toBeVisible();
+		await expect(page.locator('fieldset.icones .choisie')).toHaveText('Sifflet');
+
 		await page.locator('summary', { hasText: 'Dissoudre le comité' }).click();
 		await page.getByLabel('Je confirme').check();
 		await page.getByRole('button', { name: 'Dissoudre le comité' }).click();
@@ -1312,18 +1346,18 @@ test.describe('réglages', () => {
 		const acces = admin.getByLabel('Gérer les accès');
 		const nommer = admin.getByLabel('Nommer');
 		await acces.check();
-		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toHaveCount(0);
+		await expect(admin.getByText('Gérer les accès, les comités et les rôles est réservé')).toHaveCount(0);
 
 		await page.getByRole('radio', { name: /^Chaque équipe/ }).check();
 		await expect(acces).toBeDisabled();
 		await expect(acces).not.toBeChecked();
 		await expect(nommer).toBeEnabled();
-		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toBeVisible();
+		await expect(admin.getByText('Gérer les accès, les comités et les rôles est réservé')).toBeVisible();
 
 		await page.getByRole('radio', { name: /^Tout le centre/ }).check();
 		await expect(acces).toBeEnabled();
 		await expect(acces).toBeChecked();
-		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toHaveCount(0);
+		await expect(admin.getByText('Gérer les accès, les comités et les rôles est réservé')).toHaveCount(0);
 
 		// Enregistré en équipe : la case retirée ne part pas, et le serveur accepte.
 		await page.getByRole('radio', { name: /^Chaque équipe/ }).check();

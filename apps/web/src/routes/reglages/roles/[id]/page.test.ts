@@ -86,7 +86,7 @@ describe('page d’un rôle', () => {
 	});
 
 	describe('droits réservés à un rôle du centre', () => {
-		const PHRASE = 'Réservé à un rôle tenu pour tout le centre';
+		const PHRASE = 'Gérer les accès, les comités et les rôles est réservé';
 		const RESERVES = ['GERER_ACCES', 'GERER_COMITES', 'GERER_LISTES'];
 		const grisee = (page: string, nom: string, droit: string) => new RegExp(`<input type="checkbox" name="${nom}" value="${droit}"[^>]*disabled`).test(page);
 		const cochee = (page: string, nom: string, droit: string) => new RegExp(`<input type="checkbox" name="${nom}" value="${droit}"[^>]*checked`).test(page);
@@ -98,8 +98,8 @@ describe('page d’un rôle', () => {
 				expect(grisee(page, nom, 'ATTRIBUER_RESPONSABILITE')).toBe(false);
 			}
 			expect(page.match(new RegExp(PHRASE, 'g'))).toHaveLength(2);
-			expect(page).toMatch(/<p id="admin-centre"[^>]*>Réservé à un rôle tenu pour tout le centre/);
-			expect(page).toMatch(/<p id="detail-centre"[^>]*>Réservé à un rôle tenu pour tout le centre/);
+			expect(page).toMatch(/<p id="admin-centre"[^>]*>Gérer les accès, les comités et les rôles est réservé/);
+			expect(page).toMatch(/<p id="detail-centre"[^>]*>Gérer les accès, les comités et les rôles est réservé/);
 			// La phrase est reliée à chaque case qu'elle concerne, et à elles seules.
 			for (const d of RESERVES) {
 				expect(page).toMatch(new RegExp(`name="admin" value="${d}"[^>]*aria-describedby="admin-centre"`));
@@ -203,6 +203,36 @@ describe('page d’un rôle', () => {
 		expect(page).toMatch(/<details class="repli[^"]*"><summary[^>]*>Archiver le rôle<\/summary>/);
 		expect(page).not.toContain('class="plus');
 		expect(page).not.toMatch(/>Plus</);
+	});
+
+	it('après un refus : l’identité est ouverte et l’interrupteur garde la saisie', () => {
+		const page = html({}, { cible: 'role', erreurs: { nom: 'Ce nom est déjà utilisé.' }, valeurs: { nom: 'Doublon', nature: 'fonction' } });
+		const identite = page.slice(page.indexOf('>Identité<'));
+		expect(identite).toMatch(/<div[^>]*class="contenu[^"]*"[^>]*>/);
+		expect(identite.match(/<div[^>]*class="contenu[^"]*"[^>]*>/)![0]).not.toContain('hidden');
+		expect(page).toMatch(/name="toujours" value="1"[^>]*checked/);
+		// Sans refus, l'identité reste repliée au téléphone.
+		const repliee = html({}).slice(html({}).indexOf('>Identité<'));
+		expect(repliee.match(/<div[^>]*class="contenu[^"]*"[^>]*>/)![0]).toContain('hidden');
+	});
+
+	it('après un refus de l’archivage, la confirmation est dépliée', () => {
+		const page = html({}, { cible: 'archiver', message: 'Cochez « Je confirme » pour continuer.' });
+		expect(page).toMatch(/<details class="repli archiver[^"]*" open/);
+		expect(page).toContain('Cochez « Je confirme » pour continuer.');
+	});
+
+	it('rôle système ou archivé : l’identité se lit, sans geste', () => {
+		const raison = 'Ce rôle est archivé. Il ne se modifie plus.';
+		const page = html({ raison, role: role({ archiveeLe: '2026-01-01', attributeur: { type: 'chef_centre' } }) });
+		const identite = page.slice(page.indexOf('>Identité<'));
+		expect(page).toContain('>Identité<');
+		expect(identite).toMatch(/Tenu pour[\s\S]*?Tout le centre/);
+		expect(identite).toMatch(/Qui nomme[\s\S]*?Le chef de centre/);
+		expect(identite).toMatch(/Icône[\s\S]*?Camion/);
+		expect(page).not.toContain('Changer d’icône');
+		expect(page).not.toContain('name="toujours"');
+		expect(page).not.toContain('Archiver le rôle');
 	});
 
 	it('l’ordre de la fiche : titulaires, identité, ce qu’il peut faire, demandes, puis le détail et l’archivage en bas', () => {

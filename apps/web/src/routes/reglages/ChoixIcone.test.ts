@@ -10,6 +10,8 @@ describe('choix de l’icône', () => {
 		const page = html({ valeur: 'camion' });
 		expect(page).toMatch(/<legend[^>]*>Icône<\/legend>/);
 		expect(page).toMatch(/class="choisie[^"]*"[\s\S]*?<svg[\s\S]*?>Camion</);
+		// Le nom de l'icône choisie est annoncé quand il change.
+		expect(page).toMatch(/<span aria-live="polite"[^>]*>Camion<\/span>/);
 		// Sans JavaScript, la grille reste dans un repli simple, fermé.
 		expect(page).toMatch(/<details class="repli[^"]*"><summary[^>]*>Changer d’icône<\/summary>/);
 		expect(page.match(/name="icone"/g)).toHaveLength(34);

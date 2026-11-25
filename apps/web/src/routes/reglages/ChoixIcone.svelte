@@ -11,12 +11,16 @@
 	const id = $props.id();
 
 	let choisie = $state(untrack(() => valeur ?? ''));
+	// Une autre valeur venue de la page (un autre rôle, même écran) remplace le choix.
+	$effect.pre(() => {
+		choisie = valeur ?? '';
+	});
 	let ouverte = $state(untrack(() => Boolean(erreur)));
 	let monte = $state(false);
 	let racine: HTMLFieldSetElement;
 	onMount(() => (monte = true));
 
-	// Au doigt ou à la souris, un choix referme la grille. Au clavier, les flèches parcourent les icônes et Entrée ou Espace choisit.
+	// Au doigt ou à la souris, un choix referme la grille. Au clavier, les flèches parcourent les icônes, Entrée ou Espace choisit et referme.
 	async function refermer() {
 		ouverte = false;
 		await tick();
@@ -25,10 +29,16 @@
 	const auClic = (e: MouseEvent) => {
 		if (e.detail > 0) refermer();
 	};
+	// Entrée enverrait le formulaire : elle choisit seulement.
 	const auClavier = (e: KeyboardEvent & { currentTarget: HTMLInputElement }) => {
-		if (e.key !== 'Enter' && e.key !== ' ') return;
-		// Entrée enverrait le formulaire : elle choisit seulement.
-		if (e.key === 'Enter') e.preventDefault();
+		if (e.key !== 'Enter') return;
+		e.preventDefault();
+		choisie = e.currentTarget.value;
+		refermer();
+	};
+	// Espace coche la case à l'appui : on referme au relâché, pour ne pas lui voler le focus avant.
+	const auRelache = (e: KeyboardEvent & { currentTarget: HTMLInputElement }) => {
+		if (e.key !== ' ') return;
 		choisie = e.currentTarget.value;
 		refermer();
 	};
@@ -38,7 +48,7 @@
 	<div class="tuiles">
 		{#each Object.keys(ICONES_ROLES) as Icone[] as icone (icone)}
 			<label class="tuile">
-				<input type="radio" name="icone" value={icone} bind:group={choisie} onclick={auClic} onkeydown={auClavier} />
+				<input type="radio" name="icone" value={icone} bind:group={choisie} onclick={auClic} onkeydown={auClavier} onkeyup={auRelache} />
 				<IconeRole {icone} taille={40} />
 				<span class="cache">{NOMS_ICONES[icone]}</span>
 			</label>
@@ -52,7 +62,7 @@
 	<div class="ligne">
 		<div class="choisie">
 			{#if choisie}<IconeRole icone={choisie as Icone} taille={40} />{/if}
-			<span>{choisie ? NOMS_ICONES[choisie as Icone] : sansChoix}</span>
+			<span aria-live="polite">{choisie ? NOMS_ICONES[choisie as Icone] : sansChoix}</span>
 		</div>
 		{#if monte}<div class="changer"><Bouton variante="secondaire" etendu={ouverte} controle="{id}-grille" onclick={() => (ouverte = !ouverte)}>Changer d’icône</Bouton></div>{/if}
 	</div>
