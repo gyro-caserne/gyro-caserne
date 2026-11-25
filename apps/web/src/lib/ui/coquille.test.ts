@@ -142,6 +142,12 @@ describe('Coquille', () => {
 		expect(html('/')).toMatch(/<span class="appli[^"]*">Gyro Caserne<\/span>/);
 	});
 
+	it('au téléphone, sous le contenu : la hauteur de la barre du bas, la zone de sécurité de l’iPhone et un espacement', () => {
+		expect(regle('nav a')).toMatch(/min-height: var\(--hauteur-navigation\)/);
+		expect(regle('nav')).toMatch(/padding-bottom: env\(safe-area-inset-bottom\)/);
+		expect(regle('main')).toMatch(/padding: var\(--espace-16\) var\(--espace-16\) calc\(var\(--hauteur-navigation\) \+ env\(safe-area-inset-bottom\) \+ var\(--espace-24\)\)/);
+	});
+
 	it('à l’ordinateur, l’en-tête et sa bande prennent toute la largeur, le menu dessous à gauche', () => {
 		expect(source).toMatch(/'entete entete'\s*'marquage marquage'\s*'menu contenu'/);
 		expect(source).toMatch(/background: var\(--menu-fond\)/);
