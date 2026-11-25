@@ -43,6 +43,15 @@ describe('page d’un profil', () => {
 		expect(page).toContain('Aucun accès');
 	});
 
+	it('profil extérieur : seulement les réservations, Rien ou Réserver, et pourquoi', () => {
+		const page = html({ data: { ...retraite, profil: { ...retraite.profil, droits: ['RESERVER'] } }, form: null });
+		expect(page).toMatch(/name="niveau-reservations" value="1" checked/);
+		expect(page).not.toMatch(/name="niveau-reservations" value="2"/);
+		for (const d of ['planning', 'engins', 'stock', 'messagerie']) expect(page).not.toContain(`name="niveau-${d}"`);
+		expect(page).toContain('Un profil extérieur ne donne que le droit de réserver.');
+		expect(page).not.toContain('Les droits de base');
+	});
+
 	it('profil agent : pas de murs ouverts ; renommer sous « Plus » ; le profil de départ ne se supprime pas', () => {
 		const page = html({ data, form: null });
 		expect(page).not.toContain('Murs ouverts');

@@ -48,6 +48,17 @@ describe('changer l’équipe d’une semaine', () => {
 		expect(a).toMatchObject({ quoi: 'semaine', url: '/planning' });
 	});
 
+	it('deux semaines changées d’un coup : un seul avis par personne, qui les dit toutes', async () => {
+		const { base, chef, apres, deAvant } = await jeu();
+		const suivante = '2027-07-16';
+		await changerSemaines(base, chef, 2027, { [S]: apres, [suivante]: apres }, maintenant, reglage);
+		const lus = await base.select().from(avisEte);
+		expect(new Set(lus.map((l) => l.personneId)).size).toBe(lus.length);
+		const siens = await avisDe(base, deAvant);
+		expect(siens).toHaveLength(1);
+		expect(siens[0]).toMatch(/^La semaine du vendredi 9 juillet passe de l’Équipe \d à l’Équipe \d\./);
+	});
+
 	it('une semaine remise à la même équipe ne prévient personne', async () => {
 		const { base, chef, avant, deAvant } = await jeu();
 		await changerSemaines(base, chef, 2027, { [S]: avant }, maintenant, reglage);
@@ -77,11 +88,10 @@ describe('changer l’équipe d’une semaine', () => {
 			{ texte: 'Nuit du mercredi 14 juillet : Avant Test cherche un remplaçant', conclu: false, personnes: [deAvant] }
 		]);
 		await changerSemaines(base, chef, 2027, { [S]: apres }, maintenant, reglage);
-		const touche = expect.stringMatching(/^Votre remplacement \(nuit du lundi 12 juillet\) est touché : la semaine du vendredi 9 juillet passe de l’Équipe \d à l’Équipe \d\. Voyez-le avec votre chef de garde\.$/);
+		const touche = expect.stringMatching(/^Votre remplacement \(nuit du lundi 12 juillet\) est touché\. La semaine du vendredi 9 juillet passe de l’Équipe \d à l’Équipe \d\. Voyez-le avec votre chef de garde\.$/);
 		expect(await avisDe(base, dAutre)).toEqual([touche]);
-		// Une personne d'une des équipes qui a un remplacement dans la semaine : un avis par remplacement, pas en plus celui de l'équipe.
-		expect(await avisDe(base, deAvant)).toHaveLength(2);
-		expect((await avisDe(base, deAvant)).every((t) => t.startsWith('Votre remplacement'))).toBe(true);
+		// Une personne d'une des équipes qui a deux remplacements dans la semaine : un seul avis, qui les dit, pas en plus celui de l'équipe.
+		expect(await avisDe(base, deAvant)).toEqual([expect.stringMatching(/^Vos remplacements \(nuit du lundi 12 juillet, nuit du mercredi 14 juillet\) sont touchés\. La semaine[^]*Voyez-les avec votre chef de garde\.$/)]);
 		expect(await avisDe(base, deApres)).toHaveLength(1);
 	});
 

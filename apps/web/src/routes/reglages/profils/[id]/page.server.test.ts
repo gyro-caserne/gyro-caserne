@@ -42,10 +42,12 @@ describe('page d’un profil', () => {
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
 		const params = { id: String(reserve!.id) };
-		const r = await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '1'], ['niveau-planning', '1'], ['mur-centre', '0'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], params);
+		const r = await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '0'], ['mur-centre', '0'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], params);
 		expect(r).toMatchObject({ cible: 'profil', succes: 'Le profil « Réserve citoyenne » est enregistré.' });
 		expect((await charger(load, locaux(base, chef), params)).profil.mursOuverts).toEqual({ vie: 'lecture', [`comite:${amicale!.id}`]: 'ecriture' });
-		expect(await droitsProfil(reserve!.id)).toContain('VALIDER_REMPLACEMENT');
+		expect(await droitsProfil(reserve!.id)).not.toContain('RESERVER');
+		// Un droit d'agent sur un profil extérieur : refusé, la raison dite.
+		expect(await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-planning', '1']], params)).toMatchObject({ status: 400, data: { message: expect.stringContaining('Un profil extérieur ne donne que le droit de réserver.') } });
 		const actions_ = (await base.select().from(journal)).map((l) => l.action);
 		expect(actions_).toContain('modifier_murs_ouverts');
 		expect(actions_).toContain('modifier_droits_profil');
@@ -57,7 +59,7 @@ describe('page d’un profil', () => {
 		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
 		const [amicale] = await base.select().from(comite).where(eq(comite.nom, 'Amicale'));
 		const avant = base.requetes;
-		const r = await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '1'], ['niveau-planning', '1'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], { id: String(reserve!.id) });
+		const r = await envoyer(actions, 'enregistrer', locaux(base, chef), [['niveau-reservations', '0'], ['mur-vie', '1'], [`mur-comite:${amicale!.id}`, '2']], { id: String(reserve!.id) });
 		expect(r).toMatchObject({ succes: expect.any(String) });
 		expect(base.requetes - avant).toBeLessThanOrEqual(5);
 	});

@@ -5,7 +5,7 @@ import type { Acteur } from '../src/droits.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
 import { lireMur, publier } from '../src/actions/publications.ts';
-import { ajouterMembres, annuaire, creerGroupe, envoyer, exigerMessagerie, lireConversation, membresPourGroupe, nonLusTotal, pourVous } from '../src/messagerie.ts';
+import { ajouterMembres, annuaire, peutEcrireAPersonne, creerGroupe, envoyer, exigerMessagerie, lireConversation, membresPourGroupe, nonLusTotal, pourVous } from '../src/messagerie.ts';
 import { attribution, comite, personne, profil, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
@@ -73,6 +73,20 @@ describe('messagerie d’un profil ouvert', () => {
 		const deManon = ids(await annuaire(base, acteur(manon), aujourdhui));
 		expect(deManon).not.toContain(rene);
 		expect(deManon).toContain(paul);
+	});
+
+	it('peutEcrireAPersonne : la même réponse que l’annuaire, pour chaque paire, en une requête', async () => {
+		const { base } = await jeu();
+		const tous = (await base.select({ id: personne.id }).from(personne)).map((p) => p.id);
+		for (const moi of tous) {
+			const lus = await annuaire(base, acteur(moi), aujourdhui).then((a) => ids(a)).catch(() => [] as number[]);
+			for (const autre of tous) {
+				const avant = base.requetes;
+				expect(await peutEcrireAPersonne(base, acteur(moi), autre, aujourdhui), `${moi} vers ${autre}`).toBe(lus.includes(autre));
+				expect(base.requetes - avant).toBe(moi === autre ? 0 : 1);
+			}
+		}
+		expect(await peutEcrireAPersonne(base, { type: 'super', email: 'a@b.fr' }, tous[0]!, aujourdhui)).toBe(false);
 	});
 
 	it('écrire à deux, dans les deux sens ; refusé hors de ses liens', async () => {

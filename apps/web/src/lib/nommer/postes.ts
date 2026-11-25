@@ -44,8 +44,8 @@ export function resume(compte: string, postes: { nommer?: { aPourvoir: boolean }
 
 // Les agents proposés pour nommer : ceux de l'équipe du poste d'abord, puis les autres, chacun dans l'ordre des noms.
 export function agentsPour(agents: Agent[], poste: Pick<Poste, 'perimetre'>, sauf: number[] = []): Agent[] {
-	// Une personne extérieure ne tient pas de rôle de comité (règle du socle) : elle n'y est pas proposée.
-	const libres = agents.filter((a) => !sauf.includes(a.id) && !(a.exterieur && poste.perimetre.type === 'comite'));
+	// Une personne extérieure ne tient aucun rôle (règle du socle) : elle n'est jamais proposée.
+	const libres = agents.filter((a) => !sauf.includes(a.id) && !a.exterieur);
 	if (poste.perimetre.type !== 'equipe') return libres;
 	return [...libres.filter((a) => a.equipeId === poste.perimetre.id), ...libres.filter((a) => a.equipeId !== poste.perimetre.id)];
 }

@@ -12,12 +12,13 @@ import { aNePasManquer } from '../src/a-ne-pas-manquer.ts';
 import { accueilDe } from '../src/casquettes.ts';
 import { changerStatut } from '../src/actions/personnes.ts';
 import { remplacementsDuMoment } from '../src/remplacements/moment.ts';
+import { avis as avisRemplacements } from '../src/remplacements/avis.ts';
 import { chargerAptitudesFictives } from '../src/remplacements/fictif.ts';
 import { repondreEvenement } from '../src/actions/interactions.ts';
 import { bandesDe, lireContexte, disponibles, mesTranches } from '../src/remplacements/contexte.ts';
 import { demandeVue, nombreRemplacementsAValider, pourDemander, remplacementsDe } from '../src/remplacements/lectures.ts';
 import { accepterDemande, annulerDemande, demanderRemplacement, desister, echangerPlace, manoeuvresEchangeables, ouvrirATous, proposerEchange, proposerEchangeManoeuvre, refuserDemande, refuserValidation, valider } from '../src/remplacements/demandes.ts';
-import { affectationEquipe, aptitude, aptitudeAgent, attribution, avisRemplacement, demandeRemplacement, destinataireRemplacement, envoiPush, abonnementPush, equipe, manoeuvre, personne, profil, publication, reponseEvenement, responsabilite } from '../src/schema.ts';
+import { affectationEquipe, aptitude, aptitudeAgent, attribution, avisRemplacement, demandeRemplacement, destinataireRemplacement, envoiPush, abonnementPush, equipe, journal, manoeuvre, personne, profil, publication, reponseEvenement, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
 const reglage = centreExemple.astreinte;
@@ -80,6 +81,31 @@ describe('demande ouverte', () => {
 		expect(await avisDe(n.david)).toEqual([]);
 		// Déjà demandée : plus proposée.
 		await expect(demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: null }, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Période déjà dans une demande'));
+	});
+
+	it('une notification par demande : son tag porte l’identifiant de la demande', async () => {
+		const { base, alice, n } = await jeu();
+		await abonner(base, { type: 'personne', id: n.bruno }, { endpoint: 'https://fcm.googleapis.com/fcm/send/b', p256dh: 'BCle', auth: 'secret', appareil: '' }, maintenant);
+		const un = await demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: null }, maintenant, reglage);
+		const deux = await demanderRemplacement(base, alice, { periodes: [nuitMardi10], cibleId: null }, maintenant, reglage);
+		const tags = (await base.select().from(envoiPush)).map((e) => (JSON.parse(e.donnees) as { tag: string }).tag);
+		expect(tags).toEqual([`remplacement:${un}:recue`, `remplacement:${deux}:recue`]);
+	});
+
+	it('de 22 h à 7 h : la cloche seule, sans téléphone ; dès 7 h, le téléphone', async () => {
+		const { base, alice, n, avisDe } = await jeu();
+		await abonner(base, { type: 'personne', id: n.bruno }, { endpoint: 'https://fcm.googleapis.com/fcm/send/b', p256dh: 'BCle', auth: 'secret', appareil: '' }, maintenant);
+		await demanderRemplacement(base, alice, { periodes: [nuitLundi9], cibleId: null }, '2026-11-01T22:00', reglage);
+		await demanderRemplacement(base, alice, { periodes: [nuitMardi10], cibleId: null }, '2026-11-02T06:59', reglage);
+		expect(await avisDe(n.bruno)).toEqual(['recue', 'recue']);
+		expect(await base.select().from(envoiPush)).toEqual([]);
+		// Une urgence sonne la nuit ; dès 7 h, le reste aussi.
+		const lot = (l: ReturnType<typeof avisRemplacements>) => base.batch(l as unknown as [never, ...never[]]);
+		await lot(avisRemplacements(base, [n.bruno], 1, 'informe', 'Urgence', '/remplacements/1', '2026-11-02T23:30', undefined, 'urgences'));
+		// Pressant (une demande courte, une demande expirée) : il sonne aussi la nuit.
+		await lot(avisRemplacements(base, [n.bruno], 1, 'expiree', 'Pressant', '/remplacements/1', '2026-11-02T23:40', undefined, 'remplacements', true));
+		await lot(avisRemplacements(base, [n.bruno], 1, 'informe', 'Matin', '/remplacements/1', '2026-11-03T07:00'));
+		expect((await base.select().from(envoiPush)).map((e) => (JSON.parse(e.donnees) as { texte: string }).texte)).toEqual(['Urgence', 'Pressant', 'Matin']);
 	});
 
 	it('refuse une période qui n’est pas de son astreinte, ou déjà commencée', async () => {
@@ -149,6 +175,37 @@ describe('demande ouverte', () => {
 		expect((await enTeteDe(base, elodie, '2026-11-01', maintenant)).remplacementsAValider).toBe(0);
 		await valider(base, chef, id, maintenant, reglage);
 		expect((await enTeteDe(base, chef, '2026-11-01', maintenant)).remplacementsAValider).toBe(0);
+	});
+
+	it('chef de centre et adjoint : le second qui agit apprend « Déjà traité par… », sans rien écrire', async () => {
+		const { base, elodie, bruno, chef, apt, n, nommer } = await jeu();
+		const [agent] = await base.select().from(profil).where(eq(profil.nom, 'Agent'));
+		const [adj] = await base.insert(personne).values({ email: 'adj@exemple.fr', prenom: 'Paul', nom: 'Adjoint', profilId: agent!.id }).returning();
+		await nommer(adj!.id, 'chef_centre_adjoint', null);
+		const adjoint: Acteur = { type: 'personne', id: adj!.id };
+		await base.insert(aptitudeAgent).values({ personneId: n.elodie, aptitudeId: await apt('CA2'), obtenueLe: '2020-01-01' });
+		const demander = async () => {
+			const id = await demanderRemplacement(base, elodie, { periodes: [nuitLundi9], cibleId: null }, maintenant, reglage);
+			await accepterDemande(base, bruno, id, maintenant, reglage);
+			return id;
+		};
+		const journalDe = async (id: number) => (await base.select().from(journal).where(eq(journal.cibleId, id))).filter((l) => l.cibleType === 'demande_remplacement').map((l) => l.action);
+		// Les deux sont prévenus, pareil.
+		const id = await demander();
+		expect((await base.select().from(avisRemplacement).where(eq(avisRemplacement.demandeId, id))).filter((a) => a.quoi === 'a_valider').map((a) => a.personneId).sort()).toEqual([n.chef, adj!.id].sort());
+		await valider(base, chef, id, maintenant, reglage);
+		const deja = new DonneeInvalide('Déjà traité par Chef Test');
+		await expect(valider(base, adjoint, id, maintenant, reglage)).rejects.toThrow(deja);
+		await expect(refuserValidation(base, adjoint, id, null, maintenant, reglage)).rejects.toThrow(deja);
+		expect(await journalDe(id)).toEqual(['demander_remplacement', 'accepter_remplacement', 'valider_remplacement']);
+		// En même temps, à la même minute : un seul l'emporte, l'autre l'apprend, une seule écriture.
+		await annulerDemande(base, chef, id, '2026-11-01T10:05', reglage);
+		const autre = await demanderRemplacement(base, elodie, { periodes: [nuitMardi10], cibleId: null }, maintenant, reglage);
+		await accepterDemande(base, bruno, autre, maintenant, reglage);
+		const resultats = await Promise.allSettled([valider(base, chef, autre, maintenant, reglage), refuserValidation(base, adjoint, autre, null, maintenant, reglage)]);
+		expect(resultats.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+		expect((resultats.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason.message).toMatch(/^Déjà traité par (Chef Test|Paul Adjoint)$/);
+		expect((await journalDe(autre)).filter((a) => a === 'valider_remplacement' || a === 'refuser_validation')).toHaveLength(1);
 	});
 
 	it('désistement : le titulaire redevient responsable, prévenu, la demande repart', async () => {

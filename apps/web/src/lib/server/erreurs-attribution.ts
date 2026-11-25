@@ -6,7 +6,7 @@ const CHAMP_DE_L_ERREUR: Record<string, string> = {
 	'Fin avant le début': 'fin',
 	'Choisissez une date après le début du mandat': 'debut',
 	'Ce mandat finit avant cette date': 'debut',
-	'Une personne extérieure ne tient pas de rôle de comité': 'personneId',
+	'Une personne extérieure ne tient aucun rôle. Seuls les agents du centre sont nommés.': 'personneId',
 	'Une attribution ne peut qu’être raccourcie': 'fin',
 	'Personne inconnue': 'personneId',
 	'Cette personne est partie': 'personneId',

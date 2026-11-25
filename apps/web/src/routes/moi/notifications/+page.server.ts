@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { couper, DonneeInvalide, mesNotifications, RefusDroit } from '@gyro-caserne/socle';
+import { couper, DonneeInvalide, mesNotifications, RefusDroit, SUJETS } from '@gyro-caserne/socle';
+import { NOMS_SUJETS } from '#lib/notifications/sujets.ts';
 import { aujourdhuiParis, maintenantParis } from '#lib/aujourdhui.ts';
 import { exigerActeur } from '#lib/server/formulaire-mur.ts';
 import type { Actions, PageServerLoad } from './$types';
@@ -36,6 +37,14 @@ export const actions: Actions = {
 	courriel: async ({ locals, request }) => {
 		const recevoir = (await request.formData()).get('oui') === '1';
 		return changer(locals, 'courriel', !recevoir, recevoir ? 'Les nouvelles demandes arrivent aussi par e-mail.' : 'Plus d’e-mail pour les nouvelles demandes.');
+	},
+	// Un sujet : `oui` = au téléphone ; sans `oui`, dans la cloche seulement.
+	sujet: async ({ locals, request }) => {
+		const f = await request.formData();
+		const sujet = SUJETS.find((x) => x === f.get('sujet'));
+		if (!sujet) return fail(400, { message: 'Ce réglage n’existe plus.' });
+		const telephone = f.get('oui') === '1';
+		return changer(locals, sujet, !telephone, `${NOMS_SUJETS[sujet].libelle}, ${telephone ? 'de nouveau au téléphone' : 'dans la cloche seulement'}.`);
 	},
 	reactiver: async ({ locals, request }) => {
 		const lieu = (await request.formData()).get('lieu');

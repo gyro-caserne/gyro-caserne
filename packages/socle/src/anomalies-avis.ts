@@ -75,7 +75,7 @@ const parmi = (ids: number[]) => sql`(select value from json_each(${JSON.stringi
 
 export type AvisAnomalie = { titre: string; texte: string; url: string };
 
-// Écritures à placer dans un batch : la ligne de la cloche et l'envoi au téléphone (lieu « engins » : seul « tout » le coupe).
+// Écritures à placer dans un batch : la ligne de la cloche et l'envoi au téléphone (sujet « engins »).
 // `si` : une condition vérifiée à l'écriture (le geste a bien eu lieu).
 // `ids` : une liste, ou une sous-requête d'identifiants ; `lieu` : « urgences » pour celles du chef et de l'adjoint.
 export function avisAnomalies(base: Base, ids: number[] | SQLWrapper, a: AvisAnomalie, maintenant: string, si?: SQL, lieu: 'engins' | 'urgences' = 'engins') {

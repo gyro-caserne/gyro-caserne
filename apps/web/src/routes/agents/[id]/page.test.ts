@@ -362,6 +362,8 @@ describe('page fiche agent', () => {
 			expect(page).toMatch(/<select[^>]*name="responsabiliteId"/);
 			expect(page).toMatch(/<input[^>]*type="date"[^>]*name="debut"|<input[^>]*name="debut"[^>]*type="date"/);
 			expect(page).toMatch(/name="fin"/);
+			// Une personne extérieure ne tient aucun rôle : rien à nommer sur sa fiche.
+			expect(html({ data: { ...data, peutAttribuer, fiche: { ...data.fiche, profil: { id: 2, nom: 'Retraité', typePersonne: 'exterieur' } } }, form: null })).not.toContain('action="?/attribuer"');
 		});
 
 		it('montre l\'erreur de doublon sous la date de début et un message pour la bonne cible', () => {

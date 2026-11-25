@@ -447,3 +447,14 @@ describe('accueil', () => {
 		});
 	});
 });
+
+describe('accueil d’une personne d’un profil extérieur', () => {
+	it('sans casquette ni astreinte : « À ne pas manquer » seul, en une colonne', () => {
+		const html = page({ casquettes: [], choisie: '', contenu: { type: 'aucune' }, astreinte: null, exterieur: true });
+		expect(html).toContain('Bonjour Alice');
+		expect(html).not.toContain('Mon astreinte');
+		expect(html).not.toContain('astreinte');
+		expect(html).toMatch(/class="colonnes[^"]*seule/);
+		expect(html).not.toContain('À décider');
+	});
+});

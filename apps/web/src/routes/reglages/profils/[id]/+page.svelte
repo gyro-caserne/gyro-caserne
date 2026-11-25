@@ -69,10 +69,14 @@
 
 {@render retour('profil')}
 
-<p class="intro">Ce que ce profil donne à chaque personne qui l’a, domaine par domaine. Les droits de base (voir le planning, les engins…) ne se règlent pas ici.</p>
+{#if exterieur}
+	<p class="intro">Un profil extérieur ne donne que le droit de réserver. Le planning, les engins et les remplacements sont réservés aux agents du centre.</p>
+{:else}
+	<p class="intro">Ce que ce profil donne à chaque personne qui l’a, domaine par domaine. Les droits de base (voir le planning, les engins…) ne se règlent pas ici.</p>
+{/if}
 
 <form method="POST" action="?/enregistrer" class="formulaire">
-	<Domaines droits={droits} bind:choix profil />
+	<Domaines droits={droits} bind:choix profil {exterieur} />
 	{#if exterieur}
 		<Groupe titre="Murs ouverts" resume={resumeMurs} bind:ouvert={mursOuverts}>
 			<p class="aide">En lecture, on voit les publications et on en est prévenu. En écriture, on peut aussi commenter, voter, répondre et publier (sauf sur Le centre). Un comité ouvert en écriture donne la messagerie avec ses membres.</p>

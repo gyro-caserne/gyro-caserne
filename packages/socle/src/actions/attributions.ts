@@ -116,8 +116,8 @@ async function preparerNomination(base: Base, acteur: Acteur, a: Nomination, auj
 	const [fiche] = await base.select({ id: personne.id, statut: personne.statut, typePersonne: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, a.personneId));
 	if (!fiche) throw new DonneeInvalide('Personne inconnue');
 	if (fiche.statut === 'parti') throw new DonneeInvalide('Cette personne est partie');
-	// Une personne d'un profil extérieur ne tient pas de rôle de comité : un agent ou le chef anime le comité.
-	if (fiche.typePersonne === 'exterieur' && a.perimetre.type === 'comite') throw new DonneeInvalide('Une personne extérieure ne tient pas de rôle de comité');
+	// Une personne d'un profil extérieur (retraité, réserve citoyenne) ne tient aucun rôle : ni du centre, ni d'équipe, ni de comité.
+	if (fiche.typePersonne === 'exterieur') throw new DonneeInvalide('Une personne extérieure ne tient aucun rôle. Seuls les agents du centre sont nommés.');
 	let nomPerimetre = 'Le centre';
 	if (a.perimetre.type === 'equipe') {
 		const [uneEquipe] = await base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.id, a.perimetre.id));
@@ -332,12 +332,14 @@ export async function peutAttribuerQuelqueChose(base: Base, acteur: Acteur, aujo
 	return responsabilites.some((r) => perimetres[r.typePerimetre].some((p) => peutAttribuer(contexte, r, perimetreDeLigne(p.type, p.id))));
 }
 
-// L'agent nommé : une ligne dans sa cloche et un envoi au téléphone (lieu « nominations » : seul « tout » le coupe).
+// L'agent nommé : une ligne dans sa cloche et un envoi au téléphone (sujet « vie »).
 // Écritures à placer dans le batch de l'attribution ; le nom de l'auteur est lu à l'écriture.
 function avisNomination(base: Base, personneId: number, role: string, perimetre: string, acteur: Acteur, maintenant: string) {
 	const par = acteur.type === 'super' ? sql<string>`'Super administrateur'` : sql<string>`coalesce((select p.prenom || ' ' || p.nom from personne p where p.id = ${acteur.id}), 'un ancien agent')`;
 	const titre = `Vous êtes nommé ${role}`;
 	const url = `/agents/${personneId}`;
+	// Le même texte dans la cloche et au téléphone.
+	const texte = sql<string>`${perimetre} || ', par ' || ${par}`;
 	return [
 		base.insert(avisNominationTable).select(
 			base
@@ -345,7 +347,7 @@ function avisNomination(base: Base, personneId: number, role: string, perimetre:
 					id: sql<number | null>`null`.as('id'),
 					personneId: personne.id,
 					titre: sql<string>`${titre}`.as('titre'),
-					texte: sql<string>`${perimetre} || ', par ' || ${par}`.as('texte'),
+					texte: sql<string>`${texte}`.as('texte'),
 					url: sql<string>`${url}`.as('url'),
 					creeLe: sql<string>`${maintenant}`.as('cree_le'),
 					lueLe: sql<string | null>`null`.as('lue_le')
@@ -353,6 +355,6 @@ function avisNomination(base: Base, personneId: number, role: string, perimetre:
 				.from(personne)
 				.where(eq(personne.id, personneId))
 		),
-		mettreEnFile(base, [personneId], 'nominations', { titre, texte: perimetre, url, tag: `nomination:${maintenant}` }, maintenant, undefined, 'nomination')
+		mettreEnFile(base, [personneId], 'vie', { titre, texte: perimetre, url, tag: `nomination:${maintenant}` }, maintenant, undefined, 'nomination', { texte })
 	] as const;
 }

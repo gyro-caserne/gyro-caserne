@@ -432,6 +432,7 @@ describe('budget de requêtes', () => {
 		expect(await requetes(() => repondreEvenement(base, acteur(autre), equipes, 'present', maintenant))).toBe(3);
 		expect(await requetes(() => commenter(base, acteur(autre), sondage, 'Encore', maintenant))).toBe(3);
 		expect(await requetes(() => lireCommentaires(base, acteur(autre), sondage, aujourdhui))).toBe(3);
-		expect(await requetes(() => supprimerCommentaire(base, acteur(autre), c, maintenant))).toBe(3);
+		// Les murs, déjà lus par la lecture d'avant (même base, aucune écriture entre les deux) : une requête de moins.
+		expect(await requetes(() => supprimerCommentaire(base, acteur(autre), c, maintenant))).toBe(2);
 	});
 });

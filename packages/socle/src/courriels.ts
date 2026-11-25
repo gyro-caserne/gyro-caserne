@@ -4,7 +4,7 @@ import { exigerDate } from './dates.ts';
 import { STATUTS_AVEC_ACCES } from './listes.ts';
 import { periodeCourte } from './reservations-calcul.ts';
 import { gestionnairesDe } from './reservations.ts';
-import { avisAnomalie, avisDemandeReferent, coupure, personne, reservation, ressource } from './schema.ts';
+import { abonnementPush, avisAnomalie, avisDemandeReferent, coupure, personne, reservation, ressource } from './schema.ts';
 
 // L'e-mail d'une nouvelle demande adressée à un référent : à chacun de ceux qui l'ont reçue en notification (la ligne de leur cloche
 // en est la trace : mêmes destinataires, même titre, mêmes deux lignes), sauf s'ils ont coupé « courriel ». Une requête, lue après la réponse.
@@ -57,6 +57,14 @@ export async function courrielsDeDemande(base: Base, d: DemandeACourriel, aujour
 		.select({ a: personne.email, titre: t.titre, texte: t.texte, url: t.url })
 		.from(t)
 		.innerJoin(personne, eq(personne.id, t.personneId))
-		.where(and(quelles, joignable(sql`${t.personneId}`), ne(personne.email, '')))
+		// Une anomalie : seulement à qui ne la reçoit pas au téléphone (aucun appareil abonné, ou « tout » ou « engins » coupé), sinon en double.
+		.where(
+			and(
+				quelles,
+				joignable(sql`${t.personneId}`),
+				ne(personne.email, ''),
+				d.genre === 'demande' ? undefined : sql`(not exists (select 1 from ${abonnementPush} where ${abonnementPush.personneId} = ${t.personneId}) or exists (select 1 from ${coupure} where ${coupure.personneId} = ${t.personneId} and ${coupure.lieu} in ('tout', 'engins')))`
+			)
+		)
 		.orderBy(t.id);
 }

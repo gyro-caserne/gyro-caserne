@@ -4,7 +4,7 @@ import type { Base } from '../base.ts';
 import { exigerDateHeure, existeAParis } from '../dates.ts';
 import { aLeDroit, type Acteur } from '../droits.ts';
 import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
-import { ligneJournal } from '../journal.ts';
+import { ligneJournal, ligneJournalSi } from '../journal.ts';
 import type { EtatDemande } from '../listes.ts';
 import type { Periode, Reglage } from '../planning/calendrier.ts';
 import type { Convocation } from '../murs.ts';
@@ -119,7 +119,7 @@ export async function demanderRemplacementCourt(base: Base, acteur: Acteur, d: {
 			.returning({ id: demandeRemplacement.id }),
 		ecrireDestinataires(base, derniere, destinataires),
 		journalDemande(base, moi, 'demander_remplacement_court', derniere, { duree: d.duree, destinataires: destinataires.length }, maintenant),
-		...avis(base, destinataires, derniere, 'recue', `${nomDe(ctx, moi)}, ${texteDemande([plage])}`, URL_POUR_MOI, maintenant)
+		...avis(base, destinataires, derniere, 'recue', `${nomDe(ctx, moi)}, ${texteDemande([plage])}`, URL_POUR_MOI, maintenant, undefined, 'remplacements', true)
 	]);
 	return lignes[0]!.id;
 }
@@ -146,7 +146,7 @@ export async function proposerEchange(base: Base, acteur: Acteur, d: { periodes:
 	if (!disponible(ctx, d.cibleId, periodes) || !disponible(ctx, moi, periodesCible)) throw new DonneeInvalide('Collègue indisponible sur ces périodes');
 	const mot = motDe(d.mot);
 	const debut = [periodes[0]!.debut, periodesCible[0]!.debut].sort()[0]!;
-	const texte = `${nomDe(ctx, moi)} propose d’échanger : ${texteDemande(periodes)} contre ${texteDemande(periodesCible)}`;
+	const texte = `${nomDe(ctx, moi)} propose un échange, ${texteDemande(periodes)} contre ${texteDemande(periodesCible)}`;
 	const [lignes] = await base.batch([
 		base
 			.insert(demandeRemplacement)
@@ -303,10 +303,23 @@ async function lireDemande(base: Base, id: number, maintenant: string, reglage: 
 }
 
 const commencee = (d: LigneDemande, maintenant: string) => d.debut <= maintenant.slice(0, 16);
-const dejaTraitee = () => new DonneeInvalide('Cette demande a déjà été traitée');
+// Déjà tranchée : par qui, si c'est une personne (le chef de centre et l'adjoint agissent tous les deux, le second l'apprend ainsi).
+const dejaTraitee = (ctx?: Contexte, trancheePar?: string | null) => {
+	const qui = /^personne:(\d+)$/.exec(trancheePar ?? '')?.[1];
+	return new DonneeInvalide(ctx && qui ? `Déjà traité par ${nomDe(ctx, Number(qui))}` : 'Cette demande a déjà été traitée');
+};
+// Après un geste d'un chef : s'il n'a rien écrit (un autre est passé avant, à la même minute), il l'apprend.
+async function exigerTranchee(base: Base, ctx: Contexte, id: number, moi: number, maintenant: string) {
+	const [apres] = await base.select({ par: demandeRemplacement.trancheePar, le: demandeRemplacement.trancheeLe }).from(demandeRemplacement).where(eq(demandeRemplacement.id, id));
+	if (apres?.par !== `personne:${moi}` || apres.le !== maintenant) throw dejaTraitee(ctx, apres?.par);
+}
+const journalDemandeSi = (base: Base, moi: number, action: string, id: number, details: object, maintenant: string, si: SQL) =>
+	ligneJournalSi(base, { acteur: `personne:${moi}`, action, cibleType: 'demande_remplacement', cibleId: id, details }, maintenant, si);
 const url = (id: number) => `/remplacements/${id}`;
 // La décision écrite est bien celle-ci : l'état et la date du geste.
-const decidee = (id: number, etat: EtatDemande, maintenant: string) => sql`exists (select 1 from ${demandeRemplacement} where ${demandeRemplacement.id} = ${id} and ${demandeRemplacement.etat} = ${etat} and ${demandeRemplacement.trancheeLe} = ${maintenant})`;
+// `par` : et c'est bien ce geste-là (deux chefs à la même minute).
+const decidee = (id: number, etat: EtatDemande, maintenant: string, par?: number) =>
+	sql`exists (select 1 from ${demandeRemplacement} where ${demandeRemplacement.id} = ${id} and ${demandeRemplacement.etat} = ${etat} and ${demandeRemplacement.trancheeLe} = ${maintenant}${par === undefined ? sql`` : sql` and ${demandeRemplacement.trancheePar} = ${`personne:${par}`}`})`;
 
 export const texteDe = (ctx: Contexte, d: LigneDemande) =>
 	d.genre === 'echange' ? `${texteDemande(periodesDe(d.periodes))} contre ${texteDemande(periodesDe(d.periodesCible))}` : texteDemande(periodesDe(d.periodes));
@@ -432,7 +445,8 @@ export async function ouvrirATous(base: Base, acteur: Acteur, id: number, mainte
 // Retour au départ, après un refus du chef ou un désistement : une demande ouverte attend un autre collègue (le remplaçant ne la revoit plus) ;
 // une demande ciblée ou un échange passe « refusé ».
 // Une demande ouverte est renvoyée à ses destinataires encore disponibles (sauf l'ancien remplaçant).
-function rouvrir(base: Base, ctx: Contexte, d: LigneDemande, destinataires: { personneId: number; refuseLe: string | null }[], qui: number, motif: string | null, maintenant: string) {
+// `depuis` : les états d'où la demande repart (un refus du chef : seulement « à valider », pas une validation passée avant lui).
+function rouvrir(base: Base, ctx: Contexte, d: LigneDemande, destinataires: { personneId: number; refuseLe: string | null }[], qui: number, motif: string | null, maintenant: string, depuis: EtatDemande[] = ['a_valider', 'conclue']) {
 	const ouverte = d.genre === 'remplacement' && d.cibleId === null;
 	const periodes = periodesDe(d.periodes);
 	const encore = ouverte ? destinataires.filter((x) => x.refuseLe === null && x.personneId !== d.remplacantId && disponible(ctx, x.personneId, periodes, d.id)).map((x) => x.personneId) : [];
@@ -440,16 +454,16 @@ function rouvrir(base: Base, ctx: Contexte, d: LigneDemande, destinataires: { pe
 		base
 			.update(demandeRemplacement)
 			.set({ etat: ouverte ? 'attente' : 'refusee', remplacantId: null, manque: null, accepteeLe: null, motif, trancheePar: `personne:${qui}`, trancheeLe: maintenant })
-			.where(and(eq(demandeRemplacement.id, d.id), inArray(demandeRemplacement.etat, ['a_valider', 'conclue']))),
+			.where(and(eq(demandeRemplacement.id, d.id), inArray(demandeRemplacement.etat, depuis))),
 		base
 			.update(destinataireRemplacement)
 			.set({ refuseLe: maintenant })
 			.where(and(eq(destinataireRemplacement.demandeId, d.id), eq(destinataireRemplacement.personneId, d.remplacantId ?? 0))),
-		...avis(base, encore, d.id, 'recue', `${nomDe(ctx, d.demandeurId)} est de nouveau sans remplaçant, ${texteDe(ctx, d)}`, URL_POUR_MOI, maintenant, rouverte(d, maintenant))
+		...avis(base, encore, d.id, 'recue', `${nomDe(ctx, d.demandeurId)} est de nouveau sans remplaçant, ${texteDe(ctx, d)}`, URL_POUR_MOI, maintenant, rouverte(d, maintenant, qui))
 	] as const;
 }
 
-const rouverte = (d: LigneDemande, maintenant: string) => decidee(d.id, d.genre === 'remplacement' && d.cibleId === null ? 'attente' : 'refusee', maintenant);
+const rouverte = (d: LigneDemande, maintenant: string, par?: number) => decidee(d.id, d.genre === 'remplacement' && d.cibleId === null ? 'attente' : 'refusee', maintenant, par);
 
 // Le remplaçant se désiste avant le début : le titulaire redevient responsable, il est prévenu, et la demande repart.
 export async function desister(base: Base, acteur: Acteur, id: number, maintenant: string, reglage: Reglage): Promise<void> {
@@ -478,18 +492,19 @@ export async function valider(base: Base, acteur: Acteur, id: number, maintenant
 	exigerDateHeure(maintenant, 'Date');
 	const { d, ctx } = await lireDemande(base, id, maintenant, reglage);
 	exigerValideur(ctx, d, moi);
-	if (d.etat !== 'a_valider') throw dejaTraitee();
+	if (d.etat !== 'a_valider') throw dejaTraitee(ctx, d.trancheePar);
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
-	const si = decidee(id, 'conclue', maintenant);
+	const si = decidee(id, 'conclue', maintenant, moi);
 	const texte = `${nomDe(ctx, d.remplacantId)} remplace ${nomDe(ctx, d.demandeurId)}, ${texteDe(ctx, d)}`;
 	await base.batch([
 		base
 			.update(demandeRemplacement)
 			.set({ etat: 'conclue', trancheePar: `personne:${moi}`, trancheeLe: maintenant })
 			.where(and(eq(demandeRemplacement.id, id), eq(demandeRemplacement.etat, 'a_valider'))),
-		journalDemande(base, moi, 'valider_remplacement', id, {}, maintenant),
+		journalDemandeSi(base, moi, 'valider_remplacement', id, {}, maintenant, si),
 		...avis(base, [d.demandeurId, d.remplacantId!], id, 'validee', texte, url(id), maintenant, si)
 	]);
+	await exigerTranchee(base, ctx, id, moi, maintenant);
 }
 
 // Le chef refuse : la demande repart comme au départ, le remplaçant et le demandeur sont prévenus.
@@ -498,17 +513,18 @@ export async function refuserValidation(base: Base, acteur: Acteur, id: number, 
 	exigerDateHeure(maintenant, 'Date');
 	const { d, ctx, destinataires } = await lireDemande(base, id, maintenant, reglage);
 	exigerValideur(ctx, d, moi);
-	if (d.etat !== 'a_valider') throw dejaTraitee();
+	if (d.etat !== 'a_valider') throw dejaTraitee(ctx, d.trancheePar);
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
 	const propre = motDe(motif);
 	const texte = [`${nomDe(ctx, d.remplacantId)} ne remplacera pas ${nomDe(ctx, d.demandeurId)}`, texteDe(ctx, d), ...(propre ? [propre] : [])].join(', ');
 	await base.batch([
-		...rouvrir(base, ctx, d, destinataires, moi, propre ?? 'Refusé par le chef de garde', maintenant),
-		journalDemande(base, moi, 'refuser_validation', id, {}, maintenant),
-		...avis(base, [d.demandeurId], id, 'refus_chef', texte, url(id), maintenant, rouverte(d, maintenant)),
+		...rouvrir(base, ctx, d, destinataires, moi, propre ?? 'Refusé par le chef de garde', maintenant, ['a_valider']),
+		journalDemandeSi(base, moi, 'refuser_validation', id, {}, maintenant, rouverte(d, maintenant, moi)),
+		...avis(base, [d.demandeurId], id, 'refus_chef', texte, url(id), maintenant, rouverte(d, maintenant, moi)),
 		// Le remplaçant écarté ne voit plus la demande : son avis mène à « Pour moi ».
-		...avis(base, [d.remplacantId!], id, 'refus_chef', texte, URL_POUR_MOI, maintenant, rouverte(d, maintenant))
+		...avis(base, [d.remplacantId!], id, 'refus_chef', texte, URL_POUR_MOI, maintenant, rouverte(d, maintenant, moi))
 	]);
+	await exigerTranchee(base, ctx, id, moi, maintenant);
 }
 
 // Remplacement court conclu : le demandeur, ou le chef de garde si une aptitude contrôlée manque, refuse le remplaçant avant le début.
@@ -517,7 +533,7 @@ export async function refuserApresCoup(base: Base, acteur: Acteur, id: number, m
 	const moi = moiDe(acteur);
 	exigerDateHeure(maintenant, 'Date');
 	const { d, ctx } = await lireDemande(base, id, maintenant, reglage);
-	if (d.court !== 1 || d.etat !== 'conclue' || d.remplacantId === null) throw dejaTraitee();
+	if (d.court !== 1 || d.etat !== 'conclue' || d.remplacantId === null) throw dejaTraitee(ctx, d.trancheePar);
 	const parLeDemandeur = d.demandeurId === moi;
 	if (!parLeDemandeur) {
 		exigerValideur(ctx, d, moi);
@@ -525,19 +541,20 @@ export async function refuserApresCoup(base: Base, acteur: Acteur, id: number, m
 	}
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
 	const quoi = parLeDemandeur ? 'refusee' : 'refus_chef';
-	const si = decidee(id, 'annulee', maintenant);
+	const si = decidee(id, 'annulee', maintenant, moi);
 	const auRemplacant = `${parLeDemandeur ? nomDe(ctx, moi) : 'Le chef de garde'} refuse votre remplacement, ${texteDe(ctx, d)}`;
 	await base.batch([
 		base
 			.update(demandeRemplacement)
 			.set({ etat: 'annulee', motif: parLeDemandeur ? 'Refusé par le demandeur' : 'Refusé par le chef de garde', trancheePar: `personne:${moi}`, trancheeLe: maintenant })
 			.where(and(eq(demandeRemplacement.id, id), eq(demandeRemplacement.etat, 'conclue'))),
-		journalDemande(base, moi, 'refuser_apres_coup', id, { parLeDemandeur }, maintenant),
+		journalDemandeSi(base, moi, 'refuser_apres_coup', id, { parLeDemandeur }, maintenant, si),
 		...avis(base, [d.remplacantId], id, quoi, auRemplacant, url(id), maintenant, si, 'urgences'),
 		...(parLeDemandeur ? [] : avis(base, [d.demandeurId], id, quoi, `${nomDe(ctx, d.remplacantId)} ne vous remplacera pas ${texteDe(ctx, d)}. Vous restez d’astreinte.`, url(id), maintenant, si, 'urgences')),
 		// Les chefs qui l'avaient appris : en urgence s'ils l'avaient su en urgence (une aptitude manquait).
 		...avis(base, valideurs(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId).filter((x) => x !== moi), id, quoi, `${nomDe(ctx, d.remplacantId)} ne remplace plus ${nomDe(ctx, d.demandeurId)} ${texteDe(ctx, d)}, refusé par ${parLeDemandeur ? 'le demandeur' : 'le chef de garde'}`, url(id), maintenant, si, d.manque !== null ? 'urgences' : 'remplacements')
 	]);
+	await exigerTranchee(base, ctx, id, moi, maintenant);
 }
 
 // Annuler : le demandeur tant que personne n'a accepté ; un valideur, à tout moment avant le début.
@@ -550,7 +567,7 @@ export async function annulerDemande(base: Base, acteur: Acteur, id: number, mai
 		if (d.demandeurId === moi && ['a_valider', 'conclue'].includes(d.etat)) throw new DonneeInvalide('Déjà acceptée. Demandez au remplaçant de se désister');
 		exigerValideur(ctx, d, moi);
 	}
-	if (!['attente', 'refusee', 'a_valider', 'conclue'].includes(d.etat)) throw dejaTraitee();
+	if (!['attente', 'refusee', 'a_valider', 'conclue'].includes(d.etat)) throw dejaTraitee(ctx, d.trancheePar);
 	if (d.genre === 'manoeuvre' && d.etat === 'conclue') throw new DonneeInvalide('Un échange de manœuvre conclu ne s’annule pas');
 	if (d.court === 1 && d.etat === 'conclue') throw new DonneeInvalide('Un remplacement court conclu ne s’annule pas. Refusez le remplaçant');
 	if (commencee(d, maintenant)) throw new DonneeInvalide('Période déjà commencée');
@@ -560,8 +577,9 @@ export async function annulerDemande(base: Base, acteur: Acteur, id: number, mai
 			.update(demandeRemplacement)
 			.set({ etat: 'annulee', trancheePar: `personne:${moi}`, trancheeLe: maintenant })
 			.where(and(eq(demandeRemplacement.id, id), eq(demandeRemplacement.etat, d.etat))),
-		journalDemande(base, moi, 'annuler_remplacement', id, { parLeDemandeur }, maintenant),
-		...avis(base, prevenus, id, 'annulee', `${parLeDemandeur ? nomDe(ctx, moi) : 'Le chef'} a annulé la demande, ${texteDe(ctx, d)}`, url(id), maintenant, decidee(id, 'annulee', maintenant))
+		journalDemandeSi(base, moi, 'annuler_remplacement', id, { parLeDemandeur }, maintenant, decidee(id, 'annulee', maintenant, moi)),
+		...avis(base, prevenus, id, 'annulee', `${parLeDemandeur ? nomDe(ctx, moi) : 'Le chef'} a annulé la demande, ${texteDe(ctx, d)}`, url(id), maintenant, decidee(id, 'annulee', maintenant, moi))
 	]);
+	await exigerTranchee(base, ctx, id, moi, maintenant);
 }
 

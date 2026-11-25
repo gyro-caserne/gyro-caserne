@@ -27,7 +27,7 @@ import { couper, effacerVieillesNotifications, enTeteDe, filDeNotifications, tou
 import { chevauche, periodeCourte } from '../src/reservations-calcul.ts';
 import { courrielsDeDemande } from '../src/courriels.ts';
 const chevaucheCreneau = (a: { debut: string; fin: string }, b: { debut: string; fin: string }) => chevauche(a, b, 'creneau');
-import { abonnementPush, attribution, avisReservation, comite, envoiPush, personne, profil, profilDroit, reservation, ressource, responsabilite } from '../src/schema.ts';
+import { abonnementPush, attribution, avisReservation, comite, envoiPush, journal, personne, profil, profilDroit, reservation, ressource, responsabilite } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
 const maintenant = '2026-11-01T10:00';
@@ -159,6 +159,12 @@ describe('trancher', () => {
 		await refuser(base, superAdmin, b2, ' Plus de place dans le camion ', maintenant);
 		expect(await etat(base, b2)).toMatchObject({ etat: 'refusee', motif: 'Plus de place dans le camion' });
 		await expect(accepter(base, romain, b2, maintenant)).rejects.toThrow(new DonneeInvalide('Cette demande a déjà été traitée'));
+		// Tranchée par une personne : le second qui agit apprend par qui, et rien n'est écrit deux fois.
+		await expect(refuser(base, superAdmin, b1, null, maintenant)).rejects.toThrow(/^Déjà traité par Romain /);
+		const { id: b3 } = await reserver(base, alice, bancs, { debut: '2026-11-13', fin: '2026-11-13', quantite: 1 }, maintenant);
+		const r = await Promise.allSettled([accepter(base, romain, b3, maintenant), refuser(base, superAdmin, b3, null, maintenant)]);
+		expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+		expect((await base.select().from(journal)).filter((l) => l.cibleType === 'reservation' && l.cibleId === b3 && l.action !== 'reserver')).toHaveLength(1);
 		await reserver(base, alice, vl, { debut: '2026-11-07T09:00', fin: '2026-11-07T12:00' }, maintenant);
 		const { id: v2 } = await reserver(base, romain, vl, { debut: '2026-11-07T10:00', fin: '2026-11-07T11:00' }, maintenant);
 		await expect(refuser(base, romain, v2, null, maintenant)).rejects.toBeInstanceOf(RefusDroit);
@@ -493,7 +499,8 @@ describe('après la revue', () => {
 		const { id } = await reserver(base, alice, bancs, { debut: '2026-11-12', fin: '2026-11-12', quantite: 2 }, maintenant);
 		await vider();
 		const course = avecCourse(base, () => refuser(base, superAdmin, id, null, maintenant));
-		await accepter(course, romain, id, maintenant);
+		// Le second l'apprend, sans rien écrire.
+		await expect(accepter(course, romain, id, maintenant)).rejects.toThrow(new DonneeInvalide('Cette demande a déjà été traitée'));
 		expect(await etat(base, id)).toMatchObject({ etat: 'refusee' });
 		expect((await base.select().from(avisReservation)).map((a) => a.quoi)).toEqual(['refusee']);
 		expect((await envois()).map((e) => e.titre)).toEqual(['Demande refusée (Bancs)']);

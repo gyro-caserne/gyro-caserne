@@ -259,8 +259,13 @@ export async function plageAPreparer(base: Base, acteur: Acteur, annee: number, 
 }
 
 // Les plages où la répartition enregistrée n'arme pas le FPT : pour l'accueil du chef, comme l'écran Été les compte.
+// L'accueil ne le calcule que si le nombre n'a pas été gardé (une proposition d'avant ce compte, voir garderARevoir).
 export async function plagesARevoir(base: Base, annee: number, aujourdhui: string, reglage: Reglage): Promise<number> {
-	const lu = await lireEte(base, annee, aujourdhui, reglage, false);
+	return compterARevoir(await lireEte(base, annee, aujourdhui, reglage, false));
+}
+
+// Le compte, d'après une lecture de l'été ; `ecart` : l'écart d'une plage qui vient de changer (proposition, ajustement, fichier).
+function compterARevoir(lu: Lu, ecart: (p: PlageEte) => { ajoutes: number[]; retires: number[] } | undefined = () => undefined): number {
 	const fpt = enginFpt(lu.fpt);
 	// Des présents qui tiennent les mêmes postes arment le FPT de la même façon : une équipe garde souvent les mêmes d'une plage à
 	// l'autre, le calcul est fait une fois par combinaison.
@@ -268,7 +273,7 @@ export async function plagesARevoir(base: Base, annee: number, aujourdhui: strin
 	const noms = new Map<Set<Poste>, string>();
 	const nom = (x: Set<Poste>) => noms.get(x) ?? noms.set(x, [...x].join()).get(x)!;
 	return lu.plagesEte.filter((p) => {
-		const postes = presentsDe(lu, p, lu.ecartDe(p)).map((id) => lu.postes(id, p.debut.slice(0, 10)));
+		const postes = presentsDe(lu, p, (ecart(p) as PlageLue | undefined) ?? lu.ecartDe(p)).map((id) => lu.postes(id, p.debut.slice(0, 10)));
 		const cle = postes.map(nom).sort().join(' ');
 		let arme = armees.get(cle);
 		if (arme === undefined) armees.set(cle, (arme = armement(fpt, postes.map((x, id) => ({ id, postes: x }))).arme));
@@ -279,6 +284,13 @@ export async function plagesARevoir(base: Base, annee: number, aujourdhui: strin
 const pick = (a: { id: number; prenom: string; nom: string }) => ({ id: a.id, prenom: a.prenom, nom: a.nom });
 
 const journal = (base: Base, acteur: Acteur, action: string, details: object, maintenant: string) => ligneJournal(base, { acteur: nomActeur(acteur), action, cibleType: 'planning', cibleId: null, details }, maintenant);
+
+// Le nombre de plages à revoir, gardé à chaque changement de la répartition : l'accueil du chef n'a plus à refaire l'été (décision 0021).
+// Gardé au journal (cible « ete », l'année), sans migration ; hors du suivi du centre. Une écriture plus récente qui peut le changer
+// (planning, fiche d'un agent, aptitudes, armement, fêtes) le fait recalculer à l'accueil (casquettes.ts).
+export const ACTION_A_REVOIR = 'plages_ete_a_revoir';
+export const CIBLES_QUI_CHANGENT_L_ETE = ['planning', 'personne', 'aptitude', 'centre', 'fete_centre'];
+const garderARevoir = (base: Base, annee: number, aRevoir: number, maintenant: string) => ligneJournal(base, { acteur: 'planning', action: ACTION_A_REVOIR, cibleType: 'ete', cibleId: annee, details: { aRevoir } }, maintenant);
 
 // Calcule la proposition et l'enregistre (elle remplace la précédente). Seulement avant la publication.
 export async function proposerEte(base: Base, acteur: Acteur, annee: number, maintenant: string, reglage: Reglage): Promise<{ impossibles: string[] }> {
@@ -293,7 +305,8 @@ export async function proposerEte(base: Base, acteur: Acteur, annee: number, mai
 	await base.batch([
 		base.delete(plageEte).where(eq(plageEte.annee, annee)),
 		...ecarts.map((x) => base.insert(plageEte).values({ debut: x.debut, fin: x.fin, annee, ajoutes: JSON.stringify(x.ajoutes), retires: JSON.stringify(x.retires) })),
-		journal(base, acteur, 'proposer_ete', { annee, impossibles: impossibles.length }, maintenant)
+		journal(base, acteur, 'proposer_ete', { annee, impossibles: impossibles.length }, maintenant),
+		garderARevoir(base, annee, compterARevoir(lu, (p) => ecarts.find((x) => x.debut === p.debut) ?? { ajoutes: [], retires: [] }), maintenant)
 	]);
 	return { impossibles: impossibles.map((x) => texteManque(x, x.manque)) };
 }
@@ -313,10 +326,11 @@ export async function ajusterPlage(base: Base, acteur: Acteur, annee: number, de
 	const retires = ecart.retires.filter((id) => id !== personneId);
 	if (present && !deBase) ajoutes.push(personneId);
 	if (!present && deBase) retires.push(personneId);
-	const texte = !present ? `Vous n’êtes plus d’astreinte : ${texteTranche(p)}.` : deBase ? `Vous êtes de nouveau d’astreinte : ${texteTranche(p)}.` : `Vous êtes en renfort ${duGroupe(lu, p.equipeId)} : ${texteTranche(p)}.`;
+	const texte = !present ? `Vous n’êtes plus d’astreinte, ${texteTranche(p)}.` : deBase ? `Vous êtes de nouveau d’astreinte, ${texteTranche(p)}.` : `Vous êtes en renfort ${duGroupe(lu, p.equipeId)}, ${texteTranche(p)}.`;
 	await base.batch([
 		base.update(plageEte).set({ ajoutes: JSON.stringify(ajoutes), retires: JSON.stringify(retires) }).where(eq(plageEte.debut, debut)),
 		journal(base, acteur, present ? 'ajouter_plage_ete' : 'retirer_plage_ete', { debut, personneId }, maintenant),
+		garderARevoir(base, annee, compterARevoir(lu, (x) => (x.debut === debut ? { ajoutes, retires } : undefined)), maintenant),
 		...(lu.e.publiee ? avis(base, [personneId], 'repartition', texte, '/planning', maintenant) : [])
 	]);
 }
@@ -405,6 +419,7 @@ export async function analyserFeuilleEte(base: Base, annee: number, entetes: str
 	const touchees = [...new Set(changements.map((c) => c.debut))];
 	const ecritures = () => [
 		...touchees.map((debut) => base.update(plageEte).set({ ajoutes: JSON.stringify(ecarts.get(debut)!.ajoutes), retires: JSON.stringify(ecarts.get(debut)!.retires) }).where(eq(plageEte.debut, debut))),
+		...(touchees.length > 0 ? [garderARevoir(base, annee, compterARevoir(lu, (p) => ecarts.get(p.debut)), maintenant)] : []),
 		// Été publié : chaque agent touché est prévenu une fois.
 		...(lu.e!.publiee ? [...new Set(changements.map((c) => c.personneId))].flatMap((id) => avis(base, [id], 'repartition', 'Vos plages du planning d’été ont changé. Voyez votre planning.', '/planning', maintenant)) : [])
 	];

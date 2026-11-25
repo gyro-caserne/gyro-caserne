@@ -211,4 +211,74 @@ describe('textes visibles', () => {
 		const trouvees = [...racine, ...produits(join(appli, 'lib')), ...produits(join(appli, 'routes')), ...produits(socle)].flatMap(relevees);
 		expect(trouvees).toEqual([]);
 	});
+
+	it('aucun texte de notification du socle ne met deux-points entre deux idées', () => {
+		expect(fautesNotifications('exemple.ts', "const texte = `Vous êtes de garde : ${quand}.`;\navis(base, ids, 'x', `Nuit du ${jour}, par ${nom}`, '/');\nconst titre = 'Date invalide : ' + x;")).toEqual(['exemple.ts:1 deux-points entre deux idées : Vous êtes de garde : ', 'exemple.ts:3 deux-points entre deux idées : Date invalide : ']);
+		expect(produits(socle).flatMap((f) => fautesNotifications(relative(join(appli, '../../..'), f), readFileSync(f, 'utf8')))).toEqual([]);
+	});
+
+	it('emoji : jamais à l’écran ; un seul, en fin de texte, dans les seuls avis conviviaux', () => {
+		expect(fautesEmoji('exemple.ts', chaines("const a = 'Bravo 👏'; const b = '🎉 Fête'; const c = 'Joie 🎉🎉'; const d = 'Attention ⚠ et ✓';"), true)).toEqual(['exemple.ts:1 emoji ailleurs qu’en fin de texte : 🎉 Fête', 'exemple.ts:1 un seul emoji : Joie 🎉🎉']);
+		expect(fautesEmoji('exemple.ts', chaines("const a = 'Remplacement 🚒';"), false)).toEqual(['exemple.ts:1 emoji hors d’un avis convivial : Remplacement 🚒']);
+		const racine = readdirSync(appli).filter((f) => /\.ts$/.test(f) && !/\.(test|d)\.ts$/.test(f)).map((f) => join(appli, f));
+		const fichiers = [...racine, ...produits(join(appli, 'lib')), ...produits(join(appli, 'routes')), ...produits(socle)];
+		const trouvees = fichiers.flatMap((f) => {
+			const nom = relative(join(appli, '../../..'), f);
+			if (nom in SANS_GARDE_EMOJI) return [];
+			const source = readFileSync(f, 'utf8');
+			const textes = f.endsWith('.svelte') ? textesSvelte(source) : chaines(source);
+			const permis = AVIS_CONVIVIAUX[nom];
+			return [...fautesEmoji(nom, textes.filter((t) => !permis?.test(t.texte)), false), ...fautesEmoji(nom, textes.filter((t) => permis?.test(t.texte)), true)];
+		});
+		expect(trouvees).toEqual([]);
+	});
 });
+
+// Les avis conviviaux, seuls à pouvoir finir par un emoji (charte, « Les textes », décision du porteur du 25/11/2026).
+// Par fichier, la forme exacte du texte permis : un emoji ailleurs dans le même fichier reste refusé.
+const AVIS_CONVIVIAUX: Record<string, RegExp> = {
+	// Un souhait d'anniversaire, au téléphone et dans la cloche.
+	'packages/socle/src/souhaits.ts': /^ vous souhaite un joyeux anniversaire 🎂$/,
+	'apps/web/src/routes/notifications/+page.svelte': /^ vous souhaite un joyeux anniversaire 🎂$/,
+	// Les félicitations d'un collègue pour un palier d'ancienneté.
+	'packages/socle/src/anciennete.ts': /^ de service 🎖️$/
+};
+// Pas des textes : les réactions qu'un agent choisit sous une publication.
+const SANS_GARDE_EMOJI: Record<string, string> = { 'packages/socle/src/listes.ts': 'les réactions' };
+
+// Un emoji : un pictogramme en couleur, ou un symbole forcé en emoji (sélecteur U+FE0F). Les signes typographiques (✓, ⚠) n'en sont pas.
+const EMOJI = /\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F/gu;
+export function fautesEmoji(fichier: string, textes: Texte[], convivial: boolean): string[] {
+	return textes.flatMap(({ texte, ligne }) => {
+		const trouves = [...texte.matchAll(EMOJI)];
+		if (trouves.length === 0) return [];
+		const extrait = texte.trim().slice(0, 80);
+		if (!convivial) return [`${fichier}:${ligne} emoji hors d’un avis convivial : ${extrait}`];
+		if (trouves.length > 1) return [`${fichier}:${ligne} un seul emoji : ${extrait}`];
+		const fin = texte.trimEnd();
+		const dernier = trouves[0]!;
+		return dernier.index! + dernier[0].length + (fin.endsWith('\uFE0F') && !dernier[0].endsWith('\uFE0F') ? 1 : 0) === fin.length ? [] : [`${fichier}:${ligne} emoji ailleurs qu’en fin de texte : ${extrait}`];
+	});
+}
+
+// Les titres et textes des notifications : les chaînes des appels qui écrivent un avis, et des constantes qui préparent leur titre,
+// leur texte ou leur phrase. Deux-points entre deux idées : deux phrases, ou une virgule (charte, « Les textes »).
+const APPELS_AVIS = /\b(?:avis|avisAnomalies|avisUrgence|mettreEnFile|avisDe)\(|\bconst (?:titre|texte|textes|phrase|auChef|avec|avis)\b[^=]*=/g;
+export function fautesNotifications(fichier: string, code: string): string[] {
+	const trouvees: string[] = [];
+	for (const m of code.matchAll(APPELS_AVIS)) {
+		// Jusqu'à la parenthèse fermante ou au point-virgule du même niveau.
+		let profondeur = 0;
+		let fin = m.index! + m[0].length;
+		for (; fin < code.length; fin++) {
+			const c = code[fin];
+			if (c === '(' || c === '{' || c === '[') profondeur++;
+			else if (c === ')' || c === '}' || c === ']') {
+				if (profondeur-- === 0) break;
+			} else if (c === ';' && profondeur <= 0) break;
+		}
+		const decalage = code.slice(0, m.index!).split('\n').length - 1;
+		for (const c of chaines(code.slice(m.index!, fin), decalage)) if (/\S\s:\s|\s:\s*$/.test(c.texte)) trouvees.push(`${fichier}:${c.ligne} deux-points entre deux idées : ${c.texte}`);
+	}
+	return [...new Set(trouvees)];
+}

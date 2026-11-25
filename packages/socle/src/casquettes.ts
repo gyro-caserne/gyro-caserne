@@ -6,7 +6,7 @@ import { iconeDuRole, type NomIcone } from './icones.ts';
 import type { Droit } from './listes.ts';
 import type { Reglage } from './planning/calendrier.ts';
 import { vueEte } from './planning/ete.ts';
-import { plagesARevoir } from './planning/repartition.ts';
+import { ACTION_A_REVOIR, CIBLES_QUI_CHANGENT_L_ETE, plagesARevoir } from './planning/repartition.ts';
 import { anomaliesADecider, traiteLesAnomalies } from './anomalies.ts';
 import { demandesADecider, lectureDemandesADecider } from './demandes.ts';
 import { prisesEnRetard } from './prises.ts';
@@ -20,6 +20,8 @@ export type ADecider = { texte: string; lien: string };
 export type ContenuCasquette =
 	| { type: 'centre'; aDecider: ADecider[] }
 	| { type: 'astreinte' }
+	// Aucune casquette (une personne d'un profil extérieur) : l'accueil n'a que « À ne pas manquer ».
+	| { type: 'aucune' }
 	| { type: 'equipe'; aDecider: ADecider[] }
 	| { type: 'role'; permet: string[]; aDecider: ADecider[]; liens?: ADecider[] }
 	| { type: 'comite'; membres: { personneId: number; prenom: string; nom: string; role: string }[]; aDecider: ADecider[] };
@@ -67,12 +69,15 @@ async function tenues(base: Base, acteur: Acteur, aujourdhui: string): Promise<{
 	const centre = { id: 'centre', nom: 'Le centre', icone: 'etoile' as const };
 	if (acteur.type === 'super') return { liste: [centre], aTraiter: new Map(), recoivent: new Set() };
 
-	const [lignes, equipes, comites, demandes] = await base.batch([
+	const [lignes, equipes, comites, demandes, fiches] = await base.batch([
 		requeteTenues(base, acteur.id, aujourdhui),
 		base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation)),
 		base.select({ id: comite.id, nom: comite.nom }).from(comite).where(isNull(comite.dissousLe)).orderBy(asc(comite.nom)),
-		lectureDemandesADecider(base, acteur.id, aujourdhui)
+		lectureDemandesADecider(base, acteur.id, aujourdhui),
+		base.select({ type: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, acteur.id))
 	]);
+	// Une personne d'un profil extérieur n'a pas d'astreinte.
+	const exterieur = fiches[0]?.type === 'exterieur';
 	const valides = tenuesValides(lignes);
 	const tient = (garde: (l: (typeof valides)[number]) => boolean) => valides.some(garde);
 
@@ -84,7 +89,7 @@ async function tenues(base: Base, acteur: Acteur, aujourdhui: string): Promise<{
 		...equipes
 			.filter((e) => tient((l) => l.systeme === 'chef_equipe' && l.perimetreId === e.id))
 			.map((e) => ({ id: `equipe:${e.id}`, nom: `Chef de garde (${e.nom})`, icone: 'casque' as const })),
-		{ id: 'astreinte', nom: 'Mon astreinte', icone: 'casque' },
+		...(exterieur ? [] : [{ id: 'astreinte', nom: 'Mon astreinte', icone: 'casque' as const }]),
 		...[...referents].map(([id, r]) => ({ id: `role:${id}`, ...r })).sort(parNom),
 		...comites.filter((c) => tient((l) => l.type === 'comite' && l.perimetreId === c.id)).map((c) => ({ id: `comite:${c.id}`, nom: c.nom, icone: 'groupe' as const }))
 	];
@@ -191,7 +196,8 @@ export async function aDecider(base: Base, acteur: Acteur, aujourdhui: string, r
 // L'accueil : la casquette demandée si elle est tenue, sinon celle où quelque chose attend, sinon la principale (la première).
 export async function accueilDe(base: Base, acteur: Acteur, demandee: string | null, aujourdhui: string, maintenant: string, reglage: Reglage): Promise<Accueil> {
 	const { casquettes, aDecider, reservations, recoivent } = await lire(base, acteur, aujourdhui, maintenant, reglage);
-	const choisie = (casquettes.find((c) => c.id === demandee) ?? casquettes.find((c) => c.compte > 0) ?? casquettes[0]!).id;
+	const choisie = (casquettes.find((c) => c.id === demandee) ?? casquettes.find((c) => c.compte > 0) ?? casquettes[0])?.id;
+	if (choisie === undefined) return { casquettes, choisie: '', contenu: { type: 'aucune' } };
 	return { casquettes, choisie, contenu: await contenu(base, choisie, aDecider, reservations.get(choisie) ?? [], aujourdhui, recoivent) };
 }
 
@@ -199,7 +205,12 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 	// Pas de jointure à noms de colonnes en double : dans un batch, D1 n'en garde qu'une.
 	const annee = Number(aujourdhui.slice(0, 4));
 	const suivante = annee + 1;
-	const [equipes, attributions, responsabilites, personnes, annees, etes, proposes] = await base.batch([
+	// Le dernier nombre de plages à revoir gardé pour chaque année (repartition.ts), par l'index du journal ; nul si une écriture
+	// plus récente peut l'avoir changé.
+	const cibles = sql.raw(CIBLES_QUI_CHANGENT_L_ETE.map((c) => `'${c}'`).join(', '));
+	const garde = (a: number) =>
+		sql<string | null>`(select g.details from journal g where g.id = (select max(id) from journal where cible_type = 'ete' and cible_id = ${a} and action = ${ACTION_A_REVOIR}) and not exists (select 1 from journal k where k.id > g.id and k.cible_type in (${cibles})))`;
+	const [equipes, attributions, responsabilites, personnes, annees, etes, proposes, gardes] = await base.batch([
 		base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation)),
 		base
 			.select({ personneId: attribution.personneId, responsabiliteId: attribution.responsabiliteId, type: attribution.perimetreType, perimetreId: attribution.perimetreId, systeme: responsabilite.systeme })
@@ -219,7 +230,8 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 			.leftJoin(profil, eq(profil.id, personne.profilId)),
 		base.select({ publieeLe: anneePlanning.publieeLe }).from(anneePlanning).where(eq(anneePlanning.annee, suivante)),
 		base.select().from(ete).where(and(gte(ete.annee, annee), lte(ete.annee, suivante))).orderBy(asc(ete.annee)),
-		base.selectDistinct({ annee: plageEte.annee }).from(plageEte).where(and(gte(plageEte.annee, annee), lte(plageEte.annee, suivante)))
+		base.selectDistinct({ annee: plageEte.annee }).from(plageEte).where(and(gte(plageEte.annee, annee), lte(plageEte.annee, suivante))),
+		base.select({ cette: garde(annee).as('cette'), suivante: garde(suivante).as('suivante') }).from(ete).limit(1)
 	]);
 	// À partir du 1er octobre, l'année suivante est à préparer tant qu'elle n'est pas publiée.
 	const planning = aujourdhui.slice(5) >= '10-01' && !annees.some((a) => a.publieeLe !== null);
@@ -237,7 +249,10 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 		// À ouvrir du 1er mars à la fin d'août, tant que l'été de l'année n'existe pas.
 		if (aujourdhui >= `${annee}-03-01` && aujourdhui <= `${annee}-08-31` && !etes.some((x) => x.annee === annee)) pourLete.push({ texte: `Été ${annee} à ouvrir`, lien: lienEte(annee) });
 	} else if (reglage && e && !e.publiee) {
-		const aRevoir = proposes.some((x) => x.annee === e.annee) ? await plagesARevoir(base, e.annee, aujourdhui, reglage) : 0;
+		// Le nombre gardé à la proposition, à l'ajustement ou au fichier ; calculé seulement s'il manque.
+		const lu = gardes[0]?.[e.annee === annee ? 'cette' : 'suivante'];
+		const gardeLu = lu ? (JSON.parse(lu) as { aRevoir?: number }).aRevoir : undefined;
+		const aRevoir = !proposes.some((x) => x.annee === e.annee) ? 0 : (gardeLu ?? (await plagesARevoir(base, e.annee, aujourdhui, reglage)));
 		if (aRevoir > 0) pourLete.push({ texte: `Été ${e.annee} : ${aRevoir} ${aRevoir > 1 ? 'plages' : 'plage'} à revoir`, lien: lienEte(e.annee) });
 		else if (aujourdhui > e.dateLimite) pourLete.push({ texte: `Été ${e.annee} à publier`, lien: lienEte(e.annee) });
 	}

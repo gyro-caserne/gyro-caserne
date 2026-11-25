@@ -109,13 +109,13 @@ describe('le jour J', () => {
 		await feliciter(base, acteur(claire), thomas, '2026-12-12T10:00:00');
 		await Promise.all([feliciter(base, acteur(claire), thomas, maintenant), feliciter(base, acteur(claire), thomas, maintenant)]);
 		const lignes = await base.select().from(avisAnciennete);
-		expect(lignes).toMatchObject([{ personneId: thomas, agentId: thomas, auteurId: claire, annees: 10, jour: aujourdhui, titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service.', url: '/', lueLe: null }]);
-		expect(await envois(`anciennete:${claire}`)).toEqual([{ titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service.', url: '/', tag: `anciennete:${claire}`, lue: { genre: 'anciennete', id: lignes[0]!.id } }]);
+		expect(lignes).toMatchObject([{ personneId: thomas, agentId: thomas, auteurId: claire, annees: 10, jour: aujourdhui, titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service 🎖️', url: '/', lueLe: null }]);
+		expect(await envois(`anciennete:${claire}`)).toEqual([{ titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service 🎖️', url: '/', tag: `anciennete:${claire}`, lue: { genre: 'anciennete', id: lignes[0]!.id } }]);
 		expect((await fetesDuJourAuCentre(base, acteur(claire), aujourdhui)).paliers[0]!.geste).toBe('felicite');
 		// La cloche de Thomas : comptée, montrée, lue.
 		expect((await enTeteDe(base, acteur(thomas), aujourdhui)).nonLues).toBe(1);
 		const fil = await filDeNotifications(base, acteur(thomas), maintenant);
-		expect(fil.lignes).toEqual([{ id: lignes[0]!.id, type: 'anciennete', titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service.', url: '/', creeLe: maintenant, lue: false }]);
+		expect(fil.lignes).toEqual([{ id: lignes[0]!.id, type: 'anciennete', titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service 🎖️', url: '/', creeLe: maintenant, lue: false }]);
 		await marquerLue(base, acteur(thomas), 'anciennete', lignes[0]!.id, maintenant);
 		expect((await enTeteDe(base, acteur(thomas), aujourdhui)).nonLues).toBe(0);
 	});

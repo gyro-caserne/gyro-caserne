@@ -325,7 +325,19 @@ export async function gesteDemande(base: Base, acteur: Acteur, id: number, geste
 	const reglage = lireReglage(d.reglage);
 	const ordre = reglage?.etapes.map((e) => e.id) ?? [];
 	const permis = gestesDemande({ etape: a.etape, question: a.question, demandeur: a.demandeurId, prisePar: a.prisePar }, ordre, { moi, gere });
-	if (!permis.gestes.includes(geste.quoi)) throw new DonneeInvalide('Geste impossible');
+	// Un autre gestionnaire (titulaire, chef de centre, adjoint) vient d'agir : le second l'apprend.
+	const dejaTraite = async (sinon: string) => {
+		const [dernier] = await base
+			.select({ par: filDemandeReferent.par, prenom: personne.prenom, nom: personne.nom })
+			.from(filDemandeReferent)
+			.leftJoin(personne, eq(personne.id, filDemandeReferent.par))
+			.where(eq(filDemandeReferent.demandeId, id))
+			.orderBy(desc(filDemandeReferent.id))
+			.limit(1);
+		const autre = gere && dernier && dernier.par !== moi && dernier.par !== a.demandeurId && dernier.prenom !== null;
+		return new DonneeInvalide(autre ? `Déjà traité par ${`${dernier.prenom} ${dernier.nom}`.trim()}` : sinon);
+	};
+	if (!permis.gestes.includes(geste.quoi)) throw await dejaTraite('Geste impossible');
 	if (geste.quoi === 'avancer' && !permis.vers.includes(geste.vers)) throw new DonneeInvalide('Étape impossible');
 	const texte = 'texte' in geste ? propre(geste.texte) : '';
 	if (texte.length > LIMITE_DEMANDE) throw new DonneeInvalide('Texte trop long');
@@ -385,7 +397,7 @@ export async function gesteDemande(base: Base, acteur: Acteur, id: number, geste
 		base.select({ ok: sql<number>`${fait}` }).from(demandeReferent).where(eq(demandeReferent.id, id))
 	]);
 	const [verif] = resultats.at(-1) as { ok: number }[];
-	if (!verif?.ok) throw new DonneeInvalide('Demande changée entre-temps');
+	if (!verif?.ok) throw await dejaTraite('Demande changée entre-temps');
 }
 
 export type DemandeReferentListee = { id: number; texte: string; roleId: number; role: string; etape: string; nomEtape: string; question: QuestionDemande | null; demandeur: string; prisePar: string | null; creeLe: string; majLe: string; finLe: string | null };

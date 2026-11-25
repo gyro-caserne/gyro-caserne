@@ -132,7 +132,7 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 		if (['indisponible', 'remettre'].includes(geste.quoi) && !qui.traite) throw new RefusDroit('TRAITER_ANOMALIE', { type: 'centre' });
 		if (geste.quoi === 'clore' && !qui.traite && !qui.prevenu) throw new RefusDroit('TRAITER_ANOMALIE', { type: 'centre' });
 		if (!qui.prend && !qui.prevenu) throw new RefusDroit('PRENDRE_EN_CHARGE_ANOMALIE', { type: 'centre' });
-		throw new DonneeInvalide('Geste impossible');
+		throw await dejaTraite(base, id, moi, 'Geste impossible');
 	}
 	const texte = 'texte' in geste ? propre(geste.texte) : '';
 	if (texte.length > LIMITES_ANOMALIE.note) throw new DonneeInvalide('Texte trop long');
@@ -161,7 +161,7 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 
 	const titre = `${a.libelle} (${lu.nomEngin})`;
 	const lien = `/engins/anomalies/${id}`;
-	const avec = texte ? ` : ${texte}` : '';
+	const avec = texte ? ` (${texte})` : '';
 	const textes: Record<QuoiGeste, string> = {
 		prendre: `${libelleEtape('prise_en_charge', r)} par ${lu.nom}`,
 		attente: `${libelleEtape('en_attente', r)} (${LIBELLES_MOTIF[geste.quoi === 'attente' ? geste.motif : 'piece'].toLocaleLowerCase('fr')}), par ${lu.nom}${avec}`,
@@ -171,7 +171,10 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 		indisponible: `Engin rendu indisponible par ${lu.nom}`,
 		remettre: `Engin remis en service par ${lu.nom}`
 	};
-	const prevenusHabituels = [...new Set([a.signaleePar, geste.quoi === 'prendre' ? null : a.priseEnChargePar].filter((x): x is number => x !== null && x !== moi))];
+	// Le signaleur n'est prévenu qu'à la prise en charge et à la clôture ; qui l'a prise en charge, de chaque geste d'un autre.
+	const clot = changement !== null && 'closeLe' in changement;
+	const signaleur = geste.quoi === 'prendre' || clot ? a.signaleePar : null;
+	const prevenusHabituels = [...new Set([signaleur, geste.quoi === 'prendre' ? null : a.priseEnChargePar].filter((x): x is number => x !== null && x !== moi))];
 	// Engin rendu indisponible : une urgence au chef de centre et à l'adjoint (sauf l'auteur), qui ne reçoivent pas l'avis habituel en double.
 	const urgence = geste.quoi === 'indisponible';
 	const prevenus = urgence ? prevenusHabituels.filter((x) => !lu.chefs.includes(x)) : prevenusHabituels;
@@ -196,7 +199,19 @@ export async function gesteAnomalie(base: Base, acteur: Acteur, id: number, gest
 		base.select({ ok: sql<number>`${fait}` }).from(anomalie).where(eq(anomalie.id, id))
 	]);
 	const [verif] = resultats.at(-1) as { ok: number }[];
-	if (!verif?.ok) throw new DonneeInvalide('Anomalie changée entre-temps');
+	if (!verif?.ok) throw await dejaTraite(base, id, moi, 'Anomalie changée entre-temps');
+}
+
+// Un geste refusé parce qu'un autre (le chef de centre et l'adjoint agissent tous les deux) vient d'agir : qui, d'après le dernier suivi.
+async function dejaTraite(base: Base, id: number, moi: number, sinon: string): Promise<DonneeInvalide> {
+	const [dernier] = await base
+		.select({ par: anomalieSuivi.par, prenom: personne.prenom, nom: personne.nom })
+		.from(anomalieSuivi)
+		.leftJoin(personne, eq(personne.id, anomalieSuivi.par))
+		.where(eq(anomalieSuivi.anomalieId, id))
+		.orderBy(desc(anomalieSuivi.id))
+		.limit(1);
+	return new DonneeInvalide(dernier && dernier.par !== moi && dernier.prenom !== null ? `Déjà traité par ${`${dernier.prenom} ${dernier.nom}`.trim()}` : sinon);
 }
 
 export type SignalementAnomalie = { enginId: number; libelle: string; genre: GenreEcart; note: string; photo?: Photo | null };

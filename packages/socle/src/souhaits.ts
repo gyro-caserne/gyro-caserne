@@ -40,8 +40,8 @@ export async function souhaiter(base: Base, acteur: Acteur, personneId: number, 
 					.where(and(eq(personne.id, personneId), fetesDuJour(aujourdhui)))
 			)
 			.onConflictDoNothing(),
-		// Seulement si la ligne vient d'être écrite (changes() : l'instruction précédente du batch). Lieu « anniversaire » : seul « tout » le coupe.
-		mettreEnFile(base, [personneId], 'anniversaire', { titre: 'Joyeux anniversaire', texte, url: '/', tag: `anniversaire:${acteur.id}` }, maintenant, sql`changes() = 1`, 'anniversaire')
+		// Seulement si la ligne vient d'être écrite (changes() : l'instruction précédente du batch). Sujet « vie » : il se coupe avec la vie du centre.
+		mettreEnFile(base, [personneId], 'vie', { titre: 'Joyeux anniversaire', texte, url: '/', tag: `anniversaire:${acteur.id}` }, maintenant, sql`changes() = 1`, 'anniversaire')
 	]);
 }
 

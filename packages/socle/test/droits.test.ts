@@ -176,10 +176,10 @@ describe('aLeDroit', () => {
 		expect(await aLeDroit(base, personneActeur(p!.id), 'VOIR_PLANNING', centre, aujourdhui)).toBe(false);
 	});
 
-	it('une personne extérieure n’a que les droits de son profil', async () => {
+	it('une personne extérieure : de son profil, seulement RESERVER (une ligne ancienne ne donne rien d’autre)', async () => {
 		const { base, exterieur, nouvelle } = await jeuDeDonnees();
 		const id = await nouvelle('e@x.fr', exterieur.id);
-		expect(await aLeDroit(base, personneActeur(id), 'VOIR_ANNUAIRE', centre, aujourdhui)).toBe(true);
+		expect(await aLeDroit(base, personneActeur(id), 'VOIR_ANNUAIRE', centre, aujourdhui)).toBe(false);
 		expect(await aLeDroit(base, personneActeur(id), 'VOIR_PLANNING', centre, aujourdhui)).toBe(false);
 	});
 

@@ -2,7 +2,7 @@ import { and, eq, sql, type SQL } from 'drizzle-orm';
 import type { Base } from './base.ts';
 import { enCours } from './dates.ts';
 import { DROITS, STATUTS_AVEC_ACCES, type Droit, type ResponsabiliteSysteme, type TypePerimetre } from './listes.ts';
-import { attribution, personne, profilDroit, responsabilite, responsabiliteDroit } from './schema.ts';
+import { attribution, personne, profil, profilDroit, responsabilite, responsabiliteDroit } from './schema.ts';
 
 export type Acteur = { type: 'super'; email: string } | { type: 'personne'; id: number };
 export type Perimetre = { type: 'centre' } | { type: Exclude<TypePerimetre, 'centre'>; id: number };
@@ -55,7 +55,7 @@ export function droitsDe(base: Base, acteur: Acteur, date: string): Promise<Droi
 
 async function lireDroits(base: Base, personneId: number, date: string): Promise<DroitAccorde[]> {
 
-	const [fiche] = await base.select({ statut: personne.statut, profilId: personne.profilId }).from(personne).where(eq(personne.id, personneId));
+	const [fiche] = await base.select({ statut: personne.statut, profilId: personne.profilId, type: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, personneId));
 	if (!fiche || !(STATUTS_AVEC_ACCES as readonly string[]).includes(fiche.statut)) return [];
 
 	const duProfil =
@@ -83,7 +83,9 @@ async function lireDroits(base: Base, personneId: number, date: string): Promise
 	// Une attribution hors du type de périmètre de sa responsabilité ne donne rien.
 	const valides = desAttributions.filter((ligne) => ligne.type === ligne.typeResponsabilite && enCours(ligne.debut, ligne.fin, date));
 
-	return [...accordes(duProfil), ...accordes(valides)];
+	// Un profil extérieur ne donne que le droit de réserver, même si une ligne ancienne en porte d'autres (actions/profils.ts).
+	const duType = fiche.type === 'exterieur' ? duProfil.filter((d) => d.droit === 'RESERVER') : duProfil;
+	return [...accordes(duType), ...accordes(valides)];
 }
 
 // Parmi des droits déjà lus, l'un donne-t-il `droit` sur `vise` ?
@@ -100,7 +102,7 @@ export async function aLeDroit(base: Base, acteur: Acteur, droit: Droit, vise: P
 export function aLeDroitAuCentreSql(qui: SQL, droit: Droit, date: string): SQL {
 	const statuts = sql.raw(STATUTS_AVEC_ACCES.map((s) => `'${s}'`).join(', '));
 	return sql`exists (select 1 from personne p where p.id = ${qui} and p.statut in (${statuts}) and (
-		exists (select 1 from profil_droit d where d.profil_id = p.profil_id and d.droit = ${droit} and d.perimetre_type = 'centre')
+		exists (select 1 from profil_droit d join profil pr on pr.id = d.profil_id where d.profil_id = p.profil_id and d.droit = ${droit} and d.perimetre_type = 'centre' and (pr.type_personne <> 'exterieur' or d.droit = 'RESERVER'))
 		or exists (select 1 from attribution a join responsabilite_droit rd on rd.responsabilite_id = a.responsabilite_id join responsabilite r on r.id = a.responsabilite_id
 			where a.personne_id = p.id and rd.droit = ${droit} and a.perimetre_type = r.type_perimetre and a.perimetre_type = 'centre' and a.debut <= ${date} and (a.fin is null or a.fin >= ${date}))))`;
 }

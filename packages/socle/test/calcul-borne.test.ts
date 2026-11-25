@@ -154,21 +154,63 @@ describe('Le calcul reste borné, avec 60 agents, 6 années publiées et 50 dema
 		const { base, reglage, acteurs } = jeu;
 		const plages = (await eteAPreparer(base, acteurs.chef, 2027, m, reglage)).semaines.flatMap((s) => s.plages).length;
 		expect(plages).toBeGreaterThan(60);
+		// Le nombre gardé à la dernière proposition ou au dernier ajustement, sans écriture plus récente qui le change.
+		const { journal } = await import('../src/schema.ts');
+		const { ACTION_A_REVOIR, plagesARevoir } = await import('../src/planning/repartition.ts');
+		await base.insert(journal).values({ quand: m, acteur: 'planning', action: ACTION_A_REVOIR, cibleType: 'ete', cibleId: 2027, details: JSON.stringify({ aRevoir: await plagesARevoir(base, 2027, m.slice(0, 10), reglage) }) });
 		for (const f of [armement.armement, armement.postesDe, calendrier.calculerAnnee]) vi.mocked(f).mockClear();
 		await accueilDe(base, acteurs.chef, null, m.slice(0, 10), m, reglage);
 		// Avant : le FPT calculé pour chaque plage, les postes de chacun pour chaque jour, toutes les semaines de l'année.
 		expect(vi.mocked(armement.armement).mock.calls.length, 'FPT calculé').toBeLessThanOrEqual(10);
 		expect(vi.mocked(armement.postesDe).mock.calls.length, 'postes calculés').toBeLessThanOrEqual(jeu.agents);
-		const semaines = vi.mocked(calendrier.calculerAnnee).mock.results.map((r) => (r.value as unknown[]).length);
-		expect(semaines, 'semaines calculées : seulement celles de l’été').toEqual([expect.toBeOneOf([9, 10])]);
+		// Le nombre gardé à la proposition : rien à recalculer.
+		expect(vi.mocked(calendrier.calculerAnnee).mock.calls, 'nombre gardé').toEqual([]);
+		// Sans nombre gardé (une proposition d'avant ce compte) : seulement les semaines de l'été.
+		const gardes = (await base.select().from(journal)).filter((l) => l.action === ACTION_A_REVOIR);
+		await base.delete(journal).where(eq(journal.action, ACTION_A_REVOIR));
+		try {
+			await accueilDe(base, acteurs.chef, null, m.slice(0, 10), m, reglage);
+			expect(vi.mocked(armement.armement).mock.calls.length, 'FPT calculé').toBeLessThanOrEqual(10);
+			expect(vi.mocked(armement.postesDe).mock.calls.length, 'postes calculés').toBeLessThanOrEqual(jeu.agents);
+			const semaines = vi.mocked(calendrier.calculerAnnee).mock.results.map((r) => (r.value as unknown[]).length);
+			expect(semaines, 'semaines calculées : seulement celles de l’été').toEqual([expect.toBeOneOf([9, 10])]);
+		} finally {
+			if (gardes.length) await base.insert(journal).values(gardes);
+		}
 	});
 
-	it('ce qui n’a pas besoin des semaines ne les calcule pas ; l’accueil d’un agent, une année', async () => {
+	it('ce qui n’a pas besoin des semaines ne les calcule pas ; l’accueil d’un agent, une année, et seulement la fenêtre utile', async () => {
 		const { base, reglage, acteurs, m } = jeu;
 		expect((await compter(() => remplacementsDe(base, acteurs.agent, m, reglage))).annees).toBe(0);
 		expect((await compter(() => manoeuvresEchangeables(base, acteurs.agent, m, reglage))).annees).toBe(0);
-		expect((await compter(() => astreinteDe(base, acteurs.agent, m, reglage))).annees).toBe(1);
+		const n = await compter(() => astreinteDe(base, acteurs.agent, m, reglage));
+		expect(n.annees).toBe(1);
+		// Avant : les 52 semaines de l'année ; la semaine en cours et les huit suivantes.
+		expect(n.semaines, 'semaines calculées').toBeLessThanOrEqual(10);
 	});
+
+	it('l’astreinte de l’accueil : la même qu’en calculant les années entières, chaque jour d’une année et aux heures de relève', async () => {
+		const { base, reglage, acteurs } = jeu;
+		const original = (await vi.importActual<typeof import('../src/planning/calendrier.ts')>('../src/planning/calendrier.ts')).calculerAnnee;
+		const moments: string[] = [];
+		for (let j = 0; j < 400; j += 1) {
+			const jour = ajouterJours('2026-11-01', j);
+			moments.push(`${jour}T10:00`, `${jour}T${reglage.debut.heure}`);
+		}
+		let comparees = 0;
+		for (const acteur of [acteurs.agent, acteurs.chef, acteurs.chefGarde, acteurs.referent])
+			for (const m of moments.filter((_, i) => i % 3 === 0)) {
+				const apres = await astreinteDe(base, acteur, m, reglage);
+				vi.mocked(calendrier.calculerAnnee).mockImplementation((annee, r, ordre, changees) => original(annee, r, ordre, changees));
+				try {
+					expect(apres, m).toEqual(await astreinteDe(base, acteur, m, reglage));
+				} finally {
+					vi.mocked(calendrier.calculerAnnee).mockImplementation(original);
+				}
+				comparees++;
+			}
+		expect(comparees).toBeGreaterThan(1000);
+	}, 300_000);
 
 	it('l’équipe d’une relève, lue sans calculer l’année : la même que celle du planning, semaine changée comprise', async () => {
 		const { base, reglage, acteurs } = jeu;

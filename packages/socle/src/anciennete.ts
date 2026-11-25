@@ -64,7 +64,8 @@ export async function feliciter(base: Base, acteur: Acteur, agentId: number, mai
 	if (!fete || !auteur) throw new DonneeInvalide('Pas de palier à fêter aujourd’hui');
 	if (deja) return;
 	const titre = `${ans(fete.annees)} de service`;
-	const texte = `${`${auteur.prenom} ${auteur.nom}`.trim()} vous félicite pour vos ${ans(fete.annees)} de service.`;
+	// Un moment convivial : un emoji, en fin de message (charte, « Les textes »).
+	const texte = `${`${auteur.prenom} ${auteur.nom}`.trim()} vous félicite pour vos ${ans(fete.annees)} de service 🎖️`;
 	await base.batch([
 		// Revérifié à l'écriture ; deux appuis simultanés n'écrivent qu'une ligne (index unique).
 		base
@@ -89,8 +90,8 @@ export async function feliciter(base: Base, acteur: Acteur, agentId: number, mai
 					.where(leJour)
 			)
 			.onConflictDoNothing(),
-		// Seulement si la ligne vient d'être écrite. Lieu « anciennete » : seul « tout » le coupe.
-		mettreEnFile(base, [agentId], 'anciennete', { titre, texte, url: '/', tag: `anciennete:${acteur.id}` }, maintenant, sql`changes() = 1`, 'anciennete')
+		// Seulement si la ligne vient d'être écrite. Sujet « vie ».
+		mettreEnFile(base, [agentId], 'vie', { titre, texte, url: '/', tag: `anciennete:${acteur.id}` }, maintenant, sql`changes() = 1`, 'anciennete')
 	]);
 }
 

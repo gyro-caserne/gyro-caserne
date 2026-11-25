@@ -5,7 +5,7 @@ import Page from './+page.svelte';
 import CeTelephone from './CeTelephone.svelte';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const html = (data: Record<string, unknown>, form: unknown = null) => render(Page as any, { props: { data: { clePublique: 'BPub', tout: false, coupes: [], appareils: 0, urgences: null, courriel: null, ...data }, form } }).body;
+const html = (data: Record<string, unknown>, form: unknown = null) => render(Page as any, { props: { data: { clePublique: 'BPub', tout: false, coupes: [], appareils: 0, urgences: null, courriel: null, sujets: { remplacements: true, engins: true, demandes: true, planning: true, vie: false }, ...data }, form } }).body;
 const telephone = (etat: string, appareils = 0) => render(CeTelephone as any, { props: { etat, appareils, activer: () => {}, desactiver: () => {} } }).body;
 
 describe('page Mes notifications', () => {
@@ -26,9 +26,21 @@ describe('page Mes notifications', () => {
 
 	it('chaque interrupteur passe par le composant commun, sa description reliée', () => {
 		const source = readFileSync(new URL('./+page.svelte', import.meta.url), 'utf8');
-		expect(source.match(/<Interrupteur /g)).toHaveLength(3);
+		expect(source.match(/<Interrupteur /g)).toHaveLength(4);
 		expect(source).not.toContain('role="switch"');
 		expect(html({ urgences: true })).toMatch(/aria-describedby="[^"]+-aide"/);
+	});
+
+	it('« Par sujet » : un interrupteur par sujet, coché quand il sonne au téléphone ; la cloche garde tout ; les urgences à part', () => {
+		const page = html({ urgences: true });
+		expect(page).toMatch(/Ce téléphone[\s\S]*Par sujet[\s\S]*Tout couper/);
+		for (const [sujet, libelle] of [['remplacements', 'Remplacements'], ['engins', 'Engins'], ['demandes', 'Demandes aux référents'], ['planning', 'Planning'], ['vie', 'Anniversaires et nominations']])
+			expect(page, sujet).toMatch(new RegExp(`action="\\?/sujet"[^>]*>(<!---->)?\\s*<input type="hidden" name="sujet" value="${sujet}"[\\s\\S]*?${libelle}`));
+		expect(page).toMatch(/value="vie"[\s\S]*?role="switch" name="oui" value="1"(?![^>]*checked)[^>]*>/);
+		expect(page).toMatch(/value="planning"[\s\S]*?role="switch" name="oui" value="1"[^>]*checked/);
+		expect(page).toContain('Coupé, un sujet ne sonne plus au téléphone. Il reste dans la cloche.');
+		expect(page).toContain('Les urgences du centre ne se coupent pas ici.');
+		expect(html({})).not.toContain('Les urgences du centre ne se coupent pas ici.');
 	});
 
 	it('« Tout couper » coupe aussi les urgences : l’écran prévient le chef', () => {

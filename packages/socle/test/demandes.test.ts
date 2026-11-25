@@ -16,6 +16,7 @@ import {
 	type EtatDemandeReferent
 } from '../src/demandes.ts';
 import { accueilDe } from '../src/casquettes.ts';
+import { DonneeInvalide } from '../src/erreurs.ts';
 import { courrielsDeDemande } from '../src/courriels.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
 import { changerStatut } from '../src/actions/personnes.ts';
@@ -69,6 +70,19 @@ describe('faire une demande', () => {
 		expect(await j.avis(j.ids.alice)).toEqual([]);
 		const [envoi] = await j.base.select().from(envoiPush);
 		expect(JSON.parse(envoi!.donnees)).toMatchObject({ url: `/demandes/${id}`, lue: { genre: 'demande' } });
+	});
+
+	it('rôle sans titulaire : la cheffe et l’adjoint agissent pareil ; le second apprend « Déjà traité par… », sans rien écrire', async () => {
+		const j = await jeu({ titulaires: false });
+		const id = await j.demander(j.ids.alice);
+		await j.geste(j.ids.claire, id, { quoi: 'prendre' });
+		await expect(j.geste(j.ids.adam, id, { quoi: 'prendre' })).rejects.toThrow(new DonneeInvalide('Déjà traité par Claire Fictif'));
+		// En même temps : un seul l'emporte.
+		const autre = await j.demander(j.ids.bob);
+		const r = await Promise.allSettled([j.geste(j.ids.claire, autre, { quoi: 'prendre' }), j.geste(j.ids.adam, autre, { quoi: 'prendre' })]);
+		expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+		expect((r.find((x) => x.status === 'rejected') as PromiseRejectedResult).reason.message).toMatch(/^Déjà traité par (Claire|Adam) Fictif$/);
+		expect((await j.base.select().from(filDemandeReferent).where(eq(filDemandeReferent.demandeId, autre)))).toHaveLength(1);
 	});
 
 	it('rôle sans titulaire (ou le sien terminé) : la cheffe et l’adjoint la reçoivent', async () => {
@@ -284,7 +298,7 @@ describe('le suivi d’une demande', () => {
 		const resultats = await Promise.allSettled([j.geste(j.ids.paul, id, { quoi: 'prendre' }), j.geste(j.ids.pia, id, { quoi: 'prendre' })]);
 		expect(resultats.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
 		const refus = resultats.find((r) => r.status === 'rejected') as PromiseRejectedResult;
-		expect(String(refus.reason)).toMatch(/Demande changée entre-temps|Geste impossible/);
+		expect(String(refus.reason)).toMatch(/Déjà traité par (Paul|Pia) Fictif/);
 		expect(await j.base.select().from(filDemandeReferent)).toHaveLength(1);
 		expect((await j.avis(j.ids.alice))).toHaveLength(1);
 	});

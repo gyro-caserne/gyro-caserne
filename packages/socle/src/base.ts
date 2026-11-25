@@ -2,13 +2,14 @@ import type { SQL } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { type DrizzleD1Database, drizzle } from 'drizzle-orm/d1';
 import { oublierDroits } from './droits.ts';
+import { oublierMurs } from './murs.ts';
 
 // batch est propre à D1 et au proxy de test : il exécute plusieurs requêtes d'un bloc.
 // La base est créée sans le schéma : drizzle en construirait sinon à chaque requête son modèle relationnel (base.query,
 // inutilisé), soit environ 2 ms de calcul, 14 ms à froid. Les requêtes passent par les tables de schema.ts.
 export type Base = BaseSQLiteDatabase<'async', unknown> & Pick<DrizzleD1Database, 'batch'>;
 
-// Une requête qui n'est pas une lecture peut changer des droits : ceux déjà lus sont oubliés.
+// Une requête qui n'est pas une lecture peut changer des droits ou des murs : ceux déjà lus sont oubliés.
 export const ecrit = (sql: string) => !/^\s*select\b/i.test(sql);
 // Une requête qui met des envois au téléphone en file (mettreEnFile).
 export const metEnFile = (sql: string) => /^\s*insert into "envoi_push"/i.test(sql);
@@ -19,7 +20,10 @@ export function creerBaseD1(d1: D1Database, siEnFile?: () => void): Base {
 		get(cible, cle) {
 			if (cle === 'prepare')
 				return (sql: string) => {
-					if (ecrit(sql)) oublierDroits(base);
+					if (ecrit(sql)) {
+						oublierDroits(base);
+						oublierMurs(base);
+					}
 					if (siEnFile && metEnFile(sql)) siEnFile();
 					return cible.prepare(sql);
 				};

@@ -7,6 +7,8 @@
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 	import Interrupteur from '#lib/ui/Interrupteur.svelte';
 	import CeTelephone, { type EtatTelephone } from './CeTelephone.svelte';
+	import { NOMS_SUJETS } from '#lib/notifications/sujets.ts';
+	import { SUJETS } from '@gyro-caserne/socle';
 
 	let { data, form } = $props();
 
@@ -50,13 +52,27 @@
 		<!-- Le chef de centre et l'adjoint : en premier, ce qui sonne à toute heure. -->
 		<Carte titre="Urgences du centre">
 			<form method="POST" action="?/urgences" use:enhance={garder}>
-				<Interrupteur libelle="Recevoir les urgences" description="Un engin indisponible, un remplacement sans remplaçant la veille, une équipe sans chef de garde la veille de sa relève : votre téléphone sonne, à toute heure." nom="oui" coche={data.urgences} envoyer />
+				<Interrupteur libelle="Recevoir les urgences" description="Un engin indisponible, un remplacement sans remplaçant la veille, une équipe sans chef de garde la veille de sa relève. Votre téléphone sonne alors, à toute heure." nom="oui" coche={data.urgences} envoyer />
 			</form>
 		</Carte>
 	{/if}
 
 	<Carte titre="Ce téléphone">
 		<CeTelephone etat={data.clePublique ? etat : 'sans-cles'} appareils={data.appareils} {echec} {activer} {desactiver} />
+	</Carte>
+
+	<Carte titre="Par sujet">
+		<p class="doux">Coupé, un sujet ne sonne plus au téléphone. Il reste dans la cloche.{#if data.urgences !== null && data.urgences !== undefined}{' '}Les urgences du centre ne se coupent pas ici.{/if}</p>
+		<ul role="list" class="sujets">
+			{#each SUJETS as sujet (sujet)}
+				<li>
+					<form method="POST" action="?/sujet" use:enhance={garder}>
+						<input type="hidden" name="sujet" value={sujet} />
+						<Interrupteur libelle={NOMS_SUJETS[sujet].libelle} description={NOMS_SUJETS[sujet].description} nom="oui" coche={data.sujets[sujet]} envoyer />
+					</form>
+				</li>
+			{/each}
+		</ul>
 	</Carte>
 
 	{#if data.courriel !== null && data.courriel !== undefined}
@@ -121,6 +137,13 @@
 		margin: var(--espace-8) 0 0;
 		font-weight: 600;
 		color: var(--statut-alerte-texte);
+	}
+	.sujets li {
+		display: block;
+		min-height: 0;
+	}
+	.doux + .sujets {
+		margin-top: var(--espace-8);
 	}
 	ul {
 		margin: 0;

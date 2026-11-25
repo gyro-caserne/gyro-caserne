@@ -22,6 +22,7 @@ import {
 	mesNotifications,
 	estCoupe,
 	marquerLue,
+	mettreEnFile,
 	notifierCommentaire,
 	notifierMessage,
 	notifierPublication,
@@ -225,6 +226,45 @@ describe('couper', () => {
 		expect(await base.select().from(coupure)).toEqual([]);
 	});
 
+	it('par sujet : coupé, il ne sonne plus au téléphone, la cloche le garde ; les urgences restent à part', async () => {
+		const { base, alice, bruno, file } = await jeu();
+		for (const sujet of ['remplacements', 'engins', 'demandes', 'planning', 'vie']) await couper(base, acteur(bruno), sujet, true, maintenant);
+		await base.batch([
+			...avisDEte(base, [alice, bruno], 'semaine', 'Votre semaine change.', '/planning', maintenant),
+			...avisAnomalies(base, [alice, bruno], { titre: 'Radio (FPT)', texte: 'Prise en charge par Chloe Test', url: '/engins/anomalies/1' }, maintenant),
+			...avisAnomalies(base, [bruno], { titre: 'FPT indisponible', texte: 'Radio, décidé par Chloe Test', url: '/engins/1' }, maintenant, undefined, 'urgences')
+		] as [never, ...never[]]);
+		expect((await file()).map((e) => [e.a, e.titre])).toEqual([
+			['Alice', 'Planning'],
+			['Alice', 'Radio (FPT)'],
+			['Bruno', 'FPT indisponible']
+		]);
+		expect((await base.select().from(avisEte)).map((l) => l.personneId).sort()).toEqual(tri(alice, bruno));
+		expect((await base.select().from(avisAnomalie)).filter((l) => l.personneId === bruno)).toHaveLength(2);
+		expect((await mesNotifications(base, acteur(bruno), aujourdhui)).sujets).toEqual({ remplacements: false, engins: false, demandes: false, planning: false, vie: false });
+		await couper(base, acteur(bruno), 'vie', false, maintenant);
+		expect((await mesNotifications(base, acteur(bruno), aujourdhui)).sujets).toMatchObject({ vie: true, planning: false });
+		// Les autres sujets, et une manœuvre (son mur ou « planning ») : rien au téléphone de Bruno, tout à Alice.
+		await base.delete(envoiPush);
+		const donnees = (titre: string) => ({ titre, texte: 'x', url: '/', tag: titre });
+		await base.batch([
+			mettreEnFile(base, [alice, bruno], 'remplacements', donnees('Remplacement'), maintenant),
+			mettreEnFile(base, [alice, bruno], 'demandes', donnees('Demande'), maintenant),
+			mettreEnFile(base, [alice, bruno], 'vie', donnees('Joyeux anniversaire'), maintenant),
+			mettreEnFile(base, [alice, bruno], ['mur:centre', 'planning'], donnees('Manœuvre'), maintenant)
+		]);
+		expect((await file()).map((e) => [e.a, e.titre])).toEqual([
+			['Alice', 'Remplacement'],
+			['Alice', 'Demande'],
+			['Alice', 'Joyeux anniversaire'],
+			['Alice', 'Manœuvre'],
+			// « vie » vient d'être réactivé : il sonne de nouveau.
+			['Bruno', 'Joyeux anniversaire']
+		]);
+		// Un sujet coupé n'est pas listé avec les murs et conversations coupés : il a son interrupteur.
+		expect((await mesNotifications(base, acteur(bruno), aujourdhui)).coupes).toEqual([]);
+	});
+
 	it('mesNotifications : « tout », les lieux coupés nommés, les appareils', async () => {
 		const { base, e2, alice, bruno } = await jeu();
 		const groupe = await creerGroupe(base, acteur(alice), { nom: 'Pot', membres: [bruno] }, maintenant);
@@ -236,6 +276,7 @@ describe('couper', () => {
 			appareils: 2,
 			urgences: null,
 			courriel: null,
+			sujets: { remplacements: true, engins: true, demandes: true, planning: true, vie: true },
 			coupes: [
 				{ lieu: 'mur:vie', nom: 'Vie du centre' },
 				{ lieu: `mur:equipe:${e2.id}`, nom: e2.nom },

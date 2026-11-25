@@ -144,7 +144,7 @@ describe('remplacement court : refuser après coup', () => {
 		expect(await avisDe(n.chloe)).toEqual(['recue', 'refusee']);
 		expect((await envoisDe(n.chloe)).map((e) => e.tag)).toContain(`urgence:remplacement:${id}:refusee`);
 		// Une seule fois.
-		await expect(refuserApresCoup(base, alice, id, '2026-11-09T19:31', reglage)).rejects.toThrow(new DonneeInvalide('Cette demande a déjà été traitée'));
+		await expect(refuserApresCoup(base, alice, id, '2026-11-09T19:31', reglage)).rejects.toThrow(new DonneeInvalide('Déjà traité par Alice Test'));
 	});
 
 	it('le chef de garde refuse quand une aptitude manque : urgence au demandeur et au remplaçant', async () => {

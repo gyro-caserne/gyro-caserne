@@ -94,6 +94,13 @@ const moiDe = (acteur: Acteur) => {
 // Les tables des lignes de la cloche, par genre.
 const TABLES = { publication: notification, commentaire: notification, reservation: avisReservation, remplacement: avisRemplacement, ete: avisEte, anomalie: avisAnomalie, demande: avisDemandeReferent, nomination: avisNomination, anniversaire: souhaitAnniversaire, anciennete: avisAnciennete };
 
+// Les sujets qui se coupent un à un au téléphone (Moi, puis Notifications) ; la cloche les garde. Leur nom est le lieu de leurs envois.
+// Remplacements ; engins (anomalies, prises de garde) ; demandes aux référents ; planning (été, semaines changées, manœuvres) ;
+// vie du centre (anniversaires, félicitations, nominations). Les urgences ont leur lieu, à part.
+export const SUJETS = ['remplacements', 'engins', 'demandes', 'planning', 'vie'] as const;
+export type Sujet = (typeof SUJETS)[number];
+const estSujet = (lieu: string): lieu is Sujet => (SUJETS as readonly string[]).includes(lieu);
+
 // Écritures : le fil, puis un envoi par appareil des destinataires qui n'ont coupé ni tout, ni ce lieu.
 function ecrireFil(base: Base, ids: number[], publicationId: number, commentaireId: number | null, maintenant: string) {
 	return base.insert(notification).select(
@@ -115,14 +122,18 @@ function ecrireFil(base: Base, ids: number[], publicationId: number, commentaire
 // `si` : une condition de plus, vérifiée au moment de l'écriture. `ligne` : le genre de la ligne de cloche écrite juste avant
 // dans le même batch, quand la page d'arrivée ne la marque pas lue (avis d'été), ou pour plus de sûreté (anomalies, demandes) ; chaque envoi porte celle de sa
 // personne (sa plus récente), pour que la toucher la marque lue. Les autres pages marquent déjà lu ce qu'elles montrent.
-export function mettreEnFile(base: Base, ids: number[] | SQLWrapper, lieu: string, donnees: DonneesPush, maintenant: string, si?: SQL, ligne?: 'ete' | 'anomalie' | 'demande' | 'nomination' | 'anniversaire' | 'anciennete') {
+// `lieu` : un lieu, ou plusieurs (une manœuvre vient de son mur et du sujet « planning ») ; une coupure de l'un d'eux suffit.
+// `calcules` : un tag ou un texte calculés à l'écriture (une demande créée dans le même batch, le nom de l'auteur), à la place de ceux de `donnees`.
+export function mettreEnFile(base: Base, ids: number[] | SQLWrapper, lieu: string | string[], donnees: DonneesPush, maintenant: string, si?: SQL, ligne?: 'ete' | 'anomalie' | 'demande' | 'nomination' | 'anniversaire' | 'anciennete', calcules: { tag?: SQL; texte?: SQL } = {}) {
 	const coupe = base
 		.select({ un: sql`1` })
 		.from(coupure)
-		.where(and(eq(coupure.personneId, abonnementPush.personneId), inArray(coupure.lieu, ['tout', lieu])));
+		.where(and(eq(coupure.personneId, abonnementPush.personneId), inArray(coupure.lieu, ['tout', ...(Array.isArray(lieu) ? lieu : [lieu])])));
 	const json = JSON.stringify(donnees);
 	const t = ligne === undefined ? null : TABLES[ligne];
-	const contenu = t === null ? sql<string>`${json}` : sql<string>`json_set(${json}, '$.lue', json_object('genre', ${ligne}, 'id', (select max(${t.id}) from ${t} where ${t.personneId} = "abonnement_push"."personne_id")))`;
+	let brut = sql`${json}`;
+	for (const [cle, valeur] of Object.entries(calcules)) brut = sql`json_set(${brut}, ${`$.${cle}`}, ${valeur})`;
+	const contenu = t === null ? sql<string>`${brut}` : sql<string>`json_set(${brut}, '$.lue', json_object('genre', ${ligne}, 'id', (select max(${t.id}) from ${t} where ${t.personneId} = "abonnement_push"."personne_id")))`;
 	return base.insert(envoiPush).select(
 		base
 			.select({ id: sql<number | null>`null`.as('id'), abonnementId: abonnementPush.id, donnees: contenu.as('donnees'), creeLe: sql<string>`${maintenant}`.as('cree_le'), jeton: sql<string | null>`null`.as('jeton'), reserveeLe: sql<string | null>`null`.as('reservee_le'), essais: sql<number>`0`.as('essais') })
@@ -175,7 +186,8 @@ export async function notifierConvoques(base: Base, id: number, maintenant: stri
 		.map((x) => x.id);
 	if (ids.length === 0) return;
 	const donnees = { titre: message.titre, texte: extrait(message.texte), url: `/echanges/${p.mur}/${id}`, tag: `publication:${id}` };
-	await base.batch([ecrireFil(base, ids, id, null, maintenant), mettreEnFile(base, ids, `mur:${p.mur}`, donnees, maintenant)]);
+	// Une manœuvre se coupe par son mur ou par le sujet « planning ».
+	await base.batch([ecrireFil(base, ids, id, null, maintenant), mettreEnFile(base, ids, [`mur:${p.mur}`, 'planning'], donnees, maintenant)]);
 }
 
 // Un commentaire : l'auteur de la publication, s'il lit encore le mur et n'a pas commenté lui-même. Une lecture, une écriture.
@@ -469,14 +481,14 @@ export const marquerLueLaPublication = (base: Base, moi: number, id: number, mai
 		.set({ lueLe: maintenant })
 		.where(and(eq(notification.personneId, moi), isNull(notification.lueLe), eq(notification.publicationId, id)));
 
-// Couper (oui) ou réactiver un lieu : « tout », « urgences » (celles du centre, pour le chef et l'adjoint), « courriel » (les demandes par e-mail), « mur:<clé> » (un mur que la personne lit) ou « conversation:<id> » (dont elle est membre).
+// Couper (oui) ou réactiver un lieu : « tout », « urgences » (celles du centre, pour le chef et l'adjoint), « courriel » (les demandes par e-mail), un sujet (SUJETS), « mur:<clé> » (un mur que la personne lit) ou « conversation:<id> » (dont elle est membre).
 // Réactiver ne vérifie que la forme : on peut toujours retirer une coupure.
 export async function couper(base: Base, acteur: Acteur, lieu: string, oui: boolean, maintenant: string): Promise<void> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const moi = moiDe(acteur);
 	const mur = /^mur:(.+)$/.exec(lieu)?.[1];
 	const conv = /^conversation:([1-9]\d*)$/.exec(lieu)?.[1];
-	if (lieu !== 'tout' && lieu !== 'urgences' && lieu !== 'courriel' && mur === undefined && conv === undefined) throw new DonneeInvalide('Lieu inconnu');
+	if (lieu !== 'tout' && lieu !== 'urgences' && lieu !== 'courriel' && !estSujet(lieu) && mur === undefined && conv === undefined) throw new DonneeInvalide('Lieu inconnu');
 	if (!oui) {
 		await base.delete(coupure).where(and(eq(coupure.personneId, moi), eq(coupure.lieu, lieu)));
 		return;
@@ -506,9 +518,11 @@ const RANG_MUR: Record<string, number> = { centre: 0, vie: 1, equipe: 2, comite:
 // Moi → Notifications : « tout » coupé ou non, les lieux coupés (murs puis conversations, nommés), le nombre d'appareils ;
 // pour le chef de centre et l'adjoint, s'ils reçoivent les urgences du centre ; pour qui tient un rôle (et peut recevoir des demandes),
 // s'il les reçoit par e-mail (nuls pour les autres). Une requête.
-export async function mesNotifications(base: Base, acteur: Acteur, aujourdhui: string): Promise<{ tout: boolean; coupes: { lieu: string; nom: string }[]; appareils: number; urgences: boolean | null; courriel: boolean | null }> {
+// `sujets` : pour chaque sujet, s'il sonne au téléphone.
+export async function mesNotifications(base: Base, acteur: Acteur, aujourdhui: string): Promise<{ tout: boolean; coupes: { lieu: string; nom: string }[]; appareils: number; urgences: boolean | null; courriel: boolean | null; sujets: Record<Sujet, boolean> }> {
 	exigerDate(aujourdhui);
-	if (acteur.type !== 'personne') return { tout: false, coupes: [], appareils: 0, urgences: null, courriel: null };
+	const tousLesSujets = (lieux: { lieu: string }[]) => Object.fromEntries(SUJETS.map((x) => [x, !lieux.some((l) => l.lieu === x)])) as Record<Sujet, boolean>;
+	if (acteur.type !== 'personne') return { tout: false, coupes: [], appareils: 0, urgences: null, courriel: null, sujets: tousLesSujets([]) };
 	const moi = acteur.id;
 	const conversationsCoupees = base
 		.select({ id: sql<number>`cast(substr(${coupure.lieu}, 14) as integer)` })
@@ -544,7 +558,7 @@ export async function mesNotifications(base: Base, acteur: Acteur, aujourdhui: s
 			return { lieu: `conversation:${c.id}`, nom: c.type === 'deux' ? `${autre?.prenom ?? ''} ${autre?.nom ?? ''}`.trim() : (c.nom ?? '') };
 		})
 		.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
-	return { tout: lieux.some((l) => l.lieu === 'tout'), coupes: [...murs, ...convs], appareils: appareils?.n ?? 0, urgences: appareils?.chef ? !lieux.some((l) => l.lieu === 'urgences') : null, courriel: appareils?.role ? !lieux.some((l) => l.lieu === 'courriel') : null };
+	return { tout: lieux.some((l) => l.lieu === 'tout'), coupes: [...murs, ...convs], appareils: appareils?.n ?? 0, urgences: appareils?.chef ? !lieux.some((l) => l.lieu === 'urgences') : null, courriel: appareils?.role ? !lieux.some((l) => l.lieu === 'courriel') : null, sujets: tousLesSujets(lieux) };
 }
 
 export type Abonnement = { endpoint: string; p256dh: string; auth: string; appareil: string };

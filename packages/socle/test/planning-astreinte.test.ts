@@ -46,6 +46,13 @@ describe('astreinte de l’accueil', () => {
 		expect(await astreinteDe(base, chef, '2026-11-01T10:00', reglage)).toMatchObject({ debut: '2026-10-30T18:00', mienne: false, enCours: true, equipe: { id: ids[3] } });
 	});
 
+	it('sans VOIR_PLANNING (un profil extérieur) : rien, même sans équipe', async () => {
+		const { base, a } = await jeu();
+		const [ext] = await base.select().from(profil).where(eq(profil.typePersonne, 'exterieur'));
+		const [rc] = await base.insert(personne).values({ email: 'rc@exemple.fr', prenom: 'Réserve', nom: 'Citoyenne', profilId: ext!.id }).returning();
+		expect(await astreinteDe(base, a(rc!.id), '2026-11-01T10:00', reglage)).toBeNull();
+	});
+
 	it('année non publiée : rien', async () => {
 		const { base, alice } = await jeu({ publier: false });
 		expect(await astreinteDe(base, alice, '2026-11-01T10:00', reglage)).toBeNull();
