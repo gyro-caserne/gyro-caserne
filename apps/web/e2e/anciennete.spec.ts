@@ -42,6 +42,6 @@ test.describe('ancienneté de service', () => {
 		await connecter(thomas, THOMAS);
 		await expect(thomas.getByText('Vous fêtez vos 10 ans de service', { exact: true })).toBeVisible();
 		await thomas.goto('/notifications');
-		await expect(thomas.getByText(/vous félicite pour vos 10\s+ans de service\.$/)).toBeVisible();
+		await expect(thomas.getByText(/vous félicite pour vos 10\s+ans de service 🎖️$/)).toBeVisible();
 	});
 });

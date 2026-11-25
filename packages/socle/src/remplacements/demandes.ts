@@ -146,7 +146,7 @@ export async function proposerEchange(base: Base, acteur: Acteur, d: { periodes:
 	if (!disponible(ctx, d.cibleId, periodes) || !disponible(ctx, moi, periodesCible)) throw new DonneeInvalide('Collègue indisponible sur ces périodes');
 	const mot = motDe(d.mot);
 	const debut = [periodes[0]!.debut, periodesCible[0]!.debut].sort()[0]!;
-	const texte = `${nomDe(ctx, moi)} propose d’échanger : ${texteDemande(periodes)} contre ${texteDemande(periodesCible)}`;
+	const texte = `${nomDe(ctx, moi)} propose un échange, ${texteDemande(periodes)} contre ${texteDemande(periodesCible)}`;
 	const [lignes] = await base.batch([
 		base
 			.insert(demandeRemplacement)

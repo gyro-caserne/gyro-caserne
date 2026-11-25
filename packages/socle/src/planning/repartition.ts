@@ -313,7 +313,7 @@ export async function ajusterPlage(base: Base, acteur: Acteur, annee: number, de
 	const retires = ecart.retires.filter((id) => id !== personneId);
 	if (present && !deBase) ajoutes.push(personneId);
 	if (!present && deBase) retires.push(personneId);
-	const texte = !present ? `Vous n’êtes plus d’astreinte : ${texteTranche(p)}.` : deBase ? `Vous êtes de nouveau d’astreinte : ${texteTranche(p)}.` : `Vous êtes en renfort ${duGroupe(lu, p.equipeId)} : ${texteTranche(p)}.`;
+	const texte = !present ? `Vous n’êtes plus d’astreinte, ${texteTranche(p)}.` : deBase ? `Vous êtes de nouveau d’astreinte, ${texteTranche(p)}.` : `Vous êtes en renfort ${duGroupe(lu, p.equipeId)}, ${texteTranche(p)}.`;
 	await base.batch([
 		base.update(plageEte).set({ ajoutes: JSON.stringify(ajoutes), retires: JSON.stringify(retires) }).where(eq(plageEte.debut, debut)),
 		journal(base, acteur, present ? 'ajouter_plage_ete' : 'retirer_plage_ete', { debut, personneId }, maintenant),

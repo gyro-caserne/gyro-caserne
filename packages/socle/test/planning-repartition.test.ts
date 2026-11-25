@@ -191,7 +191,7 @@ describe('été : proposer, ajuster, publier', () => {
 		await base.delete(avisEte);
 		await ajusterPlage(base, chef, 2027, MAR, p.fred, false, maintenant, reglage);
 		await expect(ajusterPlage(base, chef, 2027, '2027-06-29T19:00', p.fred, false, maintenant, reglage)).rejects.toThrow(DonneeInvalide);
-		expect((await base.select().from(avisEte)).map((x) => [x.personneId, x.texte])).toEqual([[p.fred, 'Vous n’êtes plus d’astreinte : nuit du mardi 29 juin.']]);
+		expect((await base.select().from(avisEte)).map((x) => [x.personneId, x.texte])).toEqual([[p.fred, 'Vous n’êtes plus d’astreinte, nuit du mardi 29 juin.']]);
 		const vue = await eteAPreparer(base, chef, 2027, maintenant, reglage);
 		expect(vue.conflits).toEqual(['nuit du mardi 29 juin : Fred Test est remplacé par Hugo Test, mais n’est plus d’astreinte']);
 		await base.delete(avisEte);
@@ -247,7 +247,7 @@ describe('été : proposer, ajuster, publier', () => {
 		expect((await base.select().from(avisEte).where(eq(avisEte.personneId, p.alice)))).toHaveLength(1);
 		await base.delete(avisEte);
 		await ajusterPlage(base, chef, 2027, MAR, p.fred, true, maintenant, reglage);
-		expect((await base.select().from(avisEte)).map((x) => x.texte)).toEqual(['Vous êtes de nouveau d’astreinte : nuit du mardi 29 juin.']);
+		expect((await base.select().from(avisEte)).map((x) => x.texte)).toEqual(['Vous êtes de nouveau d’astreinte, nuit du mardi 29 juin.']);
 	});
 
 	it('un agent en vacances présent sur une plage (vacances données après la proposition) est signalé ; ?plage= sans proposition ne détaille rien', async () => {

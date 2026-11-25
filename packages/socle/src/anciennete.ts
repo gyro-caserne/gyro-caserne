@@ -64,7 +64,8 @@ export async function feliciter(base: Base, acteur: Acteur, agentId: number, mai
 	if (!fete || !auteur) throw new DonneeInvalide('Pas de palier à fêter aujourd’hui');
 	if (deja) return;
 	const titre = `${ans(fete.annees)} de service`;
-	const texte = `${`${auteur.prenom} ${auteur.nom}`.trim()} vous félicite pour vos ${ans(fete.annees)} de service.`;
+	// Un moment convivial : un emoji, en fin de message (charte, « Les textes »).
+	const texte = `${`${auteur.prenom} ${auteur.nom}`.trim()} vous félicite pour vos ${ans(fete.annees)} de service 🎖️`;
 	await base.batch([
 		// Revérifié à l'écriture ; deux appuis simultanés n'écrivent qu'une ligne (index unique).
 		base
