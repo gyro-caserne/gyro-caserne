@@ -85,7 +85,7 @@ describe('page fiche agent', () => {
 			expect(bloc(page, 'Équipe et statut')[0]).toContain('Aucune équipe, opérationnel');
 			expect(bloc(page, 'Rôles')[0]).toContain('Aucun rôle en cours');
 			expect(bloc(page, 'Aptitudes')[0]).toContain('Aucune aptitude');
-			expect(bloc(page, 'Départ du centre')[0]).toContain('Fin des rôles, données personnelles effacées');
+			expect(bloc(page, 'Départ du centre')[0]).toContain('Quitter le centre ou partir à la retraite');
 		});
 
 		it('les résumés disent le téléphone, le grade et l’entrée, les rôles en cours', () => {

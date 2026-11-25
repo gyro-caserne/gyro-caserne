@@ -107,7 +107,7 @@
 		equipe: `${fiche.equipe?.nom ?? 'Aucune équipe'}, ${LIBELLES_STATUT[fiche.statut].toLocaleLowerCase('fr')}`,
 		aptitudes: data.aptitudes.length ? data.aptitudes.map((a) => (a.valide ? a.nom : `${a.nom} (expirée)`)).join(', ') : 'Aucune aptitude',
 		roles: [enCours.length ? enCours.map(intitule).join(', ') : 'Aucun rôle en cours', data.attributions.aVenir.length && `${data.attributions.aVenir.length} à venir`].filter(Boolean).join(', '),
-		depart: fiche.statut === 'parti' ? (fiche.partiLe ? `Parti le ${date(fiche.partiLe)}` : 'A quitté le centre') : (data.raison ?? 'Fin des rôles, données personnelles effacées')
+		depart: fiche.statut === 'parti' ? (fiche.partiLe ? `Parti le ${date(fiche.partiLe)}` : 'A quitté le centre') : (data.raison ?? (retraitePossible ? 'Quitter le centre ou partir à la retraite' : 'Fin des rôles, données personnelles effacées'))
 	});
 
 	// Le bloc concerné par le dernier envoi s'ouvre seul : on y voit l'erreur ou le message.

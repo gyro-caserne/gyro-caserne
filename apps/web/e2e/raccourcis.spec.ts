@@ -43,7 +43,7 @@ test('« Part à la retraite, reste dans l’appli » depuis « Départ du centr
 	await ouvrirBloc(page, /^Départ du centre/);
 	await page.getByRole('radio', { name: /^Part à la retraite, reste dans l’appli/ }).check();
 	const formulaire = page.locator('form[action^="?/retraite"]');
-	await expect(formulaire.getByLabel('Profil extérieur', { exact: true }).locator('option:checked')).toHaveText('Retraités');
+	await expect(formulaire.getByLabel('Profil extérieur', { exact: true }).locator('option:checked')).toHaveText(/^Retrait/);
 	await formulaire.getByLabel('Je confirme').check();
 	await formulaire.getByRole('button', { name: 'Passer à la retraite', exact: true }).click();
 	await expect(page.getByRole('status').filter({ hasText: 'Passage à la retraite enregistré' })).toHaveCount(1);
@@ -68,7 +68,7 @@ test('Demandes reçues : la carte « Étapes de vos demandes » en tête, et son
 	const lien = await page.getByRole('link', { name: /Référent pharmacie/ }).first().getAttribute('href');
 	await page.goto(`/demandes/role/${lien!.match(/\d+$/)![0]}`);
 	const carte = page.getByRole('region', { name: 'Étapes de vos demandes', exact: true });
-	await expect(carte).toContainText(/^Étapes de vos demandesDemandée, Prise en compte, /);
+	await expect(carte).toContainText(/^Étapes de vos demandes\s*Demandée, Prise en compte, /);
 	await page.waitForLoadState('networkidle');
 	await carte.locator('details > summary').click();
 	await expect(carte.getByRole('button', { name: 'Enregistrer les étapes', exact: true })).toBeVisible();
