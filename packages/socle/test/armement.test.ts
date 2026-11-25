@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
-import { armement, enregistrerArmement, postesTenus, lireArmement, postesDe, type Poste } from '../src/armement.ts';
+import { armement, armementDuCentre, enregistrerArmement, postesTenus, lireArmement, postesDe, type Poste } from '../src/armement.ts';
+import { creerTypeEngin } from '../src/fiches.ts';
 import { RefusDroit, DonneeInvalide } from '../src/erreurs.ts';
 import { chargerJeuDeDepart } from '../src/jeu-de-depart.ts';
 import { aptitude, attribution, personne, profil, responsabilite } from '../src/schema.ts';
@@ -86,5 +87,20 @@ describe('réglages de l’armement', () => {
 		await expect(enregistrerArmement(base, chef, { ...voulu, niveaux: { ...voulu.niveaux, ce: 9999 } }, '2026-11-01T10:00')).rejects.toThrow(DonneeInvalide);
 		await expect(enregistrerArmement(base, chef, { ...voulu, engins: [{ nom: 'FPT', postes: { ...FPT, agent: 12 } }] }, '2026-11-01T10:00')).rejects.toThrow(DonneeInvalide);
 		expect(await id('CE')).toBeGreaterThan(0);
+	});
+	it('un type ajouté par le centre a son armement : CA 1 agrès, CE et agent tant qu’il n’est pas réglé', async () => {
+		const { base, chef } = await jeu();
+		await creerTypeEngin(base, chef, 'CCF', '2026-11-01T10:00');
+		const r = await armementDuCentre(base);
+		expect(r.engins.map((e) => e.nom)).toEqual(['VSAV', 'VTU', 'FPT', 'CCF']);
+		expect(r.engins[3]!.postes).toEqual({ ca2: 0, ca1: 1, ce: 1, cod1: 0, agent: 1 });
+		// Le planning ne lit que le FPT : sa lecture ne change pas.
+		expect((await lireArmement(base)).engins.map((e) => e.nom)).toEqual(['VSAV', 'VTU', 'FPT']);
+		const voulu = { ...r, engins: r.engins.map((e) => (e.nom === 'CCF' ? { ...e, postes: { ...e.postes, cod1: 1 } } : e)) };
+		await enregistrerArmement(base, chef, voulu, '2026-11-01T10:00');
+		expect((await armementDuCentre(base)).engins[3]).toEqual({ nom: 'CCF', postes: { ca2: 0, ca1: 1, ce: 1, cod1: 1, agent: 1 } });
+		// Un nom qui n'est pas un type du centre n'est pas gardé.
+		await enregistrerArmement(base, chef, { ...voulu, engins: [...voulu.engins, { nom: 'INCONNU', postes: FPT }] }, '2026-11-01T10:00');
+		expect((await armementDuCentre(base)).engins.map((e) => e.nom)).toEqual(['VSAV', 'VTU', 'FPT', 'CCF']);
 	});
 });
