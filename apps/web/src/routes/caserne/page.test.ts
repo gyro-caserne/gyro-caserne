@@ -41,9 +41,10 @@ describe('/caserne', () => {
 		expect(page).not.toContain('href="/reglages"');
 	});
 
-	it('« Habillement » (Faire une demande, au référent habillement) pour un agent du centre ; pas pour le compte de la réserve citoyenne', () => {
-		expect(html({ comites: true })).toMatch(lien('/habillement', 'Habillement'));
-		expect(html({ comites: false })).not.toContain('href="/habillement"');
+	it('une seule entrée « Faire une demande », habillement compris ; plus de lien « Habillement » à part ; pas pour le compte de la réserve citoyenne', () => {
+		expect(html({ comites: true })).toMatch(lien('/demandes', 'Faire une demande'));
+		expect(html({ comites: true })).not.toContain('href="/habillement"');
+		expect(html({ comites: false })).not.toContain('href="/demandes"');
 	});
 
 	it('chef de centre : « Agents », « Qui fait quoi » et « Réglages » ; plus de page Nominations', () => {

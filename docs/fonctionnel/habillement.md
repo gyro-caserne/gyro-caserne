@@ -4,7 +4,7 @@
 
 ## Ce qui change
 
-- **Caserne → Habillement** ouvre « Faire une demande », le référent habillement déjà choisi.
+- **Caserne → Faire une demande**, en choisissant « Référent habillement ». L’ancienne adresse `/habillement` y mène encore, le référent déjà choisi.
 - Le rôle « Référent habillement » reçoit des demandes, sans droit propre, avec deux étapes intermédiaires, **En stock** et **Commandée au SDIS**, et une dernière étape, **Livrée**. Le référent saute l'une des deux selon le cas. Ces étapes se règlent comme pour tout rôle (Réglages → Rôles).
 - Le chef de centre et l'adjoint agissent toujours, et reçoivent les demandes quand le rôle n'a aucun titulaire.
 - Les anciennes adresses (`/habillement/12`, dans une notification ou le suivi du centre) mènent à la demande reprise, sinon à « Mes demandes ».
