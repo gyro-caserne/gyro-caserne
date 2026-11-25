@@ -13,10 +13,10 @@ Tout ce qui concerne l'agent, et seulement cela, jamais à l'auteur lui-même :
 - **un message** dans une de ses conversations (au téléphone seulement : les messages ont déjà leur pastille sur Échanges) ;
 - **une réservation** : une demande à trancher chez qui gère la ressource, l'accord, le refus ou l'annulation chez le demandeur (voir [Réservations](reservations.md)) ;
 - **un avis** de remplacement, de l'été ou d'anomalie (voir [Remplacements](remplacements-et-echanges.md), [Planning d'été](planning-d-ete.md), [Anomalies](anomalies.md)) ;
-- **un souhait d'anniversaire** d'un collègue, le jour de son anniversaire (voir [Murs](salons.md#anniversaires)) ; seul « tout » le coupe ;
-- **une félicitation** d'un collègue, le jour d'un palier d'ancienneté ; seul « tout » le coupe. Le chef de centre et l'adjoint lisent aussi dans la cloche les paliers dans 30 jours, sans envoi au téléphone, avec un e-mail (voir [Ancienneté](anciennete.md)) ;
+- **un souhait d'anniversaire** d'un collègue, le jour de son anniversaire (voir [Murs](salons.md#anniversaires)), « … vous souhaite un joyeux anniversaire 🎂 » ;
+- **une félicitation** d'un collègue, le jour d'un palier d'ancienneté, « … vous félicite pour vos 10 ans de service 🎖️ ». Le chef de centre lit aussi dans la cloche les paliers dans 30 jours, sans envoi au téléphone, avec un e-mail ; l'adjoint seulement sans chef de centre en cours, ou pour le palier du chef (voir [Ancienneté](anciennete.md)) ;
 - **la vigilance rouge**, à tous les agents, quand le département y passe (voir [Météo et vigilance](meteo-et-vigilance.md)) ;
-- **une nomination** faite à la main (fiche de l'agent, Qui fait quoi, fiche d'un rôle ou d'un comité) : « Vous êtes nommé Chef de garde », le périmètre et qui a nommé. Pas pour l'import du fichier de l'effectif, ni pour un retrait (voir [Accès et attributions](acces-et-attributions.md)) ;
+- **une nomination** faite à la main (fiche de l'agent, Qui fait quoi, fiche d'un rôle ou d'un comité) : « Vous êtes nommé Chef de garde », le périmètre et qui a nommé, le même texte dans la cloche et au téléphone. Pas pour l'import du fichier de l'effectif, ni pour un retrait (voir [Accès et attributions](acces-et-attributions.md)) ;
 - **une urgence du centre**, pour le chef de centre et l'adjoint (plus bas).
 
 Seul qui peut lire la publication ou la conversation **au moment de l'envoi** est prévenu.
@@ -45,6 +45,10 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 - Dans la cloche, **une seule ligne** : « Suivi du centre : 3 nouveautés depuis votre dernière visite », sans envoi au téléphone ; ses propres actions ne comptent pas. Elle compte pour 1 dans le chiffre de la cloche et sur la pastille de l'icône ; ouvrir le suivi la remet à zéro. Au-delà de 99, le compte s'arrête ; seules les 1 000 dernières actions du journal, et celles des trois derniers mois, comptent.
 - Un agent effacé y reste « Ancien agent ».
 
+## Chef de centre et adjoint
+
+Le chef de centre est le destinataire principal. L'adjoint ne reçoit pas les mêmes lignes en double, sauf les urgences, ou quand il n'y a pas de chef de centre en cours (ou que c'est lui l'auteur). C'est le cas d'un remplacement sans chef de garde (informé, à valider, désistement, relance), des anomalies d'une zone dont le rôle n'a pas de titulaire, des paliers d'ancienneté dans 30 jours, des vacances changées après la publication de l'été et d'une réouverture de prise demandée sans chef de garde. L'adjoint garde tous ses droits : il valide toujours un remplacement.
+
 ## Chefs et demandes adressées aux référents
 
 - Dès qu'un référent est nommé (référent engins pour les anomalies, référent habillement, gestionnaire d'une ressource), le chef de centre et l'adjoint ne reçoivent plus la demande au téléphone ni par e-mail : elle passe dans leur suivi. Le chef de garde de l'équipe d'astreinte reste prévenu des anomalies.
@@ -53,7 +57,7 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 
 ## E-mail aux référents
 
-- Une **nouvelle** demande adressée à un référent part aussi par e-mail à chacun de ceux qui la reçoivent en notification : nouvelle demande d'habillement, anomalie signalée (et nouvelles anomalies d'une prise de garde), réservation à valider. Un rôle créé par le chef avec ce droit reçoit donc les e-mails.
+- Une **nouvelle** demande adressée à un référent part aussi par e-mail à chacun de ceux qui la reçoivent en notification : nouvelle demande d'habillement, anomalie signalée (et nouvelles anomalies d'une prise de garde), réservation à valider. Pour une anomalie, seulement à qui n'a activé les notifications sur aucun téléphone : sinon, il la reçoit déjà. Un rôle créé par le chef avec ce droit reçoit donc les e-mails.
 - Texte simple : le titre, ses deux lignes et le lien vers la demande. La suite de la demande (questions, prise en compte) reste dans l'appli.
 - Moi → Notifications → « Recevoir les demandes par e-mail », activé par défaut, pour qui tient un rôle. « Tout couper » ne coupe pas les e-mails.
 - L'e-mail part après la réponse : un échec (adresse refusée, Brevo en panne) n'empêche jamais la demande. Brevo, offre gratuite : 300 e-mails par jour.
@@ -64,7 +68,9 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 - Sur iPhone, il faut d'abord ajouter l'appli à l'écran d'accueil (exigence d'Apple) : l'écran l'explique, étapes à l'appui (voir « Installer l'appli » plus bas).
 - La notification dit le lieu et l'auteur (« Publication d’Élodie Martin (Équipe 2) », « Message de Romain », « Message de Manon dans Départ de Thomas ») et le début du texte. Pas de photo.
 - La toucher ouvre sa page et marque lue sa ligne de la cloche, quelle qu'elle soit. Publications, commentaires, réservations et remplacements : leur page les marque déjà lues. Avis de l'été (dont le rappel des vacances) et anomalies, que leur page ne marque pas : la notification passe par la même adresse que la cloche (`/notifications/ouvrir`). Sans ligne de cloche (un message, une demande de réservation à trancher, une vigilance rouge) : sa page, directement.
-- Plusieurs messages d'une même conversation se remplacent : une seule notification par conversation à l'écran.
+- Plusieurs messages d'une même conversation se remplacent : une seule notification par conversation à l'écran. De même, une demande de remplacement a sa notification, qui porte son numéro : deux demandes ne se remplacent pas.
+- **De 22 h à 7 h**, un avis de remplacement ne sonne pas au téléphone : la ligne de la cloche suffit. Les urgences sonnent toujours.
+- Plusieurs semaines changées d'équipe d'un coup : **un seul avis** par personne, qui les dit toutes, avec ses remplacements touchés.
 - Délai : tout de suite (quelques secondes) jusqu'à 20 téléphones ; au-delà, le reste dans les dix minutes, puis dix minutes de plus par tranche de 40 (« Le centre » avec 100 appareils : 20 tout de suite, le reste en 20 minutes au plus). Une notification refusée par le téléphone n'est pas renvoyée. Un envoi interrompu de notre côté (coupure de Cloudflare) n'est pas perdu : il repart 5 à 15 minutes plus tard (plus tôt si quelqu'un publie entre-temps). Il remplace la notification encore affichée au lieu de s'ajouter, et ne recouvre jamais une notification plus récente de la même conversation ou publication.
 
 ## La pastille sur l'icône
@@ -84,6 +90,7 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 
 ## Couper
 
+- **Par sujet** : Moi → Notifications → « Par sujet », un interrupteur par sujet. **Remplacements** ; **Engins** (anomalies et prises de garde) ; **Demandes aux référents** ; **Planning** (l'été, les semaines changées, les manœuvres) ; **Vie du centre** (anniversaires, félicitations, nominations). Coupé, le sujet ne sonne plus au téléphone et reste dans la cloche (cloche seule, sans téléphone). Les urgences du centre ne se coupent pas avec ces sujets : elles ont leur interrupteur.
 - **Un mur ou une conversation** : le haut-parleur dans son en-tête (barré quand c'est coupé). Une seule cloche à l'écran : celle de l'appli. Une coupure vaut pour tout ce qui vient de ce lieu, commentaires sous ses propres publications compris.
 - **Tout** : l'interrupteur « Tout couper au téléphone » de Moi → Notifications, qui liste aussi ce qui est coupé, avec « Réactiver ». Il coupe aussi les urgences du centre.
 - **Les urgences du centre** (chef, adjoint) et **les e-mails des demandes** (qui tient un rôle) : leurs interrupteurs dans Moi → Notifications.
@@ -102,7 +109,7 @@ Le chef de centre et l'adjoint en fonction ne sont dérangés que pour l'urgent,
 
 - Les notifications de plus de 30 jours sont effacées chaque nuit.
 - Au départ d'un agent, ses appareils, ses notifications et ses coupures sont effacés. Se déconnecter désabonne l'appareil : un téléphone partagé ne reçoit plus les notifications du compte qui l'a quitté.
-- Pas d'heures calmes dans l'appli : le mode « Ne pas déranger » du téléphone s'en charge. Pas d'alerte opérationnelle : c'est le rôle du CTA-CODIS.
+- Pas d'heures calmes réglables : de 22 h à 7 h, seuls les avis de remplacement attendent la cloche ; pour le reste, le mode « Ne pas déranger » du téléphone s'en charge. Pas d'alerte opérationnelle : c'est le rôle du CTA-CODIS.
 
 ## Ce que la fonction ne fait pas (encore)
 
