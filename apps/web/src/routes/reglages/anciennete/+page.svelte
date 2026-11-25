@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
+	import { ans } from '@gyro-caserne/socle';
 
 	let { data, form } = $props();
 
@@ -38,7 +39,7 @@
 			<p class="doux" id="aide-paliers">Par exemple ceux de la médaille d’honneur des sapeurs-pompiers, 10, 20, 25, 30 et 40 ans.</p>
 			<div class="paliers">
 				{#each choix as p (p)}
-					<label class="palier"><input type="checkbox" name="palier" value={p} checked={data.paliers.includes(p)} aria-describedby="aide-paliers" />{p} ans</label>
+					<label class="palier"><input type="checkbox" name="palier" value={p} checked={data.paliers.includes(p)} aria-describedby="aide-paliers" />{ans(p)}</label>
 				{/each}
 			</div>
 		</fieldset>

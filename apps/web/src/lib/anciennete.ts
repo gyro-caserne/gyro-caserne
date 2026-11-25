@@ -1,11 +1,10 @@
-import { NOMS_ECHELON, type Anciennete } from '@gyro-caserne/socle';
+import { ans, NOMS_ECHELON, type Anciennete } from '@gyro-caserne/socle';
 import { formatDeDate } from '@gyro-caserne/socle/dates';
-import { pluriel } from './pluriel.ts';
 
 // Les textes du bloc d'ancienneté (fiche, Moi). Sans aucune date, rien à montrer : null.
 export type TextesAnciennete = { nombre: string; sous: string; echelon: string | null; prochain: string | null; part: number | null };
 
-const annees = (n: number) => (n === 0 ? 'Moins d’un an' : pluriel(n, 'an'));
+const annees = (n: number) => (n === 0 ? 'Moins d’un an' : ans(n));
 // « 3 mars 2029 », « 1er avril 2030 ».
 const date = (iso: string) => formatDeDate({ day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`)).replace(/^1(?=\s)/, '1er');
 
@@ -16,7 +15,7 @@ export function textesAnciennete(a: Anciennete): TextesAnciennete | null {
 		nombre: annees(a.annees),
 		sous: `de service${centre}`,
 		echelon: a.echelon ? `Échelon ${NOMS_ECHELON[a.echelon]}` : null,
-		prochain: a.prochain ? `Prochain palier, ${a.prochain.annees} ans le ${date(a.prochain.jour)}` : null,
+		prochain: a.prochain ? `Prochain palier, ${ans(a.prochain.annees)} le ${date(a.prochain.jour)}` : null,
 		part: a.prochain ? Math.round(a.prochain.part * 100) : null
 	};
 }

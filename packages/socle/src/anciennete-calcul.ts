@@ -7,6 +7,9 @@ export const PALIERS_PAR_DEFAUT = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 export const PALIER_MIN = 2;
 export const PALIER_MAX = 60;
 
+// « 10 ans », jamais coupé en fin de ligne (espace insécable) ; « 1 an ». Pour tout texte d'ancienneté : écrans, cloche, e-mail.
+export const ans = (n: number) => `${n}\u00a0${n > 1 ? 'ans' : 'an'}`;
+
 // Les échelons de la médaille d'honneur des sapeurs-pompiers. Ils disent où en est l'ancienneté, pas qu'une médaille a été remise.
 export const ECHELONS = [
 	{ annees: 40, echelon: 'grand_or' },

@@ -109,13 +109,13 @@ describe('le jour J', () => {
 		await feliciter(base, acteur(claire), thomas, '2026-12-12T10:00:00');
 		await Promise.all([feliciter(base, acteur(claire), thomas, maintenant), feliciter(base, acteur(claire), thomas, maintenant)]);
 		const lignes = await base.select().from(avisAnciennete);
-		expect(lignes).toMatchObject([{ personneId: thomas, agentId: thomas, auteurId: claire, annees: 10, jour: aujourdhui, titre: '10 ans de service', texte: 'Claire Martin vous félicite pour vos 10 ans de service.', url: '/', lueLe: null }]);
-		expect(await envois(`anciennete:${claire}`)).toEqual([{ titre: '10 ans de service', texte: 'Claire Martin vous félicite pour vos 10 ans de service.', url: '/', tag: `anciennete:${claire}`, lue: { genre: 'anciennete', id: lignes[0]!.id } }]);
+		expect(lignes).toMatchObject([{ personneId: thomas, agentId: thomas, auteurId: claire, annees: 10, jour: aujourdhui, titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service.', url: '/', lueLe: null }]);
+		expect(await envois(`anciennete:${claire}`)).toEqual([{ titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service.', url: '/', tag: `anciennete:${claire}`, lue: { genre: 'anciennete', id: lignes[0]!.id } }]);
 		expect((await fetesDuJourAuCentre(base, acteur(claire), aujourdhui)).paliers[0]!.geste).toBe('felicite');
 		// La cloche de Thomas : comptée, montrée, lue.
 		expect((await enTeteDe(base, acteur(thomas), aujourdhui)).nonLues).toBe(1);
 		const fil = await filDeNotifications(base, acteur(thomas), maintenant);
-		expect(fil.lignes).toEqual([{ id: lignes[0]!.id, type: 'anciennete', titre: '10 ans de service', texte: 'Claire Martin vous félicite pour vos 10 ans de service.', url: '/', creeLe: maintenant, lue: false }]);
+		expect(fil.lignes).toEqual([{ id: lignes[0]!.id, type: 'anciennete', titre: '10\u00a0ans de service', texte: 'Claire Martin vous félicite pour vos 10\u00a0ans de service.', url: '/', creeLe: maintenant, lue: false }]);
 		await marquerLue(base, acteur(thomas), 'anciennete', lignes[0]!.id, maintenant);
 		expect((await enTeteDe(base, acteur(thomas), aujourdhui)).nonLues).toBe(0);
 	});
@@ -166,15 +166,15 @@ describe('30 jours avant, au réveil', () => {
 		base.requetes = 0;
 		const courriels = await ancienneteDuMatin(base, huit);
 		expect(base.requetes).toBe(2);
-		const texte = 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10 ans de service.\nDans 30 jours, le 12 décembre, Julie Bernard atteint 20 ans de service.';
+		const texte = 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10\u00a0ans de service.\nDans 30 jours, le 12 décembre, Julie Bernard atteint 20\u00a0ans de service.';
 		expect(courriels).toEqual([
 			{ a: 'claire@exemple.fr', titre: 'Paliers d’ancienneté dans 30 jours', texte, url: '/agents' },
 			{ a: 'paul@exemple.fr', titre: 'Paliers d’ancienneté dans 30 jours', texte, url: '/agents' }
 		]);
 		const lignes = await base.select({ personneId: avisAnciennete.personneId, agentId: avisAnciennete.agentId, texte: avisAnciennete.texte, url: avisAnciennete.url }).from(avisAnciennete);
 		expect(lignes).toHaveLength(4);
-		expect(lignes).toContainEqual({ personneId: claire, agentId: thomas, texte: 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10 ans de service.', url: `/agents/${thomas}` });
-		expect(lignes).toContainEqual({ personneId: paul, agentId: julie, texte: 'Dans 30 jours, le 12 décembre, Julie Bernard atteint 20 ans de service.', url: `/agents/${julie}` });
+		expect(lignes).toContainEqual({ personneId: claire, agentId: thomas, texte: 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10\u00a0ans de service.', url: `/agents/${thomas}` });
+		expect(lignes).toContainEqual({ personneId: paul, agentId: julie, texte: 'Dans 30 jours, le 12 décembre, Julie Bernard atteint 20\u00a0ans de service.', url: `/agents/${julie}` });
 		expect((await filDeNotifications(base, acteur(claire), `${huit}:00`)).lignes.map((l) => l.type)).toEqual(['anciennete', 'anciennete']);
 		// Pas d'envoi au téléphone : la cloche et l'e-mail suffisent.
 		expect((await envois('anciennete')).length).toBe(0);
@@ -186,7 +186,7 @@ describe('30 jours avant, au réveil', () => {
 	it('un seul agent : l’e-mail mène à sa fiche ; « courriel » coupé, pas d’e-mail mais la cloche ; rien sans palier', async () => {
 		const { base, thomas, claire, paul } = await jeu();
 		await couper(base, acteur(paul), 'courriel', true, huit);
-		expect(await ancienneteDuMatin(base, huit)).toEqual([{ a: 'claire@exemple.fr', titre: 'Palier d’ancienneté dans 30 jours', texte: 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10 ans de service.', url: `/agents/${thomas}` }]);
+		expect(await ancienneteDuMatin(base, huit)).toEqual([{ a: 'claire@exemple.fr', titre: 'Palier d’ancienneté dans 30 jours', texte: 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10\u00a0ans de service.', url: `/agents/${thomas}` }]);
 		expect((await base.select({ personneId: avisAnciennete.personneId }).from(avisAnciennete)).map((l) => l.personneId).sort()).toEqual([claire, paul].sort());
 		expect(await ancienneteDuMatin(base, '2026-11-13T08:00')).toEqual([]);
 		await toutMarquerLu(base, acteur(claire), maintenant);
@@ -204,8 +204,8 @@ describe('30 jours avant, au réveil', () => {
 		const [a, b] = await Promise.all([ancienneteDuMatin(base, huit), ancienneteDuMatin(base, '2026-11-12T08:10')]);
 		const courriels = [...a, ...b];
 		expect(courriels.map((c) => c.a).sort()).toEqual(['claire@exemple.fr', 'paul@exemple.fr']);
-		expect(courriels.find((c) => c.a === 'claire@exemple.fr')!.texte).toBe('Dans 30 jours, le 12 décembre, Thomas Agent atteint 10 ans de service.');
-		expect(courriels.find((c) => c.a === 'paul@exemple.fr')!.texte).toContain('Claire Martin atteint 20 ans de service.');
+		expect(courriels.find((c) => c.a === 'claire@exemple.fr')!.texte).toBe('Dans 30 jours, le 12 décembre, Thomas Agent atteint 10\u00a0ans de service.');
+		expect(courriels.find((c) => c.a === 'paul@exemple.fr')!.texte).toContain('Claire Martin atteint 20\u00a0ans de service.');
 		const lignes = await base.select({ personneId: avisAnciennete.personneId, agentId: avisAnciennete.agentId }).from(avisAnciennete);
 		expect(lignes).toHaveLength(3);
 		expect(lignes).not.toContainEqual({ personneId: claire, agentId: claire });
@@ -216,6 +216,6 @@ describe('30 jours avant, au réveil', () => {
 		const { base, nouvelle } = await jeu();
 		await nouvelle('Leon', { nom: 'Bissextile', engagementSpv: '2016-02-29' });
 		// 30 jours avant le 28 février 2026 : le 29 janvier.
-		expect((await ancienneteDuMatin(base, '2026-01-29T08:00')).map((c) => c.texte)).toEqual(['Dans 30 jours, le 28 février, Leon Bissextile atteint 10 ans de service.', 'Dans 30 jours, le 28 février, Leon Bissextile atteint 10 ans de service.']);
+		expect((await ancienneteDuMatin(base, '2026-01-29T08:00')).map((c) => c.texte)).toEqual(['Dans 30 jours, le 28 février, Leon Bissextile atteint 10\u00a0ans de service.', 'Dans 30 jours, le 28 février, Leon Bissextile atteint 10\u00a0ans de service.']);
 	});
 });

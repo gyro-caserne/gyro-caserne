@@ -9,8 +9,8 @@ describe('page des paliers d’ancienneté', () => {
 	it('une case par palier, de 5 en 5 jusqu’à 50, cochées selon le réglage ; un palier réglé hors liste reste proposé', () => {
 		const page = html({ paliers: [10, 12, 20, 25, 30, 40] });
 		expect(page.match(/type="checkbox" name="palier"/g)).toHaveLength(11);
-		for (const p of [10, 12, 20, 25, 30, 40]) expect(page).toMatch(new RegExp(`value="${p}" checked[^>]*>${p} ans`));
-		expect(page).toMatch(/value="5"(?! checked)[^>]*>5 ans/);
+		for (const p of [10, 12, 20, 25, 30, 40]) expect(page).toMatch(new RegExp(`value="${p}" checked[^>]*>${p}\u00a0ans`));
+		expect(page).toMatch(/value="5"(?! checked)[^>]*>5\u00a0ans/);
 		expect(page).toMatch(/<legend[^>]*>Paliers fêtés<\/legend>/);
 		expect(page).toContain('Enregistrer les paliers');
 	});

@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, isNull, ne, notExists, sql } from 'drizzle-orm';
 import { anneesDeService, palierDuJour } from './a-ne-pas-manquer.ts';
 import { nomActeur } from './actions/personnes.ts';
-import { anciennete, PALIER_MAX, PALIER_MIN, PALIERS_PAR_DEFAUT, type Anciennete } from './anciennete-calcul.ts';
+import { anciennete, ans, PALIER_MAX, PALIER_MIN, PALIERS_PAR_DEFAUT, type Anciennete } from './anciennete-calcul.ts';
 import type { Base } from './base.ts';
 import type { Courriel } from './courriels.ts';
 import { ajouterJours, exigerDateHeure, formatDeDate } from './dates.ts';
@@ -63,8 +63,8 @@ export async function feliciter(base: Base, acteur: Acteur, agentId: number, mai
 	]);
 	if (!fete || !auteur) throw new DonneeInvalide('Pas de palier à fêter aujourd’hui');
 	if (deja) return;
-	const titre = `${fete.annees} ans de service`;
-	const texte = `${`${auteur.prenom} ${auteur.nom}`.trim()} vous félicite pour vos ${fete.annees} ans de service.`;
+	const titre = `${ans(fete.annees)} de service`;
+	const texte = `${`${auteur.prenom} ${auteur.nom}`.trim()} vous félicite pour vos ${ans(fete.annees)} de service.`;
 	await base.batch([
 		// Revérifié à l'écriture ; deux appuis simultanés n'écrivent qu'une ligne (index unique).
 		base
@@ -123,7 +123,7 @@ export async function ancienneteDuMatin(base: Base, maintenant: string): Promise
 	]);
 	const nouveaux = aVenir.filter((p) => !deja.some((d) => d.agentId === p.id && d.annees === p.annees));
 	if (nouveaux.length === 0 || chefs.length === 0) return [];
-	const lignes = nouveaux.map((p) => ({ p, texte: `Dans ${ANNONCE_JOURS} jours, ${leJour(cible)}, ${`${p.prenom} ${p.nom}`.trim()} atteint ${p.annees} ans de service.` }));
+	const lignes = nouveaux.map((p) => ({ p, texte: `Dans ${ANNONCE_JOURS} jours, ${leJour(cible)}, ${`${p.prenom} ${p.nom}`.trim()} atteint ${ans(p.annees)} de service.` }));
 	const ids = chefs.map((c) => c.id);
 	// Une ligne par chef et par agent, pas pour son propre palier ; jamais deux fois (un réveil en retard peut croiser le suivant).
 	const ecrites = (await base.batch(

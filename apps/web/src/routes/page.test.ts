@@ -112,8 +112,8 @@ describe('accueil', () => {
 	it('les paliers d’ancienneté du jour : le sien avec qui l’a félicité, ceux des collègues avec « Féliciter »', () => {
 		const base = { casquettes: [astreinte], choisie: 'astreinte', contenu: { type: 'astreinte' } };
 		const html = page({ ...base, monPalier: { annees: 10, feliciteePar: [{ prenom: 'Claire', nom: 'Martin' }] }, paliers: [{ id: 7, prenom: 'Thomas', nom: 'Agent', annees: 25, geste: 'feliciter' }, { id: 8, prenom: 'Julie', nom: 'Bernard', annees: 5, geste: 'felicite' }] });
-		expect(texte(html)).toMatch(/Aujourd’hui au centre\s*Vous fêtez vos 10 ans de service\s*Claire Martin vous félicite\./);
-		expect(texte(html)).toContain('Thomas Agent fête ses 25 ans de service');
+		expect(texte(html)).toMatch(/Aujourd’hui au centre\s*Vous fêtez vos 10\u00a0ans de service\s*Claire Martin vous félicite\./);
+		expect(texte(html)).toContain('Thomas Agent fête ses 25\u00a0ans de service');
 		expect(html).toMatch(/<form method="POST" action="\/echanges\?\/feliciter"[\s\S]*?name="id" value="7"[\s\S]*?name="retour" value="\/"[\s\S]*?Féliciter<span class="masque"> Thomas Agent<\/span>/);
 		expect(texte(html)).toContain('Félicité Julie Bernard');
 		// L'insigne de l'échelon (vermeil à 25 ans), décoratif : le texte dit tout.

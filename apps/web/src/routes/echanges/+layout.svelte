@@ -17,7 +17,7 @@
 	import Feliciter from '#lib/ui/Feliciter.svelte';
 	import InsigneAnciennete from '#lib/ui/InsigneAnciennete.svelte';
 	import Souhaiter from '#lib/ui/Souhaiter.svelte';
-	import { echelonDe, type AnniversaireDuJour, type PalierDuJour } from '@gyro-caserne/socle';
+	import { ans, echelonDe, type AnniversaireDuJour, type PalierDuJour } from '@gyro-caserne/socle';
 	import type { TuileMur } from './+layout.server';
 
 	let { data, children } = $props();
@@ -99,7 +99,7 @@
 {#snippet palier(p: PalierDuJour)}
 	<div class="ligne-jour">
 		<span class="medaille"><InsigneAnciennete echelon={echelonDe(p.annees)} taille={40} /></span>
-		<strong class="quoi">{p.prenom} {p.nom} fête ses {p.annees} ans de service</strong>
+		<strong class="quoi">{p.prenom} {p.nom} fête ses {ans(p.annees)} de service</strong>
 		<span class="geste"><Feliciter {p} retour={page.url.pathname} /></span>
 	</div>
 {/snippet}

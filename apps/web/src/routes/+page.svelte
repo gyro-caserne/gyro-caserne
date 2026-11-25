@@ -7,7 +7,7 @@
 	import { momentAnniversaire } from '#lib/animations/celebration.ts';
 	import { phraseSouhaits } from '#lib/anniversaire.ts';
 	import { phraseFelicitations } from '#lib/anciennete.ts';
-	import { echelonDe } from '@gyro-caserne/socle';
+	import { ans, echelonDe } from '@gyro-caserne/socle';
 	import Feliciter from '#lib/ui/Feliciter.svelte';
 	import InsigneAnciennete from '#lib/ui/InsigneAnciennete.svelte';
 	import TirerPourActualiser from '#lib/animations/TirerPourActualiser.svelte';
@@ -149,14 +149,14 @@
 				<ListeRangees titre="Aujourd’hui au centre">
 					{#if data.monPalier}
 						<li>
-							<Rangee titre="Vous fêtez vos {data.monPalier.annees} ans de service" sous={phraseFelicitations(data.monPalier.feliciteePar) || undefined}>
+							<Rangee titre="Vous fêtez vos {ans(data.monPalier.annees)} de service" sous={phraseFelicitations(data.monPalier.feliciteePar) || undefined}>
 								{#snippet tete()}<span class="medaille"><InsigneAnciennete echelon={echelonDe(data.monPalier!.annees)} taille={32} /></span>{/snippet}
 							</Rangee>
 						</li>
 					{/if}
 					{#each data.paliers as p (p.id)}
 						<li>
-							<Rangee titre="{p.prenom} {p.nom} fête ses {p.annees} ans de service">
+							<Rangee titre="{p.prenom} {p.nom} fête ses {ans(p.annees)} de service">
 								{#snippet tete()}<span class="medaille"><InsigneAnciennete echelon={echelonDe(p.annees)} taille={32} /></span>{/snippet}
 								{#snippet droite()}<Feliciter {p} retour="/" />{/snippet}
 							</Rangee>
