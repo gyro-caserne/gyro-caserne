@@ -47,7 +47,7 @@ test('« Part à la retraite, reste dans l’appli » depuis « Départ du centr
 	await formulaire.getByLabel('Je confirme').check();
 	await formulaire.getByRole('button', { name: 'Passer à la retraite', exact: true }).click();
 	await expect(page.getByRole('status').filter({ hasText: 'Passage à la retraite enregistré' })).toHaveCount(1);
-	await expect(page.getByRole('button', { name: /^Profil/ })).toContainText('Retraités');
+	await expect(page.getByRole('button', { name: /^Profil/ })).toContainText(/Retrait/);
 });
 
 test('au téléphone, le bas d’une page longue reste au-dessus de la barre du bas', async ({ page }, info) => {
