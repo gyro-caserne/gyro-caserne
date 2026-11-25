@@ -3,7 +3,7 @@
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 
 	let { data, form } = $props();
-	const depart = $derived(form?.valeurs ?? { nom: '', typeId: String(data.types[0]?.id ?? ''), immatriculation: '', situation: 'centre' as const, provenance: '' });
+	const depart = $derived(form?.valeurs ?? { nom: '', typeId: String(data.types[0]?.id ?? ''), nouveauType: '', immatriculation: '', situation: 'centre' as const, provenance: '' });
 </script>
 
 <svelte:head>

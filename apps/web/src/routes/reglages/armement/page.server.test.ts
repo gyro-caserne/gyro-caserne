@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lireArmement } from '@gyro-caserne/socle';
+import { armementDuCentre, creerTypeEngin, lireArmement } from '@gyro-caserne/socle';
 import { charger, envoyer, locaux, preparer } from '../de-test.ts';
 import { actions, load } from './+page.server';
 
@@ -43,5 +43,13 @@ describe('réglages : armement des engins', () => {
 		const sans = await lireArmement(base);
 		expect(sans.niveaux).toEqual({ ca2: null, ca1: null, ce: null, cod2: null, cod1: null });
 		expect(sans.engins).toEqual(apres.engins);
+	});
+	it('un type ajouté par le centre a son panneau, et ses postes s’enregistrent', async () => {
+		const { base, referent } = await preparer();
+		const l = locaux(base, referent);
+		await creerTypeEngin(base, { type: 'super', email: 'admin@exemple.fr' }, 'CCF', '2026-11-01T10:00');
+		expect(await charger(load, l, {}, 'http://x/?engin=CCF')).toMatchObject({ engin: 'CCF' });
+		await envoyer(actions, 'enregistrer', l, [['CCF-ca2', '0'], ['CCF-ca1', '1'], ['CCF-ce', '1'], ['CCF-cod1', '1'], ['CCF-agent', '2']]);
+		expect((await armementDuCentre(base)).engins.find((e) => e.nom === 'CCF')!.postes).toEqual({ ca2: 0, ca1: 1, ce: 1, cod1: 1, agent: 2 });
 	});
 });

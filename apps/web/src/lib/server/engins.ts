@@ -35,6 +35,8 @@ const PHRASES: Record<string, string> = {
 	'Nom trop long': 'Le nom est trop long.',
 	'Nom déjà utilisé': 'Ce nom est déjà pris par un engin du centre.',
 	'Type déjà présent': 'Ce type d’engin existe déjà.',
+	'Type vide': 'Indiquez le nom du nouveau type.',
+	'Type trop long': 'Le nom du type est trop long (20 caractères au plus).',
 	'Caractère interdit dans le type': 'Le type ne peut contenir aucun de ces signes, refusés par Excel : deux-points, \\ / ? * [ ].',
 	'Fiche changée entre-temps': 'La fiche vient d’être modifiée par quelqu’un d’autre. Elle est rechargée, refaites votre geste.',
 	'Provenance vide': 'Indiquez le centre qui prête l’engin.',
@@ -104,15 +106,20 @@ export function estFichierFichesLu(v: unknown): v is FichierFichesLu {
 	return Object.values(feuilles).every((lignes) => Array.isArray(lignes) && lignes.length <= LIGNES_MAX && lignes.every((l) => typeof l === 'object' && l !== null && Number.isSafeInteger(l.numero) && textes(l.cellules)));
 }
 
-// Le formulaire d'un engin, tel que tapé (renvoyé sur la page s'il est refusé).
+// Le choix « Nouveau type » de la liste des types.
+export const NOUVEAU_TYPE = 'nouveau';
+
+// Le formulaire d'un engin, tel que tapé (renvoyé sur la page s'il est refusé). « Nouveau type » : son nom tapé à côté.
 export function saisieEngin(f: FormData) {
 	const situation = champ(f, 'situation');
 	const valeurs = {
 		nom: champ(f, 'nom'),
 		typeId: champ(f, 'type'),
+		nouveauType: champ(f, 'nouveauType'),
 		immatriculation: champ(f, 'immatriculation'),
 		situation: (['centre', 'prete', 'parti'].includes(situation) ? situation : 'centre') as SituationEngin,
 		provenance: champ(f, 'provenance')
 	};
-	return { valeurs, saisie: { ...valeurs, typeId: idDe(valeurs.typeId) } };
+	const { nouveauType, ...reste } = valeurs;
+	return { valeurs, saisie: { ...reste, typeId: idDe(valeurs.typeId), ...(valeurs.typeId === NOUVEAU_TYPE && { nouveauType }) } };
 }

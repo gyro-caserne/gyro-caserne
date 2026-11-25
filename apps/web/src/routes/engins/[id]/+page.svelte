@@ -8,7 +8,7 @@
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 	import Pastille from '#lib/ui/Pastille.svelte';
 
-	type Donnees = { engin: EnginVu; gere: boolean; fiche: Fiche; releve?: Releve; peutFaire?: boolean; prise?: PriseDeLaReleve['prise']; ouvertes?: AnomalieVue[]; historique?: PriseHistorique[]; peutSignaler?: boolean; aRemettre?: number | null };
+	type Donnees = { engin: EnginVu; gere: boolean; fiche: Fiche; releve?: Releve; peutFaire?: boolean; prise?: PriseDeLaReleve['prise']; ouvertes?: AnomalieVue[]; historique?: PriseHistorique[]; peutSignaler?: boolean; aRemettre?: number | null; suites?: { armement: boolean } | null };
 	let { data }: { data: Donnees } = $props();
 	const e = $derived(data.engin);
 	const etat = $derived(etatPrise(data.prise ?? null));
@@ -90,7 +90,13 @@
 				<h2 id="titre-fiche">Fiche {data.fiche.type}</h2>
 				<p class="doux">{compteFiche(data.fiche.zones)}. Version {data.fiche.version.numero} du {dateCourte(data.fiche.version.creeLe)} ({data.fiche.version.auteur}).</p>
 			</div>
-			{#if data.fiche.zones.length === 0}
+			{#if data.suites}
+				<p class="doux">Cette fiche est encore vide.</p>
+				<div class="gestes">
+					<a class="lien-secondaire" href="/engins/fiches/{e.typeId}">Compléter sa fiche de prise de garde</a>
+					{#if data.suites.armement}<a class="lien-secondaire" href="/reglages/armement?engin={encodeURIComponent(e.type)}">Régler son armement</a>{/if}
+				</div>
+			{:else if data.fiche.zones.length === 0}
 				<p class="doux">Cette fiche est encore vide.{data.gere ? ' Ajoutez ses zones et ses éléments depuis « Modifier la fiche ».' : ''}</p>
 			{:else}
 				<ZonesFiche zones={data.fiche.zones} />
