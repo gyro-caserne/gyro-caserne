@@ -1,25 +1,66 @@
 <script lang="ts">
+	import { onMount, tick, untrack } from 'svelte';
+	import Bouton from '#lib/ui/Bouton.svelte';
 	import IconeRole from '#lib/ui/IconeRole.svelte';
 	import { ICONES_ROLES, type IconeRole as Icone } from '#lib/ui/icones-roles.ts';
 	import { NOMS_ICONES } from './roles.ts';
 
-	// L'icône d'un rôle, choisie dans la petite liste fixe.
-	let { valeur, erreur, legende = 'Icône' }: { valeur?: Icone; erreur?: string; legende?: string } = $props();
+	// L'icône d'un rôle ou d'un comité, choisie dans la petite liste fixe. On voit celle choisie ; « Changer d'icône » déplie la grille
+	// sur place, et un choix la referme. Sans JavaScript, la grille est dans un repli simple.
+	let { valeur, erreur, legende = 'Icône', sansChoix = 'Aucune' }: { valeur?: Icone; erreur?: string; legende?: string; sansChoix?: string } = $props();
 	const id = $props.id();
+
+	let choisie = $state(untrack(() => valeur ?? ''));
+	let ouverte = $state(untrack(() => Boolean(erreur)));
+	let monte = $state(false);
+	let racine: HTMLFieldSetElement;
+	onMount(() => (monte = true));
+
+	// Au doigt ou à la souris, un choix referme la grille. Au clavier, les flèches parcourent les icônes et Entrée ou Espace choisit.
+	async function refermer() {
+		ouverte = false;
+		await tick();
+		racine.querySelector<HTMLButtonElement>('.changer button')?.focus();
+	}
+	const auClic = (e: MouseEvent) => {
+		if (e.detail > 0) refermer();
+	};
+	const auClavier = (e: KeyboardEvent & { currentTarget: HTMLInputElement }) => {
+		if (e.key !== 'Enter' && e.key !== ' ') return;
+		// Entrée enverrait le formulaire : elle choisit seulement.
+		if (e.key === 'Enter') e.preventDefault();
+		choisie = e.currentTarget.value;
+		refermer();
+	};
 </script>
 
-<fieldset class="icones" aria-describedby={erreur ? `${id}-erreur` : undefined}>
-	<legend>{legende}</legend>
+{#snippet grille()}
 	<div class="tuiles">
 		{#each Object.keys(ICONES_ROLES) as Icone[] as icone (icone)}
 			<label class="tuile">
-				<input type="radio" name="icone" value={icone} checked={icone === valeur} />
+				<input type="radio" name="icone" value={icone} bind:group={choisie} onclick={auClic} onkeydown={auClavier} />
 				<IconeRole {icone} taille={40} />
 				<span class="cache">{NOMS_ICONES[icone]}</span>
 			</label>
 		{/each}
 	</div>
+{/snippet}
+
+<fieldset class="icones" bind:this={racine} aria-describedby={erreur ? `${id}-erreur` : undefined}>
+	<legend>{legende}</legend>
 	{#if erreur}<p class="erreur" id="{id}-erreur">{erreur}</p>{/if}
+	<div class="ligne">
+		<div class="choisie">
+			{#if choisie}<IconeRole icone={choisie as Icone} taille={40} />{/if}
+			<span>{choisie ? NOMS_ICONES[choisie as Icone] : sansChoix}</span>
+		</div>
+		{#if monte}<div class="changer"><Bouton variante="secondaire" etendu={ouverte} controle="{id}-grille" onclick={() => (ouverte = !ouverte)}>Changer d’icône</Bouton></div>{/if}
+	</div>
+	{#if monte}
+		<div id="{id}-grille" class="grille" hidden={!ouverte}>{@render grille()}</div>
+	{:else}
+		<details class="repli" {...erreur ? { open: true } : {}}><summary>Changer d’icône</summary>{@render grille()}</details>
+	{/if}
 </fieldset>
 
 <style>
@@ -27,11 +68,32 @@
 		border: none;
 		margin: 0;
 		padding: 0;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-8);
 	}
 	legend {
 		font-weight: 600;
 		padding: 0;
-		margin-bottom: var(--espace-6);
+		margin-bottom: var(--espace-8);
+	}
+	.ligne {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--espace-12);
+	}
+	.choisie {
+		display: flex;
+		align-items: center;
+		gap: var(--espace-12);
+		min-height: var(--cible);
+	}
+	.grille,
+	details > .tuiles {
+		padding-top: var(--espace-4);
 	}
 	.tuiles {
 		display: flex;
@@ -87,7 +149,7 @@
 		clip-path: inset(50%);
 	}
 	.erreur {
-		margin: var(--espace-6) 0 0;
+		margin: 0;
 		color: var(--accent);
 		font-weight: 600;
 	}
