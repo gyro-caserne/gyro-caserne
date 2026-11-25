@@ -91,6 +91,8 @@ Sous « Bonjour », une phrase compte ce qui attend un geste (« 2 publications 
 
 L'agent fêté voit sur son accueil, toute la journée, qui le lui a souhaité : « Paul Martin et Marc Petit vous l'ont souhaité. » (trois noms, puis « et 4 autres collègues »). Les souhaits sont effacés la nuit suivante, quand l'agent masque son anniversaire ou change sa date dans « Mon profil », et au départ de l'un ou l'autre.
 
+Les **paliers d'ancienneté** du jour s'y ajoutent, avec « Féliciter » (voir [Ancienneté de service](anciennete.md)).
+
 Exemple : Zoé a 30 ans. Paul ouvre Échanges, voit « Zoé Bernard fête son anniversaire » et appuie sur « Souhaiter ». Le téléphone de Zoé vibre ; sur son accueil, « Paul Martin vous l'a souhaité. »
 
 ## Photos

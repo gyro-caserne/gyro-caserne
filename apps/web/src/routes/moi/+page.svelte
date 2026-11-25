@@ -8,6 +8,7 @@
 	import ListeRangees from '#lib/ui/ListeRangees.svelte';
 	import Rangee from '#lib/ui/Rangee.svelte';
 	import Visage from '#lib/ui/Visage.svelte';
+	import BlocAnciennete from '#lib/ui/BlocAnciennete.svelte';
 	import Bouton from '#lib/ui/Bouton.svelte';
 
 	let { data, form } = $props();
@@ -66,6 +67,9 @@
 			<div class="qui"><p class="nom">Mon compte</p></div>
 		{/if}
 	</section>
+
+	<!-- Son ancienneté de service ; rien pour une personne extérieure, ni sans aucune date. -->
+	{#if data.anciennete && !data.exterieur}<BlocAnciennete a={data.anciennete} />{/if}
 
 	<ListeRangees>
 		<!-- Le super administrateur n'a pas de fiche : pas de « Mon profil ». -->

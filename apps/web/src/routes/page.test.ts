@@ -12,7 +12,7 @@ const vide = { annonces: [], evenements: [], sondages: [], epinglees: [], nouvea
 const sansMeteo = { meteo: null, vigilance: null };
 const page = (data: Record<string, unknown>, form: unknown = null, niveau = 'vivant') =>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	render(Page as any, { props: { data: { prenom: 'Alice', peutNominations: false, peutReglages: false, aNePasManquer: vide, meteo: sansMeteo, ...data }, form }, context: new Map([['affichage', { niveau, theme: 'auto' }]]) }).body;
+	render(Page as any, { props: { data: { prenom: 'Alice', peutNominations: false, peutReglages: false, aNePasManquer: vide, meteo: sansMeteo, monPalier: null, paliers: [], ...data }, form }, context: new Map([['affichage', { niveau, theme: 'auto' }]]) }).body;
 
 const texte = (html: string) => html.replace(/<!--.*?-->|<[^>]+>/g, '');
 
@@ -107,6 +107,18 @@ describe('accueil', () => {
 		expect(html).toMatch(/href="\/remplacements\/4"[^>]*>[\s\S]*?Alice Test cherche un remplaçant/);
 		expect(html).toContain('nuit du lundi 9 novembre, à accepter ou refuser');
 		expect(html).not.toContain('Tout est à jour');
+	});
+
+	it('les paliers d’ancienneté du jour : le sien avec qui l’a félicité, ceux des collègues avec « Féliciter »', () => {
+		const base = { casquettes: [astreinte], choisie: 'astreinte', contenu: { type: 'astreinte' } };
+		const html = page({ ...base, monPalier: { annees: 10, feliciteePar: [{ prenom: 'Claire', nom: 'Martin' }] }, paliers: [{ id: 7, prenom: 'Thomas', nom: 'Agent', annees: 25, geste: 'feliciter' }, { id: 8, prenom: 'Julie', nom: 'Bernard', annees: 5, geste: 'felicite' }] });
+		expect(texte(html)).toMatch(/Aujourd’hui au centre\s*Vous fêtez vos 10\u00a0ans de service\s*Claire Martin vous félicite\./);
+		expect(texte(html)).toContain('Thomas Agent fête ses 25\u00a0ans de service');
+		expect(html).toMatch(/<form method="POST" action="\/echanges\?\/feliciter"[\s\S]*?name="id" value="7"[\s\S]*?name="retour" value="\/"[\s\S]*?Féliciter<span class="masque"> Thomas Agent<\/span>/);
+		expect(texte(html)).toContain('Félicité Julie Bernard');
+		// L'insigne de l'échelon (vermeil à 25 ans), décoratif : le texte dit tout.
+		expect(html).toMatch(/<svg class="insigne vermeil[^"]*"[^>]*aria-hidden="true"/);
+		expect(texte(page(base))).not.toContain('Aujourd’hui au centre');
 	});
 
 	it('jour de son anniversaire : qui le lui a souhaité, en tête ; rien sans souhait ni un autre jour', () => {

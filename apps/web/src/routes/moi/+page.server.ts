@@ -1,5 +1,5 @@
 import { fail, redirect, type Cookies } from '@sveltejs/kit';
-import { aptitudesDe, desabonnerPartout, vueEffectif } from '@gyro-caserne/socle';
+import { ancienneteDe, aptitudesDe, desabonnerPartout, vueEffectif } from '@gyro-caserne/socle';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -7,13 +7,14 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	const { acteur, base } = locals;
 	if (!acteur) redirect(303, '/connexion');
-	if (acteur.type === 'super') return { identite: null, aptitudes: [] };
-	const [groupes, aptitudes] = await Promise.all([vueEffectif(base, aujourdhuiParis()), aptitudesDe(base, acteur, acteur.id, aujourdhuiParis())]);
+	if (acteur.type === 'super') return { identite: null, aptitudes: [], anciennete: null };
+	// Son ancienneté de service (décision 0047) : ses dates et les paliers du centre.
+	const [groupes, aptitudes, anciennete] = await Promise.all([vueEffectif(base, aujourdhuiParis()), aptitudesDe(base, acteur, acteur.id, aujourdhuiParis()), ancienneteDe(base, acteur.id, aujourdhuiParis())]);
 	for (const g of groupes) {
 		const p = g.personnes.find((x) => x.id === acteur.id);
-		if (p) return { identite: { prenom: p.prenom, nom: p.nom, grade: p.grade, role: p.roles[0] ?? null, equipe: g.equipe ? { nom: g.titre, couleur: g.equipe.couleur } : null }, aptitudes };
+		if (p) return { identite: { prenom: p.prenom, nom: p.nom, grade: p.grade, role: p.roles[0] ?? null, equipe: g.equipe ? { nom: g.titre, couleur: g.equipe.couleur } : null }, aptitudes, anciennete };
 	}
-	return { identite: null, aptitudes };
+	return { identite: null, aptitudes, anciennete };
 };
 
 // Ferme la session de cet appareil : Better Auth demande d'effacer ses cookies, on le fait ici, la réponse étant celle de SvelteKit.

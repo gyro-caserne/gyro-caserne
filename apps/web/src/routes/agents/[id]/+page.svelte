@@ -12,6 +12,7 @@
 	import PastilleEquipe from '#lib/ui/PastilleEquipe.svelte';
 	import Statut from '#lib/ui/Statut.svelte';
 	import { LIBELLES_STATUT } from '#lib/ui/statut.ts';
+	import BlocAnciennete from '#lib/ui/BlocAnciennete.svelte';
 	import Insigne from '#lib/ui/Insigne.svelte';
 	import Visage from '#lib/ui/Visage.svelte';
 
@@ -229,6 +230,9 @@
 				</ul>
 			</div>
 		</header>
+
+		<!-- L'ancienneté de service : pas pour une personne extérieure, qui n'a pas de dates de parcours. -->
+		{#if !exterieur && !fiche.effaceLe}<BlocAnciennete a={data.anciennete} completer={!data.raison} />{/if}
 
 		<div class="annonces">
 			<div role="status">

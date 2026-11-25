@@ -29,6 +29,7 @@ Format d'une page :
 - [Comment remplacer un chef de garde ?](remplacer-un-chef-de-garde.md)
 - [Comment publier sur un mur ?](publier-sur-un-mur.md)
 - [Comment souhaiter un anniversaire ?](souhaiter-un-anniversaire.md)
+- [Comment féliciter un collègue pour ses années de service ?](feliciter-un-collegue.md)
 - [Comment créer un sondage ?](comment-creer-un-sondage.md)
 - [Comment répondre à une convocation ?](repondre-a-une-convocation.md)
 - [Quand suis-je d'astreinte ?](voir-mon-planning.md)

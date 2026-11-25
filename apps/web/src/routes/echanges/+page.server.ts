@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { DonneeInvalide, souhaiter } from '@gyro-caserne/socle';
+import { DonneeInvalide, feliciter, souhaiter } from '@gyro-caserne/socle';
 import { maintenantParis } from '#lib/aujourdhui.ts';
 import { exigerActeur } from '#lib/server/formulaire-mur.ts';
 import type { Actions } from './$types';
@@ -20,5 +20,20 @@ export const actions: Actions = {
 			}
 		}
 		redirect(303, /^\/echanges(\/[\w:-]+)*$/.test(retour) ? retour : '/echanges');
+	},
+	// « Féliciter » un collègue le jour de son palier d'ancienneté, depuis l'accueil ou Échanges : même retour.
+	feliciter: async ({ locals, request }) => {
+		const acteur = exigerActeur(locals);
+		const f = await request.formData();
+		const id = String(f.get('id') ?? '');
+		const retour = String(f.get('retour') ?? '');
+		if (/^[1-9]\d{0,14}$/.test(id)) {
+			try {
+				await feliciter(locals.base, acteur, Number(id), maintenantParis());
+			} catch (erreur) {
+				if (!(erreur instanceof DonneeInvalide)) throw erreur;
+			}
+		}
+		redirect(303, retour === '/' || /^\/echanges(\/[\w:-]+)*$/.test(retour) ? retour : '/echanges');
 	}
 };

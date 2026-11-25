@@ -14,6 +14,7 @@ Tout ce qui concerne l'agent, et seulement cela, jamais à l'auteur lui-même :
 - **une réservation** : une demande à trancher chez qui gère la ressource, l'accord, le refus ou l'annulation chez le demandeur (voir [Réservations](reservations.md)) ;
 - **un avis** de remplacement, de l'été ou d'anomalie (voir [Remplacements](remplacements-et-echanges.md), [Planning d'été](planning-d-ete.md), [Anomalies](anomalies.md)) ;
 - **un souhait d'anniversaire** d'un collègue, le jour de son anniversaire (voir [Murs](salons.md#anniversaires)) ; seul « tout » le coupe ;
+- **une félicitation** d'un collègue, le jour d'un palier d'ancienneté ; seul « tout » le coupe. Le chef de centre et l'adjoint lisent aussi dans la cloche les paliers dans 30 jours, sans envoi au téléphone, avec un e-mail (voir [Ancienneté](anciennete.md)) ;
 - **la vigilance rouge**, à tous les agents, quand le département y passe (voir [Météo et vigilance](meteo-et-vigilance.md)) ;
 - **une nomination** faite à la main (fiche de l'agent, Qui fait quoi, fiche d'un rôle ou d'un comité) : « Vous êtes nommé Chef de garde », le périmètre et qui a nommé. Pas pour l'import du fichier de l'effectif, ni pour un retrait (voir [Accès et attributions](acces-et-attributions.md)) ;
 - **une urgence du centre**, pour le chef de centre et l'adjoint (plus bas).

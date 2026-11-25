@@ -22,7 +22,7 @@ Ici, les **gestionnaires** sont ceux qui ont le droit `GERER_ACCES` sur le centr
 ## Ce que la fiche permet
 
 - **Anniversaires** : le jour J, l'agent est fêté sur l'accueil et ses collègues peuvent le lui souhaiter (Échanges). L'agent peut le désactiver.
-- **Ancienneté** : un rappel des médailles d'honneur à 10, 20, 25 et 30 ans de service, pour préparer les dossiers à temps.
+- **Ancienneté** : les années de service, l'échelon et le prochain palier, en tête de la fiche ; fêtée le jour du palier, annoncée aux chefs 30 jours avant. Voir [Ancienneté de service](anciennete.md).
 - **Fin d'engagement** : l'engagement SPV dure 5 ans et se renouvelle. L'agent et le chef de centre sont prévenus avant l'échéance.
 - **Aptitudes et aptitude médicale** : un rappel avant expiration. Voir [Composition des gardes](composition-des-gardes.md).
 

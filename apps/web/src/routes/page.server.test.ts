@@ -41,6 +41,8 @@ describe('load de /', () => {
 			contenu: { type: 'astreinte' },
 			aNePasManquer: { annonces: [], evenements: [], sondages: [], epinglees: [], nouveautes: [], remplacements: [] },
 			anniversaire: null,
+			monPalier: null,
+			paliers: [],
 			aujourdhui: aujourdhuiParis(),
 			astreinte: null,
 			priseOuverte: false,
@@ -97,6 +99,14 @@ describe('load de /', () => {
 		const { base, alice } = await jeu();
 		await base.update(personne).set({ naissance: `1990${aujourdhuiParis().slice(4)}` }).where(eq(personne.id, alice.id));
 		expect(await appeler({ acteur: alice, base })).toMatchObject({ anniversaire: { souhaitePar: [] }, aujourdhui: aujourdhuiParis() });
+	});
+
+	it('les paliers d’ancienneté du jour : le sien, et ceux des collègues à féliciter', async () => {
+		const { base, alice } = await jeu();
+		const jour = aujourdhuiParis();
+		const [bruno] = await base.insert(personne).values({ email: 'bruno@exemple.fr', prenom: 'Bruno', nom: 'M', engagementSpv: `${Number(jour.slice(0, 4)) - 20}${jour.slice(4)}` }).returning();
+		expect(await appeler({ acteur: alice, base })).toMatchObject({ monPalier: null, paliers: [{ id: bruno!.id, prenom: 'Bruno', nom: 'M', annees: 20, geste: 'feliciter' }] });
+		expect(await appeler({ acteur: { type: 'personne', id: bruno!.id }, base })).toMatchObject({ monPalier: { annees: 20, feliciteePar: [] }, paliers: [] });
 	});
 
 	it('super administrateur : pas de prénom, « Le centre »', async () => {

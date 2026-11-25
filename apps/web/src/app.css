@@ -56,6 +56,12 @@
 	--insigne-rouge: #ef4b59;
 	--insigne-or: #e8b923;
 	--insigne-argent: #d9dee3;
+	/* Les échelons de l’ancienneté (médaille d’honneur) : le disque de l’insigne, au moins 3:1 sur la surface. Le mot dit toujours l’échelon. */
+	--medaille-bronze: #9c5a2c;
+	--medaille-argent: #78828d;
+	--medaille-vermeil: #b5452a;
+	--medaille-or: #9a7400;
+	--medaille-grand-or: #7d5c00;
 	--marquage: repeating-linear-gradient(-45deg, var(--jaune) 0 10px, var(--rouge) 10px 20px);
 	/* Les cartes sont plates : une surface sur le fond, sans ombre (décision 0026). */
 	--ombre-carte: 0 0 0 transparent;
@@ -144,6 +150,11 @@
 	--insigne-rouge: #ef4b59;
 	--insigne-or: #e8b923;
 	--insigne-argent: #d9dee3;
+	--medaille-bronze: #d49060;
+	--medaille-argent: #c3cad3;
+	--medaille-vermeil: #ec8a6a;
+	--medaille-or: #e8b923;
+	--medaille-grand-or: #f6d26a;
 	--menu-fond: #0f141b;
 	--menu-actif: #1a222c;
 	--segment-fond: #252e39;
@@ -195,6 +206,11 @@
 		--insigne-rouge: #ef4b59;
 		--insigne-or: #e8b923;
 		--insigne-argent: #d9dee3;
+		--medaille-bronze: #d49060;
+		--medaille-argent: #c3cad3;
+		--medaille-vermeil: #ec8a6a;
+		--medaille-or: #e8b923;
+		--medaille-grand-or: #f6d26a;
 		--menu-fond: #0f141b;
 		--menu-actif: #1a222c;
 		--segment-fond: #252e39;

@@ -1,4 +1,4 @@
-import { aNePasManquer, anniversairesDuJour, apercusDesMurs, exigerMessagerie, mursDe, RefusDroit, type ApercuMur, type Mur } from '@gyro-caserne/socle';
+import { aNePasManquer, apercusDesMurs, fetesDuJourAuCentre, exigerMessagerie, mursDe, RefusDroit, type ApercuMur, type Mur } from '@gyro-caserne/socle';
 import { aujourdhuiParis, maintenantParis } from '#lib/aujourdhui.ts';
 import { exigerActeur } from '#lib/server/formulaire-mur.ts';
 import type { LayoutServerLoad } from './$types';
@@ -11,13 +11,14 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const surMessages = url.pathname === '/echanges/messages' || url.pathname.startsWith('/echanges/messages/');
 	const acteur = exigerActeur(locals);
 	// Les messages ont leur propre chargement : les murs ne sont pas lus.
-	if (surMessages) return { messagerie: true, avis: null, sections: { centre: null, groupes: [], autres: [], supervision: [] }, aujourdhui: { anniversaires: [], evenement: null }, aVenir: [] };
+	if (surMessages) return { messagerie: true, avis: null, sections: { centre: null, groupes: [], autres: [], supervision: [] }, aujourdhui: { anniversaires: [], paliers: [], evenement: null }, aVenir: [] };
 	const aujourdhui = aujourdhuiParis();
-	const [murs, apercus, { annonces, evenements, nouveautes }, anniversaires, messagerie] = await Promise.all([
+	const [murs, apercus, { annonces, evenements, nouveautes }, { anniversaires, paliers }, messagerie] = await Promise.all([
 		mursDe(locals.base, acteur, aujourdhui),
 		apercusDesMurs(locals.base, acteur, aujourdhui),
 		aNePasManquer(locals.base, acteur, aujourdhui, maintenantParis()),
-		anniversairesDuJour(locals.base, acteur, aujourdhui),
+		// Les anniversaires et les paliers d'ancienneté du jour, en une requête.
+		fetesDuJourAuCentre(locals.base, acteur, aujourdhui),
 		exigerMessagerie(locals.base, acteur, aujourdhui).then(
 			() => true,
 			(erreur) => {
@@ -61,6 +62,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		},
 		aujourdhui: {
 			anniversaires,
+			paliers,
 			evenement: evenement ? { id: evenement.id, cle: evenement.cle, titre: evenement.titre, debut: evenement.debut } : null
 		},
 		// Les 3 prochains événements où la personne est convoquée, en cours compris, pour la colonne de droite d'un mur.

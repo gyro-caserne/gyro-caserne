@@ -1,5 +1,6 @@
-import { creerBaseD1, creerBasePhotos, effacerAgentsPartis, equipeSansChefDemain, effacerAnciens, effacerSouhaitsPasses, effacerVieillesDemandesReferents, effacerPhotosOrphelines, effacerVieillesNotifications, effacerVieillesPublications, effacerVieillesReservations, fileDEnvoisVide, mettreAJourReleves, planningDuMatin, rappelsEte, remplacementsDuMoment, resumeErreur } from '@gyro-caserne/socle';
+import { ancienneteDuMatin, creerBaseD1, creerBasePhotos, effacerAgentsPartis, equipeSansChefDemain, effacerAnciens, effacerSouhaitsPasses, effacerVieillesDemandesReferents, effacerPhotosOrphelines, effacerVieillesNotifications, effacerVieillesPublications, effacerVieillesReservations, fileDEnvoisVide, mettreAJourReleves, planningDuMatin, rappelsEte, remplacementsDuMoment, resumeErreur } from '@gyro-caserne/socle';
 import { aujourdhuiParis, maintenantParis } from './lib/aujourdhui.ts';
+import { envoyerCourriel, type EnvCourriel } from './lib/server/courriel.ts';
 import { envoyerLot } from './lib/server/envoi-push.ts';
 import { clesVapid, type EnvVapid } from './lib/server/webpush.ts';
 
@@ -14,7 +15,7 @@ export function limiteDeConservation(quand: Date, mois: number): string {
 	return vise.toISOString().slice(0, 10);
 }
 
-type Env = EnvVapid & { BASE: D1Database; PHOTOS: D1Database; VIGILANCE_CLE?: string; SUPER_ADMINS?: string; JOURNAL_DES_PAGES?: boolean };
+type Env = EnvVapid & EnvCourriel & { BASE: D1Database; PHOTOS: D1Database; VIGILANCE_CLE?: string; SUPER_ADMINS?: string; JOURNAL_DES_PAGES?: boolean };
 
 // Les notifications du fil sont gardées 30 jours.
 const CONSERVATION_NOTIFICATIONS_JOURS = 30;
@@ -52,6 +53,15 @@ export function avecPlanifie<K extends { fetch: unknown }>(kit: K, centre: { con
 					taches.push(rappelsEte(base, maintenant).catch((e) => console.error('Rappels de l’été', resumeErreur(e))));
 					// La veille d'une relève : l'équipe d'astreinte sans chef de garde, en urgence au chef de centre et à l'adjoint (rien n'est lu les autres jours).
 					taches.push(equipeSansChefDemain(base, maintenant, centre.astreinte).catch((e) => console.error('Équipe sans chef', resumeErreur(e))));
+					// Les paliers d'ancienneté dans 30 jours : la cloche du chef et de l'adjoint, et un e-mail qui les liste (rien sans palier, jamais deux fois).
+					taches.push(
+						ancienneteDuMatin(base, maintenant)
+							.then(async (courriels) => {
+								const origine = env.BETTER_AUTH_URL ? new URL(env.BETTER_AUTH_URL).origin : '';
+								for (const c of courriels) await envoyerCourriel(env, { a: c.a, sujet: c.titre, texte: `${c.titre}\n${c.texte}\n\n${origine}${c.url}\n` }).catch((e) => console.error('Courriel d’ancienneté non envoyé', resumeErreur(e)));
+							})
+							.catch((e) => console.error('Ancienneté', resumeErreur(e)))
+					);
 				}
 				// Les remplacements : expirés au début de leur période, relancés la veille. Toutes les dix minutes, à chaque réveil.
 				if (maintenant[15] === '0') taches.push(remplacementsDuMoment(base, maintenant).catch((e) => console.error('Remplacements du moment', resumeErreur(e))));
@@ -83,7 +93,7 @@ export function avecPlanifie<K extends { fetch: unknown }>(kit: K, centre: { con
 					effacerAnciens(base, photos, avant),
 					effacerVieillesPublications(base, photos, publications),
 					effacerVieillesNotifications(base, notifications),
-					// Les souhaits d'anniversaire ne passent pas la journée (décision 0033).
+					// Les souhaits d'anniversaire et les félicitations d'ancienneté ne passent pas la journée (décisions 0033 et 0047).
 					effacerSouhaitsPasses(base, aujourdhuiParis(quand)),
 					effacerVieillesReservations(base, reservations),
 					effacerVieillesDemandesReferents(base, demandes),

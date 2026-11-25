@@ -6,6 +6,7 @@ Une page par fonction, avec exemples et cas d'usage. Le modèle commun (briques,
 |---|---|
 | Accès et attributions | [acces-et-attributions.md](acces-et-attributions.md) |
 | Fiche agent | [fiche-agent.md](fiche-agent.md) |
+| Ancienneté de service | [anciennete.md](anciennete.md) |
 | Données des agents (partis, effacement) | [donnees-des-agents.md](donnees-des-agents.md) |
 | Vos données dans Gyro Caserne (page pour les agents) | [vos-donnees.md](vos-donnees.md) |
 | Qui fait quoi | [comites-et-referents.md](comites-et-referents.md) |

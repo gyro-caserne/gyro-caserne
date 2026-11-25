@@ -75,6 +75,14 @@ describe('page des notifications', () => {
 		expect(page).toMatch(/Non lu, [\s\S]*?Vous êtes nommé Chef de garde[\s\S]*?Équipe 2, par Claire Martin/);
 	});
 
+	it('l’ancienneté : une félicitation, ou un palier dans 30 jours pour le chef ; l’icône de la médaille', () => {
+		const page = html({ nonLues: 2, lignes: [{ id: 8, type: 'anciennete', titre: '10 ans de service', texte: 'Claire Martin vous félicite pour vos 10 ans de service.', url: '/', creeLe: '2026-12-12T09:00', lue: false }, { id: 9, type: 'anciennete', titre: 'Palier d’ancienneté dans 30 jours', texte: 'Dans 30 jours, le 12 décembre, Thomas Agent atteint 10 ans de service.', url: '/agents/7', creeLe: '2026-11-12T08:00', lue: true }] });
+		expect(page).toContain(`href="${ouvre('anciennete', 8, '/')}"`);
+		expect(page).toContain('href="/agents/7"');
+		expect(page).toMatch(/Non lu, [\s\S]*?10 ans de service[\s\S]*?Claire Martin vous félicite pour vos 10 ans de service\./);
+		expect(page).toContain('Dans 30 jours, le 12 décembre, Thomas Agent atteint 10 ans de service.');
+	});
+
 	it('non lue : le point, « Non lu, » écrit pour les lecteurs d’écran et le titre en gras ; pas de bande à gauche', () => {
 		expect(html({ nonLues: 1, lignes: [ligne({})] })).toMatch(/class="ligne[^"]*non-lue[\s\S]*?Non lu, [\s\S]*?<span class="point[^"]*" aria-hidden="true">/);
 		expect(source).toMatch(/\.non-lue \.quoi \{\s*font-weight: 700;/);

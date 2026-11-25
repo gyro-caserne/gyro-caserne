@@ -89,7 +89,8 @@ describe('formes', () => {
 			['lib/ui/Publication.svelte', '.publication'],
 			['routes/echanges/+layout.svelte', '.centre'],
 			['lib/planning/CarteAstreinte.svelte', '.plaque'],
-			['lib/planning/VueMois.svelte', '.carte']
+			['lib/planning/VueMois.svelte', '.carte'],
+			['lib/ui/BlocAnciennete.svelte', '.anciennete']
 		];
 		for (const [f, sel] of cartes) {
 			const regle = source(f).match(new RegExp(`\\n\\t${sel.replace('.', '\\.')} \\{([^}]*)\\}`))![1];
@@ -248,6 +249,8 @@ describe('direction B', () => {
 		expect(s).toMatch(/background: var\(--statut-neutre-fond\);\s*color: var\(--statut-neutre-texte\);/);
 		// « Souhaiter » : le bouton commun, secondaire (un contour), pas un lien refait à la main.
 		expect(source('lib/ui/Souhaiter.svelte')).toMatch(/<Bouton type="submit" variante="secondaire"[^>]*>Souhaiter/);
+		// « Féliciter » pour un palier d'ancienneté : le même bouton.
+		expect(source('lib/ui/Feliciter.svelte')).toMatch(/<Bouton type="submit" variante="secondaire"[^>]*>Féliciter/);
 	});
 
 	it('une option choisie ne saute pas : son bord plus épais est repris sur le retrait', () => {

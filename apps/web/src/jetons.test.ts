@@ -203,3 +203,16 @@ describe('texte posé sur la couleur d’une équipe (plaque d’astreinte, visa
 				}
 	});
 });
+
+// L'insigne d'ancienneté : le disque de chaque échelon se détache de la surface et du fond, dans les deux thèmes (le mot dit l'échelon).
+describe('jetons de l’ancienneté', () => {
+	it.each(['clair', 'sombre'])('%s : bronze, argent, vermeil, or et grand or au moins à 3:1', (nom) => {
+		const t = { ...themes.clair, ...themes[nom] };
+		for (const echelon of ['bronze', 'argent', 'vermeil', 'or', 'grand-or']) {
+			const c = t[`medaille-${echelon}`];
+			expect(c, echelon).toMatch(/^#[0-9a-f]{6}$/);
+			expect(contraste(c, t.surface), `${echelon}/surface`).toBeGreaterThanOrEqual(3);
+			expect(contraste(c, t.fond), `${echelon}/fond`).toBeGreaterThanOrEqual(3);
+		}
+	});
+});

@@ -14,8 +14,10 @@
 	import { ICONE_MAISON } from '#lib/ui/icones-roles.ts';
 	import Pastille from '#lib/ui/Pastille.svelte';
 	import PastilleMur from '#lib/ui/PastilleMur.svelte';
+	import Feliciter from '#lib/ui/Feliciter.svelte';
+	import InsigneAnciennete from '#lib/ui/InsigneAnciennete.svelte';
 	import Souhaiter from '#lib/ui/Souhaiter.svelte';
-	import type { AnniversaireDuJour } from '@gyro-caserne/socle';
+	import { ans, echelonDe, type AnniversaireDuJour, type PalierDuJour } from '@gyro-caserne/socle';
 	import type { TuileMur } from './+layout.server';
 
 	let { data, children } = $props();
@@ -30,7 +32,8 @@
 	const s = $derived(data.sections);
 	const jour = $derived(data.aujourdhui);
 	// Sur un mur, à l'ordinateur : la colonne « Aujourd'hui », si elle a quelque chose à dire.
-	const journee = $derived(actif !== undefined && (jour.anniversaires.length > 0 || data.aVenir.length > 0));
+	const fetes = $derived(jour.anniversaires.length + jour.paliers.length > 0);
+	const journee = $derived(actif !== undefined && (fetes || data.aVenir.length > 0));
 	// Au premier rendu seulement : ensuite, la personne ouvre et ferme les sections repliées à son gré.
 	const ouvrir = untrack(() => ({
 		autres: data.sections.autres.some((t) => t.cle === page.params.mur),
@@ -93,6 +96,14 @@
 	</div>
 {/snippet}
 
+{#snippet palier(p: PalierDuJour)}
+	<div class="ligne-jour">
+		<span class="medaille"><InsigneAnciennete echelon={echelonDe(p.annees)} taille={40} /></span>
+		<strong class="quoi">{p.prenom} {p.nom} fête ses {ans(p.annees)} de service</strong>
+		<span class="geste"><Feliciter {p} retour={page.url.pathname} /></span>
+	</div>
+{/snippet}
+
 {#snippet titre(id: string, texte: string)}
 	<svelte:element this={actif ? 'p' : 'h2'} {id} class="titre-groupe">{texte}</svelte:element>
 {/snippet}
@@ -112,10 +123,11 @@
 
 			<div class="colonnes">
 				<div class="colonne">
-					{#if !actif && (jour.anniversaires.length > 0 || jour.evenement)}
+					{#if !actif && (fetes || jour.evenement)}
 						<section class="jour" aria-labelledby="t-jour">
 							<h2 id="t-jour" class="rubrique">Aujourd’hui au centre</h2>
 							{#each jour.anniversaires as a, i (i)}{@render anniversaire(a)}{/each}
+							{#each jour.paliers as p (p.id)}{@render palier(p)}{/each}
 							{#if jour.evenement}
 								{@const e = jour.evenement}
 								<a class="ligne-jour evenement" href="/echanges/{e.cle}/{e.id}">
@@ -200,10 +212,11 @@
 		<!-- Après le mur, à l'écran comme au clavier : à côté à partir de 1280 px, dessous en deçà. -->
 		{#if journee}
 			<aside class="journee" aria-label="Aujourd’hui">
-				{#if jour.anniversaires.length > 0}
+				{#if fetes}
 					<section class="jour" aria-labelledby="t-jour-mur">
 						<h2 id="t-jour-mur" class="rubrique">Aujourd’hui au centre</h2>
 						{#each jour.anniversaires as a, i (i)}{@render anniversaire(a)}{/each}
+						{#each jour.paliers as p (p.id)}{@render palier(p)}{/each}
 					</section>
 				{/if}
 				{#if data.aVenir.length > 0}
@@ -317,6 +330,15 @@
 		background: var(--statut-neutre-fond);
 		color: var(--statut-neutre-texte);
 		font-weight: 700;
+	}
+	/* L'insigne du palier, à la place des initiales. */
+	.medaille {
+		flex: none;
+		width: 44px;
+		height: 44px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 	.geste {
 		flex: none;

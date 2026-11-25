@@ -6,6 +6,10 @@
 	import Celebration from '#lib/animations/Celebration.svelte';
 	import { momentAnniversaire } from '#lib/animations/celebration.ts';
 	import { phraseSouhaits } from '#lib/anniversaire.ts';
+	import { phraseFelicitations } from '#lib/anciennete.ts';
+	import { ans, echelonDe } from '@gyro-caserne/socle';
+	import Feliciter from '#lib/ui/Feliciter.svelte';
+	import InsigneAnciennete from '#lib/ui/InsigneAnciennete.svelte';
 	import TirerPourActualiser from '#lib/animations/TirerPourActualiser.svelte';
 	import GyroAccueil from '#lib/gyro/GyroAccueil.svelte';
 	import Installer from '#lib/ui/Installer.svelte';
@@ -140,6 +144,26 @@
 					<li><Rangee titre={phraseSouhaits(data.anniversaire.souhaitePar)} /></li>
 				</ListeRangees>
 			{/if}
+			<!-- Les paliers d'ancienneté du jour : le sien, et ceux des collègues à féliciter (comme « Souhaiter » dans Échanges). -->
+			{#if data.monPalier || data.paliers.length > 0}
+				<ListeRangees titre="Aujourd’hui au centre">
+					{#if data.monPalier}
+						<li>
+							<Rangee titre="Vous fêtez vos {ans(data.monPalier.annees)} de service" sous={phraseFelicitations(data.monPalier.feliciteePar) || undefined}>
+								{#snippet tete()}<span class="medaille"><InsigneAnciennete echelon={echelonDe(data.monPalier!.annees)} taille={32} /></span>{/snippet}
+							</Rangee>
+						</li>
+					{/if}
+					{#each data.paliers as p (p.id)}
+						<li>
+							<Rangee titre="{p.prenom} {p.nom} fête ses {ans(p.annees)} de service">
+								{#snippet tete()}<span class="medaille"><InsigneAnciennete echelon={echelonDe(p.annees)} taille={32} /></span>{/snippet}
+								{#snippet droite()}<Feliciter {p} retour="/" />{/snippet}
+							</Rangee>
+						</li>
+					{/each}
+				</ListeRangees>
+			{/if}
 			{#if enTete.length > 0}{@render decider(enTete)}{/if}
 			<ANePasManquer a={data.aNePasManquer} casquette={data.choisie} {form} />
 		</div>
@@ -203,6 +227,14 @@
 <Celebration moment={momentAnniversaire(data.anniversaire !== null && data.anniversaire !== undefined, data.aujourdhui)} qui={data.qui} />
 
 <style>
+	.medaille {
+		flex: none;
+		width: 40px;
+		height: 40px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
 	.page {
 		display: flex;
 		flex-direction: column;

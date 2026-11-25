@@ -91,6 +91,15 @@ describe('/agents/[id] : accès', () => {
 		expect(adjointParLuiMeme.raison).toBe('Seuls le chef de centre ou un super administrateur modifient la fiche d’un adjoint.');
 	});
 
+	it('l’ancienneté de service, d’après l’engagement, l’entrée au centre et les paliers du centre', async () => {
+		const { base, agent } = await preparer();
+		expect((await lire(locaux(base, super_), agent)).anciennete).toEqual({ annees: null, auCentre: null, echelon: null, prochain: null });
+		const jour = aujourdhuiParis();
+		const annee = Number(jour.slice(0, 4));
+		await base.update(personne).set({ engagementSpv: `${annee - 12}-01-01`, entreeCentre: `${annee - 8}-01-01` }).where(eq(personne.id, agent));
+		expect((await lire(locaux(base, super_), agent)).anciennete).toMatchObject({ annees: 12, auCentre: 8, echelon: 'bronze', prochain: { annees: 15, jour: `${annee + 3}-01-01` } });
+	});
+
 	it('« Écrire » par la messagerie : à un autre agent qui l’a, si l’on l’a soi-même', async () => {
 		const { base, chef, agent } = await preparer();
 		expect((await lire(locaux(base, { type: 'personne', id: chef }), agent)).ecrire).toBe(true);
