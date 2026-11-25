@@ -107,11 +107,14 @@
 </svelte:head>
 
 {#snippet retour(cible: string)}
+	<!-- Les deux zones lues ensemble : vides, elles ne prennent qu'un écart de la page. -->
+	<div class="retours">
 	<div role="alert">
 		{#if concerne(cible) && (form?.message || form?.erreurs)}<p class="echec">{form?.message ?? 'Le formulaire contient des erreurs.'}</p>{/if}
 	</div>
 	<div role="status">
 		{#if concerne(cible) && form?.succes}<p class="succes">{form.succes}</p>{/if}
+	</div>
 	</div>
 {/snippet}
 
@@ -248,8 +251,8 @@
 
 	{#if !lectureSeule}
 		{#snippet confirmerArchivage()}
-			{@render retour('archiver')}
-			<form id="archiver" method="POST" action="?/archiver" class="formulaire-detail" hidden={monte && !archivage}>
+			<form id="archiver" method="POST" action="?/archiver" class="formulaire-detail confirmation" hidden={monte && !archivage}>
+				{@render retour('archiver')}
 				<p class="avertissement">{avertissement(role.titulaires)}</p>
 				<label class="case"><input type="checkbox" name="confirmation" value="oui" /> Je confirme</label>
 				<Bouton type="submit" variante="grave">Confirmer l’archivage</Bouton>
@@ -305,7 +308,19 @@
 		margin-top: var(--espace-12);
 	}
 	.bas {
-		margin-top: var(--espace-24);
+		margin-top: var(--espace-8);
+	}
+	.retours {
+		display: flex;
+		flex-direction: column;
+	}
+	/* La confirmation de l'archivage : une carte, sous son bouton. */
+	.confirmation {
+		padding: var(--espace-16);
+		background: var(--surface);
+		border: 1px solid transparent;
+		box-shadow: var(--ombre-carte);
+		border-radius: var(--rayon-grand);
 	}
 	.archiver {
 		display: flex;
