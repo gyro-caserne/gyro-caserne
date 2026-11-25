@@ -15,6 +15,14 @@ describe('page d’un comité', () => {
 		expect(page).toMatch(/action="\?\/dissoudre"[\s\S]*name="confirmation" value="oui"/);
 	});
 
+	it('l’icône du mur repliée : celle choisie, la grille sous « Changer d’icône »', () => {
+		const page = html({});
+		expect(page).toMatch(/<legend[^>]*>Icône du mur<\/legend>/);
+		expect(page).toMatch(/<details class="repli[^"]*"><summary[^>]*>Changer d’icône<\/summary>/);
+		expect(page).toContain('Le chef de centre nommera aux rôles qu’il nommait.');
+		expect(page).not.toContain('responsabilit');
+	});
+
 	it('le comité du centre ne se renomme ni ne se dissout', () => {
 		const page = html({ estCentre: true, nom: 'Comité du centre' });
 		expect(page).toContain('<input type="hidden" name="nom" value="Comité du centre"');

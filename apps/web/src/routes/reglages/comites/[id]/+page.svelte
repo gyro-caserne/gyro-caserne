@@ -22,7 +22,7 @@
 
 	const blocTitulaires = $derived(data.titulairesDuComite);
 	const resumeTitulaires = $derived(blocTitulaires ? resume(pluriel(c.membresEnCours, 'membre'), blocTitulaires.postes) : '');
-	const SUITE = 'les nominations à venir sont annulées. Les responsabilités qu’il attribuait seront attribuées par le chef de centre.';
+	const SUITE = 'les nominations à venir sont annulées. Le chef de centre nommera aux rôles qu’il nommait.';
 	const avertissement = (n: number) =>
 		n === 0
 			? `Personne ne tient de rôle dans ce comité aujourd’hui ; ${SUITE}`

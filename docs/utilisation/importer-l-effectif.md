@@ -10,7 +10,7 @@ Réservé au chef de centre, à son adjoint et au super administrateur. Pour un 
    - une ligne sans n° est une arrivée ; ne touchez pas au n° des agents existants ;
    - e-mail, prénom, nom et profil sont obligatoires ; un statut vide vaut « Opérationnel » ;
    - les dates s'écrivent JJ/MM/AAAA ; grade, équipe, statut et profil se choisissent dans les listes ;
-   - pour une responsabilité, « Oui » ou vide ; pour un comité, le rôle (« Membre de comité »…) ou vide ;
+   - pour un rôle, « Oui » ou vide ; pour un comité, le rôle (« Membre de comité »…) ou vide ;
    - supprimer la ligne d'un agent le fait partir (statut « Parti »).
 4. Enregistrez au format `.xlsx`, revenez sur la page et appuyez sur « Importer un fichier ». Rien n'est encore écrit.
 5. Lisez l'aperçu, en commençant par les départs, affichés en tête : vérifiez qu'aucun agent n'y figure par erreur. Lisez ensuite les arrivées, les modifications, puis les erreurs ligne par ligne.

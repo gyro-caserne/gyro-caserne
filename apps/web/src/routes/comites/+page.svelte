@@ -212,8 +212,8 @@
 		<div class="colonne">
 			{#if data.commandement.length > 0}{@render groupe('Chef de centre et adjoint', resumeRoles(data.commandement), data.commandement.map((r) => cleDePoste(r.id, null)), commandement)}{/if}
 			{#each fonctionsEquipe as r (r.id)}{@render parEquipe(r)}{/each}
-			{#if data.fonctions.length > 0}{@render groupe('Autres fonctions', resumeRoles(data.fonctions), data.fonctions.map((r) => cleDePoste(r.id, null)), fonctions)}{/if}
-			{#if data.missions.length > 0}{@render groupe('Missions', resumeRoles(data.missions), data.missions.map((r) => cleDePoste(r.id, null)), missions)}{/if}
+			{#if data.fonctions.length > 0}{@render groupe('Autres rôles toujours tenus', resumeRoles(data.fonctions), data.fonctions.map((r) => cleDePoste(r.id, null)), fonctions)}{/if}
+			{#if data.missions.length > 0}{@render groupe('Autres rôles', resumeRoles(data.missions), data.missions.map((r) => cleDePoste(r.id, null)), missions)}{/if}
 			{#each missionsEquipe as r (r.id)}{@render parEquipe(r)}{/each}
 		</div>
 	</div>

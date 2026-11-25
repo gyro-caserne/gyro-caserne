@@ -384,13 +384,13 @@ for (const theme of ['auto', 'sombre']) {
 				await nommer(page, agent.fiche, 'Référent technique');
 				await page.goto('/comites');
 				await page.waitForLoadState('networkidle');
-				await ouvrirGroupe(page, 'Missions');
+				await ouvrirGroupe(page, 'Autres rôles');
 				await page.getByRole('link', { name: 'Ajouter (Référent pharmacie)', exact: true }).click();
 				await expect(page.getByRole('dialog', { name: 'Nommer', exact: true })).toBeVisible();
 				await sansViolation(page);
 				await page.keyboard.press('Escape');
 				await expect(page.getByRole('dialog')).toHaveCount(0);
-				// Le référent technique est une mission : sa carte est dans « Missions », déjà ouvert. Au-delà de cinq titulaires
+				// Le référent technique n'est pas toujours tenu : sa carte est dans « Autres rôles », déjà ouvert. Au-delà de cinq titulaires
 				// (les e2e en nomment beaucoup), les autres sont sous « Voir les N titulaires » : tout est déplié.
 				await page.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
 				await page.getByRole('link', { name: new RegExp(`^${agent.nom}`) }).click();
@@ -1043,8 +1043,8 @@ test.describe('qui fait quoi', () => {
 		// Une fonction neuve, que personne ne tient : elle est à pourvoir.
 		await page.goto('/reglages/roles/nouveau?modele=vierge');
 		await page.getByLabel('Nom', { exact: true }).fill(role);
-		await page.getByLabel('Nature').selectOption({ label: 'Fonction' });
-		await page.getByLabel('Portée').selectOption({ label: 'Tout le centre' });
+		await page.getByRole('switch', { name: 'Doit toujours être tenu', exact: true }).check();
+		await page.getByRole('radio', { name: /^Tout le centre/ }).check();
 		await page.getByRole('button', { name: 'Créer le rôle' }).click();
 		await expect(page).toHaveURL(/\/reglages\/roles\/\d+\?nouveau$/);
 		await expect(page.getByText('Qui le tiendra ?', { exact: true })).toBeVisible();
@@ -1064,7 +1064,7 @@ test.describe('qui fait quoi', () => {
 		await expect(aPourvoir.getByRole('link', { name: `Nommer (${role})`, exact: true })).toHaveCount(0);
 
 		// Remplacer, à partir d'aujourd'hui : le mandat en cours finit hier, le nouveau titulaire commence aujourd'hui.
-		await ouvrirGroupe(page, 'Autres fonctions');
+		await ouvrirGroupe(page, 'Autres rôles toujours tenus');
 		await page.getByRole('link', { name: new RegExp(`^${premier.nom}`) }).click();
 		const volet = page.getByRole('dialog', { name: premier.nom, exact: true });
 		await expect(volet.getByText(role, { exact: true })).toBeVisible();
@@ -1102,7 +1102,7 @@ test.describe('qui fait quoi', () => {
 		const page = await (await browser.newContext({ storageState: ETAT_SUPER })).newPage();
 		await page.goto('/comites');
 		await page.waitForLoadState('networkidle');
-		await ouvrirGroupe(page, 'Missions');
+		await ouvrirGroupe(page, 'Autres rôles');
 		const ouvrir = page.getByRole('link', { name: 'Ajouter (Référent pharmacie)', exact: true });
 		const volet = page.getByRole('dialog', { name: 'Nommer', exact: true });
 		await ouvrir.focus();
@@ -1148,7 +1148,7 @@ test.describe('qui fait quoi', () => {
 		await carte.getByRole('checkbox', { name: 'Je confirme la fin du rôle Chef de garde (Équipe 1)' }).check();
 		await carte.getByRole('button', { name: 'Terminer' }).click();
 		await expect(carte.getByRole('status').first()).toHaveText('Rôle terminé');
-		await expect(carte.getByText('Aucune responsabilité en cours.')).toBeVisible();
+		await expect(carte.getByText('Aucun rôle en cours.', { exact: true })).toBeVisible();
 
 		await agent.reload();
 		await ouvrirEquipe(agent);
@@ -1263,9 +1263,16 @@ test.describe('réglages', () => {
 		await page.goto('/reglages/roles/nouveau');
 		await page.getByRole('link', { name: /Vierge/ }).click();
 		await page.getByLabel('Nom', { exact: true }).fill(role);
-		await page.getByLabel('Portée').selectOption({ label: 'Tout le centre' });
-		await page.getByLabel('Qui attribue').selectOption({ label: `Le comité « ${comite} »` });
-		await page.getByRole('radio', { name: 'Ballon' }).check();
+		await page.getByRole('radio', { name: /^Tout le centre/ }).check();
+		await page.getByLabel('Qui nomme', { exact: true }).selectOption({ label: `Le comité « ${comite} »` });
+		// L'icône est repliée : « Changer d'icône » déplie la grille, un choix la referme.
+		const changer = page.getByRole('button', { name: 'Changer d’icône', exact: true });
+		await changer.click();
+		await expect(changer).toHaveAttribute('aria-expanded', 'true');
+		await page.getByRole('radio', { name: 'Ballon', exact: true }).click();
+		await expect(changer).toHaveAttribute('aria-expanded', 'false');
+		await expect(page.getByRole('radio', { name: 'Ballon', exact: true })).toBeChecked();
+		await expect(page.locator('fieldset.icones').getByText('Ballon', { exact: true })).toBeVisible();
 		await page.getByRole('button', { name: 'Créer le rôle' }).click();
 		await expect(page).toHaveURL(/\/reglages\/roles\/\d+\?nouveau$/);
 		await expect(page.getByRole('heading', { level: 1, name: role })).toBeVisible();
@@ -1295,7 +1302,7 @@ test.describe('réglages', () => {
 		const role = `Référent portée ${nouvelleMarque()}`;
 		await page.goto('/reglages/roles/nouveau?modele=vierge');
 		await page.getByLabel('Nom', { exact: true }).fill(role);
-		await page.getByLabel('Portée').selectOption({ label: 'Tout le centre' });
+		await page.getByRole('radio', { name: /^Tout le centre/ }).check();
 		await page.getByRole('button', { name: 'Créer le rôle' }).click();
 		await expect(page).toHaveURL(/\/reglages\/roles\/\d+\?nouveau$/);
 		await page.waitForLoadState('networkidle');
@@ -1307,22 +1314,34 @@ test.describe('réglages', () => {
 		await acces.check();
 		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toHaveCount(0);
 
-		await page.getByLabel('Portée').selectOption({ label: 'Une équipe' });
+		await page.getByRole('radio', { name: /^Chaque équipe/ }).check();
 		await expect(acces).toBeDisabled();
 		await expect(acces).not.toBeChecked();
 		await expect(nommer).toBeEnabled();
 		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toBeVisible();
 
-		await page.getByLabel('Portée').selectOption({ label: 'Tout le centre' });
+		await page.getByRole('radio', { name: /^Tout le centre/ }).check();
 		await expect(acces).toBeEnabled();
 		await expect(acces).toBeChecked();
 		await expect(admin.getByText('Réservé à un rôle tenu pour tout le centre')).toHaveCount(0);
 
 		// Enregistré en équipe : la case retirée ne part pas, et le serveur accepte.
-		await page.getByLabel('Portée').selectOption({ label: 'Une équipe' });
+		await page.getByRole('radio', { name: /^Chaque équipe/ }).check();
 		await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
 		await expect(page.getByText(`Le rôle « ${role} » est enregistré.`)).toBeVisible();
 		await expect(page.locator('fieldset.admin').getByLabel('Gérer les accès')).toBeDisabled();
+
+		// En bas de page, « Archiver le rôle » se voit sans menu et demande toujours « Je confirme ».
+		await expect(page.getByRole('button', { name: 'Plus', exact: true })).toHaveCount(0);
+		const archiver = page.getByRole('button', { name: 'Archiver le rôle', exact: true });
+		const confirmer = page.getByRole('button', { name: 'Confirmer l’archivage', exact: true });
+		if ((await archiver.getAttribute('aria-expanded')) === 'false') await archiver.click();
+		await expect(confirmer).toBeVisible();
+		await confirmer.click();
+		await expect(page.getByText('Cochez « Je confirme » pour continuer.', { exact: true })).toBeVisible();
+		await page.locator('form#archiver').getByLabel('Je confirme', { exact: true }).check();
+		await page.getByRole('button', { name: 'Confirmer l’archivage', exact: true }).click();
+		await expect(page.getByText('Ce rôle est archivé. Il ne se modifie plus.', { exact: true })).toBeVisible();
 		await page.context().close();
 	});
 
