@@ -1271,7 +1271,7 @@ test.describe('réglages', () => {
 		await expect(changer).toHaveAttribute('aria-expanded', 'true');
 		await page.getByRole('radio', { name: 'Ballon', exact: true }).click();
 		await expect(changer).toHaveAttribute('aria-expanded', 'false');
-		await expect(page.getByRole('radio', { name: 'Ballon', exact: true })).toBeChecked();
+		await expect(page.getByRole('radio', { name: 'Ballon', exact: true, includeHidden: true })).toBeChecked();
 		await expect(page.locator('fieldset.icones .choisie')).toHaveText('Ballon');
 		await page.getByRole('button', { name: 'Créer le rôle' }).click();
 		await expect(page).toHaveURL(/\/reglages\/roles\/\d+\?nouveau$/);
