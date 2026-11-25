@@ -6,13 +6,13 @@ import { iconeDuRole, type NomIcone } from './icones.ts';
 import type { Droit } from './listes.ts';
 import type { Reglage } from './planning/calendrier.ts';
 import { vueEte } from './planning/ete.ts';
-import { plagesARevoir } from './planning/repartition.ts';
+import { ACTION_A_REVOIR, plagesARevoir } from './planning/repartition.ts';
 import { anomaliesADecider, traiteLesAnomalies } from './anomalies.ts';
 import { demandesADecider, lectureDemandesADecider } from './demandes.ts';
 import { prisesEnRetard } from './prises.ts';
 import { periodeCourte } from './reservations-calcul.ts';
 import { remplacementsAValider } from './remplacements/lectures.ts';
-import { anneePlanning, attribution, comite, equipe, ete, personne, plageEte, profil, reservation, responsabilite, responsabiliteDroit, ressource } from './schema.ts';
+import { anneePlanning, attribution, comite, equipe, ete, journal, personne, plageEte, profil, reservation, responsabilite, responsabiliteDroit, ressource } from './schema.ts';
 
 // id : 'centre', 'astreinte', 'equipe:<id>', 'role:<id>' ou 'comite:<id>'.
 export type Casquette = { id: string; nom: string; icone: NomIcone; compte: number };
@@ -205,7 +205,9 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 	// Pas de jointure à noms de colonnes en double : dans un batch, D1 n'en garde qu'une.
 	const annee = Number(aujourdhui.slice(0, 4));
 	const suivante = annee + 1;
-	const [equipes, attributions, responsabilites, personnes, annees, etes, proposes] = await base.batch([
+	// Le dernier nombre de plages à revoir gardé pour chaque année (repartition.ts) : quelques lignes du planning au journal.
+	const garde = (a: number) => sql<string | null>`(select ${journal.details} from ${journal} where ${journal.cibleType} = 'planning' and ${journal.action} = ${ACTION_A_REVOIR} and json_extract(${journal.details}, '$.annee') = ${a} order by ${journal.id} desc limit 1)`;
+	const [equipes, attributions, responsabilites, personnes, annees, etes, proposes, gardes] = await base.batch([
 		base.select({ id: equipe.id, nom: equipe.nom }).from(equipe).where(eq(equipe.active, 1)).orderBy(asc(equipe.ordreRotation)),
 		base
 			.select({ personneId: attribution.personneId, responsabiliteId: attribution.responsabiliteId, type: attribution.perimetreType, perimetreId: attribution.perimetreId, systeme: responsabilite.systeme })
@@ -225,7 +227,8 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 			.leftJoin(profil, eq(profil.id, personne.profilId)),
 		base.select({ publieeLe: anneePlanning.publieeLe }).from(anneePlanning).where(eq(anneePlanning.annee, suivante)),
 		base.select().from(ete).where(and(gte(ete.annee, annee), lte(ete.annee, suivante))).orderBy(asc(ete.annee)),
-		base.selectDistinct({ annee: plageEte.annee }).from(plageEte).where(and(gte(plageEte.annee, annee), lte(plageEte.annee, suivante)))
+		base.selectDistinct({ annee: plageEte.annee }).from(plageEte).where(and(gte(plageEte.annee, annee), lte(plageEte.annee, suivante))),
+		base.select({ cette: garde(annee).as('cette'), suivante: garde(suivante).as('suivante') }).from(ete).limit(1)
 	]);
 	// À partir du 1er octobre, l'année suivante est à préparer tant qu'elle n'est pas publiée.
 	const planning = aujourdhui.slice(5) >= '10-01' && !annees.some((a) => a.publieeLe !== null);
@@ -243,7 +246,10 @@ async function lireADecider(base: Base, aujourdhui: string, reglage?: Reglage): 
 		// À ouvrir du 1er mars à la fin d'août, tant que l'été de l'année n'existe pas.
 		if (aujourdhui >= `${annee}-03-01` && aujourdhui <= `${annee}-08-31` && !etes.some((x) => x.annee === annee)) pourLete.push({ texte: `Été ${annee} à ouvrir`, lien: lienEte(annee) });
 	} else if (reglage && e && !e.publiee) {
-		const aRevoir = proposes.some((x) => x.annee === e.annee) ? await plagesARevoir(base, e.annee, aujourdhui, reglage) : 0;
+		// Le nombre gardé à la proposition, à l'ajustement ou au fichier ; calculé seulement s'il manque.
+		const lu = gardes[0]?.[e.annee === annee ? 'cette' : 'suivante'];
+		const gardeLu = lu ? (JSON.parse(lu) as { aRevoir?: number }).aRevoir : undefined;
+		const aRevoir = !proposes.some((x) => x.annee === e.annee) ? 0 : (gardeLu ?? (await plagesARevoir(base, e.annee, aujourdhui, reglage)));
 		if (aRevoir > 0) pourLete.push({ texte: `Été ${e.annee} : ${aRevoir} ${aRevoir > 1 ? 'plages' : 'plage'} à revoir`, lien: lienEte(e.annee) });
 		else if (aujourdhui > e.dateLimite) pourLete.push({ texte: `Été ${e.annee} à publier`, lien: lienEte(e.annee) });
 	}

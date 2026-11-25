@@ -159,8 +159,22 @@ describe('Le calcul reste borné, avec 60 agents, 6 années publiées et 50 dema
 		// Avant : le FPT calculé pour chaque plage, les postes de chacun pour chaque jour, toutes les semaines de l'année.
 		expect(vi.mocked(armement.armement).mock.calls.length, 'FPT calculé').toBeLessThanOrEqual(10);
 		expect(vi.mocked(armement.postesDe).mock.calls.length, 'postes calculés').toBeLessThanOrEqual(jeu.agents);
-		const semaines = vi.mocked(calendrier.calculerAnnee).mock.results.map((r) => (r.value as unknown[]).length);
-		expect(semaines, 'semaines calculées : seulement celles de l’été').toEqual([expect.toBeOneOf([9, 10])]);
+		// Le nombre gardé à la proposition : rien à recalculer.
+		expect(vi.mocked(calendrier.calculerAnnee).mock.calls, 'nombre gardé').toEqual([]);
+		// Sans nombre gardé (une proposition d'avant ce compte) : seulement les semaines de l'été.
+		const { journal } = await import('../src/schema.ts');
+		const { ACTION_A_REVOIR } = await import('../src/planning/repartition.ts');
+		const gardes = (await base.select().from(journal)).filter((l) => l.action === ACTION_A_REVOIR);
+		await base.delete(journal).where(eq(journal.action, ACTION_A_REVOIR));
+		try {
+			await accueilDe(base, acteurs.chef, null, m.slice(0, 10), m, reglage);
+			expect(vi.mocked(armement.armement).mock.calls.length, 'FPT calculé').toBeLessThanOrEqual(10);
+			expect(vi.mocked(armement.postesDe).mock.calls.length, 'postes calculés').toBeLessThanOrEqual(jeu.agents);
+			const semaines = vi.mocked(calendrier.calculerAnnee).mock.results.map((r) => (r.value as unknown[]).length);
+			expect(semaines, 'semaines calculées : seulement celles de l’été').toEqual([expect.toBeOneOf([9, 10])]);
+		} finally {
+			if (gardes.length) await base.insert(journal).values(gardes);
+		}
 	});
 
 	it('ce qui n’a pas besoin des semaines ne les calcule pas ; l’accueil d’un agent, une année, et seulement la fenêtre utile', async () => {

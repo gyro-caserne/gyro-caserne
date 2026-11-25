@@ -9,7 +9,7 @@ import { ajouterRessource, refuser, reserver } from '../src/reservations.ts';
 import { anneePlanning, attribution, comite, equipe, grade, personne, profil, responsabilite, responsabiliteDroit, ressource } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 import { periodeParDefaut, reglerEte } from '../src/planning/ete.ts';
-import { eteAPreparer, proposerEte, publierEte } from '../src/planning/repartition.ts';
+import { ajusterPlage, eteAPreparer, plageAPreparer, plagesARevoir, proposerEte, publierEte } from '../src/planning/repartition.ts';
 import { jeuEte } from './jeu-ete.ts';
 
 const aujourdhui = '2026-10-25';
@@ -396,6 +396,28 @@ describe('À décider : l’été', () => {
 		expect(await ete(base, chef, '2027-04-01')).toEqual([{ texte: `Été 2027 : ${n} plages à revoir`, lien: '/planning/ete?annee=2027' }]);
 		const centre = (await accueilDe(base, chef, 'centre', '2027-04-01', '2027-04-01T10:00', reglage)).casquettes.find((c) => c.id === 'centre');
 		expect(centre!.compte).toBe((await aDecider(base, chef, '2027-04-01', reglage)).length);
+	});
+
+	it('le nombre de plages à revoir est gardé : relu à l’accueil sans refaire le calcul, recompté à chaque ajustement', async () => {
+		const { base, chef, nouvelle, apte } = await jeuEte();
+		await reglerEte(base, chef, 2027, periodeParDefaut(2027, reglage), '2027-03-01T10:00', reglage);
+		for (const [prenom, ...aptitudes] of [['Hugo', 'CA2'], ['Léa', 'CE'], ['Inès', 'COD1'], ['Jules'], ['Sarah']] as [string, ...string[]][]) await apte(await nouvelle(prenom, 1), ...aptitudes);
+		await proposerEte(base, chef, 2027, '2027-04-01T10:00', reglage);
+		const vue = await eteAPreparer(base, chef, 2027, '2027-04-01T10:00', reglage);
+		const n = vue.impossibles.length;
+		// Lu, pas recalculé : sans lecture de l'été (aucune lecture des plages à l'accueil).
+		const avant = base.jouees.length;
+		expect(await ete(base, chef, '2027-04-01')).toEqual([{ texte: `Été 2027 : ${n} plages à revoir`, lien: '/planning/ete?annee=2027' }]);
+		expect(base.jouees.slice(avant).filter((r) => /from "plage_ete" where/.test(r.sql) && !/distinct/.test(r.sql)).map((r) => r.sql)).toEqual([]);
+		// Un ajustement qui arme une plage : le nombre suit, comme l'écran Été.
+		const plage = vue.semaines.flatMap((s) => s.plages).find((p) => !p.arme)!;
+		const retire = plage.presents[0]!;
+		await ajusterPlage(base, chef, 2027, plage.debut, retire.id, false, '2027-04-01T10:00', reglage);
+		const autre = vue.semaines.flatMap((s) => s.plages).find((p) => p.arme);
+		if (autre) await ajusterPlage(base, chef, 2027, autre.debut, autre.presents[0]!.id, false, '2027-04-01T10:00', reglage);
+		const m = await plagesARevoir(base, 2027, '2027-04-01', reglage);
+		expect(m).toBe(autre ? n + 1 : n);
+		expect((await ete(base, chef, '2027-04-01'))[0]!.texte).toBe(`Été 2027 : ${m} plages à revoir`);
 	});
 
 	it('l’été de l’an prochain, déjà ouvert et proposé : dit dès maintenant', async () => {
