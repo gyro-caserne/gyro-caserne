@@ -1,6 +1,6 @@
 # Comment demander une tenue ?
 
-1. Ouvrez **Caserne**, puis **Habillement**. La page **Faire une demande** s'ouvre, le référent habillement déjà choisi.
+1. Ouvrez **Caserne**, puis **Faire une demande**, et choisissez **Référent habillement** dans « À qui ? ».
 2. Dans **Votre demande**, écrivez la pièce, la taille et pourquoi (ex. : « veste textile en L, la mienne est déchirée »).
 3. Appuyez sur **Envoyer la demande**. Le référent habillement est prévenu.
 4. Vous êtes prévenu à chaque étape (prise en compte, question, en stock ou commandée au SDIS, livrée). Si on vous pose une question, ouvrez la demande et répondez dans **Votre réponse**.
