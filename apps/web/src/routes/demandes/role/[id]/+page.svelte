@@ -2,7 +2,7 @@
 	import { extraitDemandeReferent, type DemandeReferentListee, type ReglageDemandes } from '@gyro-caserne/socle';
 	import { dateCourte } from '#lib/engins/textes.ts';
 	import ReglageEtapes from '#lib/demandes/ReglageEtapes.svelte';
-	import { etatDemandeReferent } from '#lib/demandes/textes.ts';
+	import { etapesEnUneLigne, etatDemandeReferent } from '#lib/demandes/textes.ts';
 	import Bouton from '#lib/ui/Bouton.svelte';
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 	import IconeRole from '#lib/ui/IconeRole.svelte';
@@ -40,6 +40,22 @@
 	<EnTetePage titre="Demandes reçues" phrase={data.role.nom} retour={{ href: '/demandes', libelle: 'Faire une demande' }}>
 		{#snippet tete()}<IconeRole icone={data.role.icone} taille={48} />{/snippet}
 	</EnTetePage>
+	<!-- En tête, pour qui règle : les étapes actuelles, et leur réglage qui se déplie sur place (ouvert après chaque envoi). -->
+	{#if data.regler && data.role.demandes}
+		<section class="etapes" aria-labelledby="titre-etapes">
+			<h2 id="titre-etapes" class="rubrique">Étapes de vos demandes</h2>
+			<p class="doux">{etapesEnUneLigne(data.role.demandes)}</p>
+			<details class="plus" {...form?.cible === 'demandes' ? { open: true } : {}}>
+				<summary>Régler les étapes</summary>
+				<form method="POST" action="?/demandes" class="reglage">
+					<div role="alert">{#if form?.message}<p class="echec">{form.message}</p>{/if}</div>
+					<div role="status">{#if form?.succes}<p class="succes">{form.succes}</p>{/if}</div>
+					<ReglageEtapes saisie={form?.demandes ?? { recoit: true, etapes: data.role.demandes.etapes, derniere: data.role.demandes.derniere }} peutCocher={false} apercu="?/apercu" />
+					<div><Bouton type="submit">Enregistrer les étapes</Bouton></div>
+				</form>
+			</details>
+		</section>
+	{/if}
 	{#if data.sansTitulaire}<p class="doux">Ce rôle n’a pas de titulaire. Le chef de centre et son adjoint reçoivent ses demandes.</p>{/if}
 
 	{#if data.enCours.length === 0 && data.terminees.length === 0}
@@ -56,19 +72,6 @@
 			{/if}
 		</div>
 	{/if}
-
-	{#if data.regler && data.role.demandes}
-		<!-- Ouvert après chaque envoi : chaque geste recharge la page. -->
-		<details class="plus" {...form?.cible === 'demandes' ? { open: true } : {}}>
-			<summary>Régler les étapes</summary>
-			<form method="POST" action="?/demandes" class="reglage">
-				<div role="alert">{#if form?.message}<p class="echec">{form.message}</p>{/if}</div>
-				<div role="status">{#if form?.succes}<p class="succes">{form.succes}</p>{/if}</div>
-				<ReglageEtapes saisie={form?.demandes ?? { recoit: true, etapes: data.role.demandes.etapes, derniere: data.role.demandes.derniere }} peutCocher={false} apercu="?/apercu" />
-				<div><Bouton type="submit">Enregistrer les étapes</Bouton></div>
-			</form>
-		</details>
-	{/if}
 </div>
 
 <style>
@@ -81,6 +84,19 @@
 	.doux {
 		margin: 0;
 		color: var(--doux);
+	}
+	.etapes {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-12);
+		padding: var(--espace-16);
+		background: var(--surface);
+		border: 1px solid transparent;
+		box-shadow: var(--ombre-carte);
+		border-radius: var(--rayon-grand);
+	}
+	.etapes .plus[open] > summary {
+		margin-bottom: 0;
 	}
 	.reglage {
 		display: flex;
