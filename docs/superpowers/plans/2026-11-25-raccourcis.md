@@ -30,3 +30,7 @@ e2e courts par geste, doc (fonctionnel, deux aides), captures, relecture par un 
 ## Décisions à valider
 
 - L'armement ne connaissait que VSAV, VTU et FPT : il connaît désormais chaque type du centre, sinon « Régler son armement » mènerait nulle part.
+- Les suites d'un engin s'affichent dans une carte « À compléter » en tête de sa page, tant que la fiche de son type est vide (en bas, elles passaient sous la barre au téléphone).
+- « Régler son armement » n'apparaît qu'à qui gère les listes du centre (sinon le lien mènerait à un refus).
+- « Part à la retraite » n'est proposé ni au chef ni à l'adjoint, ni à une personne déjà extérieure. Sans profil des retraités, la liste demande de choisir. Après le passage, le bloc « Profil » s'ouvre.
+- La barre « Enregistrer » collée garde son comportement de #130 : la resserrer en fin de page aurait caché « Archiver le rôle ».
