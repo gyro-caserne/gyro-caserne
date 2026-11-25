@@ -53,7 +53,6 @@
 		choix = choixDepart();
 		admin = adminDepart();
 		portee = porteeDepart();
-		toujours = saisie('nature', role.nature) === 'fonction';
 	});
 
 	// Hors du centre, ces droits sont grisés et décochés : une case grisée n'est pas envoyée, le droit part à l'enregistrement.
@@ -92,6 +91,9 @@
 	let identiteOuverte = $state(untrack(() => concerne('role') && !form?.succes));
 	// L'interrupteur à l'écran : le résumé de l'identité le suit avant l'enregistrement.
 	let toujours = $state(untrack(() => saisie('nature', role.nature) === 'fonction'));
+	$effect.pre(() => {
+		toujours = saisie('nature', role.nature) === 'fonction';
+	});
 	// « Archiver le rôle » déplie sa confirmation sur place ; sans JavaScript, un repli simple.
 	let monte = $state(false);
 	let archivage = $state(untrack(() => concerne('archiver') && !form?.succes));
