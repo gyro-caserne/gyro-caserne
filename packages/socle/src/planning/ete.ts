@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, lte, sql } from 'drizzle-orm';
 import type { Base } from '../base.ts';
 import { ajouterJours, enCours, exigerDate, exigerDateHeure } from '../dates.ts';
-import { aLeDroit, type Acteur } from '../droits.ts';
+import { aLeDroit, chefPrincipal, type Acteur } from '../droits.ts';
 import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
 import { dateFichier } from '../fichier-effectif.ts';
 import { lecturesAgents } from '../murs.ts';
@@ -95,7 +95,8 @@ async function exigerEteOuvert(base: Base, annee: number) {
 async function prevenirSiPublie(base: Base, e: EteVue, moi: number, maintenant: string) {
 	if (!e.publiee) return [];
 	const [chefs, [p]] = await base.batch([requeteChefs(base, maintenant.slice(0, 10)), base.select({ prenom: personne.prenom, nom: personne.nom }).from(personne).where(eq(personne.id, moi))]);
-	const ids = [...new Set(chefs.filter((c) => c.systeme === 'chef_centre' || c.systeme === 'chef_centre_adjoint').map((c) => c.personneId))].filter((id) => id !== moi);
+	// Le chef de centre ; l'adjoint seulement sans lui.
+	const ids = chefPrincipal(chefs.filter((c) => c.personneId !== moi).map((c) => ({ id: c.personneId, systeme: c.systeme })));
 	return avis(base, ids, 'vacances_changees', `${p?.prenom ?? ''} ${p?.nom ?? ''} a changé ses vacances. La répartition est à revoir.`.trim(), `/planning/ete?annee=${e.annee}`, maintenant);
 }
 

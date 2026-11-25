@@ -105,6 +105,13 @@ export function aLeDroitAuCentreSql(qui: SQL, droit: Droit, date: string): SQL {
 			where a.personne_id = p.id and rd.droit = ${droit} and a.perimetre_type = r.type_perimetre and a.perimetre_type = 'centre' and a.debut <= ${date} and (a.fin is null or a.fin >= ${date}))))`;
 }
 
+// Parmi le chef de centre et l'adjoint, qui prévenir : le chef de centre, destinataire principal ; l'adjoint seulement sans chef de centre
+// (aucun en cours, ou c'est lui l'auteur, déjà retiré de `chefs`). Pas pour une urgence : elle va aux deux.
+export function chefPrincipal(chefs: { id: number; systeme: string | null }[]): number[] {
+	const duCentre = chefs.filter((c) => c.systeme === 'chef_centre');
+	return [...new Set((duCentre.length > 0 ? duCentre : chefs.filter((c) => c.systeme === 'chef_centre_adjoint')).map((c) => c.id))];
+}
+
 // Le chef de centre, c'est la personne qui a une attribution en cours de la responsabilité système chef_centre.
 export async function estChefDeCentre(base: Base, personneId: number, aujourdhui: string): Promise<boolean> {
 	return occupe(base, personneId, 'chef_centre', aujourdhui);

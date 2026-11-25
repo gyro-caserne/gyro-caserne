@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import type { Base } from './base.ts';
 import { enCours } from './dates.ts';
+import { chefPrincipal } from './droits.ts';
 import { STATUTS_AVEC_ACCES } from './listes.ts';
 import { mettreEnFile } from './notifications.ts';
 import { attribution, avisAnomalie, personne, profilDroit, responsabilite, responsabiliteDroit } from './schema.ts';
@@ -57,7 +58,8 @@ export async function quiPrevenir(base: Base, aujourdhui: string, equipeAstreint
 
 	const tenus = choisis.filter((c) => c.id !== null && c.type === c.portee && c.type === 'centre' && enCours(c.debut!, c.fin, aujourdhui));
 	const titulaires = (role: number) => tenus.filter((c) => c.role === role).map((c) => c.id!);
-	const chefsDuCentre = tenus.filter((c) => c.systeme === 'chef_centre' || c.systeme === 'chef_centre_adjoint').map((c) => c.id!);
+	// Une zone sans titulaire : le chef de centre, l'adjoint seulement sans lui (pas d'avis en double).
+	const chefsDuCentre = chefPrincipal(tenus.filter((c) => c.id !== auteur).map((c) => ({ id: c.id!, systeme: c.systeme })));
 	return listes.map((liste) => {
 		const actifs = [...new Set(liste)].filter((r) => choisis.some((c) => c.role === r && c.archivee === null && c.portee === 'centre'));
 		if (actifs.length === 0) return habituels;

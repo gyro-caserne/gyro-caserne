@@ -162,19 +162,22 @@ describe('demande de réouverture', () => {
 		const j = await preparer();
 		await demanderReouverture(j.base, j.alice, j.id, 'J’ai oublié la radio', APRES, reglage, j.vsav);
 		const avis = await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`));
-		expect(avis).toMatchObject([{ personneId: idDe(j.chefDeGarde), titre: 'Réouverture demandée par Alice Fictif', texte: 'VSAV 1. Motif : J’ai oublié la radio', url: `/engins/${j.vsav}/prise` }]);
+		expect(avis).toMatchObject([{ personneId: idDe(j.chefDeGarde), titre: 'Réouverture demandée par Alice Fictif', texte: 'VSAV 1, motif « J’ai oublié la radio »', url: `/engins/${j.vsav}/prise` }]);
 		expect(await tracesDe(j)).toEqual({ demande: { par: idDe(j.alice), le: APRES, motif: 'J’ai oublié la radio' } });
 		// La réouverture efface la demande et garde sa propre trace.
 		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Radio', APRES, reglage);
 		expect(await tracesDe(j)).toEqual({ rouverte: { par: idDe(j.chefDeGarde), le: APRES, motif: 'Radio', valideeLe: PENDANT } });
 	});
 
-	it('sans chef de garde en fonction : au chef de centre et à l’adjoint ; refusée à qui n’est ni participant ni d’astreinte', async () => {
+	it('sans chef de garde en fonction : au chef de centre (l’adjoint seulement sans lui) ; refusée à qui n’est ni participant ni d’astreinte', async () => {
 		const j = await preparer();
 		await j.base.delete(attribution).where(eq(attribution.personneId, idDe(j.chefDeGarde)));
 		await expect(demanderReouverture(j.base, j.referent, j.id, 'Oubli', APRES, reglage)).rejects.toThrow(RefusDroit);
 		await expect(demanderReouverture(j.base, j.alice, j.id, ' ', APRES, reglage)).rejects.toThrow('Motif manquant');
 		await expect(demanderReouverture(j.base, j.alice, j.id, 'Oubli', SUIVANTE, reglage)).rejects.toThrow('Relève passée');
+		// Un adjoint en fonction : le chef de centre seul est prévenu, sans avis en double.
+		const [adjoint] = await j.base.select().from(responsabilite).where(eq(responsabilite.systeme, 'chef_centre_adjoint'));
+		await j.base.insert(attribution).values({ personneId: idDe(j.referent), responsabiliteId: adjoint!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
 		await demanderReouverture(j.base, j.alice, j.id, 'Oubli', APRES, reglage);
 		expect((await j.base.select().from(avisAnomalie).where(eq(avisAnomalie.url, `/engins/${j.vsav}/prise`))).map((a) => a.personneId)).toEqual([j.chefCentre.id]);
 	});

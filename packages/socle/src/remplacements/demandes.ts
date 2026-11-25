@@ -11,7 +11,7 @@ import type { Convocation } from '../murs.ts';
 import { convoque, equipeLe } from '../planning/annee.ts';
 import { anneePlanning, demandeRemplacement, destinataireRemplacement, manoeuvre, personne, publication, reponseEvenement } from '../schema.ts';
 import { avis } from './avis.ts';
-import { astreintesDe, disponible, disponibles, lireContexte, manque, mesTranches, periodesDe, exigerRemplacants, peutRemplacer, sansEngagement, tranchesDuJour, valideurs, type Contexte, type LigneDemande } from './contexte.ts';
+import { astreintesDe, disponible, disponibles, lireContexte, manque, mesTranches, periodesDe, exigerRemplacants, peutRemplacer, sansEngagement, tranchesDuJour, aPrevenir, valideurs, type Contexte, type LigneDemande } from './contexte.ts';
 import { heure, texteDemande } from './tranches.ts';
 
 // Les gestes d'une demande de remplacement ou d'échange. Chaque écriture vérifie l'état attendu : deux gestes simultanés
@@ -282,7 +282,7 @@ async function accepterManoeuvre(base: Base, d: LigneDemande, moi: number, ctx: 
 		...ecrituresManoeuvre(base, m2, moi, d.demandeurId, si),
 		journalDemande(base, moi, 'accepter_echange_manoeuvre', d.id, {}, maintenant),
 		...avis(base, [d.demandeurId], d.id, 'acceptee', texte, url(d.id), maintenant, si),
-		...avis(base, valideurs(ctx.chefs, d.equipeId, d.demandeurId, moi), d.id, 'informe', texte, url(d.id), maintenant, si)
+		...avis(base, aPrevenir(ctx.chefs, d.equipeId, d.demandeurId, moi), d.id, 'informe', texte, url(d.id), maintenant, si)
 	]);
 	const [apres] = await base.select({ etat: demandeRemplacement.etat, remplacantId: demandeRemplacement.remplacantId }).from(demandeRemplacement).where(eq(demandeRemplacement.id, d.id));
 	if (apres?.etat !== 'attente' && apres?.remplacantId !== moi) throw dejaTraitee();
@@ -337,8 +337,9 @@ export async function accepterDemande(base: Base, acteur: Acteur, id: number, ma
 		if (!disponible(ctx, moi, periodes, id)) throw new DonneeInvalide('Vous n’êtes pas disponible sur ces périodes');
 		manquantes = manque(ctx, d.demandeurId, moi, date);
 	}
-	const chefs = valideurs(ctx.chefs, d.equipeId, d.demandeurId, moi);
-	if (d.court === 1) return accepterCourt(base, d, moi, ctx, manquantes, chefs, maintenant);
+	// Une urgence va à tous les valideurs ; le reste, à qui est prévenu (sans chef de garde, le chef de centre seul).
+	const chefs = aPrevenir(ctx.chefs, d.equipeId, d.demandeurId, moi);
+	if (d.court === 1) return accepterCourt(base, d, moi, ctx, manquantes, chefs, valideurs(ctx.chefs, d.equipeId, d.demandeurId, moi), maintenant);
 	const etat = manquantes.length > 0 ? 'a_valider' : 'conclue';
 	// Deux acceptations à la même minute : seul celui qui l'a eue est annoncé.
 	const si = sql`${decidee(id, etat, maintenant)} and exists (select 1 from ${demandeRemplacement} where ${demandeRemplacement.id} = ${id} and ${demandeRemplacement.remplacantId} = ${moi})`;
@@ -358,7 +359,7 @@ export async function accepterDemande(base: Base, acteur: Acteur, id: number, ma
 }
 
 // Un remplacement court est conclu dès l'acceptation. Une aptitude contrôlée manque : le chef de garde le sait en urgence, et peut refuser avant le début.
-async function accepterCourt(base: Base, d: LigneDemande, moi: number, ctx: Contexte, manquantes: string[], chefs: number[], maintenant: string): Promise<'conclue'> {
+async function accepterCourt(base: Base, d: LigneDemande, moi: number, ctx: Contexte, manquantes: string[], chefs: number[], tousLesChefs: number[], maintenant: string): Promise<'conclue'> {
 	const si = sql`${decidee(d.id, 'conclue', maintenant)} and exists (select 1 from ${demandeRemplacement} where ${demandeRemplacement.id} = ${d.id} and ${demandeRemplacement.remplacantId} = ${moi})`;
 	const texte = `${nomDe(ctx, moi)}, ${texteDe(ctx, d)}`;
 	const auChef = `${nomDe(ctx, moi)} remplace ${nomDe(ctx, d.demandeurId)} ${texteDe(ctx, d)}`;
@@ -370,7 +371,7 @@ async function accepterCourt(base: Base, d: LigneDemande, moi: number, ctx: Cont
 		journalDemande(base, moi, 'accepter_remplacement', d.id, { etat: 'conclue', manque: manquantes }, maintenant),
 		...avis(base, [d.demandeurId], d.id, 'acceptee', texte, url(d.id), maintenant, si),
 		...(manquantes.length > 0
-			? avis(base, chefs, d.id, 'informe', `${auChef}, il lui manque ${manquantes.join(', ')}`, url(d.id), maintenant, si, 'urgences')
+			? avis(base, tousLesChefs, d.id, 'informe', `${auChef}, il lui manque ${manquantes.join(', ')}`, url(d.id), maintenant, si, 'urgences')
 			: avis(base, chefs, d.id, 'informe', auChef, url(d.id), maintenant, si))
 	]);
 	const [apres] = await base.select({ remplacantId: demandeRemplacement.remplacantId }).from(demandeRemplacement).where(eq(demandeRemplacement.id, d.id));
@@ -465,7 +466,7 @@ export async function desister(base: Base, acteur: Acteur, id: number, maintenan
 		journalDemande(base, moi, 'desister_remplacement', id, {}, maintenant),
 		// Un court commence dans peu de temps : le titulaire le sait en urgence.
 		...avis(base, [d.demandeurId], id, 'desistement', texte, url(id), maintenant, rouverte(d, maintenant), d.court === 1 ? 'urgences' : 'remplacements'),
-		...avis(base, valideurs(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId), id, 'desistement', `${nomDe(ctx, moi)} ne remplace plus ${nomDe(ctx, d.demandeurId)}, ${texteDe(ctx, d)}`, url(id), maintenant, rouverte(d, maintenant))
+		...avis(base, aPrevenir(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId), id, 'desistement', `${nomDe(ctx, moi)} ne remplace plus ${nomDe(ctx, d.demandeurId)}, ${texteDe(ctx, d)}`, url(id), maintenant, rouverte(d, maintenant))
 	]);
 }
 
@@ -536,7 +537,7 @@ export async function refuserApresCoup(base: Base, acteur: Acteur, id: number, m
 		...avis(base, [d.remplacantId], id, quoi, auRemplacant, url(id), maintenant, si, 'urgences'),
 		...(parLeDemandeur ? [] : avis(base, [d.demandeurId], id, quoi, `${nomDe(ctx, d.remplacantId)} ne vous remplacera pas ${texteDe(ctx, d)}. Vous restez d’astreinte.`, url(id), maintenant, si, 'urgences')),
 		// Les chefs qui l'avaient appris : en urgence s'ils l'avaient su en urgence (une aptitude manquait).
-		...avis(base, valideurs(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId).filter((x) => x !== moi), id, quoi, `${nomDe(ctx, d.remplacantId)} ne remplace plus ${nomDe(ctx, d.demandeurId)} ${texteDe(ctx, d)}, refusé par ${parLeDemandeur ? 'le demandeur' : 'le chef de garde'}`, url(id), maintenant, si, d.manque !== null ? 'urgences' : 'remplacements')
+		...avis(base, (d.manque !== null ? valideurs : aPrevenir)(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId).filter((x) => x !== moi), id, quoi, `${nomDe(ctx, d.remplacantId)} ne remplace plus ${nomDe(ctx, d.demandeurId)} ${texteDe(ctx, d)}, refusé par ${parLeDemandeur ? 'le demandeur' : 'le chef de garde'}`, url(id), maintenant, si, d.manque !== null ? 'urgences' : 'remplacements')
 	]);
 }
 

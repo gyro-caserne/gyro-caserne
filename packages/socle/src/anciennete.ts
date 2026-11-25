@@ -1,11 +1,11 @@
-import { and, asc, eq, inArray, isNull, ne, notExists, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, notExists, sql } from 'drizzle-orm';
 import { anneesDeService, palierDuJour } from './a-ne-pas-manquer.ts';
 import { nomActeur } from './actions/personnes.ts';
 import { anciennete, ans, PALIER_MAX, PALIER_MIN, PALIERS_PAR_DEFAUT, type Anciennete } from './anciennete-calcul.ts';
 import type { Base } from './base.ts';
 import type { Courriel } from './courriels.ts';
 import { ajouterJours, exigerDateHeure, formatDeDate } from './dates.ts';
-import { aLeDroit, type Acteur } from './droits.ts';
+import { aLeDroit, chefPrincipal, type Acteur } from './droits.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import { ligneJournal } from './journal.ts';
 import { STATUTS_AVEC_ACCES } from './listes.ts';
@@ -97,6 +97,9 @@ export async function feliciter(base: Base, acteur: Acteur, agentId: number, mai
 // « le 12 décembre », « le 1er mars ».
 const leJour = (iso: string) => `le ${formatDeDate({ day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`)).replace(/^1(?=\s)/, '1er')}`;
 
+// La personne (« personne » d'une requête) tient en ce moment la responsabilité système donnée.
+const occupeSql = (systeme: string, aujourdhui: string) =>
+	sql`exists (select 1 from attribution a join responsabilite r on r.id = a.responsabilite_id where a.personne_id = "personne"."id" and r.systeme = ${systeme} and a.debut <= ${aujourdhui} and (a.fin is null or a.fin >= ${aujourdhui}))`;
 const parmi = (ids: number[]) => sql`(select value from json_each(${JSON.stringify(ids)}))`;
 
 // Au réveil de 8 h (et de 8 h 10, si 8 h a manqué) : les paliers dans 30 jours, en une lecture bornée par la date.
@@ -105,7 +108,7 @@ const parmi = (ids: number[]) => sql`(select value from json_each(${JSON.stringi
 export async function ancienneteDuMatin(base: Base, maintenant: string): Promise<Courriel[]> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const cible = ajouterJours(aujourdhui, ANNONCE_JOURS);
-	const [aVenir, chefs, deja] = await base.batch([
+	const [aVenir, lus, deja] = await base.batch([
 		base
 			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, annees: anneesDeService(cible).as('annees') })
 			.from(personne)
@@ -113,7 +116,13 @@ export async function ancienneteDuMatin(base: Base, maintenant: string): Promise
 			.where(palierDuJour(cible))
 			.orderBy(asc(personne.nom), asc(personne.prenom)),
 		base
-			.select({ id: personne.id, a: personne.email, coupe: sql<number>`exists (select 1 from ${coupure} where ${coupure.personneId} = "personne"."id" and ${coupure.lieu} = 'courriel')`.as('coupe') })
+			.select({
+				id: personne.id,
+				a: personne.email,
+				coupe: sql<number>`exists (select 1 from ${coupure} where ${coupure.personneId} = "personne"."id" and ${coupure.lieu} = 'courriel')`.as('coupe'),
+				// Chef de centre ou adjoint : le chef est le destinataire principal.
+				systeme: sql<string>`case when ${occupeSql('chef_centre', aujourdhui)} then 'chef_centre' else 'chef_centre_adjoint' end`.as('systeme')
+			})
 			.from(personne)
 			.where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), estChefOuAdjointSql(sql`"personne"."id"`, aujourdhui))),
 		base
@@ -122,9 +131,11 @@ export async function ancienneteDuMatin(base: Base, maintenant: string): Promise
 			.where(and(isNull(avisAnciennete.auteurId), eq(avisAnciennete.jour, cible)))
 	]);
 	const nouveaux = aVenir.filter((p) => !deja.some((d) => d.agentId === p.id && d.annees === p.annees));
-	if (nouveaux.length === 0 || chefs.length === 0) return [];
+	if (nouveaux.length === 0 || lus.length === 0) return [];
+	// Le chef de centre ; l'adjoint seulement sans lui. Le palier du chef lui-même va à l'adjoint.
 	const lignes = nouveaux.map((p) => ({ p, texte: `Dans ${ANNONCE_JOURS} jours, ${leJour(cible)}, ${`${p.prenom} ${p.nom}`.trim()} atteint ${ans(p.annees)} de service.` }));
-	const ids = chefs.map((c) => c.id);
+	const chefs = lus;
+	const pour = (agentId: number) => chefPrincipal(lus.filter((c) => c.id !== agentId));
 	// Une ligne par chef et par agent, pas pour son propre palier ; jamais deux fois (un réveil en retard peut croiser le suivant).
 	const ecrites = (await base.batch(
 		lignes.map(({ p, texte }) =>
@@ -146,7 +157,7 @@ export async function ancienneteDuMatin(base: Base, maintenant: string): Promise
 							lueLe: sql<string | null>`null`.as('lue_le')
 						})
 						.from(personne)
-						.where(and(inArray(personne.id, parmi(ids)), ne(personne.id, p.id), notExists(base.select({ un: sql`1` }).from(avisAnciennete).where(and(eq(avisAnciennete.personneId, personne.id), eq(avisAnciennete.agentId, p.id), eq(avisAnciennete.annees, p.annees), isNull(avisAnciennete.auteurId))))))
+						.where(and(inArray(personne.id, parmi(pour(p.id))), notExists(base.select({ un: sql`1` }).from(avisAnciennete).where(and(eq(avisAnciennete.personneId, personne.id), eq(avisAnciennete.agentId, p.id), eq(avisAnciennete.annees, p.annees), isNull(avisAnciennete.auteurId))))))
 				)
 				.returning({ personneId: avisAnciennete.personneId, agentId: avisAnciennete.agentId })
 		) as [never, ...never[]]

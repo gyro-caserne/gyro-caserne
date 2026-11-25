@@ -366,7 +366,7 @@ describe('la prise de garde', () => {
 		await gestePrise(j.base, j.base.photos, j.chefDeGarde, p1, { quoi: 'ecart', element: radio.ref, genre: 'abime', manque: null, note: '' }, QUAND, reglage);
 		await toutVoir(p1, QUAND);
 		await validerPrise(j.base, j.chefDeGarde, p1, QUAND, reglage);
-		expect(await j.avis(j.referent)).toMatchObject([{ titre: 'VSAV 1, prise de garde', texte: '1 anomalie signalée par Chloé Fictif : Essai radio', url: `/engins/anomalies?engin=${j.vsav}` }]);
+		expect(await j.avis(j.referent)).toMatchObject([{ titre: 'VSAV 1, prise de garde', texte: '1 anomalie signalée par Chloé Fictif (Essai radio)', url: `/engins/anomalies?engin=${j.vsav}` }]);
 		const [a] = await j.base.select().from(anomalie).where(eq(anomalie.enginId, j.vsav));
 		// La relève suivante la retrouve.
 		const suivante = '2026-11-06T18:10';
@@ -431,7 +431,7 @@ describe('qui prévenir, selon la zone', () => {
 		const paula = await nommee(j, 'Paula', { nom: 'Référent pharmacie' });
 		const lea = await nommee(j, 'Léa', { nom: 'Référent pharmacie' });
 		await j.prise([j.sac.elements[0]!.ref]);
-		const attendu = { titre: 'VSAV 1, prise de garde', texte: `1 anomalie signalée par Alice Fictif : ${j.sac.elements[0]!.libelle}` };
+		const attendu = { titre: 'VSAV 1, prise de garde', texte: `1 anomalie signalée par Alice Fictif (${j.sac.elements[0]!.libelle})` };
 		expect(await j.avis(paula)).toMatchObject([attendu]);
 		expect(await j.avis(lea)).toMatchObject([attendu]);
 		expect(await j.avis(j.chefDeGarde)).toMatchObject([attendu]);
@@ -444,32 +444,40 @@ describe('qui prévenir, selon la zone', () => {
 		const j = await jeuZones();
 		const paula = await nommee(j, 'Paula', { nom: 'Référent pharmacie' });
 		await j.prise([j.radio.ref, j.sac.elements[0]!.ref]);
-		expect((await j.avis(j.referent)).map((a) => a.texte)).toEqual(['1 anomalie signalée par Alice Fictif : Essai radio']);
-		expect((await j.avis(paula)).map((a) => a.texte)).toEqual([`1 anomalie signalée par Alice Fictif : ${j.sac.elements[0]!.libelle}`]);
-		expect((await j.avis(j.chefDeGarde)).map((a) => a.texte)).toEqual([`2 anomalies signalées par Alice Fictif : Essai radio, ${j.sac.elements[0]!.libelle}`]);
+		expect((await j.avis(j.referent)).map((a) => a.texte)).toEqual(['1 anomalie signalée par Alice Fictif (Essai radio)']);
+		expect((await j.avis(paula)).map((a) => a.texte)).toEqual([`1 anomalie signalée par Alice Fictif (${j.sac.elements[0]!.libelle})`]);
+		expect((await j.avis(j.chefDeGarde)).map((a) => a.texte)).toEqual([`2 anomalies signalées par Alice Fictif (Essai radio, ${j.sac.elements[0]!.libelle})`]);
 		// L'e-mail suit la cloche : une ligne par destinataire.
 		expect((await courrielsDeDemande(j.base, { genre: 'prise', enginId: j.vsav, quand: QUAND })).map((c) => c.a).sort()).toEqual(['cdg@exemple.fr', 'paula@exemple.fr', 'ref@exemple.fr']);
 	});
 
-	it('personne ne tient le rôle choisi : le chef de centre et l’adjoint, à sa place', async () => {
+	it('personne ne tient le rôle choisi : le chef de centre à sa place, sans avis en double à l’adjoint', async () => {
 		const j = await jeuZones();
 		await j.prise([j.sac.elements[0]!.ref]);
 		expect(await j.avis(j.claire)).toHaveLength(1);
-		expect(await j.avis(j.paul)).toHaveLength(1);
+		expect(await j.avis(j.paul)).toEqual([]);
 		expect(await j.avis(j.chefDeGarde)).toHaveLength(1);
 		expect(await j.avis(j.referent)).toEqual([]);
 	});
 
-	it('l’auteur seul titulaire du rôle choisi : le chef de centre et l’adjoint, à sa place', async () => {
+	it('l’auteur seul titulaire du rôle choisi : le chef de centre à sa place, l’adjoint seulement sans lui', async () => {
 		const j = await jeuZones();
 		await j.base.insert(attribution).values({ personneId: idDe(j.alice), responsabiliteId: j.pharmacie, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
 		await j.prise([j.sac.elements[0]!.ref]);
 		expect(await j.avis(j.claire)).toHaveLength(1);
-		expect(await j.avis(j.paul)).toHaveLength(1);
+		expect(await j.avis(j.paul)).toEqual([]);
 		expect(await j.avis(j.alice)).toEqual([]);
 	});
 
-	it('deux rôles, l’un tenu, l’autre sans titulaire : ses titulaires, et le chef et l’adjoint pour l’autre', async () => {
+	it('zone sans titulaire et sans chef de centre en cours : l’adjoint', async () => {
+		const j = await jeuZones();
+		await j.base.update(attribution).set({ fin: '2026-01-02' }).where(eq(attribution.personneId, idDe(j.claire)));
+		await j.prise([j.sac.elements[0]!.ref]);
+		expect(await j.avis(j.paul)).toHaveLength(1);
+		expect(await j.avis(j.claire)).toEqual([]);
+	});
+
+	it('deux rôles, l’un tenu, l’autre sans titulaire : ses titulaires, et le chef de centre pour l’autre', async () => {
 		const j = await jeuZones();
 		const paula = await nommee(j, 'Paula', { nom: 'Référent pharmacie' });
 		const [habillement] = await j.base.select().from(responsabilite).where(eq(responsabilite.nom, 'Référent habillement'));
@@ -477,7 +485,7 @@ describe('qui prévenir, selon la zone', () => {
 		await j.prise([j.sac.elements[0]!.ref]);
 		expect(await j.avis(paula)).toHaveLength(1);
 		expect(await j.avis(j.claire)).toHaveLength(1);
-		expect(await j.avis(j.paul)).toHaveLength(1);
+		expect(await j.avis(j.paul)).toEqual([]);
 		expect(await j.avis(j.referent)).toEqual([]);
 	});
 

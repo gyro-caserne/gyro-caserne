@@ -110,7 +110,7 @@ describe('/engins/[id]/prise', () => {
 
 		expect(await agir('demanderReouverture', moi, vsav, [['prise', id], ['motif', '']])).toMatchObject({ status: 400, data: { cible: 'demander', message: 'Dites en quelques mots pourquoi.' } });
 		expect(await agir('demanderReouverture', moi, vsav, [['prise', id], ['motif', 'Radio oubliée']])).toMatchObject({ cible: 'demander', succes: 'Demande envoyée.' });
-		expect(await base.select({ titre: avisAnomalie.titre, texte: avisAnomalie.texte }).from(avisAnomalie)).toContainEqual({ titre: 'Réouverture demandée par Alice Test', texte: 'VSAV 1. Motif : Radio oubliée' });
+		expect(await base.select({ titre: avisAnomalie.titre, texte: avisAnomalie.texte }).from(avisAnomalie)).toContainEqual({ titre: 'Réouverture demandée par Alice Test', texte: 'VSAV 1, motif « Radio oubliée »' });
 
 		// Un agent ne rouvre pas ; le chef confirme et dit pourquoi.
 		expect(await agir('rouvrir', moi, vsav, [['prise', id], ['motif', 'Radio'], ['confirmation', 'oui']])).toMatchObject({ status: 403, data: { message: 'Seuls le chef de garde de l’équipe d’astreinte, le chef de centre et l’adjoint rouvrent une prise.' } });

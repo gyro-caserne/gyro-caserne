@@ -3,7 +3,7 @@ import type { BatchItem } from 'drizzle-orm/batch';
 import { instruction, type Base, type BasePhotos } from './base.ts';
 import { avecPhotos, effacerPhotos, exigerPhotos, lireOctets, type Photo } from './commun.ts';
 import { ajouterJours, enCours, exigerDateHeure } from './dates.ts';
-import { aLeDroit, type Acteur } from './droits.ts';
+import { aLeDroit, chefPrincipal, type Acteur } from './droits.ts';
 import { lireEngin, voitLesEngins, type EnginVu } from './engins.ts';
 import { DonneeInvalide, RefusDroit } from './erreurs.ts';
 import { lirePrevenir, type ElementFiche, type ZoneFiche } from './fiches.ts';
@@ -470,7 +470,7 @@ export async function validerPrise(base: Base, acteur: Acteur, id: number, maint
 	});
 	const parTexte = new Map<string, number[]>();
 	for (const [p, libelles] of parPersonne) {
-		const texte = `${libelles.length} ${libelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} : ${libelles.join(', ')}`;
+		const texte = `${libelles.length} ${libelles.length > 1 ? 'anomalies signalées' : 'anomalie signalée'} par ${qui} (${libelles.join(', ')})`;
 		parTexte.set(texte, [...(parTexte.get(texte) ?? []), p]);
 	}
 	const avis = [
@@ -597,10 +597,11 @@ export async function demanderReouverture(base: Base, acteur: Acteur, id: number
 	if (!v.saisie.participants.includes(v.moi) && !v.deLEquipe) throw new RefusDroit('FAIRE_PRISE_DE_GARDE', { type: 'centre' }, 'Réservé aux participants et à l’équipe d’astreinte');
 	const texte = motifDe(motif);
 	const deGarde = v.chefs.filter((c) => c.systeme === 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
-	const prevenus = deGarde.length ? deGarde : v.chefs.filter((c) => c.systeme !== 'chef_equipe' && c.id !== v.moi).map((c) => c.id);
+	// À défaut, le chef de centre ; l'adjoint seulement sans lui.
+	const prevenus = deGarde.length ? deGarde : chefPrincipal(v.chefs.filter((c) => c.systeme !== 'chef_equipe' && c.id !== v.moi));
 	if (prevenus.length === 0) throw new DonneeInvalide('Aucun chef à prévenir');
 	const qui = v.noms.get(v.moi) ?? 'Un agent';
-	const avis = { titre: `Réouverture demandée par ${qui}`, texte: `${v.nomEngin}. Motif : ${texte}`, url: `/engins/${v.prise.enginId}/prise` };
+	const avis = { titre: `Réouverture demandée par ${qui}`, texte: `${v.nomEngin}, motif « ${texte} »`, url: `/engins/${v.prise.enginId}/prise` };
 	await ecrireValidee(base, v, { traces: { ...v.traces, demande: { par: v.moi, le: maintenant, motif: texte } } }, maintenant, (si) => [...avisAnomalies(base, [...new Set(prevenus)], avis, maintenant, si)]);
 }
 
