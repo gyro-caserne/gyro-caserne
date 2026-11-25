@@ -26,6 +26,8 @@ test('Ajouter un engin d’un nouveau type, puis ses deux suites', async ({ page
 	await expect(page.getByRole('link', { name: 'Compléter sa fiche de prise de garde', exact: true })).toHaveAttribute('href', /^\/engins\/fiches\/\d+$/);
 	await page.getByRole('link', { name: 'Régler son armement', exact: true }).click();
 	await expect(page.getByRole('dialog', { name: type, exact: true })).toBeVisible();
+	// L'engin d'essai quitte le centre : il ne pèse pas sur les autres tests (prise de la relève, listes).
+	executer(`UPDATE engin SET situation = 'parti', parti_le = date('now') WHERE nom = '${type} 1';`);
 });
 
 test('« Part à la retraite, reste dans l’appli » depuis « Départ du centre »', async ({ page }) => {
@@ -57,7 +59,8 @@ test('au téléphone, le bas d’une page longue reste au-dessus de la barre du 
 		bas: Math.max(...[...document.querySelectorAll('main *')].map((e) => e.getBoundingClientRect()).filter((r) => r.height > 0).map((r) => r.bottom)),
 		barre: document.querySelector('nav')!.getBoundingClientRect().top
 	}));
-	expect(bas).toBeLessThanOrEqual(barre);
+	// Un espacement reste entre le dernier élément et la barre (la zone de sécurité de l'iPhone est vérifiée par le test du style).
+	expect(barre - bas).toBeGreaterThanOrEqual(16);
 });
 
 test('Demandes reçues : la carte « Étapes de vos demandes » en tête, et son réglage sur place', async ({ page }) => {

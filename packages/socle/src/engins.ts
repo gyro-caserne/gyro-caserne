@@ -92,7 +92,7 @@ export async function enregistrerEngin(base: Base, acteur: Acteur, saisie: Saisi
 			base.insert(engin).values({ ...valeurs, typeId: nouveau.id, creeLe: maintenant }).returning({ id: engin.id }),
 			ligneJournal(base, { acteur: nomActeur(acteur), action: 'ajouter_engin', cibleType: 'engin', cibleId: sql`last_insert_rowid()`, details: { ...details, type: nouveau.nom } }, maintenant)
 		]);
-		return resultats[3][0]!.id;
+		return (resultats[nouveau.ecritures.length] as { id: number }[])[0]!.id;
 	}
 	if (avant === null) {
 		// L'engin et son journal d'un bloc.

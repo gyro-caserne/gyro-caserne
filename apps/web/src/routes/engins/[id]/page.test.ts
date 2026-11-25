@@ -8,8 +8,9 @@ const engin = { id: 7, nom: 'CCF 1', type: 'CCF', typeId: 4, immatriculation: nu
 const fiche = { typeId: 4, type: 'CCF', zones: [], version: { numero: 1, creeLe: '2026-11-25T08:00', auteur: 'Rémi Fictif' } };
 
 describe('/engins/[id]', () => {
-	it('fiche vide : les deux suites en boutons secondaires, l’armement seulement si permis', () => {
+	it('fiche vide : les deux suites en boutons secondaires, en tête, l’armement seulement si permis', () => {
 		const page = html({ engin, gere: true, fiche, suites: { armement: true } });
+		expect(page.indexOf('À compléter')).toBeLessThan(page.indexOf('État'));
 		expect(page).toMatch(/class="lien-secondaire" href="\/engins\/fiches\/4">Compléter sa fiche de prise de garde<\/a>/);
 		expect(page).toMatch(/class="lien-secondaire" href="\/reglages\/armement\?engin=CCF">Régler son armement<\/a>/);
 		const sans = html({ engin, gere: true, fiche, suites: { armement: false } });

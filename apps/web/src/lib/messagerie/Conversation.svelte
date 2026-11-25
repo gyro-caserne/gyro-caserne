@@ -401,7 +401,8 @@
 <style>
 	/* La conversation occupe toute la place : l'en-tête reste en haut, la saisie en bas. */
 	.conversation {
-		margin: -1rem -1rem -6rem;
+		/* Annule les marges de main, dont l'espace sous le contenu gardé pour la barre du bas. */
+		margin: -1rem -1rem calc(-1 * (var(--hauteur-navigation) + env(safe-area-inset-bottom) + var(--espace-24)));
 		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;

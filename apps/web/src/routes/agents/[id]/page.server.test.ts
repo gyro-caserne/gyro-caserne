@@ -456,11 +456,21 @@ describe('/agents/[id] : ?/retraite, depuis « Départ du centre »', () => {
 		await base.insert(affectationEquipe).values({ personneId: agent, equipeId: equipe1.id, debut: '2020-01-01' });
 		const locals = locaux(base, { type: 'personne', id: chef });
 		expect(await agir('retraite', locals, agent, { profilId: String(retraite!.id) })).toMatchObject({ status: 400, data: { bloc: 'depart', erreurs: { retraite: 'Cochez « Je confirme » pour le passage à la retraite.' } } });
-		expect(await agir('retraite', locals, agent, { profilId: String(profilAgent.id), confirmation: 'oui' })).toMatchObject({ status: 400, data: { erreurs: { retraite: 'Choisissez un profil extérieur.' } } });
+		expect(await agir('retraite', locals, agent, { profilId: String(profilAgent.id), confirmation: 'oui' })).toMatchObject({ status: 400, data: { erreurs: { retraiteProfil: 'Choisissez un profil extérieur.' } } });
 		expect((await lirePersonne(base, agent)).profilId).toBe(profilAgent.id);
-		expect(await agir('retraite', locals, agent, { profilId: String(retraite!.id), confirmation: 'oui' })).toEqual({ succes: true, message: 'Passage à la retraite enregistré', bloc: 'depart' });
+		expect(await agir('retraite', locals, agent, { profilId: String(retraite!.id), confirmation: 'oui' })).toEqual({ succes: true, message: 'Passage à la retraite enregistré', bloc: 'parcours' });
 		expect(await lirePersonne(base, agent)).toMatchObject({ profilId: retraite!.id, statut: 'operationnel', naissance: '1990-05-01', contactUrgence: 'Maman 06 00 00 00 00' });
 		expect((await base.select().from(affectationEquipe).where(eq(affectationEquipe.personneId, agent)))[0]!.fin).not.toBeNull();
+		// Déjà extérieure : refusé, rien ne change.
+		expect(await agir('retraite', locals, agent, { profilId: String(retraite!.id), confirmation: 'oui' })).toMatchObject({ status: 400, data: { bloc: 'depart', message: 'Ce passage ne vaut que pour un agent du centre.' } });
+	});
+
+	it('refusé pour un agent parti', async () => {
+		const { base, agent } = await preparer();
+		const [reserve] = await base.select().from(profil).where(eq(profil.nom, 'Réserve citoyenne'));
+		await agir('statut', locaux(base, super_), agent, { statut: 'parti', confirmation: 'oui' });
+		expect(await agir('retraite', locaux(base, super_), agent, { profilId: String(reserve!.id), confirmation: 'oui' })).toMatchObject({ status: 400, data: { message: 'Ce passage ne vaut que pour un agent du centre.' } });
+		expect((await lirePersonne(base, agent)).profilId).not.toBe(reserve!.id);
 	});
 
 	it('refusé pour l’adjoint, avec le message du socle dans le bloc', async () => {

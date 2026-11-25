@@ -178,6 +178,8 @@ describe('page fiche agent', () => {
 		expect(retraite).toMatch(/name="confirmation" value="oui"[^>]*aria-describedby="retraite-avertissement retraite-erreur"/);
 		expect(retraite).toContain('Cochez « Je confirme » pour le passage à la retraite.');
 		expect(retraite).toMatch(/>(<!--[^>]*-->)*Passer à la retraite</);
+		const choixManquant = html({ data: { ...data, profils }, form: { bloc: 'depart', erreurs: { retraiteProfil: 'Choisissez un profil extérieur.' }, valeurs: { retraiteProfilId: '' } } });
+		expect(choixManquant).toMatch(/aria-describedby="retraite-profil-erreur"[\s\S]*?Choisissez un profil extérieur\.|Choisissez un profil extérieur\.[\s\S]*?name="profilId"/);
 		const sans = html({ data: { ...data, profils: [profils[0]] }, form });
 		expect(sans).not.toContain('action="?/retraite"');
 		expect(sans).toContain('Il faut d’abord créer un profil extérieur, pour les retraités par exemple, dans Réglages, Profils.');

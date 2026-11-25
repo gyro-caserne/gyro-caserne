@@ -44,6 +44,18 @@
 		</section>
 	{/if}
 
+	<!-- Un engin d'un nouveau type : ses suites, en vue dès l'arrivée, tant que la fiche de son type est vide. -->
+	{#if data.suites}
+		<section class="panneau" aria-labelledby="titre-suites">
+			<h2 id="titre-suites">À compléter</h2>
+			<p class="doux">La fiche de prise de garde de son type est encore vide.</p>
+			<div class="gestes">
+				<a class="lien-secondaire" href="/engins/fiches/{e.typeId}">Compléter sa fiche de prise de garde</a>
+				{#if data.suites.armement}<a class="lien-secondaire" href="/reglages/armement?engin={encodeURIComponent(e.type)}">Régler son armement</a>{/if}
+			</div>
+		</section>
+	{/if}
+
 	<div class="colonnes">
 		<section class="panneau" aria-labelledby="titre-etat">
 			<h2 id="titre-etat">État</h2>
@@ -90,14 +102,8 @@
 				<h2 id="titre-fiche">Fiche {data.fiche.type}</h2>
 				<p class="doux">{compteFiche(data.fiche.zones)}. Version {data.fiche.version.numero} du {dateCourte(data.fiche.version.creeLe)} ({data.fiche.version.auteur}).</p>
 			</div>
-			{#if data.suites}
+			{#if data.fiche.zones.length === 0}
 				<p class="doux">Cette fiche est encore vide.</p>
-				<div class="gestes">
-					<a class="lien-secondaire" href="/engins/fiches/{e.typeId}">Compléter sa fiche de prise de garde</a>
-					{#if data.suites.armement}<a class="lien-secondaire" href="/reglages/armement?engin={encodeURIComponent(e.type)}">Régler son armement</a>{/if}
-				</div>
-			{:else if data.fiche.zones.length === 0}
-				<p class="doux">Cette fiche est encore vide.{data.gere ? ' Ajoutez ses zones et ses éléments depuis « Modifier la fiche ».' : ''}</p>
 			{:else}
 				<ZonesFiche zones={data.fiche.zones} />
 			{/if}

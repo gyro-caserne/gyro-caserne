@@ -1,5 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { DonneeInvalide, gereLesEngins, RefusDroit, voitLesEngins, type Acteur, type FichierFichesLu, type SituationEngin } from '@gyro-caserne/socle';
+import { DonneeInvalide, gereLesEngins, LIMITES_FICHE, RefusDroit, voitLesEngins, type Acteur, type FichierFichesLu, type SituationEngin } from '@gyro-caserne/socle';
 import { aujourdhuiParis } from '#lib/aujourdhui.ts';
 
 export const REFUS_GESTION = 'Les engins et leurs fiches sont gérés par le chef de centre, son adjoint, les chefs de garde et le référent engins.';
@@ -36,7 +36,7 @@ const PHRASES: Record<string, string> = {
 	'Nom déjà utilisé': 'Ce nom est déjà pris par un engin du centre.',
 	'Type déjà présent': 'Ce type d’engin existe déjà.',
 	'Type vide': 'Indiquez le nom du nouveau type.',
-	'Type trop long': 'Le nom du type est trop long (20 caractères au plus).',
+	'Type trop long': `Le nom du type est trop long (${LIMITES_FICHE.nomType} caractères au plus).`,
 	'Caractère interdit dans le type': 'Le type ne peut contenir aucun de ces signes, refusés par Excel : deux-points, \\ / ? * [ ].',
 	'Fiche changée entre-temps': 'La fiche vient d’être modifiée par quelqu’un d’autre. Elle est rechargée, refaites votre geste.',
 	'Provenance vide': 'Indiquez le centre qui prête l’engin.',

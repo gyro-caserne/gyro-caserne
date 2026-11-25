@@ -95,7 +95,7 @@
 	const retraitePossible = $derived(!exterieur && fiche.protection === null);
 	const exterieurs = $derived(data.profils.filter((p) => p.typePersonne === 'exterieur'));
 	const profilRetraite = $derived(valeurs.retraiteProfilId || String(exterieurs.find((p) => /retrait/i.test(p.nom))?.id ?? ''));
-	const departDeDepart = () => (erreurs.retraite ? 'retraite' : 'quitte');
+	const departDeDepart = () => (erreurs.retraite || erreurs.retraiteProfil ? 'retraite' : 'quitte');
 	let departChoisi = $state(untrack(departDeDepart));
 	$effect.pre(() => {
 		departChoisi = departDeDepart();
@@ -531,7 +531,7 @@
 							<div><a class="lien-secondaire" href="/reglages/profils">Ouvrir les profils</a></div>
 						{:else}
 							<form method="POST" action={action('retraite')}>
-								<Choix id="retraite-profil" name="profilId" libelle="Profil extérieur" requis valeur={profilRetraite} options={[...(profilRetraite ? [] : [{ valeur: '', libelle: 'À choisir' }]), ...exterieurs.map((p) => ({ valeur: String(p.id), libelle: p.nom }))]} />
+								<Choix id="retraite-profil" name="profilId" libelle="Profil extérieur" requis valeur={profilRetraite} erreur={erreurs.retraiteProfil} options={[...(profilRetraite ? [] : [{ valeur: '', libelle: 'À choisir' }]), ...exterieurs.map((p) => ({ valeur: String(p.id), libelle: p.nom }))]} />
 								<p id="retraite-avertissement"><strong>{ceQuIlQuitte}</strong> Ses remplacements, échanges et réservations sont annulés, comme ses demandes pas encore avancées, et {fiche.prenom} sort des groupes de messagerie. Sa fiche, ses données et ses conversations à deux restent.</p>
 								<label>
 									<input
