@@ -57,7 +57,7 @@ test('au téléphone, le bas d’une page longue reste au-dessus de la barre du 
 	await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
 	const { bas, barre } = await page.evaluate(() => ({
 		bas: Math.max(...[...document.querySelectorAll('main *')].map((e) => e.getBoundingClientRect()).filter((r) => r.height > 0).map((r) => r.bottom)),
-		barre: document.querySelector('nav')!.getBoundingClientRect().top
+		barre: document.querySelector('nav:not(main nav)')!.getBoundingClientRect().top
 	}));
 	// Un espacement reste entre le dernier élément et la barre (la zone de sécurité de l'iPhone est vérifiée par le test du style).
 	expect(barre - bas).toBeGreaterThanOrEqual(16);
