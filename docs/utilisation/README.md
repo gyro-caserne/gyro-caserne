@@ -36,6 +36,7 @@ Format d'une page :
 - [Comment ajouter le planning à mon agenda ?](ajouter-le-planning-a-mon-agenda.md)
 - [Comment installer l'appli sur mon téléphone ?](installer-l-appli.md)
 - [Comment préparer le planning de l'année ?](preparer-l-annee.md)
+- [Comment changer les horaires de garde ?](changer-les-horaires-de-garde.md)
 - [Comment préparer l'année à partir de la précédente ?](partir-d-une-proposition.md)
 - [Comment préparer l'année dans un fichier ?](preparer-l-annee-par-fichier.md)
 - [Comment donner mes vacances d'été ?](donner-mes-vacances.md)

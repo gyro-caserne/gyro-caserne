@@ -22,7 +22,7 @@ Planning → « Remplacements » (avec le nombre de demandes à traiter). Quatre
 
 « Me faire remplacer » (plaque d'astreinte de l'Accueil et du Planning, page Remplacements, Moi) ouvre d'abord un choix, une ligne par façon de faire :
 
-- **Quelques heures aujourd'hui** (2 ou 3 h de son astreinte du jour), seulement le jour de son astreinte, tant qu'il reste une plage libre ;
+- **Quelques heures aujourd'hui** (2 ou 3 h de son astreinte du jour, ou les durées réglées par le centre), seulement le jour de son astreinte, tant qu'il reste une plage libre ;
 - **Une ou plusieurs gardes** : le parcours en 3 étapes ;
 - **Échanger avec un collègue** : sa garde contre la vôtre ;
 - **Échanger ma place à une manœuvre** : votre place contre celle d'un collègue.
@@ -40,9 +40,9 @@ Les liens précis vont droit au parcours : une semaine ou un jour de la vue Sema
 
 ## Remplacement court (quelques heures)
 
-Pour être remplacé **2 ou 3 h** pendant son astreinte du jour, pour une raison personnelle. Exemple : Julie est d'astreinte de 18 h à 6 h et a besoin de quelqu'un de 20 h à 22 h.
+Pour être remplacé **2 ou 3 h** (les durées du centre) pendant son astreinte du jour, pour une raison personnelle. Exemple : Julie est d'astreinte de 18 h à 6 h et a besoin de quelqu'un de 20 h à 22 h.
 
-- « Me faire remplacer » → « Quelques heures aujourd'hui » (proposé seulement le jour de l'astreinte). L'heure de début au quart d'heure, dans la liste du téléphone, puis 2 h ou 3 h. La plage tient dans une seule tranche de son astreinte du jour ; elle peut commencer alors que l'astreinte a commencé, mais pas dans le passé.
+- « Me faire remplacer » → « Quelques heures aujourd'hui » (proposé seulement le jour de l'astreinte). L'heure de début au quart d'heure, dans la liste du téléphone, puis la durée, parmi celles du centre qui tiennent avant la fin de la tranche. La plage tient dans une seule tranche de son astreinte du jour ; elle peut commencer alors que l'astreinte a commencé, mais pas dans le passé.
 - Toujours **ouverte à tous les disponibles**, comme une demande ouverte (ceux qui ont ses aptitudes contrôlées en tête). Pas de collègue ciblé, pas d'échange.
 - **Conclu dès qu'un collègue accepte** ; le premier l'emporte. Pas de validation avant.
 - S'il manque au remplaçant une aptitude contrôlée du demandeur, le chef de garde reçoit une **urgence** (« Marc Petit remplace Julie Martin lundi 9 novembre, de 20 h à 22 h, il lui manque CA1 ») et peut refuser. Sinon, il est simplement informé.
@@ -53,6 +53,7 @@ Pour être remplacé **2 ou 3 h** pendant son astreinte du jour, pour une raison
 - Le planning, la vue du chef de garde et l'agenda du téléphone montrent la seule plage : « Marc Petit remplace Julie Martin, lundi 9 novembre, de 20 h à 22 h ». Une plage après minuit se range, dans la semaine, sous le jour de sa nuit (de 0 h 15 à 2 h 15 le vendredi : sous le jeudi). La plaque d'astreinte du Planning dit « Remplacé par Marc Petit de 20 h à 22 h », et celle de l'Accueil aussi, le jour même, jusqu'à la fin de la plage.
 - Tant qu'il peut refuser, le chef de garde retrouve un court où une aptitude manque dans ses demandes à traiter (Accueil, cloche), jusqu'au début.
 - La nuit du passage à l'heure d'été, les débuts de 2 h à 2 h 45 (heures qui n'existent pas) ne sont pas proposés.
+- **Durées** : Réglages → « Remplacement court », pour le chef de centre et l'adjoint (droit de gérer les listes) : 1 h, 2 h, 3 h ou 4 h, au moins une ; par défaut 2 h et 3 h. Seules les nouvelles demandes les suivent. Une demande en cours garde sa durée.
 
 ## Les règles
 
