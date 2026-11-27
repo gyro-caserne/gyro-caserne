@@ -47,6 +47,7 @@ const nomEquipe = (p: Preparation, id: number | null) => (id === null ? null : (
 // Les réglages de l'année préparée et de la suivante (leurs horaires).
 const reglagesDeP = (p: Preparation, reglage: Reglage) => ({ annee: reglageDeLAnnee(reglage, p.horaires.propres ? JSON.stringify(p.horaires.valeur) : null), suivante: reglageDeLAnnee(reglage, p.horaires.suivante) });
 // Les semaines de l'année : celles enregistrées, ou le roulement proposé pour une année vide.
+// La fin d'une semaine : le jour où finit sa dernière période (la dernière de l'année peut courir jusqu'à la relève suivante).
 const semainesDe = (p: Preparation, reglage: Reglage) => {
 	const r = reglagesDeP(p, reglage);
 	return p.semaines.length ? p.semaines : calculerAnnee(p.annee, r.annee, p.ordrePropose, new Map(), undefined, r.suivante);
@@ -60,18 +61,13 @@ export async function donneesFichierPlanning(base: Base, acteur: Acteur, annee: 
 	const ete = await feuilleEte(base, annee, maintenant.slice(0, 10), reglage);
 	const equipes = actives(p);
 	const numero = (id: number) => String(equipes.findIndex((e) => e.id === id) + 1);
-	const fin = (debut: string) => {
-		const d = new Date(`${debut}T00:00:00Z`);
-		d.setUTCDate(d.getUTCDate() + 7);
-		return d.toISOString().slice(0, 10);
-	};
 	return {
 		annee,
 		feuilles: [
 			{
 				nom: FEUILLES.semaines,
 				entetes: [...ENTETES_PLANNING.semaines],
-				lignes: semainesDe(p, reglage).map((s) => [`S${s.numero}`, dateFichier(s.debut), dateFichier(fin(s.debut)), nomEquipe(p, s.equipeId) ?? '']),
+				lignes: semainesDe(p, reglage).map((s) => [`S${s.numero}`, dateFichier(s.debut), dateFichier(s.periodes.at(-1)?.fin.slice(0, 10) ?? s.debut), nomEquipe(p, s.equipeId) ?? '']),
 				listes: { Équipe: equipes.map((e) => e.nom) }
 			},
 			{

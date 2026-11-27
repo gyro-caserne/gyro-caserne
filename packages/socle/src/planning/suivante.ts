@@ -201,7 +201,9 @@ async function calculer(base: Base, annee: number, maintenant: string, reglage: 
 		fetes: { noel, nouvelAn, compromis: !noel.dansLeTour || !nouvelAn.dansLeTour, memeSemaine: i.noel >= 0 && i.noel === i.nouvelAn, deSuite: [...new Set(regle.filter((id, j) => id === regle[j + 1] && depart[j] !== depart[j + 1]))] },
 		...reprise,
 		vacances: vacances.filter((v) => v.debut.startsWith(`${annee}-`)).length,
-		equipes: etat
+		equipes: etat,
+		// Les horaires déjà réglés pour l'année (sa ligne sans roulement) : l'acceptation les garde.
+		horaires: annees.find((a) => a.annee === annee)?.horaires ?? null
 	};
 }
 
@@ -222,7 +224,7 @@ export async function accepterProposition(base: Base, acteur: Acteur, annee: num
 			base.delete(anneePlanning).where(and(eq(anneePlanning.annee, annee), eq(anneePlanning.ordre, '[]'))),
 			base.delete(semaineChangee).where(and(gte(semaineChangee.debut, `${annee}-01-01`), lte(semaineChangee.debut, `${annee}-12-31`))),
 			// Une insertion simple : si une autre acceptation est passée entre-temps, tout le bloc échoue.
-			base.insert(anneePlanning).values({ annee, ordre: JSON.stringify(p.ordre) }),
+			base.insert(anneePlanning).values({ annee, ordre: JSON.stringify(p.ordre), horaires: p.horaires }),
 			journalPlanning(base, acteur, 'accepter_proposition', { annee, ordre: p.ordre, semaines: p.changees.length, manoeuvres: p.manoeuvres.length }, maintenant),
 			...p.changees.map((c) => base.insert(semaineChangee).values({ debut: c.debut, equipeId: c.apres })),
 			...p.manoeuvres.map((m) => base.insert(manoeuvre).values({ debut: m.debut, fin: m.fin, theme: m.theme, lieu: m.lieu, convoques: JSON.stringify(m.convoques), petitDejeuner: m.petitDejeuner ? 1 : 0 }))
