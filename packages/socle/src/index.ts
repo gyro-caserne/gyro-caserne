@@ -100,3 +100,4 @@ export {
 	type RoleRecu,
 	type VueDemandeReferent
 } from './demandes.ts';
+export { DUREES_COURT, DUREES_COURT_PAR_DEFAUT, lireDureesCourt, reglerDureesCourt, texteDurees } from './remplacements/court.ts';

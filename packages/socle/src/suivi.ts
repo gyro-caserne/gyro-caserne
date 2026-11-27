@@ -70,6 +70,7 @@ const PAR_SUJET = {
 	retirer_ressource: (c) => nomme(c, 'a retiré la ressource'),
 	regler_armement: () => 'a réglé l’armement des engins',
 	regler_anciennete: () => 'a réglé les paliers d’ancienneté',
+	regler_court: () => 'a réglé les durées du remplacement court',
 	deposer_ecusson: () => 'a déposé l’écusson du centre',
 	retirer_ecusson: () => 'a retiré l’écusson du centre',
 	ajouter_aptitude: (c) => nomme(c, 'a ajouté l’aptitude'),
