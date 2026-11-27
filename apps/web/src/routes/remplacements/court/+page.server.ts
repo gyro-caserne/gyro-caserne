@@ -22,7 +22,8 @@ export const actions: Actions = {
 		if (typeof debut !== 'string' || debut === '') return fail(400, { message: 'Choisissez l’heure de début.' });
 		let id: number;
 		try {
-			id = await demanderRemplacementCourt(locals.base, acteur, { debut, duree: f.get('duree') === '3' ? 3 : 2, mot: typeof mot === 'string' ? mot : null }, maintenantParis(), centre.astreinte);
+			const duree = f.get('duree');
+			id = await demanderRemplacementCourt(locals.base, acteur, { debut, duree: typeof duree === 'string' && /^[1-4]$/.test(duree) ? Number(duree) : 0, mot: typeof mot === 'string' ? mot : null }, maintenantParis(), centre.astreinte);
 		} catch (erreur) {
 			return refus(erreur);
 		}

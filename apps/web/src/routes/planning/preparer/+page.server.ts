@@ -2,8 +2,9 @@ import { fail } from '@sveltejs/kit';
 import { ajouterJours } from '@gyro-caserne/socle/dates';
 import { eq } from 'drizzle-orm';
 import centre from '$centre';
-import { accepterProposition, ajouterVacances, anneePlanning, calculerAnnee, changerSemaines, enregistrerFete, noterFete, noterFeteCentre, preparerAnnee, supprimerFete, proposerAnnee, publierAnnee, reglerRoulement, remplacementsDeSemaine, retirerVacances } from '@gyro-caserne/socle';
+import { accepterProposition, ajouterVacances, anneePlanning, calculerAnnee, changerSemaines, enregistrerFete, noterFete, noterFeteCentre, preparerAnnee, supprimerFete, proposerAnnee, publierAnnee, reglageDeLAnnee, reglerHoraires, reglerRoulement, remplacementsDeSemaine, retirerVacances } from '@gyro-caserne/socle';
 import { maintenantParis } from '#lib/aujourdhui.ts';
+import { horairesDeLaSaisie } from '#lib/planning/horaires.ts';
 import { deplacer, etapeDe } from '#lib/planning/preparer.ts';
 import { champ, echecPlanning, nombres } from '#lib/server/formulaire-planning.ts';
 import { annoncerSiJournee, anneeDe, connecte, ouRefus } from '#lib/server/planning.ts';
@@ -18,7 +19,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const courante = Number(maintenantParis().slice(0, 4));
 	// Avant le premier enregistrement, l'aperçu suit l'ordre proposé.
 	const ordre = preparation.ordre.length ? preparation.ordre : preparation.ordrePropose;
-	const apercu = (preparation.semaines.length ? preparation.semaines : calculerAnnee(annee, centre.astreinte, ordre, new Map())).slice(0, 6);
+	// Aux horaires de l'année (et de la suivante, pour la dernière semaine).
+	const h = preparation.horaires;
+	const apercu = (preparation.semaines.length ? preparation.semaines : calculerAnnee(annee, reglageDeLAnnee(centre.astreinte, h.propres ? JSON.stringify(h.valeur) : null), ordre, new Map(), undefined, reglageDeLAnnee(centre.astreinte, h.suivante))).slice(0, 6);
 	// Année publiée, une semaine ouverte : commencée (elle ne change plus), et les remplacements qu'un changement toucherait.
 	const ouverte = preparation.semaines.find((x) => x.debut === url.searchParams.get('semaine'));
 	const m = maintenantParis();
@@ -75,6 +78,12 @@ export const actions: Actions = {
 		if (ligne?.publieeLe) return fail(400, { cible: 'roulement', message: 'Année publiée. Changez plutôt l’équipe d’une semaine, à l’étape « Vérifier et publier ».' });
 		return agir(locals, 'roulement', 'Roulement enregistré.', (m) => reglerRoulement(locals.base, locals.acteur!, anneeDe(url), ordre, m));
 	},
+	// Les horaires de garde de l'année (pas encore publiée) ; « Garder les horaires du centre » les efface.
+	horaires: async ({ locals, request, url }) => {
+		const horaires = horairesDeLaSaisie(await request.formData());
+		return agir(locals, 'horaires', 'Horaires enregistrés. Les semaines de l’année les suivent.', (m) => reglerHoraires(locals.base, locals.acteur!, anneeDe(url), horaires, m, centre.astreinte));
+	},
+	horairesDuCentre: async ({ locals, url }) => agir(locals, 'horaires', 'Horaires du centre repris.', (m) => reglerHoraires(locals.base, locals.acteur!, anneeDe(url), null, m, centre.astreinte)),
 	semaines: async ({ locals, request, url }) => {
 		const choix: Record<string, number> = {};
 		for (const [cle, valeur] of await request.formData()) {

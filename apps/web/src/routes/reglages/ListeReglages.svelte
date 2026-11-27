@@ -87,6 +87,7 @@
 			<li><Rangee href="/reglages/armement" courant={courant('/reglages/armement')} titre="Armement des engins" sous="L’équipage de chaque engin ; le FPT guide le planning d’été" /></li>
 			<li><Rangee href="/reglages/ecusson" courant={courant('/reglages/ecusson')} titre="Écusson du centre" sous="À la connexion et dans l’en-tête" /></li>
 			<li><Rangee href="/reglages/anciennete" courant={courant('/reglages/anciennete')} titre="Paliers d’ancienneté" sous="Les années de service fêtées au centre" /></li>
+			<li><Rangee href="/reglages/remplacement-court" courant={courant('/reglages/remplacement-court')} titre="Remplacement court" sous="Les durées proposées pour quelques heures" /></li>
 		</ListeRangees>
 	{/if}
 

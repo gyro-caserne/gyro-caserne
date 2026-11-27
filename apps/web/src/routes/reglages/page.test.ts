@@ -58,7 +58,7 @@ describe('page Réglages', () => {
 
 	it('les listes du centre mènent aux aptitudes, à l’armement, à l’écusson et aux paliers d’ancienneté', () => {
 		const listes = groupe(html(Page, { data }), 'Listes du centre');
-		for (const href of ['/reglages/aptitudes', '/reglages/armement', '/reglages/ecusson', '/reglages/anciennete']) expect(listes).toContain(`href="${href}"`);
+		for (const href of ['/reglages/aptitudes', '/reglages/armement', '/reglages/ecusson', '/reglages/anciennete', '/reglages/remplacement-court']) expect(listes).toContain(`href="${href}"`);
 		expect(listes).toMatch(/Paliers d’ancienneté[\s\S]*Les années de service fêtées au centre/);
 	});
 

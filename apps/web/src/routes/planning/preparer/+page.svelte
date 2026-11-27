@@ -7,6 +7,7 @@
 	import Celebration from '#lib/animations/Celebration.svelte';
 	import { momentPlanningPublie } from '#lib/animations/celebration.ts';
 	import FormulaireManoeuvre from '#lib/planning/FormulaireManoeuvre.svelte';
+	import HorairesGarde from '#lib/planning/HorairesGarde.svelte';
 	import Panneau from '#lib/planning/Panneau.svelte';
 	import PropositionAnnee from '#lib/planning/PropositionAnnee.svelte';
 	import { duAu, finDeSemaine, jourLong, momentLong, semainesParMois } from '#lib/planning/dates.ts';
@@ -152,6 +153,8 @@
 					<Bouton type="submit">Valider ce roulement</Bouton>
 				</form>
 			{/if}
+			{@render retour('horaires')}
+			<HorairesGarde horaires={p.horaires} annee={p.annee} publiee={p.publiee !== null} premiere={data.apercu[0]?.debut ?? null} {action} />
 			<h3>Aperçu</h3>
 			<ul role="list" class="apercu">
 				{#each data.apercu as s (s.debut)}

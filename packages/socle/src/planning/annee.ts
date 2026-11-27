@@ -21,7 +21,7 @@ import { appliquerFetes, calculerAnnee, equipeAuMoment, feries, fetes, horairesD
 
 export type Convoques = 'tous' | number[];
 // Les horaires de garde d'une année, vus à sa préparation.
-export type VueHoraires = { valeur: Horaires; propres: boolean; centre: Horaires; suivante: string | null };
+export type VueHoraires = { valeur: Horaires; propres: boolean; centre: Horaires; precedente: Horaires; suivante: string | null };
 // `fin` : le même jour que le début ; sans elle, la manœuvre dure 3 h.
 export type DonneesManoeuvre = { id?: number; debut: string; fin?: string | null; theme: string; lieu: string; convoques: Convoques; petitDejeuner: boolean };
 // `convoques` : les équipes ; `convocation` : avec les agents ajoutés ou retirés par un échange.
@@ -119,8 +119,9 @@ export async function preparerAnnee(base: Base, acteur: Acteur, annee: number, m
 	return {
 		annee,
 		publiee: ligne?.publieeLe ?? null,
-		// Les horaires de garde de l'année ; `propres` : réglés pour elle (sinon, ceux du centre). `suivante` : ceux de l'année d'après (sa dernière semaine).
-		horaires: { valeur: horairesDu(reglages(annee)), propres: Boolean(ligne?.horaires), centre: horairesDu(reglage), suivante: annees.find((a) => a.annee === annee + 1)?.horaires ?? null } as VueHoraires,
+		// Les horaires de garde de l'année ; `propres` : réglés pour elle (sinon, ceux du centre). `precedente` : ceux de l'année d'avant (sa dernière
+		// semaine court jusqu'à la première relève) ; `suivante` : le JSON de ceux de l'année d'après, pour le calcul de la dernière semaine.
+		horaires: { valeur: horairesDu(reglages(annee)), propres: Boolean(ligne?.horaires), centre: horairesDu(reglage), precedente: horairesDu(reglages(annee - 1)), suivante: annees.find((a) => a.annee === annee + 1)?.horaires ?? null } as VueHoraires,
 		ordre: JSON.parse(ligne?.ordre ?? '[]') as number[],
 		ordrePropose: ordrePropose(annee, reglage, equipes),
 		semaines,
