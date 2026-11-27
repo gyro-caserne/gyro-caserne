@@ -4,7 +4,7 @@ import { ajouterJours, exigerDateHeure, formatDeDate } from '../dates.ts';
 import { aLeDroit, type Acteur } from '../droits.ts';
 import { DonneeInvalide } from '../erreurs.ts';
 import { affectationEquipe, cleAgenda } from '../schema.ts';
-import { equipeAuMoment, fetes, type Reglage } from './calendrier.ts';
+import { equipeAuMoment, fetes, reglagesDe, type Reglage } from './calendrier.ts';
 import { effectifs, requeteConclues } from '../remplacements/effectifs.ts';
 import { soustraire } from '../remplacements/tranches.ts';
 import { anneesPubliees, convoque, equipeLe, lectures, vueManoeuvre } from './annee.ts';
@@ -138,7 +138,7 @@ export async function agendaDe(base: Base, fichier: string, maintenant: string, 
 		base.select({ equipeId: affectationEquipe.equipeId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe).where(eq(affectationEquipe.personneId, id))
 	]);
 	const nom = (equipeId: number) => equipes.find((e) => e.id === equipeId)?.nom ?? 'Équipe';
-	const publiees = anneesPubliees(annees.filter((a) => Math.abs(a.annee - annee) <= 1), changees, reglage, lignesFetes);
+	const publiees = anneesPubliees(annees.filter((a) => Math.abs(a.annee - annee) <= 1), changees, reglagesDe(reglage, annees), lignesFetes);
 	const groupes = nomsDeGroupes(equipes);
 	const evenements: Evenement[] = [];
 	const plages = lignesPlages.map(lirePlage);

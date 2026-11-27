@@ -5,6 +5,10 @@ import { ajouterJours } from '../dates.ts';
 // Moments à l'heure de Paris, « AAAA-MM-JJTHH:MM » : la comparaison de textes suit l'ordre du temps.
 
 export type Reglage = Centre['astreinte'];
+// Les horaires de garde d'une année du planning : la relève, la fin, les heures de semaine (sans elles, astreinte continue).
+export type Horaires = Pick<Reglage, 'debut' | 'fin' | 'semaine'>;
+// Le réglage de chaque année : ses horaires s'il en a, sinon ceux du centre.
+export type Reglages = (annee: number) => Reglage;
 export type Periode = { debut: string; fin: string };
 // `imposees` : les heures d'astreinte de la semaine tenues par une autre équipe pendant une fête du centre (appliquerFetes).
 export type SemaineCalculee = { debut: string; numero: number; equipeId: number; changee: boolean; periodes: Periode[]; imposees?: Imposee[] };
@@ -55,6 +59,27 @@ export function numeroSemaine(date: string): number {
 	return Math.floor((new Date(`${jeudi}T00:00:00Z`).getTime() - premier) / 864e5 / 7) + 1;
 }
 
+export const horairesDu = (r: Reglage): Horaires => ({ debut: r.debut, fin: r.fin, ...(r.semaine ? { semaine: r.semaine } : {}) });
+const memesHoraires = (a: Reglage, b: Reglage) => a === b || JSON.stringify(horairesDu(a)) === JSON.stringify(horairesDu(b));
+
+// Le réglage d'une année : `horaires`, le JSON de sa ligne (annee_planning) ; vide, celui du centre, tel quel.
+export function reglageDeLAnnee(reglage: Reglage, horaires: string | null | undefined): Reglage {
+	if (!horaires) return reglage;
+	const h = JSON.parse(horaires) as Horaires;
+	const { semaine: _, ...sans } = reglage;
+	return { ...sans, debut: h.debut, fin: h.fin, ...(h.semaine ? { semaine: h.semaine } : {}) };
+}
+
+// Les réglages des années lues (leurs lignes) ; une année sans ligne a ceux du centre. Calculés une fois par année.
+export function reglagesDe(reglage: Reglage, annees: { annee: number; horaires: string | null }[]): Reglages {
+	const calcules = new Map<number, Reglage>();
+	return (annee) => {
+		let r = calcules.get(annee);
+		if (!r) calcules.set(annee, (r = reglageDeLAnnee(reglage, annees.find((a) => a.annee === annee)?.horaires)));
+		return r;
+	};
+}
+
 // Les jours de relève de l'année : une semaine appartient à l'année où elle commence.
 export function semainesDe(annee: number, reglage: Reglage): { debut: string; numero: number }[] {
 	return relevesDe(annee, reglage).map((debut) => ({ debut, numero: numeroSemaine(debut) }));
@@ -75,11 +100,16 @@ const jourDeFin = (debut: string, reglage: Reglage) => ajouterJours(debut, (JOUR
 
 // Les heures d'astreinte d'une semaine. En semaine, seulement les heures réglées (souvent la nuit) ; le samedi, le dimanche
 // et les fériés, toute la journée et la nuit qui suit. Un jour de relève férié ou de week-end, l'équipe sortante reste jusqu'à la relève.
-export function periodesDeLaSemaine(debut: string, reglage: Reglage, feriesDates: Set<string>): Periode[] {
-	const fin = jourDeFin(debut, reglage);
+// `releve` : la première relève de l'année suivante, quand ses horaires sont autres. La dernière semaine court alors jusqu'à elle :
+// elle finit ce jour-là, à son heure de fin, ou à cette relève si l'équipe sortante devait rester jusqu'à la relève ; jamais après.
+export function periodesDeLaSemaine(debut: string, reglage: Reglage, feriesDates: Set<string>, releve?: { jour: string; heure: string }): Periode[] {
+	const fin = releve?.jour ?? jourDeFin(debut, reglage);
 	const continu = (jour: string) => rangDuJour(jour) >= 5 || feriesDates.has(jour);
 	const borneDebut = `${debut}T${reglage.debut.heure}`;
-	const borneFin = `${fin}T${reglage.semaine && continu(fin) ? reglage.debut.heure : reglage.fin.heure}`;
+	const jusquALaReleve = reglage.semaine ? continu(fin) : reglage.fin.heure === reglage.debut.heure;
+	const borneFin = releve
+		? `${fin}T${jusquALaReleve || reglage.fin.heure > releve.heure ? releve.heure : reglage.fin.heure}`
+		: `${fin}T${reglage.semaine && continu(fin) ? reglage.debut.heure : reglage.fin.heure}`;
 	const semaine = reglage.semaine;
 	if (!semaine) return [{ debut: borneDebut, fin: borneFin }];
 
@@ -102,17 +132,20 @@ export function periodesDeLaSemaine(debut: string, reglage: Reglage, feriesDates
 }
 
 // Roulement : la semaine `i` revient à ordre[i % n], sauf si le chef l'a changée. `entre` : seules les semaines qui commencent
-// dans cette période (l'été), sans calculer les autres.
-export function calculerAnnee(annee: number, reglage: Reglage, ordre: number[], changees: Map<string, number>, entre?: Periode): SemaineCalculee[] {
+// dans cette période (l'été), sans calculer les autres. `suivante` : le réglage de l'année d'après ; s'il est autre, la dernière
+// semaine court jusqu'à sa première relève.
+export function calculerAnnee(annee: number, reglage: Reglage, ordre: number[], changees: Map<string, number>, entre?: Periode, suivante: Reglage = reglage): SemaineCalculee[] {
 	const f = new Set(feries(annee).map((x) => x.date));
 	// La dernière semaine peut finir en janvier suivant.
 	for (const x of feries(annee + 1)) f.add(x.date);
-	return relevesDe(annee, reglage).flatMap((debut, i) => {
+	const releves = relevesDe(annee, reglage);
+	const releve = memesHoraires(reglage, suivante) ? undefined : { jour: relevesDe(annee + 1, suivante)[0]!, heure: suivante.debut.heure };
+	return releves.flatMap((debut, i) => {
 		if (entre && (debut < entre.debut || debut >= entre.fin)) return [];
 		const prevue = ordre.length ? ordre[i % ordre.length]! : 0;
 		const choisie = changees.get(debut);
 		const equipeId = choisie ?? prevue;
-		return [{ debut, numero: numeroSemaine(debut), equipeId, changee: choisie !== undefined && choisie !== prevue, periodes: periodesDeLaSemaine(debut, reglage, f) }];
+		return [{ debut, numero: numeroSemaine(debut), equipeId, changee: choisie !== undefined && choisie !== prevue, periodes: periodesDeLaSemaine(debut, reglage, f, i === releves.length - 1 ? releve : undefined) }];
 	});
 }
 

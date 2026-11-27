@@ -288,6 +288,13 @@
       "when": 1795559829701,
       "tag": "0040_anciennete",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1795786733699,
+      "tag": "0041_horaires",
+      "breakpoints": true
     }
   ]
 }

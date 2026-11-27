@@ -82,32 +82,32 @@ describe('lien de l’accueil vers la prise de garde', () => {
 		['24 h 01 après', '2026-11-07T18:01', false],
 		['le reste de la semaine', '2026-11-10T09:00', false]
 	])('%s', (_cas, maintenant, attendu) => {
-		expect(lienPriseOuvert('2026-11-06T18:00', maintenant, reglage)).toBe(attendu);
+		expect(lienPriseOuvert('2026-11-06T18:00', maintenant, releveDe(maintenant, reglage))).toBe(attendu);
 	});
 
 	it('été : l’astreinte commence dimanche, le lien suit la relève du vendredi', () => {
 		const plage = '2027-07-11T08:00';
 		expect(releveDe('2027-07-09T18:30', reglage)).toBe('2027-07-09T18:00');
-		expect(lienPriseOuvert(plage, '2027-07-09T15:59', reglage)).toBe(false);
-		expect(lienPriseOuvert(plage, '2027-07-09T16:00', reglage)).toBe(true);
-		expect(lienPriseOuvert(plage, '2027-07-10T18:00', reglage)).toBe(true);
-		expect(lienPriseOuvert(plage, '2027-07-10T18:01', reglage)).toBe(false);
+		expect(lienPriseOuvert(plage, '2027-07-09T15:59', releveDe('2027-07-09T15:59', reglage))).toBe(false);
+		expect(lienPriseOuvert(plage, '2027-07-09T16:00', releveDe('2027-07-09T16:00', reglage))).toBe(true);
+		expect(lienPriseOuvert(plage, '2027-07-10T18:00', releveDe('2027-07-10T18:00', reglage))).toBe(true);
+		expect(lienPriseOuvert(plage, '2027-07-10T18:01', releveDe('2027-07-10T18:01', reglage))).toBe(false);
 		// Le jour de sa plage, la relève est passée depuis plus de 24 h.
-		expect(lienPriseOuvert(plage, '2027-07-11T08:00', reglage)).toBe(false);
+		expect(lienPriseOuvert(plage, '2027-07-11T08:00', releveDe('2027-07-11T08:00', reglage))).toBe(false);
 	});
 
 	it('l’astreinte d’une autre semaine : pas de lien', () => {
 		// La semaine qui finit (l'équipe descendante, deux heures avant la relève).
-		expect(lienPriseOuvert('2026-10-30T18:00', '2026-11-06T17:00', reglage)).toBe(false);
+		expect(lienPriseOuvert('2026-10-30T18:00', '2026-11-06T17:00', releveDe('2026-11-06T17:00', reglage))).toBe(false);
 		// Une semaine à venir : la relève du jour n'est pas la sienne.
-		expect(lienPriseOuvert('2026-11-13T18:00', '2026-11-06T18:30', reglage)).toBe(false);
+		expect(lienPriseOuvert('2026-11-13T18:00', '2026-11-06T18:30', releveDe('2026-11-06T18:30', reglage))).toBe(false);
 		// Le dernier moment de la semaine reste dans la semaine.
-		expect(lienPriseOuvert('2026-11-13T17:59', '2026-11-06T18:30', reglage)).toBe(true);
+		expect(lienPriseOuvert('2026-11-13T17:59', '2026-11-06T18:30', releveDe('2026-11-06T18:30', reglage))).toBe(true);
 	});
 
 	it('passe le changement d’année', () => {
-		expect(lienPriseOuvert('2027-01-01T18:00', '2027-01-01T16:00', reglage)).toBe(true);
-		expect(lienPriseOuvert('2027-01-01T18:00', '2027-01-02T18:00', reglage)).toBe(true);
+		expect(lienPriseOuvert('2027-01-01T18:00', '2027-01-01T16:00', releveDe('2027-01-01T16:00', reglage))).toBe(true);
+		expect(lienPriseOuvert('2027-01-01T18:00', '2027-01-02T18:00', releveDe('2027-01-02T18:00', reglage))).toBe(true);
 	});
 });
 
@@ -179,7 +179,7 @@ describe('prise de garde', () => {
 		const [a] = await j.base.select().from(anomalie);
 		expect(a).toMatchObject({ enginId: j.vsav, ref: j.gilets.ref, zone: 'Cabine', genre: 'manquant', manque: 1, note: 'Un gilet', priseId: id, signaleeLe: '2026-10-30T18:40', closeLe: null });
 		expect(a!.photoId).not.toBeNull();
-		const faite = await lirePriseFaite(j.base, j.chefDeGarde, id);
+		const faite = await lirePriseFaite(j.base, j.chefDeGarde, id, '2026-11-02T10:00', reglage);
 		expect(faite.participants).toEqual(['Alice Fictif', 'Chloé Fictif']);
 		expect(faite.signalees.map((x) => x.libelle)).toEqual([j.gilets.libelle]);
 		// Validée : plus de geste.
@@ -209,7 +209,7 @@ describe('prise de garde', () => {
 		// La radio, rien dit : toujours ouverte.
 		expect(lignes.find((l) => l.ref === j.radio.ref)!.closeLe).toBeNull();
 		expect(lignes).toHaveLength(2);
-		expect((await lirePriseFaite(j.base, j.alice, id)).retrouvees.map((r) => r.libelle)).toEqual([j.gilets.libelle]);
+		expect((await lirePriseFaite(j.base, j.alice, id, '2026-11-02T10:00', reglage)).retrouvees.map((r) => r.libelle)).toEqual([j.gilets.libelle]);
 	});
 
 	it('une relève passée ne se reprend pas ; abandonner efface le brouillon et ses photos', async () => {

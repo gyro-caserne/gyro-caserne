@@ -220,7 +220,7 @@ describe('Le calcul reste borné, avec 60 agents, 6 années publiées et 50 dema
 		const semaines = (await base.select().from(anneePlanning)).find((a) => a.annee === 2027)!;
 		const ordre = JSON.parse(semaines.ordre) as number[];
 		await changerSemaines(base, acteurs.chef, 2027, { '2027-03-05': ordre.find((id) => id !== ordre[9 % ordre.length])! }, '2026-11-11T10:00', reglage);
-		const publiees = anneesPubliees(await base.select().from(anneePlanning), await base.select().from(semaineChangee), reglage);
+		const publiees = anneesPubliees(await base.select().from(anneePlanning), await base.select().from(semaineChangee), () => reglage);
 		vi.mocked(calendrier.calculerAnnee).mockClear();
 		let changee = 0;
 		for (const s of [...publiees.get(2026)!, ...publiees.get(2027)!]) {
@@ -241,7 +241,7 @@ describe('Remplacements : seules les semaines de la fenêtre utile sont calculé
 	// Les semaines du contexte comme avant : toutes les années publiées calculées en entier, puis filtrées sur la fenêtre.
 	async function reference(m: string) {
 		const { base, reglage } = jeu;
-		const toutes = annee.anneesPubliees(await base.select().from(anneePlanning), await base.select().from(semaineChangee), reglage);
+		const toutes = annee.anneesPubliees(await base.select().from(anneePlanning), await base.select().from(semaineChangee), () => reglage);
 		const du = ajouterJours(m.slice(0, 10), -15);
 		const au = ajouterJours(m.slice(0, 10), 12 * 7 + 7);
 		return [...toutes.entries()]

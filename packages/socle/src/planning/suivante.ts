@@ -8,7 +8,7 @@ import { DonneeInvalide } from '../erreurs.ts';
 import { STATUTS_AVEC_ACCES } from '../listes.ts';
 import { affectationEquipe, anneePlanning, aptitude, aptitudeAgent, manoeuvre, personne, semaineChangee } from '../schema.ts';
 import { equipeLe, exigerAnnee, exigerGestion, historiqueDesFetes, journalPlanning, lectures, ordrePropose, semainesCalculees, vueManoeuvre, type Convoques } from './annee.ts';
-import { calculerAnnee, momentsDesFetes, rangDuJour, rangsDuTour, type Reglage, type SemaineCalculee } from './calendrier.ts';
+import { calculerAnnee, reglagesDe, momentsDesFetes, rangDuJour, rangsDuTour, type Reglage, type SemaineCalculee } from './calendrier.ts';
 
 // « Partir d'une proposition » : une année sans roulement, pré-remplie d'après la précédente. Rien n'est écrit avant d'accepter.
 
@@ -151,15 +151,16 @@ async function calculer(base: Base, annee: number, maintenant: string, reglage: 
 	if (ids.length < 2) throw new DonneeInvalide('Au moins deux équipes actives pour proposer un roulement.');
 
 	const lignePrecedente = annees.find((a) => a.annee === annee - 1 && a.ordre !== '[]');
-	const semainesPrecedentes = semainesCalculees(annee - 1, lignePrecedente?.ordre, changees, reglage);
+	const reglages = reglagesDe(reglage, annees);
+	const semainesPrecedentes = semainesCalculees(annee - 1, lignePrecedente?.ordre, changees, reglages);
 	const ordre = lignePrecedente ? ordreQuiContinue(JSON.parse(lignePrecedente.ordre) as number[], semainesPrecedentes.length, semainesPrecedentes.at(-1)!.equipeId, ids) : ordrePropose(annee, reglage, equipes);
 
 	// Les fêtes : l'équipe d'astreinte à chaque garde, puis le réglage d'après le tour.
-	const semaines = calculerAnnee(annee, reglage, ordre, new Map());
+	const semaines = calculerAnnee(annee, reglages(annee), ordre, new Map(), undefined, reglages(annee + 1));
 	const moments = momentsDesFetes(annee);
 	const dansLaSemaine = (moment: string) => (s: SemaineCalculee) => s.periodes.some((p) => p.debut <= moment && moment < p.fin);
 	const i = { noel: semaines.findIndex(dansLaSemaine(moments.noel)), nouvelAn: semaines.findIndex(dansLaSemaine(moments.nouvelAn)) };
-	const historique = historiqueDesFetes(annee, annees, changees, saisies, reglage);
+	const historique = historiqueDesFetes(annee, annees, changees, saisies, reglages);
 	const rangs = { noel: rangsDuTour(historique, 'noel', ids, annee), nouvelAn: rangsDuTour(historique, 'nouvel_an', ids, annee) };
 	const depart = semaines.map((s) => s.equipeId);
 	// Une semaine commencée (année en cours) ne change plus.

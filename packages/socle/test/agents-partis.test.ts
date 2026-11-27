@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, isNull, like, ne } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import centreExemple from '../../../centres/exemple/centre.ts';
 import { affecterEquipe, changerStatut, modifierFiche } from '../src/actions/personnes.ts';
 import { donnerAptitude } from '../src/aptitudes.ts';
 import { lirePublication } from '../src/actions/publications.ts';
@@ -321,7 +322,7 @@ describe('l’historique sous « Ancien agent »', () => {
 		sansAnciens(await lirePublication(base, superAdmin, pub!.id, m));
 		sansAnciens(await lireAnomalie(base, superAdmin, ano!.id, m, REGLAGE_ANOMALIES));
 		await listerAnomalies(base, superAdmin, m.slice(0, 10), null);
-		sansAnciens(await lirePriseFaite(base, superAdmin, prise!.id));
+		sansAnciens(await lirePriseFaite(base, superAdmin, prise!.id, m, centreExemple.astreinte));
 		sansAnciens(await historiquePrises(base, unEngin!.id));
 		// La demande de remplacement, vue par le remplaçant.
 		const remplacant: Acteur = { type: 'personne', id: dem!.remplacantId! };

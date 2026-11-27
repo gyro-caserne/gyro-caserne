@@ -4,7 +4,7 @@ import { ajouterJours, existeAParis } from '../dates.ts';
 import { DonneeInvalide } from '../erreurs.ts';
 import { STATUTS_AVEC_ACCES } from '../listes.ts';
 import { lecturesAgents } from '../murs.ts';
-import { appliquerFetes, type FeteCentre, type Periode, type Reglage, type SemaineCalculee } from '../planning/calendrier.ts';
+import { appliquerFetes, reglagesDe, type FeteCentre, type Periode, type Reglage, type SemaineCalculee } from '../planning/calendrier.ts';
 import { equipeLe, semainesCalculees } from '../planning/annee.ts';
 import { validesLe } from '../aptitudes.ts';
 import { affectationEquipe, anneePlanning, aptitude, aptitudeAgent, attribution, demandeRemplacement, equipe, personne, responsabilite, semaineChangee, vacancesAgent } from '../schema.ts';
@@ -54,13 +54,15 @@ export async function lireContexte(base: Base, maintenant: string, reglage: Regl
 	// Seules ces semaines-là sont calculées, pas les années entières : une quinzaine au lieu de 52 à 104. Les autres années ne sont pas lues.
 	const utiles = annees.filter((a) => a.publieeLe !== null && a.annee >= Number(du.slice(0, 4)) && a.annee <= Number(au.slice(0, 4))).sort((a, b) => a.annee - b.annee);
 	const fenetre = { debut: du, fin: ajouterJours(au, 1) };
+	// Le réglage de chaque année, ses horaires compris.
+	const reglages = reglagesDe(reglage, annees);
 	return {
 		maintenant: maintenant.slice(0, 16),
-		reglage,
+		reglages,
 		// Les fêtes, appliquées au calcul des semaines (à changer avant le premier calcul pour voir l'effet d'une fête : fetes.ts).
 		fetes: fetes as FeteCentre[],
 		get semaines(): SemaineCalculee[] {
-			semaines ??= appliquerFetes(utiles.flatMap((a) => semainesCalculees(a.annee, a.ordre, changees, reglage, fenetre)), this.fetes);
+			semaines ??= appliquerFetes(utiles.flatMap((a) => semainesCalculees(a.annee, a.ordre, changees, reglages, fenetre)), this.fetes);
 			return semaines;
 		},
 		affectations,
@@ -214,7 +216,7 @@ export function mesTranches(ctx: Contexte, id: number): { semaine: string; equip
 		.map((s) => ({
 			semaine: s.debut,
 			equipeId: s.equipeId,
-			tranches: tranchesDe(s.periodes, ctx.reglage)
+			tranches: tranchesDe(s.periodes, ctx.reglages(Number(s.debut.slice(0, 4))))
 				.filter((t) => t.debut > ctx.maintenant)
 				.map((t) => ({ ...t, prise: !sansEngagement(ctx, id, [t]) }))
 		}))
@@ -226,7 +228,7 @@ export function tranchesDuJour(ctx: Contexte, id: number): Periode[] {
 	const demain = `${ajouterJours(ctx.maintenant.slice(0, 10), 1)}T00:00`;
 	return astreintesDe(ctx, id)
 		.filter((s) => s.periodes.at(-1)!.fin > ctx.maintenant && s.periodes[0]!.debut < demain)
-		.flatMap((s) => tranchesDe(s.periodes, ctx.reglage))
+		.flatMap((s) => tranchesDe(s.periodes, ctx.reglages(Number(s.debut.slice(0, 4)))))
 		.filter((t) => t.fin > ctx.maintenant && t.debut < demain);
 }
 
@@ -259,7 +261,7 @@ export function bandesDe(ctx: Contexte, id: number, pour: number | null = null):
 	const etat = (t: Periode): EtatTranche => (t.debut <= ctx.maintenant ? 'passee' : !sansEngagement(ctx, id, [t]) ? 'prise' : pour !== null && !disponible(ctx, pour, [t]) ? 'occupe' : 'libre');
 	return astreintesDe(ctx, id)
 		.filter((s) => s.periodes.at(-1)!.fin > ctx.maintenant && s.periodes[0]!.debut < limite)
-		.map((s) => ({ semaine: s.debut, equipeId: s.equipeId, tranches: tranchesDe(s.periodes, ctx.reglage).map((t) => ({ ...t, etat: etat(t) })) }))
+		.map((s) => ({ semaine: s.debut, equipeId: s.equipeId, tranches: tranchesDe(s.periodes, ctx.reglages(Number(s.debut.slice(0, 4)))).map((t) => ({ ...t, etat: etat(t) })) }))
 		.filter((s) => s.tranches.some((t) => t.etat !== 'passee'));
 }
 

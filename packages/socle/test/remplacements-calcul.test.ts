@@ -142,7 +142,7 @@ describe('Échanger : le calcul reste borné', () => {
 		const { anneePlanning, semaineChangee } = await import('../src/schema.ts');
 		const { bandesDe, candidats } = await import('../src/remplacements/contexte.ts');
 		const { ajouterJours } = await import('../src/dates.ts');
-		const toutes = [...anneesPubliees(await base.select().from(anneePlanning), await base.select().from(semaineChangee), reglage).values()].flat();
+		const toutes = [...anneesPubliees(await base.select().from(anneePlanning), await base.select().from(semaineChangee), () => reglage).values()].flat();
 		let compares = 0;
 		// Tous les quatre jours de l'année, et chaque jour autour des deux Nouvel An.
 		const jours = new Set<string>();

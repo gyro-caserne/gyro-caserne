@@ -13,7 +13,7 @@ import { chevauche, jourEnLettres, texteTranche, tranchesDe } from '../remplacem
 import { affectationEquipe, anneePlanning, aptitude, aptitudeAgent, avisEte, equipe, ete, personne, plageEte, reponseEte, semaineChangee, vacancesAgent } from '../schema.ts';
 import { equipeLe, exigerAnnee, semainesCalculees } from './annee.ts';
 import { dansLaSemaine, enVacances, heuresDe, lirePlage, type PlageLue } from './plages.ts';
-import type { Periode, Reglage, SemaineCalculee } from './calendrier.ts';
+import { reglagesDe, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
 import { nomsDeGroupes } from './groupes.ts';
 import { agentsDeLete, avis, periodeParDefaut, requeteRelance, vueEte, type EteVue, type Reponse } from './ete.ts';
 
@@ -98,7 +98,8 @@ async function lireEte(base: Base, annee: number, aujourdhui: string, reglage: R
 	const [[lignesEte, lignesAnnee, changees, agents, affectations, aptitudes, plages, vacances = [], reponses = [], equipes = [], conclues = []], fpt] = await Promise.all([
 		base.batch([
 			base.select().from(ete).where(eq(ete.annee, annee)),
-			base.select().from(anneePlanning).where(eq(anneePlanning.annee, annee)),
+			// L'année et la suivante : ses horaires règlent la fin de la dernière semaine.
+			base.select().from(anneePlanning).where(inArray(anneePlanning.annee, [annee, annee + 1])),
 			base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee}-01-01`), lte(semaineChangee.debut, `${annee}-12-31`))),
 			base.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom, statut: personne.statut }).from(personne).where(inArray(personne.statut, [...STATUTS_AVEC_ACCES])),
 			base.select({ personneId: affectationEquipe.personneId, equipeId: affectationEquipe.equipeId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe),
@@ -109,9 +110,11 @@ async function lireEte(base: Base, annee: number, aujourdhui: string, reglage: R
 		lireArmement(base)
 	]);
 	const e = lignesEte[0] ? vueEte(lignesEte[0]) : null;
+	const ligneAnnee = lignesAnnee.find((l) => l.annee === annee);
+	const reglages = reglagesDe(reglage, lignesAnnee);
 	// Seules les semaines de l'été sont calculées.
-	const lesSemaines = e && lignesAnnee[0] ? semainesCalculees(annee, lignesAnnee[0].ordre, changees, reglage, e) : [];
-	const plagesEte: PlageEte[] = lesSemaines.flatMap((s) => tranchesDe(s.periodes, reglage).map((t) => ({ ...t, semaine: s.debut, equipeId: s.equipeId })));
+	const lesSemaines = e && ligneAnnee ? semainesCalculees(annee, ligneAnnee.ordre, changees, reglages, e) : [];
+	const plagesEte: PlageEte[] = lesSemaines.flatMap((s) => tranchesDe(s.periodes, reglages(annee)).map((t) => ({ ...t, semaine: s.debut, equipeId: s.equipeId })));
 	// Rangés une fois par personne, et l'équipe de base gardée par semaine : chaque plage les relisait pour tous les agents (décision 0021).
 	const parPersonne = <T extends { personneId: number }>(lignes: T[]) => {
 		const m = new Map<number, T[]>();
@@ -155,7 +158,7 @@ async function lireEte(base: Base, annee: number, aujourdhui: string, reglage: R
 	};
 	const plagesLues = plages.map(lirePlage);
 	const ecarts = new Map(plagesLues.map((x) => [x.debut, x]));
-	return { e, semaines: lesSemaines, sansRoulement: !lignesAnnee[0] || lignesAnnee[0].ordre === '[]', plagesEte, agents, affectations, vacances, reponses, plages: plagesLues, ecartDe: (p: Periode) => ecarts.get(p.debut), equipes, conclues, fpt, postes, base: base_, affectationsDe };
+	return { e, semaines: lesSemaines, sansRoulement: !ligneAnnee || ligneAnnee.ordre === '[]', reglage: reglages(annee), plagesEte, agents, affectations, vacances, reponses, plages: plagesLues, ecartDe: (p: Periode) => ecarts.get(p.debut), equipes, conclues, fpt, postes, base: base_, affectationsDe };
 }
 
 type Lu = Awaited<ReturnType<typeof lireEte>>;
@@ -219,7 +222,7 @@ export async function eteAPreparer(base: Base, acteur: Acteur, annee: number, ma
 	return {
 		annee,
 		ete: lu.e,
-		defaut: periodeParDefaut(annee, reglage),
+		defaut: periodeParDefaut(annee, lu.reglage),
 		sansRoulement: lu.sansRoulement,
 		relanceeAujourdhui: relance.length > 0,
 		// Proposé ou publié : les groupes A, B, C, D.
