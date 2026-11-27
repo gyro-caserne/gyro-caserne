@@ -1,8 +1,13 @@
+import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import type { JourSemaine } from '@gyro-caserne/centre';
+import type { Base } from '../base.ts';
+import type { Acteur } from '../droits.ts';
 import { DonneeInvalide } from '../erreurs.ts';
-import type { Horaires } from './calendrier.ts';
+import { anneePlanning, ete, semaineChangee } from '../schema.ts';
+import { exigerAnnee, exigerGestion, journalPlanning } from './annee.ts';
+import { horairesDu, reglageDeLAnnee, semainesDe, type Horaires, type Reglage } from './calendrier.ts';
 
-// Les horaires de garde saisis pour une année : contrôlés, et rendus sans rien d'autre.
+// Les horaires de garde d'une année du planning : contrôlés à la saisie, puis gardés sur sa ligne (annee_planning.horaires).
 
 const JOURS: JourSemaine[] = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -30,4 +35,33 @@ export function exigerHoraires(x: unknown): Horaires {
 	if (!s || typeof s.debut !== 'string' || typeof s.fin !== 'string' || !HEURE.test(s.debut) || !HEURE.test(s.fin)) throw new DonneeInvalide('Heure de semaine invalide');
 	if (s.debut === s.fin) throw new DonneeInvalide('Les heures de semaine doivent être différentes');
 	return { debut, fin, semaine: { debut: s.debut, fin: s.fin } };
+}
+
+// Régler les horaires de garde d'une année pas encore publiée (`null` : garder ceux du centre). Des horaires égaux à ceux du centre
+// ne sont pas gardés : l'année suit le centre. Refusé si l'été de l'année est ouvert (ses plages suivent les heures), si la dernière
+// semaine de l'année d'avant a commencé (sa fin suit la première relève), ou, pour un autre jour de relève, si des semaines sont changées.
+export async function reglerHoraires(base: Base, acteur: Acteur, annee: number, horaires: unknown, maintenant: string, reglage: Reglage): Promise<void> {
+	exigerAnnee(annee);
+	await exigerGestion(base, acteur, maintenant);
+	const h = horaires === null ? null : exigerHoraires(horaires);
+	const json = h === null || JSON.stringify(h) === JSON.stringify(horairesDu(reglage)) ? null : JSON.stringify(h);
+	const [lignes, [ouvert], changees] = await base.batch([
+		base.select().from(anneePlanning).where(inArray(anneePlanning.annee, [annee - 1, annee])),
+		base.select({ annee: ete.annee }).from(ete).where(eq(ete.annee, annee)),
+		base.select({ debut: semaineChangee.debut }).from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee}-01-01`), lte(semaineChangee.debut, `${annee}-12-31`)))
+	]);
+	const ligne = lignes.find((l) => l.annee === annee);
+	if (ligne?.publieeLe) throw new DonneeInvalide(`Planning ${annee} publié. Ses horaires ne changent plus`);
+	if ((ligne?.horaires ?? null) === json) return;
+	if (ouvert) throw new DonneeInvalide(`L’été ${annee} est ouvert. Les horaires de l’année ne changent plus`);
+	const avant = reglageDeLAnnee(reglage, ligne?.horaires);
+	const apres = reglageDeLAnnee(reglage, json);
+	if (changees.length > 0 && avant.debut.jour !== apres.debut.jour) throw new DonneeInvalide('Des semaines sont déjà changées. Gardez le jour de relève, ou remettez d’abord ces semaines au roulement');
+	const precedente = lignes.find((l) => l.annee === annee - 1);
+	const r = reglageDeLAnnee(reglage, precedente?.horaires);
+	if (precedente?.publieeLe && `${semainesDe(annee - 1, r).at(-1)!.debut}T${r.debut.heure}` <= maintenant.slice(0, 16)) throw new DonneeInvalide(`La dernière semaine de ${annee - 1} a commencé. Les horaires de ${annee} ne changent plus`);
+	await base.batch([
+		base.insert(anneePlanning).values({ annee, horaires: json }).onConflictDoUpdate({ target: anneePlanning.annee, set: { horaires: json } }),
+		journalPlanning(base, acteur, 'regler_horaires', { annee, horaires: json === null ? null : h }, maintenant)
+	]);
 }

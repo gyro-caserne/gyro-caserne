@@ -24,6 +24,7 @@ const PAR_SUJET = {
 	annuler_manoeuvre: (c) => nomme(c, 'a annulé la manœuvre'),
 	supprimer_manoeuvre: () => 'a retiré une manœuvre pas encore annoncée',
 	regler_roulement: () => 'a réglé le roulement des équipes',
+	regler_horaires: () => 'a réglé les horaires de garde d’une année',
 	publier_annee: () => 'a publié le planning de l’année',
 	changer_semaines: () => 'a changé des semaines d’astreinte',
 	ajouter_vacances: () => 'a ajouté des vacances scolaires',

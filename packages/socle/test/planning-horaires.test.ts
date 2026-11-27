@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculerAnnee, feries, periodesDeLaSemaine, reglageDeLAnnee, reglagesDe, semainesDe, type Horaires, type Reglage } from '../src/planning/calendrier.ts';
+import { calculerAnnee, feries, periodesDeLaSemaine, rangDuJour, reglageDeLAnnee, reglagesDe, semainesDe, type Horaires, type Reglage } from '../src/planning/calendrier.ts';
 import { exigerHoraires } from '../src/planning/horaires.ts';
 import { releveDe } from '../src/prises.ts';
 import { tranchesDe } from '../src/remplacements/tranches.ts';
@@ -158,4 +158,130 @@ describe('garde-fous des horaires', () => {
 	])('refuse %j', (h, message) => {
 		expect(() => exigerHoraires(h)).toThrow(message);
 	});
+});
+
+describe('régler les horaires d’une année', async () => {
+	const { eq } = await import('drizzle-orm');
+	const centreExemple = (await import('../../../centres/exemple/centre.ts')).default;
+	const { baseDeTest } = await import('./base-de-test.ts');
+	const { chargerJeuDeDepart } = await import('../src/jeu-de-depart.ts');
+	const { changerSemaines, planningDe, preparerAnnee, publierAnnee, reglerRoulement } = await import('../src/planning/annee.ts');
+	const { reglerHoraires } = await import('../src/planning/horaires.ts');
+	const { reglerEte } = await import('../src/planning/ete.ts');
+	const { astreinteDe } = await import('../src/planning/astreinte.ts');
+	const { lireContexte, mesTranches } = await import('../src/remplacements/contexte.ts');
+	const { chargerEnginsFictifs } = await import('../src/engins.ts');
+	const { prisesDeLaReleve } = await import('../src/prises.ts');
+	const { affectationEquipe, anneePlanning, attribution, equipe, journal, personne, profil, responsabilite } = await import('../src/schema.ts');
+	const reglage = centreExemple.astreinte;
+	const m = '2026-11-01T10:00';
+
+	async function jeu() {
+		const base = await baseDeTest();
+		await chargerJeuDeDepart(base, centreExemple);
+		const [agent] = await base.select().from(profil).where(eq(profil.nom, 'Agent'));
+		const ids = (await base.select().from(equipe).orderBy(equipe.ordreRotation)).map((e) => e.id);
+		const nouvelle = async (prenom: string) => (await base.insert(personne).values({ email: `${prenom}@exemple.fr`, prenom, nom: 'Test', profilId: agent!.id }).returning())[0]!.id;
+		const chef = await nouvelle('chef');
+		const [r] = await base.select().from(responsabilite).where(eq(responsabilite.systeme, 'chef_centre'));
+		await base.insert(attribution).values({ personneId: chef, responsabiliteId: r!.id, perimetreType: 'centre', perimetreId: null, debut: '2026-01-01', saisiePar: 'super:a@b.fr', saisieLe: '2026-01-01' });
+		const alice = await nouvelle('alice');
+		await base.insert(affectationEquipe).values({ personneId: alice, equipeId: ids[0]!, debut: '2026-01-01' });
+		return { base, ids, chef: { type: 'personne' as const, id: chef }, alice: { type: 'personne' as const, id: alice } };
+	}
+
+	it('une année non publiée prend ses horaires ; ses semaines et la préparation les suivent', async () => {
+		const { base, ids, chef } = await jeu();
+		await reglerHoraires(base, chef, 2027, lundi, m, reglage);
+		await reglerRoulement(base, chef, 2027, ids, m);
+		const p = await preparerAnnee(base, chef, 2027, m, reglage);
+		expect(p.horaires).toMatchObject({ valeur: lundi, propres: true });
+		expect(p.semaines[0]!.debut).toBe('2027-01-04');
+		expect(p.semaines[0]!.periodes[0]).toEqual({ debut: '2027-01-04T19:00', fin: '2027-01-05T07:00' });
+		expect(await base.select().from(journal).where(eq(journal.action, 'regler_horaires'))).toHaveLength(1);
+		// Garder les horaires du centre : la colonne redevient vide.
+		await reglerHoraires(base, chef, 2027, null, m, reglage);
+		expect((await base.select().from(anneePlanning).where(eq(anneePlanning.annee, 2027)))[0]!.horaires).toBeNull();
+		expect((await preparerAnnee(base, chef, 2027, m, reglage)).horaires).toMatchObject({ propres: false, valeur: { debut: reglage.debut } });
+	});
+
+	it('des horaires égaux à ceux du centre ne sont pas gardés', async () => {
+		const { base, chef } = await jeu();
+		await reglerHoraires(base, chef, 2027, lundi, m, reglage);
+		await reglerHoraires(base, chef, 2027, { debut: reglage.debut, fin: reglage.fin, semaine: reglage.semaine }, m, reglage);
+		expect((await base.select().from(anneePlanning).where(eq(anneePlanning.annee, 2027)))[0]!.horaires).toBeNull();
+	});
+
+	it('refus : sans le droit, horaires invalides, année publiée', async () => {
+		const { base, ids, chef, alice } = await jeu();
+		await expect(reglerHoraires(base, alice, 2027, lundi, m, reglage)).rejects.toThrow('GERER_PLANNING');
+		await expect(reglerHoraires(base, chef, 2027, { ...lundi, fin: { jour: 'lundi', heure: '20:00' } }, m, reglage)).rejects.toThrow('La fin doit tomber au plus tard');
+		await reglerRoulement(base, chef, 2027, ids, m);
+		await publierAnnee(base, chef, 2027, m);
+		await expect(reglerHoraires(base, chef, 2027, lundi, m, reglage)).rejects.toThrow('Planning 2027 publié. Ses horaires ne changent plus');
+		await expect(reglerHoraires(base, chef, 2027, null, m, reglage)).rejects.toThrow('Planning 2027 publié');
+	});
+
+	it('refus : semaines changées et autre jour de relève ; été ouvert', async () => {
+		const { base, ids, chef } = await jeu();
+		await reglerRoulement(base, chef, 2027, ids, m);
+		await changerSemaines(base, chef, 2027, { '2027-01-08': ids[2]! }, m, reglage);
+		await expect(reglerHoraires(base, chef, 2027, lundi, m, reglage)).rejects.toThrow('Des semaines sont déjà changées');
+		// Même jour de relève, autres heures : permis.
+		await reglerHoraires(base, chef, 2027, { ...lundi, debut: { jour: 'vendredi', heure: '19:00' }, fin: { jour: 'vendredi', heure: '07:00' } }, m, reglage);
+		await reglerEte(base, chef, 2027, { debut: '2027-07-02', fin: '2027-08-27', dateLimite: '2027-05-15' }, m, reglage);
+		await expect(reglerHoraires(base, chef, 2027, null, m, reglage)).rejects.toThrow('L’été 2027 est ouvert');
+	});
+
+	it('refus : la dernière semaine de l’année d’avant a commencé', async () => {
+		const { base, ids, chef } = await jeu();
+		// 2026 publiée, sa dernière semaine commencée le vendredi 25 décembre à 18 h.
+		await reglerRoulement(base, chef, 2026, ids, m);
+		await publierAnnee(base, chef, 2026, m);
+		await expect(reglerHoraires(base, chef, 2028, lundi, '2026-12-26T10:00', reglage)).resolves.toBeUndefined();
+		await expect(reglerHoraires(base, chef, 2027, lundi, '2026-12-26T10:00', reglage)).rejects.toThrow('La dernière semaine de 2026 a commencé');
+	});
+
+	it('publiée, l’année suit ses horaires partout : planning, accueil, tranches, prise de garde', async () => {
+		const { base, ids, chef, alice } = await jeu();
+		await reglerRoulement(base, chef, 2026, ids, m);
+		await publierAnnee(base, chef, 2026, m);
+		await reglerHoraires(base, chef, 2027, lundi, m, reglage);
+		await reglerRoulement(base, chef, 2027, ids, m);
+		await publierAnnee(base, chef, 2027, m);
+		const p = await planningDe(base, alice, 2027, m, reglage);
+		if (!p.publiee) throw new Error('publiée');
+		expect(p.semaines.every((s) => rangDuJour(s.debut) === 0)).toBe(true);
+		// La dernière semaine de 2026 court jusqu'au lundi 4 janvier : le 2 janvier, l'accueil la montre en cours.
+		const a = await astreinteDe(base, chef, '2027-01-02T10:00', reglage);
+		expect(a).toMatchObject({ debut: '2026-12-25T18:00', fin: '2027-01-04T06:00', enCours: true, releve: '2026-12-25T18:00' });
+		// Les tranches d'Alice coupées à 7 h.
+		const ctx = await lireContexte(base, '2027-11-10T10:00', reglage);
+		const tranches = mesTranches(ctx, alice.id).flatMap((s) => s.tranches);
+		expect(tranches.length).toBeGreaterThan(0);
+		expect(tranches.every((t) => t.fin.endsWith('T07:00') || t.fin.endsWith('T19:00') || t.debut.endsWith('T19:00'))).toBe(true);
+		// La prise de garde : la relève du lundi à 19 h, deux heures d'avance comprises.
+		await chargerEnginsFictifs(base, m);
+		expect((await prisesDeLaReleve(base, chef, '2027-11-22T17:30', reglage)).releve.debut).toBe('2027-11-22T19:00');
+		expect((await prisesDeLaReleve(base, chef, '2027-11-22T16:30', reglage)).releve.debut).toBe('2027-11-15T19:00');
+	});
+
+	it('avec les horaires du centre, la prise de garde lit une fois ; des horaires qui déplacent la relève, deux', async () => {
+		const { base, ids, chef } = await jeu();
+		await chargerEnginsFictifs(base, m);
+		await reglerRoulement(base, chef, 2027, ids, m);
+		await publierAnnee(base, chef, 2027, m);
+		const compter = async (quand: string) => {
+			const avant = base.requetes;
+			await prisesDeLaReleve(base, chef, quand, reglage);
+			return base.requetes - avant;
+		};
+		const centre = await compter('2027-11-22T17:30');
+		await base.update(anneePlanning).set({ horaires: json(lundi) });
+		expect(await compter('2027-11-22T17:30')).toBe(centre + 1);
+		// Même relève que le centre (vendredi 18 h), autres heures de semaine : une fois.
+		await base.update(anneePlanning).set({ horaires: json({ ...centre_, semaine: { debut: '19:00', fin: '07:00' } }) });
+		expect(await compter('2027-11-26T17:30')).toBe(centre);
+	});
+	const centre_: Horaires = { debut: reglage.debut, fin: reglage.fin };
 });
