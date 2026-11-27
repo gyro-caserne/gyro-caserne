@@ -22,6 +22,14 @@ export function phraseHoraires(h: Horaires): string {
 	return `Relève le ${h.debut.jour} à ${enHeure(h.debut.heure)}, ${fin}, ${h.semaine ? `en semaine de ${enHeure(h.semaine.debut)} à ${enHeure(h.semaine.fin)}` : 'astreinte continue'}.`;
 }
 
+// Le résumé du groupe replié : « Relève le lundi à 19 h, en semaine de 19 h à 7 h », « Astreinte continue, relève le lundi à 19 h »,
+// ou « Horaires du centre » pour une année qui n'en a pas de propres.
+export function resumeHoraires(h: Horaires, propres: boolean): string {
+	if (!propres) return 'Horaires du centre';
+	const releve = `relève le ${h.debut.jour} à ${enHeure(h.debut.heure)}`;
+	return h.semaine ? `R${releve.slice(1)}, en semaine de ${enHeure(h.semaine.debut)} à ${enHeure(h.semaine.fin)}` : `Astreinte continue, ${releve}`;
+}
+
 const texte = (f: FormData, cle: string) => {
 	const v = f.get(cle);
 	return typeof v === 'string' ? v : '';

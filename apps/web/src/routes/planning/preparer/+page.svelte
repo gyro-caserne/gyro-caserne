@@ -153,15 +153,16 @@
 					<Bouton type="submit">Valider ce roulement</Bouton>
 				</form>
 			{/if}
-			{@render retour('horaires')}
-			<HorairesGarde horaires={p.horaires} annee={p.annee} publiee={p.publiee !== null} premiere={data.apercu[0]?.debut ?? null} {action} />
-			<h3>Aperçu</h3>
-			<ul role="list" class="apercu">
-				{#each data.apercu as s (s.debut)}
-					{@const e = equipe(s.equipeId)}
-					<li style:--equipe={e.couleur}><span class="numero-s">S{s.numero}</span><span class="dates">{duAu(s.debut, finDeSemaine(s.debut))}</span><strong>{e.nom}</strong></li>
-				{/each}
-			</ul>
+			<HorairesGarde horaires={p.horaires} annee={p.annee} publiee={p.publiee !== null} premiere={data.apercu[0]?.debut ?? null} {action} ouvrir={concerne('horaires')}>
+				{#snippet retours()}{@render retour('horaires')}{/snippet}
+				<h3>Aperçu</h3>
+				<ul role="list" class="apercu">
+					{#each data.apercu as s (s.debut)}
+						{@const e = equipe(s.equipeId)}
+						<li style:--equipe={e.couleur}><span class="numero-s">S{s.numero}</span><span class="dates">{duAu(s.debut, finDeSemaine(s.debut))}</span><strong>{e.nom}</strong></li>
+					{/each}
+				</ul>
+			</HorairesGarde>
 		{:else if data.etape === 'fetes'}
 			{#if !p.semaines.length}
 				{@render sansRoulement()}

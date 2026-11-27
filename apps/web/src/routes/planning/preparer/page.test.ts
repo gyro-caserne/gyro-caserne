@@ -254,7 +254,9 @@ describe('Préparer l’année en cinq étapes', () => {
 
 	it('Roulement : les horaires de garde d’une année non publiée, modifiables, avec ceux du centre par défaut', () => {
 		const html = page();
-		expect(html).toMatch(/<h3[^>]*>Horaires de garde<\/h3>/);
+		// Replié par défaut, avec son résumé ; le formulaire et l'aperçu dedans.
+		expect(html).toMatch(/aria-expanded="false"[^>]*>[\s\S]*?Horaires de garde[\s\S]*?Horaires du centre/);
+		expect(html).toMatch(/class="contenu[^"]*"[^>]*hidden/);
 		expect(html).toMatch(/<select[^>]*name="jour"/);
 		expect(html).toMatch(/<option value="vendredi"[^>]*selected/);
 		expect(html).toMatch(/name="releve"[^>]*value="18:00"|value="18:00"[^>]*name="releve"/);
@@ -263,12 +265,16 @@ describe('Préparer l’année en cinq étapes', () => {
 		expect(html).toContain('Le week-end et les jours fériés, l’astreinte est continue.');
 		expect(html).toContain('action="?/horaires&amp;annee=2027&amp;etape=roulement"');
 		expect(html).toContain('Enregistrer les horaires');
+		// Une seule action rouge : « Valider ce roulement » ; les horaires s'enregistrent en secondaire.
+		expect(html).toMatch(/class="secondaire[^"]*"[^>]*>(<!--[^>]*-->)*Enregistrer les horaires/);
+		expect(html).toMatch(/Enregistrer les horaires[\s\S]*<h3[^>]*>Aperçu<\/h3>/);
 		// Ceux du centre : rien à reprendre.
 		expect(html).not.toContain('Garder les horaires du centre');
 	});
 
 	it('Roulement : des horaires propres à l’année, continue ; ceux du centre se reprennent ; la dernière semaine d’avant le dit', () => {
 		const html = page({ preparation: preparation({ horaires: { valeur: lundi, propres: true, centre: duCentre, precedente: duCentre, suivante: null } }), apercu: [{ ...semaines[0], debut: '2027-01-04' }] });
+		expect(html).toContain('Astreinte continue, relève le lundi à 19 h');
 		expect(html).toMatch(/<option value="lundi"[^>]*selected/);
 		expect(html).toMatch(/role="switch"[^>]*checked/);
 		expect(html).not.toMatch(/name="semaine-debut"/);
@@ -280,10 +286,17 @@ describe('Préparer l’année en cinq étapes', () => {
 
 	it('Roulement : année publiée, les horaires en lecture seule', () => {
 		const html = page({ preparation: preparation({ publiee: '2026-11-01T10:00' }) });
+		expect(html).toMatch(/aria-expanded="false"[^>]*>[\s\S]*?Horaires de garde[\s\S]*?Horaires du centre/);
 		expect(html).toContain('Année publiée. Ses horaires ne changent plus.');
 		expect(html).toContain('Vendredi, 18 h');
 		expect(html).toContain('De 18 h à 6 h');
 		expect(html).not.toContain('Enregistrer les horaires');
 		expect(html).not.toMatch(/name="releve"/);
+	});
+
+	it('Roulement : les horaires s’ouvrent d’eux-mêmes après un refus, le message dedans', () => {
+		const html = page({}, { cible: 'horaires', message: 'La fin doit tomber au plus tard à l’heure de la relève suivante.' });
+		expect(html).toMatch(/aria-expanded="true"[^>]*>[\s\S]*?Horaires de garde/);
+		expect(html).toMatch(/Horaires de garde[\s\S]*role="alert"[^>]*>[\s\S]*?La fin doit tomber/);
 	});
 });

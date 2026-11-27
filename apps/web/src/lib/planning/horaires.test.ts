@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { horairesDeLaSaisie, lignesHoraires, phraseHoraires } from './horaires.ts';
+import { horairesDeLaSaisie, lignesHoraires, phraseHoraires, resumeHoraires } from './horaires.ts';
 
 const centre = { debut: { jour: 'vendredi' as const, heure: '18:00' }, fin: { jour: 'vendredi' as const, heure: '06:00' }, semaine: { debut: '18:00', fin: '06:00' } };
 const continue_ = { debut: { jour: 'lundi' as const, heure: '07:30' }, fin: { jour: 'lundi' as const, heure: '07:30' } };
@@ -28,5 +28,12 @@ describe('horaires de garde à l’écran', () => {
 		expect(horairesDeLaSaisie(f)).toEqual({ debut: { jour: 'lundi', heure: '19:00' }, fin: { jour: 'lundi', heure: '07:00' }, semaine: { debut: '19:00', fin: '07:00' } });
 		f.set('continue', '1');
 		expect(horairesDeLaSaisie(f)).toEqual({ debut: { jour: 'lundi', heure: '19:00' }, fin: { jour: 'lundi', heure: '07:00' } });
+	});
+
+	it('le résumé du groupe replié', () => {
+		const lundi = { debut: { jour: 'lundi' as const, heure: '19:00' }, fin: { jour: 'lundi' as const, heure: '07:00' }, semaine: { debut: '19:00', fin: '07:00' } };
+		expect(resumeHoraires(lundi, true)).toBe('Relève le lundi à 19 h, en semaine de 19 h à 7 h');
+		expect(resumeHoraires({ debut: lundi.debut, fin: lundi.fin }, true)).toBe('Astreinte continue, relève le lundi à 19 h');
+		expect(resumeHoraires(centre, false)).toBe('Horaires du centre');
 	});
 });
