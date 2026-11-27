@@ -6,6 +6,8 @@ import Page from './+page.svelte';
 
 const equipes = [1, 2, 3, 4].map((id) => ({ id, nom: `Équipe ${id}`, couleur: '#d4a017' }));
 const semaines = calculerAnnee(2027, centre.astreinte, [1, 2, 3, 4], new Map());
+const duCentre = { debut: centre.astreinte.debut, fin: centre.astreinte.fin, semaine: centre.astreinte.semaine };
+const lundi = { debut: { jour: 'lundi', heure: '19:00' }, fin: { jour: 'lundi', heure: '07:00' } };
 const preparation = (autres: Record<string, unknown> = {}) => ({
 	annee: 2027,
 	publiee: null,
@@ -22,8 +24,10 @@ const preparation = (autres: Record<string, unknown> = {}) => ({
 		historique: [{ annee: 2026, nom: 'Sainte-Barbe', equipeId: 2 }]
 	},
 	equipes,
+	horaires: { valeur: duCentre, propres: false, centre: duCentre, precedente: duCentre, suivante: null },
 	...autres
 });
+
 const page = (data: Record<string, unknown> = {}, form: unknown = null) =>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	render(Page as any, { props: { data: { preparation: preparation(), annees: [2026, 2027], etape: 'roulement', apercu: semaines.slice(0, 6), manoeuvre: null, semaine: null, semaineTouche: null, proposer: null, fete: null, supprimer: false, maintenant: '2026-11-21T10:00', ...data }, form } }).body;
@@ -43,7 +47,9 @@ describe('Préparer l’année en cinq étapes', () => {
 		const html = page();
 		expect(html).toMatch(/<button[^>]*name="deplacer"[^>]*value="1:monter"[^>]*aria-label="Monter Équipe 2"/);
 		expect(html).toMatch(/<button[^>]*value="0:monter"[^>]*disabled/);
-		expect(html).not.toContain('<select');
+		// La seule liste déroulante de l'étape : le jour de la relève, dans les horaires.
+		expect(html.match(/<select/g)).toHaveLength(1);
+		expect(html).toMatch(/<select[^>]*name="jour"/);
 		expect(html).toContain('Aperçu');
 		expect((html.match(/class="numero-s[^"]*">S\d+/g) ?? []).length).toBe(6);
 		expect(html).not.toContain('Valider ce roulement');
@@ -244,5 +250,53 @@ describe('Préparer l’année en cinq étapes', () => {
 	it('après l’acceptation ou un refus, le message reste visible hors du panneau', () => {
 		expect(page({}, { cible: 'proposition', succes: 'Brouillon écrit.' })).toContain('Brouillon écrit.');
 		expect(page({}, { cible: 'proposition', message: 'Cette année a déjà un roulement' })).toContain('Cette année a déjà un roulement');
+	});
+
+	it('Roulement : les horaires de garde d’une année non publiée, modifiables, avec ceux du centre par défaut', () => {
+		const html = page();
+		// Replié par défaut, avec son résumé ; le formulaire et l'aperçu dedans.
+		expect(html).toMatch(/aria-expanded="false"[^>]*>[\s\S]*?Horaires de garde[\s\S]*?Horaires du centre/);
+		expect(html).toMatch(/class="contenu[^"]*"[^>]*hidden/);
+		expect(html).toMatch(/<select[^>]*name="jour"/);
+		expect(html).toMatch(/<option value="vendredi"[^>]*selected/);
+		expect(html).toMatch(/name="releve"[^>]*value="18:00"|value="18:00"[^>]*name="releve"/);
+		expect(html).toContain('Astreinte continue toute la semaine');
+		expect(html).toMatch(/name="semaine-debut"/);
+		expect(html).toContain('Le week-end et les jours fériés, l’astreinte est continue.');
+		expect(html).toContain('action="?/horaires&amp;annee=2027&amp;etape=roulement"');
+		expect(html).toContain('Enregistrer les horaires');
+		// Une seule action rouge : « Valider ce roulement » ; les horaires s'enregistrent en secondaire.
+		expect(html).toMatch(/class="secondaire[^"]*"[^>]*>(<!--[^>]*-->)*Enregistrer les horaires/);
+		expect(html).toMatch(/Enregistrer les horaires[\s\S]*<h3[^>]*>Aperçu<\/h3>/);
+		// Ceux du centre : rien à reprendre.
+		expect(html).not.toContain('Garder les horaires du centre');
+	});
+
+	it('Roulement : des horaires propres à l’année, continue ; ceux du centre se reprennent ; la dernière semaine d’avant le dit', () => {
+		const html = page({ preparation: preparation({ horaires: { valeur: lundi, propres: true, centre: duCentre, precedente: duCentre, suivante: null } }), apercu: [{ ...semaines[0], debut: '2027-01-04' }] });
+		expect(html).toContain('Astreinte continue, relève le lundi à 19 h');
+		expect(html).toMatch(/<option value="lundi"[^>]*selected/);
+		expect(html).toMatch(/role="switch"[^>]*checked/);
+		expect(html).not.toMatch(/name="semaine-debut"/);
+		expect(html).toContain('La dernière semaine de 2026 court jusqu’à la première relève de 2027, le lundi 4 janvier à 19 h.');
+		expect(html).toContain('Ceux du centre. Relève le vendredi à 18 h, fin à 6 h, en semaine de 18 h à 6 h.');
+		expect(html).toContain('action="?/horairesDuCentre&amp;annee=2027&amp;etape=roulement"');
+		expect(html).toContain('Garder les horaires du centre');
+	});
+
+	it('Roulement : année publiée, les horaires en lecture seule', () => {
+		const html = page({ preparation: preparation({ publiee: '2026-11-01T10:00' }) });
+		expect(html).toMatch(/aria-expanded="false"[^>]*>[\s\S]*?Horaires de garde[\s\S]*?Horaires du centre/);
+		expect(html).toContain('Année publiée. Ses horaires ne changent plus.');
+		expect(html).toContain('Vendredi, 18 h');
+		expect(html).toContain('De 18 h à 6 h');
+		expect(html).not.toContain('Enregistrer les horaires');
+		expect(html).not.toMatch(/name="releve"/);
+	});
+
+	it('Roulement : les horaires s’ouvrent d’eux-mêmes après un refus, le message dedans', () => {
+		const html = page({}, { cible: 'horaires', message: 'La fin doit tomber au plus tard à l’heure de la relève suivante.' });
+		expect(html).toMatch(/aria-expanded="true"[^>]*>[\s\S]*?Horaires de garde/);
+		expect(html).toMatch(/Horaires de garde[\s\S]*role="alert"[^>]*>[\s\S]*?La fin doit tomber/);
 	});
 });

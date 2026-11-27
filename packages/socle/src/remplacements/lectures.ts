@@ -270,7 +270,8 @@ export const requetePourMoi = (base: Base, moi: number, maintenant: string) =>
 export async function pourDemander(base: Base, acteur: Acteur, maintenant: string, reglage: Reglage, choix: { periodes?: Periode[]; echange?: boolean; avec?: number | null; periodesAvec?: Periode[] } = {}) {
 	exigerDateHeure(maintenant, 'Date');
 	const moi = moiDe(acteur);
-	const ctx = await lireContexte(base, maintenant, reglage);
+	// Avec les durées du remplacement court : le lien « Quelques heures » n'est offert que si l'une tient.
+	const ctx = await lireContexte(base, maintenant, reglage, true);
 	const semaines = bandesDe(ctx, moi);
 	const libres = semaines.flatMap((s) => s.tranches).filter((t) => t.etat === 'libre');
 	const choisies = libres.filter((t) => (choix.periodes ?? []).some((p) => p.debut === t.debut && p.fin === t.fin)).map(({ debut, fin }) => ({ debut, fin }));
@@ -285,10 +286,10 @@ export async function pourDemander(base: Base, acteur: Acteur, maintenant: strin
 	return { semaines, choisies, candidats: libresPour, echangeables, avec, semainesAvec, manqueMoi, court: debutsCourts(ctx, moi).length > 0 };
 }
 
-// Le remplacement court : les débuts possibles aujourd'hui, au quart d'heure, avec la durée la plus longue qui tient (2 ou 3 h).
+// Le remplacement court : les débuts possibles aujourd'hui, au quart d'heure, avec les durées du centre qui y tiennent.
 export async function pourDemanderCourt(base: Base, acteur: Acteur, maintenant: string, reglage: Reglage) {
 	exigerDateHeure(maintenant, 'Date');
 	const moi = moiDe(acteur);
-	const ctx = await lireContexte(base, maintenant, reglage);
-	return { debuts: debutsCourts(ctx, moi) };
+	const ctx = await lireContexte(base, maintenant, reglage, true);
+	return { debuts: debutsCourts(ctx, moi), durees: ctx.durees };
 }

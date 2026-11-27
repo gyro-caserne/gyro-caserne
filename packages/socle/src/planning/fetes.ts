@@ -16,7 +16,7 @@ import { equipeLe, exigerAnnee, exigerGestion, journalPlanning, semainesCalculee
 
 // Au journal (suivi du centre), visant la fête : son nom et un lien vers l'étape Fêtes.
 const journalFete = (base: Base, acteur: Acteur, action: string, details: object, maintenant: string, cibleId: number | SQL) => ligneJournal(base, { acteur: nomActeur(acteur), action, cibleType: 'fete_centre', cibleId, details }, maintenant);
-import type { FeteCentre, Periode, Reglage } from './calendrier.ts';
+import { reglagesDe, type FeteCentre, type Periode, type Reglage } from './calendrier.ts';
 
 // Les fêtes du centre : pendant leurs heures, une équipe choisie tient l'astreinte à la place de celle du roulement
 // (appliquerFetes, calendrier.ts). Au plus 24 h, jamais deux en même temps.
@@ -59,13 +59,15 @@ function inutilesDe(ctx: Contexte, touchees: Periode[], apres: FeteCentre[]) {
 async function effets(base: Base, acteur: Acteur, avant: FeteCentre | null, apres: FeteCentre | null, autres: FeteCentre[], maintenant: string, reglage: Reglage, confirme: boolean) {
 	const touchees = [avant, apres].filter((f): f is FeteCentre => f !== null);
 	// Les semaines du roulement que les fêtes touchent : une fête de début janvier peut tomber dans la dernière semaine de l'année d'avant.
-	const annees = [...new Set(touchees.flatMap((f) => [Number(f.debut.slice(0, 4)), Number(ajouterJours(f.debut.slice(0, 10), -8).slice(0, 4))]))];
+	const annees = [...new Set(touchees.flatMap((f) => [Number(f.debut.slice(0, 4)), Number(ajouterJours(f.debut.slice(0, 10), -14).slice(0, 4))]))];
 	const [lignes, changees] = await base.batch([
-		base.select().from(anneePlanning).where(inArray(anneePlanning.annee, annees)),
+		// Et l'année d'après chacune : ses horaires règlent la fin de la dernière semaine.
+		base.select().from(anneePlanning).where(inArray(anneePlanning.annee, [...annees, ...annees.map((a) => a + 1)])),
 		base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${Math.min(...annees)}-01-01`), lte(semaineChangee.debut, `${Math.max(...annees)}-12-31`)))
 	]);
-	const publiees = lignes.filter((l) => l.publieeLe !== null);
-	const semaines = publiees.flatMap((l) => semainesCalculees(l.annee, l.ordre, changees, reglage)).filter((s) => s.periodes.some((p) => touchees.some((t) => chevauche(p, t))));
+	const publiees = lignes.filter((l) => l.publieeLe !== null && annees.includes(l.annee));
+	const reglages = reglagesDe(reglage, lignes);
+	const semaines = publiees.flatMap((l) => semainesCalculees(l.annee, l.ordre, changees, reglages)).filter((s) => s.periodes.some((p) => touchees.some((t) => chevauche(p, t))));
 	if (semaines.length === 0) return { inutiles: [], ecritures: [] };
 	const reference = (apres ?? avant)!;
 	const ctx = await lireContexte(base, maintenant, reglage);

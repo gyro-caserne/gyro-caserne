@@ -5,7 +5,7 @@ import { gesteAnomalie, REGLAGE_ANOMALIES, signalerAnomalie } from '../src/anoma
 import { enregistrerEngin } from '../src/engins.ts';
 import { couper } from '../src/notifications.ts';
 import { publierAnnee, reglerRoulement } from '../src/planning/annee.ts';
-import { abonnementPush, attribution, avisAnomalie, envoiPush, equipe, journal, personne, profil, responsabilite } from '../src/schema.ts';
+import { abonnementPush, anneePlanning, attribution, avisAnomalie, envoiPush, equipe, journal, personne, profil, responsabilite } from '../src/schema.ts';
 import { suiviDuCentre } from '../src/suivi.ts';
 import { equipeSansChefDemain } from '../src/urgences.ts';
 import { jeuEngins } from './de-test-engins.ts';
@@ -85,13 +85,25 @@ describe('urgence : une équipe sans chef de garde la veille de sa relève', () 
 		return { ...j, equipes };
 	}
 
-	it('hors de la veille à 8 h : rien, sans lire la base', async () => {
+	it('hors de la veille à 8 h : rien ; hors des passages, sans lire la base ; un autre jour à 8 h, la seule ligne de l’année', async () => {
 		const j = await avecPlanning();
-		for (const quand of ['2026-11-05T07:50', '2026-11-05T09:00', '2026-11-04T08:00', '2026-11-06T08:00']) {
+		for (const [quand, lectures] of [['2026-11-05T07:50', 0], ['2026-11-05T09:00', 0], ['2026-11-04T08:00', 1], ['2026-11-06T08:00', 1]] as const) {
 			const avant = j.base.requetes;
 			expect(await equipeSansChefDemain(j.base, quand, reglage), quand).toBe(0);
-			expect(j.base.requetes - avant, quand).toBe(0);
+			expect(j.base.requetes - avant, quand).toBe(lectures);
 		}
+	});
+
+	it('les horaires de l’année : la veille de leur relève (le lundi à 19 h), pas celle du centre', async () => {
+		const j = await jeu();
+		const equipes = await j.base.select().from(equipe).orderBy(equipe.ordreRotation);
+		await reglerRoulement(j.base, j.superAdmin, 2026, equipes.map((e) => e.id), '2026-01-01T10:00');
+		await j.base.update(anneePlanning).set({ horaires: JSON.stringify({ debut: { jour: 'lundi', heure: '19:30' }, fin: { jour: 'lundi', heure: '07:00' }, semaine: { debut: '19:00', fin: '07:00' } }) });
+		await publierAnnee(j.base, j.superAdmin, 2026, '2026-01-01T10:00');
+		await j.base.delete(attribution).where(eq(attribution.personneId, j.idDe(j.chefDeGarde)));
+		expect(await equipeSansChefDemain(j.base, VEILLE, reglage)).toBe(0);
+		expect(await equipeSansChefDemain(j.base, '2026-11-08T08:00', reglage)).toBe(1);
+		expect((await j.envois(j.claire))[0]).toMatchObject({ texte: 'Aucun chef de garde nommé pour la relève de demain, à 19 h 30.' });
 	});
 
 	it('l’équipe de la relève sans chef de garde en fonction : le chef et l’adjoint sont prévenus une fois ; la ligne est dans leur suivi', async () => {

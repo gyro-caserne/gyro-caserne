@@ -4,15 +4,17 @@ import { ajouterJours, exigerDateHeure } from '../dates.ts';
 import { aLeDroit, type Acteur } from '../droits.ts';
 import { affectationEquipe, anneePlanning, equipe, semaineChangee } from '../schema.ts';
 import { equipeLe, semainesCalculees, type EquipePlanning } from './annee.ts';
-import { appliquerFetes, equipeAuMoment, semainesDe, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
+import { appliquerFetes, equipeAuMoment, reglagesDe, semainesDe, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
+import { releveDe } from '../prises.ts';
 import { groupeDeLaSemaine, nomsDeGroupes, requeteEtes } from './groupes.ts';
 import { heuresDe, lirePlage, requeteFetes, requetePlagesPubliees, textesFetes } from './plages.ts';
 import { courtsCedes, requeteCourtsCedes } from '../remplacements/effectifs.ts';
 
 // `fetes` : les fêtes du centre de la semaine, avec l'équipe imposée (« Sainte-Barbe, samedi 5 décembre, Équipe 3 de 18 h à 2 h »).
 export type Astreinte = { debut: string; fin: string; equipe: EquipePlanning; enCours: boolean; mienne: boolean; periodes: Periode[]; fetes?: string[] };
-// À l'Accueil, en plus : mes plages courtes cédées du jour, pas encore finies (qui me remplace quelques heures).
-export type AstreinteAccueil = Astreinte & { courtsCedes: (Periode & { remplacant: string })[] };
+// À l'Accueil, en plus : mes plages courtes cédées du jour, pas encore finies (qui me remplace quelques heures), et la relève en cours
+// (prise de garde), aux horaires de son année.
+export type AstreinteAccueil = Astreinte & { courtsCedes: (Periode & { remplacant: string })[]; releve: string };
 
 // La fenêtre cherchée d'abord, en semaines après aujourd'hui.
 const FENETRE_SEMAINES = 8;
@@ -28,7 +30,8 @@ export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string
 	// La semaine en cours a pu commencer l'année d'avant.
 	// Dans le même batch : mes courts cédés, lus seulement pour aujourd'hui (pas d'aller-retour de plus).
 	const [annees, changees, equipes, affectations, lignesPlages, etes, lignesCourts, fetes] = await base.batch([
-		base.select().from(anneePlanning).where(and(gte(anneePlanning.annee, annee - 1), lte(anneePlanning.annee, annee + 1))),
+		// Jusqu'à l'année d'après la suivante : ses horaires règlent la fin de la dernière semaine de la suivante.
+		base.select().from(anneePlanning).where(and(gte(anneePlanning.annee, annee - 1), lte(anneePlanning.annee, annee + 2))),
 		base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee - 1}-12-01`), lte(semaineChangee.debut, `${annee + 1}-12-31`))),
 		base.select({ id: equipe.id, nom: equipe.nom, couleur: equipe.couleur, active: equipe.active }).from(equipe).orderBy(asc(equipe.ordreRotation)),
 		base.select({ equipeId: affectationEquipe.equipeId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe).where(eq(affectationEquipe.personneId, moi)),
@@ -46,16 +49,17 @@ export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string
 	const depuis = ajouterJours(m.slice(0, 10), -15);
 	const peutAvoir = affectations.some((a) => a.fin === null || a.fin >= depuis) || plages.some((p) => p.fin > m && p.ajoutes.includes(moi));
 	// Les années publiées, dans l'ordre, calculées une à une jusqu'à trouver. La dernière semaine de l'année d'avant peut être
-	// encore en cours : elle finit au plus tard 7 jours après sa relève (un jour de marge).
-	const finAvant = ajouterJours(semainesDe(annee - 1, reglage).at(-1)!.debut, 8);
-	const publiees = annees.filter((a) => a.publieeLe !== null && (a.annee >= annee || m.slice(0, 10) <= finAvant)).sort((a, b) => a.annee - b.annee);
+	// encore en cours : elle finit au plus tard le jour de la première relève de l'année (un jour de marge).
+	const reglages = reglagesDe(reglage, annees);
+	const finAvant = ajouterJours(semainesDe(annee, reglages(annee))[0]!.debut, 1);
+	const publiees = annees.filter((a) => a.publieeLe !== null && a.annee <= annee + 1 && (a.annee >= annee || m.slice(0, 10) <= finAvant)).sort((a, b) => a.annee - b.annee);
 	// D'abord les seules semaines de la fenêtre utile (la semaine en cours et les huit suivantes : décision 0021) ; sans rien
 	// y trouver, les années entières, comme avant. Les semaines sont lues dans l'ordre : la première trouvée est la même.
 	const chercher = (entre?: Periode) => {
 		let courante: SemaineCalculee | undefined;
 		let mienne: SemaineCalculee | undefined;
 		for (const a of publiees) {
-			const semaines = appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglage, entre), fetes);
+			const semaines = appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglages, entre), fetes);
 			courante ??= semaines.find((s) => s.periodes[0]!.debut <= m && fin(s) > m);
 			if (peutAvoir)
 				for (const s of semaines) {
@@ -81,5 +85,5 @@ export async function astreinteDe(base: Base, acteur: Acteur, maintenant: string
 	const trouvee = equipes.find((x) => x.id === id);
 	const groupe = id === semaine.equipeId ? groupeDeLaSemaine(etes, nomsDeGroupes(equipes), semaine) : null;
 	const e = trouvee ? { id: trouvee.id, nom: groupe ?? trouvee.nom, couleur: trouvee.couleur } : { id, nom: 'Équipe archivée', couleur: '#8a949e' };
-	return { debut: semaine.periodes[0]!.debut, fin: fin(semaine), equipe: e, enCours: semaine.periodes[0]!.debut <= m, mienne: aMoi, periodes: semaine.periodes, fetes: textesFetes(semaine, equipes), courtsCedes: courtsCedes(lignesCourts, m) };
+	return { debut: semaine.periodes[0]!.debut, fin: fin(semaine), equipe: e, enCours: semaine.periodes[0]!.debut <= m, mienne: aMoi, periodes: semaine.periodes, fetes: textesFetes(semaine, equipes), courtsCedes: courtsCedes(lignesCourts, m), releve: releveDe(m, reglages) };
 }

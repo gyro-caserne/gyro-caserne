@@ -13,6 +13,7 @@ import { anneePlanning, demandeRemplacement, destinataireRemplacement, manoeuvre
 import { avis } from './avis.ts';
 import { astreintesDe, disponible, disponibles, lireContexte, manque, mesTranches, periodesDe, exigerRemplacants, peutRemplacer, sansEngagement, tranchesDuJour, valideurs, type Contexte, type LigneDemande } from './contexte.ts';
 import { heure, texteDemande } from './tranches.ts';
+import { texteDurees } from './court.ts';
 
 // Les gestes d'une demande de remplacement ou d'échange. Chaque écriture vérifie l'état attendu : deux gestes simultanés
 // ne s'appliquent jamais tous les deux (une seule acceptation d'une demande ouverte).
@@ -97,15 +98,16 @@ export async function demanderRemplacement(base: Base, acteur: Acteur, d: { peri
 	return lignes[0]!.id;
 }
 
-// Un remplacement court : 2 ou 3 h dans une tranche de son astreinte du jour, début au quart d'heure, à venir. Toujours ouvert à tous les disponibles.
-export async function demanderRemplacementCourt(base: Base, acteur: Acteur, d: { debut: string; duree: 2 | 3; mot?: string | null }, maintenant: string, reglage: Reglage): Promise<number> {
+// Un remplacement court : une des durées du centre (2 ou 3 h par défaut) dans une tranche de son astreinte du jour, début au quart d'heure,
+// à venir. Toujours ouvert à tous les disponibles.
+export async function demanderRemplacementCourt(base: Base, acteur: Acteur, d: { debut: string; duree: number; mot?: string | null }, maintenant: string, reglage: Reglage): Promise<number> {
 	const moi = await exigerDemander(base, acteur, maintenant);
-	if (d.duree !== 2 && d.duree !== 3) throw new DonneeInvalide('Durée de 2 h ou 3 h');
 	if (typeof d.debut !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:(00|15|30|45)$/.test(d.debut) || Number.isNaN(Date.parse(`${d.debut}:00Z`))) throw new DonneeInvalide('Début au quart d’heure');
 	if (d.debut <= maintenant.slice(0, 16)) throw new DonneeInvalide('Début déjà passé');
 	if (!existeAParis(d.debut)) throw new DonneeInvalide('Cette heure n’existe pas cette nuit-là (passage à l’heure d’été)');
+	const ctx = await lireContexte(base, maintenant, reglage, true);
+	if (!ctx.durees.includes(d.duree)) throw new DonneeInvalide(`Durée de ${texteDurees(ctx.durees)}`);
 	const plage = { debut: d.debut, fin: new Date(Date.parse(`${d.debut}:00Z`) + d.duree * 3_600_000).toISOString().slice(0, 16) };
-	const ctx = await lireContexte(base, maintenant, reglage);
 	const tranche = tranchesDuJour(ctx, moi).find((t) => t.debut <= plage.debut && plage.debut < t.fin);
 	if (!tranche) throw new DonneeInvalide('La plage doit tenir dans votre astreinte du jour');
 	if (plage.fin > tranche.fin) throw new DonneeInvalide(`La plage doit finir à ${heure(tranche.fin)} au plus tard`);

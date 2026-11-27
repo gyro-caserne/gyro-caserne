@@ -27,7 +27,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		const m = apercus.find((x) => x.cle === n.cle);
 		return { ...n, icone: m?.icone ?? null, couleur: m?.couleur ?? null, numero: m?.numero ?? null };
 	});
-	const priseOuverte = astreinte !== null && lienPriseOuvert(astreinte.debut, maintenant, centre.astreinte);
+	const priseOuverte = astreinte !== null && lienPriseOuvert(astreinte.debut, maintenant, astreinte.releve);
 	return { prenom, ...accueil, aNePasManquer: { ...aNePasManquer, nouveautes }, anniversaire, monPalier, paliers, aujourdhui, astreinte, priseOuverte, maintenant, meteo: vueMeteo(centre.departement ? releves : { ...releves, vigilance: null }, aujourdhui, centre.departementNom ?? centre.departement) };
 };
 

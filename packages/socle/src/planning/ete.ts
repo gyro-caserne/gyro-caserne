@@ -6,14 +6,14 @@ import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
 import { dateFichier } from '../fichier-effectif.ts';
 import { lecturesAgents } from '../murs.ts';
 import { requeteChefs } from '../remplacements/contexte.ts';
-import { ete, journal, personne, plageEte, reponseEte, vacancesAgent } from '../schema.ts';
+import { anneePlanning, ete, journal, personne, plageEte, reponseEte, vacancesAgent } from '../schema.ts';
 import { ligneJournal } from '../journal.ts';
 import { nomActeur } from '../actions/personnes.ts';
 import { exigerAnnee } from './annee.ts';
 import { avis } from './avis.ts';
 
 export { avis };
-import { semainesDe, type Reglage } from './calendrier.ts';
+import { reglageDeLAnnee, semainesDe, type Reglage } from './calendrier.ts';
 
 // L'été : la période et la date limite (le chef), les vacances des agents, les rappels.
 
@@ -42,12 +42,13 @@ async function exigerGestion(base: Base, acteur: Acteur, maintenant: string) {
 export async function reglerEte(base: Base, acteur: Acteur, annee: number, d: { debut: string; fin: string; dateLimite: string }, maintenant: string, reglage: Reglage): Promise<void> {
 	exigerAnnee(annee);
 	await exigerGestion(base, acteur, maintenant);
-	const releves = semainesDe(annee, reglage).map((s) => s.debut);
+	exigerDate(d.dateLimite);
+	// Les jours de relève suivent les horaires de l'année, lus avec l'été.
+	const [[existant], [ligne]] = await base.batch([base.select().from(ete).where(eq(ete.annee, annee)), base.select({ horaires: anneePlanning.horaires }).from(anneePlanning).where(eq(anneePlanning.annee, annee))]);
+	const releves = semainesDe(annee, reglageDeLAnnee(reglage, ligne?.horaires)).map((s) => s.debut);
 	if (!releves.includes(d.debut) || !releves.includes(d.fin)) throw new DonneeInvalide('Jour de relève attendu');
 	if (d.fin < d.debut) throw new DonneeInvalide('Fin avant le début');
 	if (releves.indexOf(d.fin) - releves.indexOf(d.debut) >= SEMAINES_MAX) throw new DonneeInvalide(`Été trop long : ${SEMAINES_MAX} semaines au plus`);
-	exigerDate(d.dateLimite);
-	const [existant] = await base.select().from(ete).where(eq(ete.annee, annee));
 	if (existant?.publieeLe && (existant.debut !== d.debut || existant.fin !== d.fin)) throw new DonneeInvalide('Été publié, la période ne change plus');
 	const valeurs = { debut: d.debut, fin: d.fin, dateLimite: d.dateLimite };
 	// Une nouvelle date limite relance les rappels.

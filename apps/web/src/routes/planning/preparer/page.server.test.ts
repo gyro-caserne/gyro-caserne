@@ -134,4 +134,25 @@ describe('/planning/preparer', () => {
 		expect(prep.publiee).toBeNull();
 		expect(await envoyer(actions, 'proposition', locaux(base, chef), [], q)).toMatchObject({ status: 400, data: { cible: 'proposition', message: expect.stringMatching(/déjà un roulement/) } });
 	});
+
+	it('horaires de garde : réglés sur une année non publiée, l’aperçu et les semaines les suivent ; ceux du centre repris ; refus sur une année publiée', async () => {
+		const { base, chef, alice, annee, ids } = await preparer({ publiee: false });
+		const l = locaux(base, chef);
+		const q = `?annee=${annee + 1}`;
+		const saisie: [string, string][] = [['jour', 'lundi'], ['releve', '19:00'], ['fin', '07:00'], ['semaine-debut', '19:00'], ['semaine-fin', '07:00']];
+		expect(await envoyer(actions, 'horaires', locaux(base, alice), saisie, q)).toMatchObject({ status: 403 });
+		expect(await envoyer(actions, 'horaires', l, [...saisie.slice(0, 2), ['fin', '20:00'], ...saisie.slice(3)], q)).toMatchObject({ status: 400, data: { cible: 'horaires', message: expect.stringContaining('La fin doit tomber au plus tard') } });
+		expect(await envoyer(actions, 'horaires', l, saisie, q)).toEqual({ cible: 'horaires', succes: 'Horaires enregistrés. Les semaines de l’année les suivent.' });
+		const data = await charger(load, l, q);
+		expect(data.preparation.horaires).toMatchObject({ propres: true, valeur: { debut: { jour: 'lundi', heure: '19:00' } } });
+		expect(data.apercu[0]!.periodes[0]!.debut).toMatch(/T19:00$/);
+		await envoyer(actions, 'roulement', l, ids.map((id): [string, string] => ['ordre', String(id)]), q);
+		expect((await charger(load, l, q)).preparation.semaines.every((s: { debut: string }) => new Date(`${s.debut}T00:00:00Z`).getUTCDay() === 1)).toBe(true);
+		expect(await envoyer(actions, 'horairesDuCentre', l, [], q)).toEqual({ cible: 'horaires', succes: 'Horaires du centre repris.' });
+		expect((await charger(load, l, q)).preparation.horaires.propres).toBe(false);
+		await envoyer(actions, 'horaires', l, [...saisie, ['continue', '1']], q);
+		expect((await charger(load, l, q)).preparation.horaires.valeur).toEqual({ debut: { jour: 'lundi', heure: '19:00' }, fin: { jour: 'lundi', heure: '07:00' } });
+		await envoyer(actions, 'publier', l, [], q);
+		expect(await envoyer(actions, 'horaires', l, saisie, q)).toMatchObject({ status: 400, data: { cible: 'horaires', message: expect.stringContaining('publié') } });
+	});
 });

@@ -4,9 +4,10 @@ import { ajouterJours, enCours, exigerDateHeure } from './dates.ts';
 import { ligneJournal } from './journal.ts';
 import { STATUTS_AVEC_ACCES } from './listes.ts';
 import { mettreEnFile, type DonneesPush } from './notifications.ts';
-import { rangDuJour, type Reglage } from './planning/calendrier.ts';
+import { rangDuJour, reglageDeLAnnee, type Reglage } from './planning/calendrier.ts';
 import { equipeDe, lecturesEquipe } from './prises.ts';
-import { attribution, journal, personne, responsabilite } from './schema.ts';
+import { heure } from './remplacements/tranches.ts';
+import { anneePlanning, attribution, journal, personne, responsabilite } from './schema.ts';
 import { estChefOuAdjointSql } from './suivi.ts';
 
 // Les urgences du centre : au téléphone du chef de centre et de l'adjoint, à toute heure (lieu « urgences », coupé par « urgences » ou « tout »).
@@ -28,13 +29,18 @@ export const avisUrgence = (base: Base, ids: number[] | SQLWrapper, donnees: Don
 
 // Au réveil de 8 h (et 8 h 10), la veille d'une relève : l'équipe qui prend l'astreinte n'a pas de chef de garde en fonction.
 // Hors de ces passages, rien n'est lu. Une alerte par relève : la ligne du journal (dans le suivi des chefs) en est la marque.
+// La relève suit les horaires de l'année de demain : un autre jour que celui du centre, ils sont lus d'abord (une ligne).
 export async function equipeSansChefDemain(base: Base, maintenant: string, reglage: Reglage): Promise<number> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const demain = ajouterJours(aujourdhui, 1);
-	if (!PASSAGES.includes(maintenant.slice(11, 16)) || JOURS[rangDuJour(demain)] !== reglage.debut.jour) return 0;
-	const releve = `${demain}T${reglage.debut.heure}`;
+	if (!PASSAGES.includes(maintenant.slice(11, 16))) return 0;
+	const jour = JOURS[rangDuJour(demain)];
+	if (jour !== reglage.debut.jour) {
+		const [ligne] = await base.select({ horaires: anneePlanning.horaires }).from(anneePlanning).where(eq(anneePlanning.annee, Number(demain.slice(0, 4))));
+		if (jour !== reglageDeLAnnee(reglage, ligne?.horaires).debut.jour) return 0;
+	}
 	const [annees, changees, equipes, chefsDeGarde, deja] = await base.batch([
-		...lecturesEquipe(base, releve),
+		...lecturesEquipe(base, `${demain}T${reglage.debut.heure}`),
 		base
 			.select({ equipeId: attribution.perimetreId, debut: attribution.debut, fin: attribution.fin })
 			.from(attribution)
@@ -43,9 +49,12 @@ export async function equipeSansChefDemain(base: Base, maintenant: string, regla
 			.where(and(eq(responsabilite.systeme, 'chef_equipe'), eq(attribution.perimetreType, 'equipe'), inArray(personne.statut, [...STATUTS_AVEC_ACCES]))),
 		base.select({ id: journal.id }).from(journal).where(and(eq(journal.action, 'alerter_sans_chef'), sql`substr(${journal.quand}, 1, 10) = ${aujourdhui}`))
 	]);
+	const r = reglageDeLAnnee(reglage, annees.find((a) => a.annee === Number(demain.slice(0, 4)))?.horaires);
+	if (jour !== r.debut.jour) return 0;
+	const releve = `${demain}T${r.debut.heure}`;
 	const e = equipeDe(releve, annees, changees, equipes, reglage);
 	if (!e || deja.length > 0 || chefsDeGarde.some((c) => c.equipeId === e.id && enCours(c.debut, c.fin, demain))) return 0;
-	const donnees = { titre: `${e.nom} sans chef de garde demain`, texte: `Aucun chef de garde nommé pour la relève de demain, à ${Number(reglage.debut.heure.slice(0, 2))} h.`, url: '/comites', tag: `urgence:sans-chef:${releve}` };
+	const donnees = { titre: `${e.nom} sans chef de garde demain`, texte: `Aucun chef de garde nommé pour la relève de demain, à ${heure(releve)}.`, url: '/comites', tag: `urgence:sans-chef:${releve}` };
 	await base.batch([ligneJournal(base, { acteur: 'planning', action: 'alerter_sans_chef', cibleType: 'equipe', cibleId: e.id, details: { releve } }, maintenant), avisUrgence(base, chefsDuCentre(base, aujourdhui), donnees, maintenant)]);
 	return 1;
 }

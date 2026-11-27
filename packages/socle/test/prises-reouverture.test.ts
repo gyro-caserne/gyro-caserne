@@ -60,7 +60,7 @@ describe('participants modifiés après validation', () => {
 		expect(await tracesDe(j)).toEqual({ participants: { par: idDe(j.alice), le: APRES } });
 		const vue = await lirePrise(j.base, j.alice, j.vsav, APRES, reglage);
 		expect(vue.prise!.traces.participants).toEqual({ par: 'Alice Fictif', le: APRES });
-		expect((await lirePriseFaite(j.base, j.alice, j.id)).participants).toEqual(['Alice Fictif', 'Rémi Fictif']);
+		expect((await lirePriseFaite(j.base, j.alice, j.id, '2026-11-02T10:00', reglage)).participants).toEqual(['Alice Fictif', 'Rémi Fictif']);
 		const lignes = await j.base.select().from(journal).where(eq(journal.action, 'modifier_participants_prise'));
 		expect(lignes).toMatchObject([{ acteur: `personne:${idDe(j.alice)}`, cibleType: 'engin', cibleId: j.vsav }]);
 		expect((await suiviDuCentre(j.base, j.chefCentre, '2026-10-30')).lignes[0]).toMatchObject({ qui: 'Alice Fictif', phrase: 'a modifié les participants de la prise de garde : VSAV 1' });
@@ -132,7 +132,7 @@ describe('réouverture', () => {
 			[j.radio.ref, null, null, j.id, null]
 		]);
 		expect(await tracesDe(j)).toMatchObject({ rouverte: { motif: 'Oubli' } });
-		expect((await lirePriseFaite(j.base, j.alice, j.id)).signalees).toHaveLength(2);
+		expect((await lirePriseFaite(j.base, j.alice, j.id, '2026-11-02T10:00', reglage)).signalees).toHaveLength(2);
 	});
 
 	it('un écart retiré : son anomalie, que personne ne suit, est annulée à la validation ; suivie, elle reste et l’écran le dit', async () => {
@@ -288,10 +288,10 @@ describe('garde-fous', () => {
 		await rouvrirPrise(j.base, j.chefDeGarde, j.id, 'Oubli', APRES, reglage);
 		// Avant toute prise de la relève suivante : l'historique et la prise faite la lisent déjà validée.
 		expect(await historiquePrises(j.base, j.vsav)).toMatchObject([{ id: j.id, valideeLe: PENDANT }]);
-		expect(await lirePriseFaite(j.base, j.alice, j.id)).toMatchObject({ valideeLe: PENDANT, enCours: true, releve: '2026-10-30T18:00' });
+		expect(await lirePriseFaite(j.base, j.alice, j.id, '2026-11-02T10:00', reglage)).toMatchObject({ valideeLe: PENDANT, enCours: true, releve: '2026-10-30T18:00' });
 		await commencerPrise(j.base, j.base.photos, j.alice, j.vsav, '2026-11-06T18:10', reglage);
 		expect((await j.base.select().from(priseGarde).where(eq(priseGarde.id, j.id)))[0]).toMatchObject({ etat: 'validee', valideeLe: PENDANT });
-		expect(await lirePriseFaite(j.base, j.alice, j.id)).toMatchObject({ valideeLe: PENDANT, enCours: false });
+		expect(await lirePriseFaite(j.base, j.alice, j.id, '2026-11-02T10:00', reglage)).toMatchObject({ valideeLe: PENDANT, enCours: false });
 	});
 
 	it('deux chefs rouvrent en même temps : un seul y parvient, une seule ligne de journal', async () => {

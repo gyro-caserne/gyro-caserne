@@ -17,9 +17,11 @@ import { jourEnLettres, texteDemande } from '../remplacements/tranches.ts';
 import { groupeDeLaSemaine, nomsDeGroupes, requeteEtes } from './groupes.ts';
 import { heuresDe, lirePlage, requeteFetes, requetePlagesPubliees, textesFetes } from './plages.ts';
 import { fetesDeLAnnee } from './fetes.ts';
-import { appliquerFetes, calculerAnnee, equipeAuMoment, feries, fetes, semainesDe, tourDesFetes, type Fete, type FeteCentre, type Periode, type Reglage, type SemaineCalculee } from './calendrier.ts';
+import { appliquerFetes, calculerAnnee, equipeAuMoment, feries, fetes, horairesDu, reglagesDe, semainesDe, tourDesFetes, type Fete, type FeteCentre, type Horaires, type Periode, type Reglage, type Reglages, type SemaineCalculee } from './calendrier.ts';
 
 export type Convoques = 'tous' | number[];
+// Les horaires de garde d'une année, vus à sa préparation.
+export type VueHoraires = { valeur: Horaires; propres: boolean; centre: Horaires; precedente: Horaires; suivante: string | null };
 // `fin` : le même jour que le début ; sans elle, la manœuvre dure 3 h.
 export type DonneesManoeuvre = { id?: number; debut: string; fin?: string | null; theme: string; lieu: string; convoques: Convoques; petitDejeuner: boolean };
 // `convoques` : les équipes ; `convocation` : avec les agents ajoutés ou retirés par un échange.
@@ -73,10 +75,11 @@ export function lectures(base: Base, debut: string, fin: string) {
 	] as const;
 }
 
-export const semainesCalculees = (annee: number, ordreJson: string | undefined, changees: { debut: string; equipeId: number }[], reglage: Reglage, entre?: Periode): SemaineCalculee[] => {
+// `reglages` : celui de chaque année (ses horaires), l'année d'après comprise pour la dernière semaine.
+export const semainesCalculees = (annee: number, ordreJson: string | undefined, changees: { debut: string; equipeId: number }[], reglages: Reglages, entre?: Periode): SemaineCalculee[] => {
 	const ordre = JSON.parse(ordreJson ?? '[]') as number[];
 	if (ordre.length === 0) return [];
-	return calculerAnnee(annee, reglage, ordre, new Map(changees.filter((c) => c.debut.startsWith(`${annee}-`)).map((c) => [c.debut, c.equipeId])), entre);
+	return calculerAnnee(annee, reglages(annee), ordre, new Map(changees.filter((c) => c.debut.startsWith(`${annee}-`)).map((c) => [c.debut, c.equipeId])), entre, reglages(annee + 1));
 };
 
 // L'ordre que donnerait la référence du centre (centre.ts) pour la première semaine de l'année, parmi les équipes actives.
@@ -90,10 +93,10 @@ export function ordrePropose(annee: number, reglage: Reglage, equipes: { id: num
 }
 
 // L'historique des fêtes : les saisies, complétées par les années publiées des trois dernières années.
-export function historiqueDesFetes(annee: number, annees: (typeof anneePlanning.$inferSelect)[], changees: { debut: string; equipeId: number }[], saisies: { annee: number; fete: Fete; equipeId: number }[], reglage: Reglage) {
+export function historiqueDesFetes(annee: number, annees: (typeof anneePlanning.$inferSelect)[], changees: { debut: string; equipeId: number }[], saisies: { annee: number; fete: Fete; equipeId: number }[], reglages: Reglages) {
 	const historique: { annee: number; fete: Fete; equipeId: number }[] = saisies.map((s) => ({ annee: s.annee, fete: s.fete, equipeId: s.equipeId }));
 	for (const a of annees.filter((x) => x.annee < annee && x.annee >= annee - 3 && x.publieeLe !== null)) {
-		const f = fetes(a.annee, semainesCalculees(a.annee, a.ordre, changees, reglage));
+		const f = fetes(a.annee, semainesCalculees(a.annee, a.ordre, changees, reglages));
 		for (const [fete, id] of [['noel', f.noel], ['nouvel_an', f.nouvelAn]] as const) {
 			if (id !== null && !historique.some((h) => h.annee === a.annee && h.fete === fete)) historique.push({ annee: a.annee, fete, equipeId: id });
 		}
@@ -109,12 +112,16 @@ export async function preparerAnnee(base: Base, acteur: Acteur, annee: number, m
 	await exigerGestion(base, acteur, maintenant);
 	const [annees, changees, manoeuvres, vacances, equipes, saisies, lignesFetes, saisiesFetes] = await base.batch([...lectures(base, `${annee - 3}-01-01`, `${annee}-12-31`), requeteFetes(base, `${annee - 3}-01-01`, `${annee}-12-31`), base.select().from(gardeFeteCentre)]);
 	const ligne = annees.find((a) => a.annee === annee);
-	const semaines = semainesCalculees(annee, ligne?.ordre, changees, reglage);
-	const historique = historiqueDesFetes(annee, annees, changees, saisies, reglage);
+	const reglages = reglagesDe(reglage, annees);
+	const semaines = semainesCalculees(annee, ligne?.ordre, changees, reglages);
+	const historique = historiqueDesFetes(annee, annees, changees, saisies, reglages);
 	const actives = equipes.filter((e) => e.active === 1);
 	return {
 		annee,
 		publiee: ligne?.publieeLe ?? null,
+		// Les horaires de garde de l'année ; `propres` : réglés pour elle (sinon, ceux du centre). `precedente` : ceux de l'année d'avant (sa dernière
+		// semaine court jusqu'à la première relève) ; `suivante` : le JSON de ceux de l'année d'après, pour le calcul de la dernière semaine.
+		horaires: { valeur: horairesDu(reglages(annee)), propres: Boolean(ligne?.horaires), centre: horairesDu(reglage), precedente: horairesDu(reglages(annee - 1)), suivante: annees.find((a) => a.annee === annee + 1)?.horaires ?? null } as VueHoraires,
 		ordre: JSON.parse(ligne?.ordre ?? '[]') as number[],
 		ordrePropose: ordrePropose(annee, reglage, equipes),
 		semaines,
@@ -151,10 +158,11 @@ export async function reglerRoulement(base: Base, acteur: Acteur, annee: number,
 export async function changerSemaines(base: Base, acteur: Acteur, annee: number, choix: Record<string, number>, maintenant: string, reglage: Reglage): Promise<void> {
 	exigerAnnee(annee);
 	await exigerGestion(base, acteur, maintenant);
-	const [[ligne], changees] = await base.batch([base.select().from(anneePlanning).where(eq(anneePlanning.annee, annee)), base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee}-01-01`), lte(semaineChangee.debut, `${annee}-12-31`)))]);
+	const [lignes, changees] = await base.batch([base.select().from(anneePlanning).where(inArray(anneePlanning.annee, [annee, annee + 1])), base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee}-01-01`), lte(semaineChangee.debut, `${annee}-12-31`)))]);
+	const ligne = lignes.find((l) => l.annee === annee);
 	if (!ligne || ligne.ordre === '[]') throw new DonneeInvalide('Réglez d’abord le roulement');
 	const ordre = JSON.parse(ligne.ordre) as number[];
-	const toutes = semainesCalculees(annee, ligne.ordre, changees, reglage);
+	const toutes = semainesCalculees(annee, ligne.ordre, changees, reglagesDe(reglage, lignes));
 	const debuts = new Map(Object.entries(choix));
 	for (const debut of debuts.keys()) if (!toutes.some((s) => s.debut === debut)) throw new DonneeInvalide('Semaine inconnue');
 	await exigerEquipes(base, [...new Set(debuts.values())]);
@@ -210,8 +218,8 @@ async function demandesDeSemaines(base: Base, semaines: SemaineCalculee[]) {
 export async function remplacementsDeSemaine(base: Base, acteur: Acteur, annee: number, debut: string, maintenant: string, reglage: Reglage): Promise<{ texte: string; conclu: boolean; personnes: number[] }[]> {
 	exigerAnnee(annee);
 	await exigerGestion(base, acteur, maintenant);
-	const [[ligne], changees] = await base.batch([base.select().from(anneePlanning).where(eq(anneePlanning.annee, annee)), base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee}-01-01`), lte(semaineChangee.debut, `${annee}-12-31`)))]);
-	const s = semainesCalculees(annee, ligne?.ordre, changees, reglage).find((x) => x.debut === debut);
+	const [lignes, changees] = await base.batch([base.select().from(anneePlanning).where(inArray(anneePlanning.annee, [annee, annee + 1])), base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee}-01-01`), lte(semaineChangee.debut, `${annee}-12-31`)))]);
+	const s = semainesCalculees(annee, lignes.find((l) => l.annee === annee)?.ordre, changees, reglagesDe(reglage, lignes)).find((x) => x.debut === debut);
 	if (!s) return [];
 	return (await demandesDeSemaines(base, [s])).map(({ texte, conclu, personnes }) => ({ texte, conclu, personnes }));
 }
@@ -365,8 +373,8 @@ export async function publierAnnee(base: Base, acteur: Acteur, annee: number, ma
 }
 
 // Semaines d'une année publiée, avec le roulement : lecture partagée par l'onglet Planning, l'agenda et la tâche de nuit.
-export function anneesPubliees(annees: (typeof anneePlanning.$inferSelect)[], changees: { debut: string; equipeId: number }[], reglage: Reglage, fetesCentre: FeteCentre[] = []): Map<number, SemaineCalculee[]> {
-	return new Map(annees.filter((a) => a.publieeLe !== null).map((a) => [a.annee, appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglage), fetesCentre)]));
+export function anneesPubliees(annees: (typeof anneePlanning.$inferSelect)[], changees: { debut: string; equipeId: number }[], reglages: Reglages, fetesCentre: FeteCentre[] = []): Map<number, SemaineCalculee[]> {
+	return new Map(annees.filter((a) => a.publieeLe !== null).map((a) => [a.annee, appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglages), fetesCentre)]));
 }
 
 // L'équipe de la personne à une date, d'après ses affectations.
@@ -423,9 +431,10 @@ export async function planningDe(base: Base, acteur: Acteur, annee: number, main
 	// qu'à la demande, une fois (décision 0021).
 	const publiees = annees.filter((a) => a.publieeLe !== null && a.annee >= Number(debutLecture.slice(0, 4)) && a.annee <= Number(finLecture.slice(0, 4))).sort((a, b) => a.annee - b.annee);
 	const calculees = new Map<number, SemaineCalculee[]>();
+	const reglages = reglagesDe(reglage, annees);
 	const semainesDeLAnnee = (a: (typeof publiees)[number]) => {
 		let s = calculees.get(a.annee);
-		if (!s) calculees.set(a.annee, (s = appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglage), lignesFetes)));
+		if (!s) calculees.set(a.annee, (s = appliquerFetes(semainesCalculees(a.annee, a.ordre, changees, reglages), lignesFetes)));
 		return s;
 	};
 	const ligneAnnee = publiees.find((a) => a.annee === annee);

@@ -536,10 +536,12 @@ export const avisReservation = sqliteTable(
 
 // Planning de l'année (planning/annee.ts). `ordre` : JSON, identifiants des équipes dans l'ordre du roulement, la première tient la première semaine.
 // `publiee_le` nul : l'année n'est pas encore visible des agents.
+// `horaires` : JSON des horaires de garde de l'année (relève, fin, semaine) ; vide, ceux du centre (centre.ts).
 export const anneePlanning = sqliteTable('annee_planning', {
 	annee: integer('annee').primaryKey(),
 	ordre: text('ordre').notNull().default('[]'),
-	publieeLe: text('publiee_le')
+	publieeLe: text('publiee_le'),
+	horaires: text('horaires')
 });
 
 // Une semaine dont le chef a changé l'équipe, désignée par son jour de relève.
@@ -1106,6 +1108,12 @@ export const souhaitAnniversaire = sqliteTable(
 export const reglageAnciennete = sqliteTable('reglage_anciennete', {
 	id: integer('id').primaryKey(),
 	paliers: text('paliers').notNull()
+});
+
+// Les durées proposées au remplacement court (remplacements/court.ts) : une seule ligne, `durees` JSON (heures, croissantes). Absente : 2 et 3 h.
+export const reglageCourt = sqliteTable('reglage_court', {
+	id: integer('id').primaryKey(),
+	durees: text('durees').notNull()
 });
 
 // La cloche de l'ancienneté : un collègue félicite l'agent pour son palier (`auteur_id`), ou l'appli prévient le chef et l'adjoint

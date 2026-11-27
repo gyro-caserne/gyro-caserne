@@ -4,7 +4,7 @@ Ouvert au chef de centre et à son adjoint (droit « Gérer le planning »). À 
 
 1. Appuyez sur « Planning », puis sur « Préparer l'année ». Choisissez l'année en haut. L'étiquette **Brouillon** ou **Publiée** est toujours visible.
 2. Cinq étapes, dans l'ordre ou non ; chacune s'enregistre seule :
-   1. **Roulement** : « Monter » et « Descendre » placent les équipes (la première tient la première semaine). L'aperçu montre les premières semaines. Gardez l'ordre proposé avec « Valider ce roulement ».
+   1. **Roulement** : « Monter » et « Descendre » placent les équipes (la première tient la première semaine). L'aperçu montre les premières semaines. Gardez l'ordre proposé avec « Valider ce roulement ». Dessous, les **horaires de garde** de l'année (voir [Comment changer les horaires de garde ?](changer-les-horaires-de-garde.md)).
    2. **Fêtes** : l'équipe de Noël et du Nouvel An. Hors de son tour, « Proposer un échange de semaines » propose l'échange qui corrige le tour : « Accepter l'échange » ou « Non merci ». Notez une fois les années passées. Plus bas, **Fêtes du centre** : « Ajouter une fête », puis le nom, la date, le début, la fin et l'équipe d'astreinte, et « Ajouter la fête ». Pendant ces heures, cette équipe tient l'astreinte à la place du roulement. Pour la changer, appuyez sur « Modifier » ; pour la retirer, « Supprimer la fête », puis confirmez.
    3. **Manœuvres** : « Ajouter une manœuvre » ou touchez une manœuvre ; le formulaire s'ouvre dans un panneau.
    4. **Repères** : les fériés (calculés) et les vacances scolaires (nom, du, au).

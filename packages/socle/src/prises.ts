@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { instruction, type Base, type BasePhotos } from './base.ts';
 import { avecPhotos, effacerPhotos, exigerPhotos, lireOctets, type Photo } from './commun.ts';
@@ -10,7 +10,7 @@ import { lirePrevenir, type ElementFiche, type ZoneFiche } from './fiches.ts';
 import { avisAnomalies, quiPrevenir } from './anomalies-avis.ts';
 import { ligneJournalSi } from './journal.ts';
 import { GENRES_ECART, STATUTS_AVEC_ACCES, type EtapeAnomalie, type EtatPrise, type GenreEcart, type MotifAttente } from './listes.ts';
-import { rangDuJour, semainesDe, type Reglage } from './planning/calendrier.ts';
+import { rangDuJour, reglageDeLAnnee, reglagesDe, semainesDe, type Reglage, type Reglages } from './planning/calendrier.ts';
 import { affectationEquipe, anneePlanning, anomalie, anomalieSuivi, attribution, engin, equipe, ficheElement, ficheVersion, ficheZone, personne, priseGarde, profil, responsabilite, semaineChangee, typeEngin } from './schema.ts';
 
 // La prise de garde : à la relève, l'équipe d'astreinte vérifie chaque engin zone par zone. Un brouillon sur le serveur
@@ -54,46 +54,69 @@ function decaler(moment: string, minutes: number): string {
 	return new Date(new Date(`${moment.slice(0, 16)}:00Z`).getTime() + minutes * 60_000).toISOString().slice(0, 16);
 }
 
-// La relève en cours : le dernier moment de prise d'astreinte commencé (deux heures d'avance comprises).
-export function releveDe(maintenant: string, reglage: Reglage): string {
-	exigerDateHeure(maintenant, 'Date');
-	const m = decaler(maintenant, AVANCE_MIN);
+// La dernière relève au jour et à l'heure du réglage, commencée à `m`.
+function derniereReleve(m: string, reglage: Reglage): string {
 	const jour = m.slice(0, 10);
 	const date = ajouterJours(jour, -((rangDuJour(jour) - JOURS.indexOf(reglage.debut.jour) + 7) % 7));
 	const moment = `${date}T${reglage.debut.heure}`;
 	return moment <= m ? moment : `${ajouterJours(date, -7)}T${reglage.debut.heure}`;
 }
 
+// La relève en cours : le dernier moment de prise d'astreinte commencé (deux heures d'avance comprises). Avec les réglages de chaque
+// année (ses horaires) : une relève de l'année, ou sinon la dernière de l'année d'avant, à ses horaires à elle.
+export function releveDe(maintenant: string, reglage: Reglage | Reglages): string {
+	exigerDateHeure(maintenant, 'Date');
+	const m = decaler(maintenant, AVANCE_MIN);
+	if (typeof reglage !== 'function') return derniereReleve(m, reglage);
+	const annee = Number(m.slice(0, 4));
+	const cetteAnnee = derniereReleve(m, reglage(annee));
+	if (cetteAnnee.startsWith(`${annee}-`)) return cetteAnnee;
+	const avant = reglage(annee - 1);
+	return `${semainesDe(annee - 1, avant).at(-1)!.debut}T${avant.debut.heure}`;
+}
+
 // Le lien de l'accueil vers la prise de garde : de 2 h avant la relève à 24 h après, pour qui a son astreinte dans la semaine de cette relève.
-// `debutAstreinte` : le début de ses heures, qui peut tomber plus tard dans la semaine (été, renfort). Sans requête.
-export function lienPriseOuvert(debutAstreinte: string, maintenant: string, reglage: Reglage): boolean {
-	const releve = releveDe(maintenant, reglage);
+// `debutAstreinte` : le début de ses heures, qui peut tomber plus tard dans la semaine (été, renfort). `releve` : la relève en cours
+// (releveDe, avec les horaires de son année). Sans requête.
+export function lienPriseOuvert(debutAstreinte: string, maintenant: string, releve: string): boolean {
 	return maintenant.slice(0, 16) <= decaler(releve, 24 * 60) && releve <= debutAstreinte && debutAstreinte < decaler(releve, 7 * 24 * 60);
 }
 
-// L'équipe d'astreinte d'une relève, d'après le planning publié de son année : trois lectures à placer dans un batch.
+// L'équipe d'astreinte d'une relève, d'après le planning publié de son année : trois lectures à placer dans un batch. Les années
+// d'avant et d'après sont lues aussi : leurs horaires disent si la relève est la bonne (selonLaReleve).
 export function lecturesEquipe(base: Base, releve: string) {
 	const annee = Number(releve.slice(0, 4));
 	return [
-		base.select().from(anneePlanning).where(eq(anneePlanning.annee, annee)),
-		base.select().from(semaineChangee).where(sql`substr(${semaineChangee.debut}, 1, 4) = ${String(annee)}`),
+		base.select().from(anneePlanning).where(and(gte(anneePlanning.annee, annee - 1), lte(anneePlanning.annee, annee + 1))),
+		base.select().from(semaineChangee).where(and(gte(semaineChangee.debut, `${annee - 1}-01-01`), lte(semaineChangee.debut, `${annee + 1}-12-31`))),
 		base.select({ id: equipe.id, nom: equipe.nom, couleur: equipe.couleur }).from(equipe)
 	] as const;
 }
+type LigneAnnee = typeof anneePlanning.$inferSelect;
+
+// La relève dépend des horaires de son année, lus dans le même batch que ce qui en dépend : il est lu d'abord avec la relève aux
+// horaires du centre, puis la relève est vérifiée sur les années lues. Seuls des horaires d'année qui la déplacent font relire, une fois.
+export async function selonLaReleve<R>(maintenant: string, reglage: Reglage, lire: (releve: string) => Promise<R>, annees: (lu: R) => LigneAnnee[]): Promise<{ releve: string; lu: R }> {
+	const prevue = releveDe(maintenant, reglage);
+	const lu = await lire(prevue);
+	const releve = releveDe(maintenant, reglagesDe(reglage, annees(lu)));
+	return { releve, lu: releve === prevue ? lu : await lire(releve) };
+}
+
 // L'équipe d'astreinte de la relève en cours (son identifiant), ou rien sans planning publié. Une requête.
 export async function equipeAstreinte(base: Base, maintenant: string, reglage: Reglage): Promise<number | null> {
-	const releve = releveDe(maintenant, reglage);
-	const [annees, changees, equipes] = await base.batch([...lecturesEquipe(base, releve)]);
+	const { releve, lu } = await selonLaReleve(maintenant, reglage, (r) => base.batch([...lecturesEquipe(base, r)]), ([annees]) => annees);
+	const [annees, changees, equipes] = lu;
 	return equipeDe(releve, annees, changees, equipes, reglage)?.id ?? null;
 }
 // Seulement la semaine de la relève, comme `calculerAnnee` la donnerait : celle choisie par le chef, sinon le roulement. L'accueil du chef
 // la demande deux fois ; calculer toute l'année pour une semaine coûtait (décision 0021).
-export function equipeDe(releve: string, annees: (typeof anneePlanning.$inferSelect)[], changees: { debut: string; equipeId: number }[], equipes: EquipeReleve[], reglage: Reglage): EquipeReleve | null {
+export function equipeDe(releve: string, annees: LigneAnnee[], changees: { debut: string; equipeId: number }[], equipes: EquipeReleve[], reglage: Reglage): EquipeReleve | null {
 	const annee = Number(releve.slice(0, 4));
 	const jour = releve.slice(0, 10);
 	const ligne = annees.find((a) => a.annee === annee && a.publieeLe !== null);
 	const ordre = JSON.parse(ligne?.ordre ?? '[]') as number[];
-	const rang = semainesDe(annee, reglage).findIndex((s) => s.debut === jour);
+	const rang = semainesDe(annee, reglageDeLAnnee(reglage, ligne?.horaires)).findIndex((s) => s.debut === jour);
 	if (ordre.length === 0 || rang < 0) return null;
 	const id = changees.findLast((c) => c.debut === jour)?.equipeId ?? ordre[rang % ordre.length]!;
 	return equipes.find((e) => e.id === id) ?? null;
@@ -193,24 +216,27 @@ const vueAnomalie = ({ prenom, nom, bloquante, ...a }: { prenom: string; nom: st
 export async function lirePrise(base: Base, acteur: Acteur, enginId: number, maintenant: string, reglage: Reglage): Promise<VuePrise> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const { engin: e } = await lireEngin(base, acteur, enginId, aujourdhui);
-	const releve = releveDe(maintenant, reglage);
-	const laPrise = and(eq(priseGarde.enginId, enginId), eq(priseGarde.releve, releve));
-	const version = sql<number>`coalesce((SELECT ${priseGarde.versionId} FROM ${priseGarde} WHERE ${laPrise}), (SELECT max(${ficheVersion.id}) FROM ${ficheVersion} WHERE ${ficheVersion.typeId} = ${e.typeId}))`;
 	const moi = acteur.type === 'personne' ? acteur.id : 0;
-	const [prises, zones, elements, ouvertes, annees, changees, equipes, agents, affectations, roles] = await base.batch([
-		base.select().from(priseGarde).where(laPrise),
-		...lecturesVersion(base, version),
-		ouvertesDe(base, enginId, sql`(SELECT ${priseGarde.id} FROM ${priseGarde} WHERE ${laPrise})`),
-		...lecturesEquipe(base, releve),
-		base
-			.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom })
-			.from(personne)
-			.innerJoin(profil, eq(profil.id, personne.profilId))
-			.where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), eq(profil.typePersonne, 'agent')))
-			.orderBy(asc(personne.nom), asc(personne.prenom)),
-		base.select().from(affectationEquipe),
-		lectureChefs(base, moi)
-	]);
+	const lire = (releve: string) => {
+		const laPrise = and(eq(priseGarde.enginId, enginId), eq(priseGarde.releve, releve));
+		const version = sql<number>`coalesce((SELECT ${priseGarde.versionId} FROM ${priseGarde} WHERE ${laPrise}), (SELECT max(${ficheVersion.id}) FROM ${ficheVersion} WHERE ${ficheVersion.typeId} = ${e.typeId}))`;
+		return base.batch([
+			base.select().from(priseGarde).where(laPrise),
+			...lecturesVersion(base, version),
+			ouvertesDe(base, enginId, sql`(SELECT ${priseGarde.id} FROM ${priseGarde} WHERE ${laPrise})`),
+			...lecturesEquipe(base, releve),
+			base
+				.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom })
+				.from(personne)
+				.innerJoin(profil, eq(profil.id, personne.profilId))
+				.where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), eq(profil.typePersonne, 'agent')))
+				.orderBy(asc(personne.nom), asc(personne.prenom)),
+			base.select().from(affectationEquipe),
+			lectureChefs(base, moi)
+		]);
+	};
+	const { releve, lu } = await selonLaReleve(maintenant, reglage, lire, (x) => x[4]);
+	const [prises, zones, elements, ouvertes, annees, changees, equipes, agents, affectations, roles] = lu;
 	const eq_ = equipeDe(releve, annees, changees, equipes, reglage);
 	const p = prises[0];
 	const traces = p ? lireTraces(p.traces) : {};
@@ -266,14 +292,21 @@ const faiteSql = sql`(${priseGarde.etat} = 'validee' OR ${valideeAvant} IS NOT N
 // Un brouillon d'une relève passée, jamais validé, ne se reprend plus : il est effacé, ses photos aussi.
 export async function commencerPrise(base: Base, basePhotos: BasePhotos, acteur: Acteur, enginId: number, maintenant: string, reglage: Reglage): Promise<number> {
 	const moi = await exigerPrise(base, acteur, maintenant);
-	const releve = releveDe(maintenant, reglage);
-	const passes = and(eq(priseGarde.enginId, enginId), eq(priseGarde.etat, 'en_cours'), ne(priseGarde.releve, releve), pasRouverte);
-	const [[e], anciens, [version], annees, changees, equipes] = await base.batch([
-		base.select({ situation: engin.situation, typeId: engin.typeId }).from(engin).where(eq(engin.id, enginId)),
-		base.select({ saisie: priseGarde.saisie }).from(priseGarde).where(passes),
-		base.select({ id: sql<number>`max(${ficheVersion.id})` }).from(ficheVersion).innerJoin(engin, eq(engin.typeId, ficheVersion.typeId)).where(eq(engin.id, enginId)),
-		...lecturesEquipe(base, releve)
-	]);
+	const passesDe = (releve: string) => and(eq(priseGarde.enginId, enginId), eq(priseGarde.etat, 'en_cours'), ne(priseGarde.releve, releve), pasRouverte);
+	const { releve, lu } = await selonLaReleve(
+		maintenant,
+		reglage,
+		(r) =>
+			base.batch([
+				base.select({ situation: engin.situation, typeId: engin.typeId }).from(engin).where(eq(engin.id, enginId)),
+				base.select({ saisie: priseGarde.saisie }).from(priseGarde).where(passesDe(r)),
+				base.select({ id: sql<number>`max(${ficheVersion.id})` }).from(ficheVersion).innerJoin(engin, eq(engin.typeId, ficheVersion.typeId)).where(eq(engin.id, enginId)),
+				...lecturesEquipe(base, r)
+			]),
+		(x) => x[3]
+	);
+	const passes = passesDe(releve);
+	const [[e], anciens, [version], annees, changees, equipes] = lu;
 	if (!e) throw new DonneeInvalide('Engin inconnu');
 	if (e.situation === 'parti') throw new DonneeInvalide('Engin parti');
 	if (!version?.id) throw new DonneeInvalide('Type inconnu');
@@ -344,14 +377,16 @@ export function appliquerGestePrise(saisie: Saisie, geste: GestePrise, ctx: { zo
 // `enginId` : l'engin de la page ; une prise d'un autre engin est refusée.
 async function lireBrouillon(base: Base, id: number, enginId?: number) {
 	const version = sql<number>`(SELECT ${priseGarde.versionId} FROM ${priseGarde} WHERE ${priseGarde.id} = ${id})`;
-	const [[p], zones, elements, ouvertes, agents] = await base.batch([
+	const [[p], zones, elements, ouvertes, agents, annees] = await base.batch([
 		base.select({ prise: priseGarde, situation: engin.situation, nomEngin: sql<string>`${engin.nom}`.as('nom_engin') }).from(priseGarde).innerJoin(engin, eq(engin.id, priseGarde.enginId)).where(eq(priseGarde.id, id)),
 		...lecturesVersion(base, version),
 		base
 			.select({ id: anomalie.id, ref: anomalie.ref, zone: anomalie.zone, libelle: anomalie.libelle, signaleePar: anomalie.signaleePar, priseEnChargePar: anomalie.priseEnChargePar, priseId: anomalie.priseId, closeLe: anomalie.closeLe })
 			.from(anomalie)
 			.where(and(sql`${anomalie.enginId} = (SELECT ${priseGarde.enginId} FROM ${priseGarde} WHERE ${priseGarde.id} = ${id})`, or(isNull(anomalie.closeLe), eq(anomalie.priseId, id)))),
-		base.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom }).from(personne).innerJoin(profil, eq(profil.id, personne.profilId)).where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), eq(profil.typePersonne, 'agent')))
+		base.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom }).from(personne).innerJoin(profil, eq(profil.id, personne.profilId)).where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), eq(profil.typePersonne, 'agent'))),
+		// Les horaires des années (quelques lignes) : la relève en cours en dépend.
+		base.select({ annee: anneePlanning.annee, horaires: anneePlanning.horaires }).from(anneePlanning)
 	]);
 	if (!p || (enginId !== undefined && p.prise.enginId !== enginId)) throw new DonneeInvalide('Prise inconnue');
 	if (p.situation === 'parti') throw new DonneeInvalide('Engin parti');
@@ -365,13 +400,14 @@ async function lireBrouillon(base: Base, id: number, enginId?: number) {
 		ouvertes: ouvertes.filter((o) => o.priseId !== id && o.closeLe === null),
 		propres: ouvertes.filter((o) => o.priseId === id),
 		agents: agents.map((a) => a.id),
-		noms: new Map(agents.map((a) => [a.id, `${a.prenom} ${a.nom}`]))
+		noms: new Map(agents.map((a) => [a.id, `${a.prenom} ${a.nom}`])),
+		annees
 	};
 }
 
-function exigerEnCours(p: { etat: EtatPrise; releve: string }, maintenant: string, reglage: Reglage) {
-	if (p.etat === 'validee') throw new DonneeInvalide('Prise déjà validée');
-	if (p.releve !== releveDe(maintenant, reglage)) throw new DonneeInvalide('Relève passée');
+function exigerEnCours(b: { prise: { etat: EtatPrise; releve: string }; annees: { annee: number; horaires: string | null }[] }, maintenant: string, reglage: Reglage) {
+	if (b.prise.etat === 'validee') throw new DonneeInvalide('Prise déjà validée');
+	if (b.prise.releve !== releveDe(maintenant, reglagesDe(reglage, b.annees))) throw new DonneeInvalide('Relève passée');
 }
 
 // Un geste sur le brouillon. Deux collègues peuvent écrire en même temps : l'écriture est gardée par le compteur et refaite une fois
@@ -382,7 +418,7 @@ export async function gestePrise(base: Base, basePhotos: BasePhotos, acteur: Act
 	await avecPhotos(basePhotos, nouvelle, maintenant, async ([idPhoto]) => {
 		for (let essai = 0; ; essai++) {
 			const b = await lireBrouillon(base, id, enginId);
-			exigerEnCours(b.prise, maintenant, reglage);
+			exigerEnCours(b, maintenant, reglage);
 			let saisie = appliquerGestePrise(b.saisie, geste, b);
 			if (geste.quoi === 'ecart' && geste.photo !== undefined) {
 				const cle = String(geste.element);
@@ -439,7 +475,7 @@ export async function abandonnerPrise(base: Base, basePhotos: BasePhotos, acteur
 export async function validerPrise(base: Base, acteur: Acteur, id: number, maintenant: string, reglage: Reglage, enginAttendu?: number): Promise<void> {
 	const moi = await exigerPrise(base, acteur, maintenant);
 	const b = await lireBrouillon(base, id, enginAttendu);
-	exigerEnCours(b.prise, maintenant, reglage);
+	exigerEnCours(b, maintenant, reglage);
 	if (b.zones.some((z) => !b.saisie.zones.includes(z.ref))) throw new DonneeInvalide('Zones à voir');
 	const saisie: Saisie = { ...b.saisie, participants: [...new Set([moi, ...b.saisie.participants])] };
 	const compteur = b.prise.compteur + 1;
@@ -533,7 +569,7 @@ async function lireValidee(base: Base, acteur: Acteur, id: number, maintenant: s
 	if (acteur.type !== 'personne') throw new DonneeInvalide('Réservé aux agents');
 	const b = await lireBrouillon(base, id, enginId);
 	if (b.prise.etat !== 'validee') throw new DonneeInvalide('Prise pas encore validée');
-	if (b.prise.releve !== releveDe(maintenant, reglage)) throw new DonneeInvalide('Relève passée');
+	if (b.prise.releve !== releveDe(maintenant, reglagesDe(reglage, b.annees))) throw new DonneeInvalide('Relève passée');
 	const [chefs, equipiers] = await base.batch([
 		lectureChefs(base),
 		base.select({ personneId: affectationEquipe.personneId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe).where(and(eq(affectationEquipe.personneId, acteur.id), eq(affectationEquipe.equipeId, b.prise.equipeId ?? 0)))
@@ -623,22 +659,24 @@ export type PriseDeLaReleve = { engin: EnginVu; prise: { etat: EtatPrise; valide
 export async function prisesDeLaReleve(base: Base, acteur: Acteur, maintenant: string, reglage: Reglage): Promise<{ releve: Releve; peutFaire: boolean; engins: PriseDeLaReleve[] }> {
 	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	if (!(await voitLesEngins(base, acteur, aujourdhui))) throw new RefusDroit('VOIR_ENGINS', { type: 'centre' });
-	const releve = releveDe(maintenant, reglage);
-	const [engins, prises, ouvertes, annees, changees, equipes] = await base.batch([
-		base
-			// Pas deux colonnes du même nom dans un batch (D1 n'en garde qu'une) : le nom du type est renommé.
-			.select({ id: engin.id, nom: engin.nom, immatriculation: engin.immatriculation, typeId: engin.typeId, type: sql<string>`${typeEngin.nom}`.as('type'), ordreType: typeEngin.ordre, situation: engin.situation, provenance: engin.provenance, etat: engin.etat, partiLe: engin.partiLe })
-			.from(engin)
-			.innerJoin(typeEngin, eq(typeEngin.id, engin.typeId))
-			.where(ne(engin.situation, 'parti')),
-		base
-			.select({ enginId: priseGarde.enginId, etat: priseGarde.etat, valideeLe: priseGarde.valideeLe, equipeId: priseGarde.equipeId, prenom: personne.prenom, nom: personne.nom })
-			.from(priseGarde)
-			.innerJoin(personne, eq(personne.id, priseGarde.modifieePar))
-			.where(eq(priseGarde.releve, releve)),
-		base.select({ enginId: anomalie.enginId, n: sql<number>`count(*)` }).from(anomalie).where(isNull(anomalie.closeLe)).groupBy(anomalie.enginId),
-		...lecturesEquipe(base, releve)
-	]);
+	const lire = (releve: string) =>
+		base.batch([
+			base
+				// Pas deux colonnes du même nom dans un batch (D1 n'en garde qu'une) : le nom du type est renommé.
+				.select({ id: engin.id, nom: engin.nom, immatriculation: engin.immatriculation, typeId: engin.typeId, type: sql<string>`${typeEngin.nom}`.as('type'), ordreType: typeEngin.ordre, situation: engin.situation, provenance: engin.provenance, etat: engin.etat, partiLe: engin.partiLe })
+				.from(engin)
+				.innerJoin(typeEngin, eq(typeEngin.id, engin.typeId))
+				.where(ne(engin.situation, 'parti')),
+			base
+				.select({ enginId: priseGarde.enginId, etat: priseGarde.etat, valideeLe: priseGarde.valideeLe, equipeId: priseGarde.equipeId, prenom: personne.prenom, nom: personne.nom })
+				.from(priseGarde)
+				.innerJoin(personne, eq(personne.id, priseGarde.modifieePar))
+				.where(eq(priseGarde.releve, releve)),
+			base.select({ enginId: anomalie.enginId, n: sql<number>`count(*)` }).from(anomalie).where(isNull(anomalie.closeLe)).groupBy(anomalie.enginId),
+			...lecturesEquipe(base, releve)
+		]);
+	const { releve, lu } = await selonLaReleve(maintenant, reglage, lire, (x) => x[3]);
+	const [engins, prises, ouvertes, annees, changees, equipes] = lu;
 	return {
 		releve: { debut: releve, equipe: equipeDe(releve, annees, changees, equipes, reglage) },
 		peutFaire: await peutFairePrise(base, acteur, aujourdhui),
@@ -656,18 +694,23 @@ export async function prisesDeLaReleve(base: Base, acteur: Acteur, maintenant: s
 }
 
 // Les engins dont la prise n'est pas validée trois heures après la relève, et l'équipe d'astreinte (à qui le dire). Rien sinon.
-// Une requête. Le retard est seulement signalé : jamais d'indisponibilité.
+// Une requête. Le retard est seulement signalé : jamais d'indisponibilité. Rien n'est lu dans les trois heures qui suivent la relève
+// aux horaires du centre ; la relève de l'année (ses horaires) est vérifiée sur la lecture, sans relire : chaque engin vient avec
+// sa dernière relève validée.
 export async function prisesEnRetard(base: Base, maintenant: string, reglage: Reglage): Promise<{ equipeId: number | null; engins: string[] } | null> {
-	const releve = releveDe(maintenant, reglage);
-	if (maintenant.slice(0, 16) < decaler(releve, RETARD_MIN)) return null;
-	const [engins, annees, changees, equipes] = await base.batch([
+	const prevue = releveDe(maintenant, reglage);
+	if (maintenant.slice(0, 16) < decaler(prevue, RETARD_MIN)) return null;
+	const [tous, annees, changees, equipes] = await base.batch([
 		base
-			.select({ nom: engin.nom, ordreType: typeEngin.ordre })
+			.select({ nom: engin.nom, ordreType: typeEngin.ordre, validee: sql<string | null>`(SELECT max(${priseGarde.releve}) FROM ${priseGarde} WHERE ${priseGarde.enginId} = ${engin.id} AND ${priseGarde.etat} = 'validee')` })
 			.from(engin)
 			.innerJoin(typeEngin, eq(typeEngin.id, engin.typeId))
-			.where(and(ne(engin.situation, 'parti'), sql`NOT EXISTS (SELECT 1 FROM ${priseGarde} WHERE ${priseGarde.enginId} = ${engin.id} AND ${priseGarde.releve} = ${releve} AND ${priseGarde.etat} = 'validee')`)),
-		...lecturesEquipe(base, releve)
+			.where(ne(engin.situation, 'parti')),
+		...lecturesEquipe(base, prevue)
 	]);
+	const releve = releveDe(maintenant, reglagesDe(reglage, annees));
+	if (maintenant.slice(0, 16) < decaler(releve, RETARD_MIN)) return null;
+	const engins = tous.filter((e) => e.validee !== releve);
 	if (engins.length === 0) return null;
 	const noms = engins.sort((a, b) => a.ordreType - b.ordreType || a.nom.localeCompare(b.nom, 'fr', { numeric: true })).map((e) => e.nom);
 	return { equipeId: equipeDe(releve, annees, changees, equipes, reglage)?.id ?? null, engins: noms };
@@ -704,6 +747,7 @@ export type PriseFaite = {
 	valideeLe: string;
 	// Rouverte, pas encore revalidée : pendant sa relève, la page renvoie à la prise en cours.
 	enCours: boolean;
+	courante: boolean;
 	equipe: string | null;
 	participants: string[];
 	zones: ZoneFiche[];
@@ -714,7 +758,8 @@ export type PriseFaite = {
 };
 
 // Une prise validée, telle qu'elle a été faite : la fiche de son époque, les écarts signalés et les anomalies retrouvées.
-export async function lirePriseFaite(base: Base, acteur: Acteur, id: number): Promise<PriseFaite> {
+// `courante` : de la relève en cours (aux horaires de son année), à `maintenant`.
+export async function lirePriseFaite(base: Base, acteur: Acteur, id: number, maintenant: string, reglage: Reglage): Promise<PriseFaite> {
 	const [p] = await base.select().from(priseGarde).where(and(eq(priseGarde.id, id), faiteSql));
 	if (!p) throw new DonneeInvalide('Prise inconnue');
 	const traces = lireTraces(p.traces);
@@ -722,11 +767,12 @@ export async function lirePriseFaite(base: Base, acteur: Acteur, id: number): Pr
 	const { engin: e } = await lireEngin(base, acteur, p.enginId, valideeLe.slice(0, 10));
 	const saisie = lireSaisie(p.saisie);
 	const ids = [...saisie.participants, ...idsDesTraces(traces)];
-	const [zones, elements, liees, [eq_], gens] = await base.batch([
+	const [zones, elements, liees, [eq_], gens, annees] = await base.batch([
 		...lecturesVersion(base, sql<number>`${p.versionId}`),
 		base.select(colonnesAnomalie).from(anomalie).innerJoin(personne, eq(personne.id, anomalie.signaleePar)).where(or(eq(anomalie.priseId, id), eq(anomalie.closePriseId, id))).orderBy(asc(anomalie.id)),
 		base.select({ nom: equipe.nom }).from(equipe).where(eq(equipe.id, p.equipeId ?? 0)),
-		base.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom }).from(personne).where(inArray(personne.id, ids.length ? ids : [0]))
+		base.select({ id: personne.id, prenom: personne.prenom, nom: personne.nom }).from(personne).where(inArray(personne.id, ids.length ? ids : [0])),
+		base.select({ annee: anneePlanning.annee, horaires: anneePlanning.horaires }).from(anneePlanning)
 	]);
 	const signalees = liees.filter((a) => !saisie.retrouves.includes(a.id)).map(vueAnomalie);
 	// Un écart noté sur un élément déjà signalé et ouvert n'a pas créé d'anomalie de plus.
@@ -737,6 +783,7 @@ export async function lirePriseFaite(base: Base, acteur: Acteur, id: number): Pr
 		releve: p.releve,
 		valideeLe,
 		enCours: p.etat === 'en_cours',
+		courante: p.releve === releveDe(maintenant, reglagesDe(reglage, annees)),
 		equipe: eq_?.nom ?? null,
 		participants: saisie.participants.map((pid) => nomComplet(gens.find((g) => g.id === pid))),
 		zones: zonesDe(zones, elements),

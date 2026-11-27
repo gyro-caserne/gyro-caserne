@@ -8,7 +8,7 @@ import { DonneeInvalide } from '../erreurs.ts';
 import { STATUTS_AVEC_ACCES } from '../listes.ts';
 import { affectationEquipe, anneePlanning, aptitude, aptitudeAgent, manoeuvre, personne, semaineChangee } from '../schema.ts';
 import { equipeLe, exigerAnnee, exigerGestion, historiqueDesFetes, journalPlanning, lectures, ordrePropose, semainesCalculees, vueManoeuvre, type Convoques } from './annee.ts';
-import { calculerAnnee, momentsDesFetes, rangDuJour, rangsDuTour, type Reglage, type SemaineCalculee } from './calendrier.ts';
+import { calculerAnnee, reglagesDe, momentsDesFetes, rangDuJour, rangsDuTour, type Reglage, type SemaineCalculee } from './calendrier.ts';
 
 // « Partir d'une proposition » : une année sans roulement, pré-remplie d'après la précédente. Rien n'est écrit avant d'accepter.
 
@@ -151,15 +151,16 @@ async function calculer(base: Base, annee: number, maintenant: string, reglage: 
 	if (ids.length < 2) throw new DonneeInvalide('Au moins deux équipes actives pour proposer un roulement.');
 
 	const lignePrecedente = annees.find((a) => a.annee === annee - 1 && a.ordre !== '[]');
-	const semainesPrecedentes = semainesCalculees(annee - 1, lignePrecedente?.ordre, changees, reglage);
+	const reglages = reglagesDe(reglage, annees);
+	const semainesPrecedentes = semainesCalculees(annee - 1, lignePrecedente?.ordre, changees, reglages);
 	const ordre = lignePrecedente ? ordreQuiContinue(JSON.parse(lignePrecedente.ordre) as number[], semainesPrecedentes.length, semainesPrecedentes.at(-1)!.equipeId, ids) : ordrePropose(annee, reglage, equipes);
 
 	// Les fêtes : l'équipe d'astreinte à chaque garde, puis le réglage d'après le tour.
-	const semaines = calculerAnnee(annee, reglage, ordre, new Map());
+	const semaines = calculerAnnee(annee, reglages(annee), ordre, new Map(), undefined, reglages(annee + 1));
 	const moments = momentsDesFetes(annee);
 	const dansLaSemaine = (moment: string) => (s: SemaineCalculee) => s.periodes.some((p) => p.debut <= moment && moment < p.fin);
 	const i = { noel: semaines.findIndex(dansLaSemaine(moments.noel)), nouvelAn: semaines.findIndex(dansLaSemaine(moments.nouvelAn)) };
-	const historique = historiqueDesFetes(annee, annees, changees, saisies, reglage);
+	const historique = historiqueDesFetes(annee, annees, changees, saisies, reglages);
 	const rangs = { noel: rangsDuTour(historique, 'noel', ids, annee), nouvelAn: rangsDuTour(historique, 'nouvel_an', ids, annee) };
 	const depart = semaines.map((s) => s.equipeId);
 	// Une semaine commencée (année en cours) ne change plus.
@@ -200,7 +201,9 @@ async function calculer(base: Base, annee: number, maintenant: string, reglage: 
 		fetes: { noel, nouvelAn, compromis: !noel.dansLeTour || !nouvelAn.dansLeTour, memeSemaine: i.noel >= 0 && i.noel === i.nouvelAn, deSuite: [...new Set(regle.filter((id, j) => id === regle[j + 1] && depart[j] !== depart[j + 1]))] },
 		...reprise,
 		vacances: vacances.filter((v) => v.debut.startsWith(`${annee}-`)).length,
-		equipes: etat
+		equipes: etat,
+		// Les horaires déjà réglés pour l'année (sa ligne sans roulement) : l'acceptation les garde.
+		horaires: annees.find((a) => a.annee === annee)?.horaires ?? null
 	};
 }
 
@@ -221,7 +224,7 @@ export async function accepterProposition(base: Base, acteur: Acteur, annee: num
 			base.delete(anneePlanning).where(and(eq(anneePlanning.annee, annee), eq(anneePlanning.ordre, '[]'))),
 			base.delete(semaineChangee).where(and(gte(semaineChangee.debut, `${annee}-01-01`), lte(semaineChangee.debut, `${annee}-12-31`))),
 			// Une insertion simple : si une autre acceptation est passée entre-temps, tout le bloc échoue.
-			base.insert(anneePlanning).values({ annee, ordre: JSON.stringify(p.ordre) }),
+			base.insert(anneePlanning).values({ annee, ordre: JSON.stringify(p.ordre), horaires: p.horaires }),
 			journalPlanning(base, acteur, 'accepter_proposition', { annee, ordre: p.ordre, semaines: p.changees.length, manoeuvres: p.manoeuvres.length }, maintenant),
 			...p.changees.map((c) => base.insert(semaineChangee).values({ debut: c.debut, equipeId: c.apres })),
 			...p.manoeuvres.map((m) => base.insert(manoeuvre).values({ debut: m.debut, fin: m.fin, theme: m.theme, lieu: m.lieu, convoques: JSON.stringify(m.convoques), petitDejeuner: m.petitDejeuner ? 1 : 0 }))

@@ -11,7 +11,7 @@ import { ligneJournal } from '../journal.ts';
 import { nomActeur } from '../actions/personnes.ts';
 import { anneePlanning, manoeuvre, publication, semaineChangee, vacancesScolaires } from '../schema.ts';
 import { avisSemainesChangees, colonnesExistante, ecrituresModification, ecrituresRetrait, exigerAVenir, preparerAnnee, type Preparation } from './annee.ts';
-import { calculerAnnee, fetes, type Fete, type Reglage } from './calendrier.ts';
+import { calculerAnnee, fetes, reglageDeLAnnee, type Fete, type Reglage } from './calendrier.ts';
 import { analyserFeuilleEte, feuilleEte } from './repartition.ts';
 
 // Le fichier du planning : l'année dans un classeur (Semaines, Manœuvres, Vacances scolaires), relu avec un aperçu avant d'être appliqué.
@@ -44,8 +44,14 @@ export type ApercuPlanning = {
 
 const nomEquipe = (p: Preparation, id: number | null) => (id === null ? null : (p.equipes.find((e) => e.id === id)?.nom ?? 'Équipe archivée'));
 
+// Les réglages de l'année préparée et de la suivante (leurs horaires).
+const reglagesDeP = (p: Preparation, reglage: Reglage) => ({ annee: reglageDeLAnnee(reglage, p.horaires.propres ? JSON.stringify(p.horaires.valeur) : null), suivante: reglageDeLAnnee(reglage, p.horaires.suivante) });
 // Les semaines de l'année : celles enregistrées, ou le roulement proposé pour une année vide.
-const semainesDe = (p: Preparation, reglage: Reglage) => (p.semaines.length ? p.semaines : calculerAnnee(p.annee, reglage, p.ordrePropose, new Map()));
+// La fin d'une semaine : le jour où finit sa dernière période (la dernière de l'année peut courir jusqu'à la relève suivante).
+const semainesDe = (p: Preparation, reglage: Reglage) => {
+	const r = reglagesDeP(p, reglage);
+	return p.semaines.length ? p.semaines : calculerAnnee(p.annee, r.annee, p.ordrePropose, new Map(), undefined, r.suivante);
+};
 
 // Les équipes actives (celles de l'ordre proposé), numérotées dans l'ordre du centre : « 1, 3 ».
 const actives = (p: Preparation) => p.equipes.filter((e) => p.ordrePropose.includes(e.id));
@@ -55,18 +61,13 @@ export async function donneesFichierPlanning(base: Base, acteur: Acteur, annee: 
 	const ete = await feuilleEte(base, annee, maintenant.slice(0, 10), reglage);
 	const equipes = actives(p);
 	const numero = (id: number) => String(equipes.findIndex((e) => e.id === id) + 1);
-	const fin = (debut: string) => {
-		const d = new Date(`${debut}T00:00:00Z`);
-		d.setUTCDate(d.getUTCDate() + 7);
-		return d.toISOString().slice(0, 10);
-	};
 	return {
 		annee,
 		feuilles: [
 			{
 				nom: FEUILLES.semaines,
 				entetes: [...ENTETES_PLANNING.semaines],
-				lignes: semainesDe(p, reglage).map((s) => [`S${s.numero}`, dateFichier(s.debut), dateFichier(fin(s.debut)), nomEquipe(p, s.equipeId) ?? '']),
+				lignes: semainesDe(p, reglage).map((s) => [`S${s.numero}`, dateFichier(s.debut), dateFichier(s.periodes.at(-1)?.fin.slice(0, 10) ?? s.debut), nomEquipe(p, s.equipeId) ?? '']),
 				listes: { Équipe: equipes.map((e) => e.nom) }
 			},
 			{
@@ -133,7 +134,8 @@ async function analyser(base: Base, acteur: Acteur, annee: number, lu: FichierPl
 	const ordre = p.ordre.length ? p.ordre : p.ordrePropose;
 	const changees = new Map(semaines.filter((s) => s.changee).map((s) => [s.debut, s.equipeId]));
 	for (const [debut, id] of choix) changees.set(debut, id);
-	const nouvelles = calculerAnnee(annee, reglage, ordre, changees);
+	const r = reglagesDeP(p, reglage);
+	const nouvelles = calculerAnnee(annee, r.annee, ordre, changees, undefined, r.suivante);
 	const semainesChangees = nouvelles
 		.map((s, i) => ({ s, avant: semaines[i]!.equipeId }))
 		.filter(({ s, avant }) => s.equipeId !== avant)

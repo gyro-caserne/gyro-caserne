@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { dePlage } from '@gyro-caserne/socle';
+	import { dePlage, texteDurees } from '@gyro-caserne/socle';
 	import { heure } from '#lib/murs/quand.ts';
 	import { jourLong } from '#lib/planning/dates.ts';
 	import Bouton from '#lib/ui/Bouton.svelte';
@@ -17,13 +17,15 @@
 	const options = $derived(data.debuts.map((d) => ({ valeur: d.debut, libelle: libelle(d.debut) })));
 	// Le premier début proposé, choisi d'office ; ensuite, celui de l'agent.
 	let debut = $state(untrack(() => data.debuts[0]?.debut ?? ''));
-	let duree = $state('2');
-	const max = $derived(data.debuts.find((d) => d.debut === debut)?.max ?? 2);
-	// Trois heures ne tiennent pas avant la fin de l'astreinte : on revient à deux.
+	// Les durées du centre qui tiennent à ce début ; la plus courte d'office.
+	const possibles = $derived(data.debuts.find((d) => d.debut === debut)?.durees ?? data.durees.slice(0, 1));
+	let duree = $state(untrack(() => String(data.debuts[0]?.durees[0] ?? data.durees[0] ?? 2)));
+	// Une durée qui ne tient plus à ce début : on revient à la plus courte.
 	$effect(() => {
-		if (max === 2) duree = '2';
+		if (!possibles.includes(Number(duree))) duree = String(possibles[0] ?? data.durees[0]);
 	});
-	const durees = $derived([{ valeur: '2', libelle: '2 h' }, ...(max === 3 ? [{ valeur: '3', libelle: '3 h' }] : [])]);
+	const durees = $derived(possibles.map((h) => ({ valeur: String(h), libelle: `${h} h` })));
+	const plusCourte = $derived(data.durees[0] ?? 2);
 	const fin = $derived(debut ? new Date(Date.parse(`${debut}:00Z`) + Number(duree) * 3_600_000).toISOString().slice(0, 16) : '');
 	const recap = $derived(debut ? `Remplacement ${dePlage({ debut, fin })}${debut.slice(0, 10) === jour ? '' : `, ${jourLong(debut)}`}, ouvert à tous les disponibles.` : '');
 </script>
@@ -33,10 +35,10 @@
 </svelte:head>
 
 <div class="page">
-	<EnTetePage titre="Quelques heures" phrase="2 ou 3 h de votre astreinte du jour. Le premier collègue qui accepte vous remplace." retour={{ href: '/remplacements/demander', libelle: 'Me faire remplacer' }} />
+	<EnTetePage titre="Quelques heures" phrase="{texteDurees(data.durees)} de votre astreinte du jour. Le premier collègue qui accepte vous remplace." retour={{ href: '/remplacements/demander', libelle: 'Me faire remplacer' }} />
 
 	{#if data.debuts.length === 0}
-		<Vide titre="Aucune plage de 2 h libre aujourd’hui." texte="Quelques heures se demandent le jour de votre astreinte, au moins 2 h avant sa fin, sur des heures pas encore demandées." action={{ href: '/remplacements/demander?gardes', libelle: 'Choisir des jours' }} gyro={false} />
+		<Vide titre="Aucune plage de {plusCourte} h libre aujourd’hui." texte="Quelques heures se demandent le jour de votre astreinte, au moins {plusCourte} h avant sa fin, sur des heures pas encore demandées." action={{ href: '/remplacements/demander?gardes', libelle: 'Choisir des jours' }} gyro={false} />
 	{:else}
 		<p class="erreur" class:masque={!form?.message} role="alert">{form?.message ?? ''}</p>
 		<form method="POST" class="carte">

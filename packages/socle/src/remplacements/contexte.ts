@@ -4,12 +4,13 @@ import { ajouterJours, existeAParis } from '../dates.ts';
 import { DonneeInvalide } from '../erreurs.ts';
 import { STATUTS_AVEC_ACCES } from '../listes.ts';
 import { lecturesAgents } from '../murs.ts';
-import { appliquerFetes, type FeteCentre, type Periode, type Reglage, type SemaineCalculee } from '../planning/calendrier.ts';
+import { appliquerFetes, reglagesDe, type FeteCentre, type Periode, type Reglage, type SemaineCalculee } from '../planning/calendrier.ts';
 import { equipeLe, semainesCalculees } from '../planning/annee.ts';
 import { validesLe } from '../aptitudes.ts';
 import { affectationEquipe, anneePlanning, aptitude, aptitudeAgent, attribution, demandeRemplacement, equipe, personne, responsabilite, semaineChangee, vacancesAgent } from '../schema.ts';
 import { enVacances, heuresDe, lirePlage, requeteFetes, requetePlagesPubliees } from '../planning/plages.ts';
 import { chevauche, tranchesDe } from './tranches.ts';
+import { dureesDe, requeteDureesCourt } from './court.ts';
 
 // Ce qu'il faut savoir pour décider d'une demande, lu d'un seul bloc : les semaines publiées, les équipes de chacun,
 // les demandes en cours, les agents, les aptitudes et les chefs. Le reste est calculé ici, sans requête.
@@ -20,9 +21,10 @@ const SEMAINES_PROPOSEES = 12;
 
 export const periodesDe = (json: string | null): Periode[] => (json ? (JSON.parse(json) as Periode[]) : []);
 
-export async function lireContexte(base: Base, maintenant: string, reglage: Reglage) {
+// `court` : avec les durées du remplacement court du centre (dans le même batch).
+export async function lireContexte(base: Base, maintenant: string, reglage: Reglage, court = false) {
 	const aujourdhui = maintenant.slice(0, 10);
-	const [annees, changees, affectations, demandes, agents, aptitudes, chefs, equipes, plages, vacances, fetes] = await base.batch([
+	const [annees, changees, affectations, demandes, agents, aptitudes, chefs, equipes, plages, vacances, fetes, lignesCourt = []] = await base.batch([
 		base.select().from(anneePlanning),
 		base.select().from(semaineChangee),
 		base.select({ personneId: affectationEquipe.personneId, equipeId: affectationEquipe.equipeId, debut: affectationEquipe.debut, fin: affectationEquipe.fin }).from(affectationEquipe),
@@ -43,7 +45,8 @@ export async function lireContexte(base: Base, maintenant: string, reglage: Regl
 		requetePlagesPubliees(base, ajouterJours(aujourdhui, -8), '9999-12-31'),
 		base.select({ personneId: vacancesAgent.personneId, debut: vacancesAgent.debut, fin: vacancesAgent.fin }).from(vacancesAgent).where(gte(vacancesAgent.fin, ajouterJours(aujourdhui, -8))),
 		// Les fêtes du centre de la fenêtre des remplacements (quelques lignes).
-		requeteFetes(base, ajouterJours(aujourdhui, -15), ajouterJours(aujourdhui, SEMAINES_PROPOSEES * 7 + 8))
+		requeteFetes(base, ajouterJours(aujourdhui, -15), ajouterJours(aujourdhui, SEMAINES_PROPOSEES * 7 + 8)),
+		...(court ? [requeteDureesCourt(base)] : ([] as unknown as [ReturnType<typeof requeteDureesCourt>]))
 	]);
 	// Les semaines publiées utiles, calculées seulement si on s'en sert (l'échange de manœuvre ou la liste des demandes, non) :
 	// celles qui commencent dans la fenêtre des remplacements, de deux semaines avant aujourd'hui à la fin des douze semaines proposées.
@@ -54,13 +57,16 @@ export async function lireContexte(base: Base, maintenant: string, reglage: Regl
 	// Seules ces semaines-là sont calculées, pas les années entières : une quinzaine au lieu de 52 à 104. Les autres années ne sont pas lues.
 	const utiles = annees.filter((a) => a.publieeLe !== null && a.annee >= Number(du.slice(0, 4)) && a.annee <= Number(au.slice(0, 4))).sort((a, b) => a.annee - b.annee);
 	const fenetre = { debut: du, fin: ajouterJours(au, 1) };
+	// Le réglage de chaque année, ses horaires compris.
+	const reglages = reglagesDe(reglage, annees);
 	return {
 		maintenant: maintenant.slice(0, 16),
-		reglage,
+		reglages,
+		durees: dureesDe(lignesCourt),
 		// Les fêtes, appliquées au calcul des semaines (à changer avant le premier calcul pour voir l'effet d'une fête : fetes.ts).
 		fetes: fetes as FeteCentre[],
 		get semaines(): SemaineCalculee[] {
-			semaines ??= appliquerFetes(utiles.flatMap((a) => semainesCalculees(a.annee, a.ordre, changees, reglage, fenetre)), this.fetes);
+			semaines ??= appliquerFetes(utiles.flatMap((a) => semainesCalculees(a.annee, a.ordre, changees, reglages, fenetre)), this.fetes);
 			return semaines;
 		},
 		affectations,
@@ -214,7 +220,7 @@ export function mesTranches(ctx: Contexte, id: number): { semaine: string; equip
 		.map((s) => ({
 			semaine: s.debut,
 			equipeId: s.equipeId,
-			tranches: tranchesDe(s.periodes, ctx.reglage)
+			tranches: tranchesDe(s.periodes, ctx.reglages(Number(s.debut.slice(0, 4))))
 				.filter((t) => t.debut > ctx.maintenant)
 				.map((t) => ({ ...t, prise: !sansEngagement(ctx, id, [t]) }))
 		}))
@@ -226,7 +232,7 @@ export function tranchesDuJour(ctx: Contexte, id: number): Periode[] {
 	const demain = `${ajouterJours(ctx.maintenant.slice(0, 10), 1)}T00:00`;
 	return astreintesDe(ctx, id)
 		.filter((s) => s.periodes.at(-1)!.fin > ctx.maintenant && s.periodes[0]!.debut < demain)
-		.flatMap((s) => tranchesDe(s.periodes, ctx.reglage))
+		.flatMap((s) => tranchesDe(s.periodes, ctx.reglages(Number(s.debut.slice(0, 4)))))
 		.filter((t) => t.fin > ctx.maintenant && t.debut < demain);
 }
 
@@ -234,17 +240,19 @@ const QUART = 15 * 60_000;
 const decaler = (moment: string, ms: number) => new Date(Date.parse(`${moment}:00Z`) + ms).toISOString().slice(0, 16);
 
 // Les débuts possibles d'un remplacement court, au quart d'heure : à venir, dans une tranche du jour, libres de toute demande.
-// `max` : 3 si trois heures tiennent, sinon 2.
-export function debutsCourts(ctx: Contexte, id: number): { debut: string; max: 2 | 3 }[] {
+// `durees` : celles du centre qui y tiennent et sont libres (le contexte lu avec `court`).
+export function debutsCourts(ctx: Contexte, id: number): { debut: string; durees: number[] }[] {
 	const libre = (debut: string, heures: number) => sansEngagement(ctx, id, [{ debut, fin: decaler(debut, heures * 3_600_000) }]);
 	// Le premier quart d'heure qui suit maintenant.
 	const premier = new Date(Math.floor(Date.parse(`${ctx.maintenant}:00Z`) / QUART) * QUART + QUART).toISOString().slice(0, 16);
-	const debuts: { debut: string; max: 2 | 3 }[] = [];
+	const plusCourte = Math.min(...ctx.durees);
+	const debuts: { debut: string; durees: number[] }[] = [];
 	for (const t of tranchesDuJour(ctx, id)) {
 		const depart = new Date(Math.ceil(Date.parse(`${t.debut}:00Z`) / QUART) * QUART).toISOString().slice(0, 16);
-		for (let d = depart > premier ? depart : premier; decaler(d, 2 * 3_600_000) <= t.fin; d = decaler(d, QUART)) {
-			if (!existeAParis(d) || !libre(d, 2)) continue;
-			debuts.push({ debut: d, max: decaler(d, 3 * 3_600_000) <= t.fin && libre(d, 3) ? 3 : 2 });
+		for (let d = depart > premier ? depart : premier; decaler(d, plusCourte * 3_600_000) <= t.fin; d = decaler(d, QUART)) {
+			if (!existeAParis(d)) continue;
+			const durees = ctx.durees.filter((h) => decaler(d, h * 3_600_000) <= t.fin && libre(d, h));
+			if (durees.length) debuts.push({ debut: d, durees });
 		}
 	}
 	return debuts;
@@ -259,7 +267,7 @@ export function bandesDe(ctx: Contexte, id: number, pour: number | null = null):
 	const etat = (t: Periode): EtatTranche => (t.debut <= ctx.maintenant ? 'passee' : !sansEngagement(ctx, id, [t]) ? 'prise' : pour !== null && !disponible(ctx, pour, [t]) ? 'occupe' : 'libre');
 	return astreintesDe(ctx, id)
 		.filter((s) => s.periodes.at(-1)!.fin > ctx.maintenant && s.periodes[0]!.debut < limite)
-		.map((s) => ({ semaine: s.debut, equipeId: s.equipeId, tranches: tranchesDe(s.periodes, ctx.reglage).map((t) => ({ ...t, etat: etat(t) })) }))
+		.map((s) => ({ semaine: s.debut, equipeId: s.equipeId, tranches: tranchesDe(s.periodes, ctx.reglages(Number(s.debut.slice(0, 4)))).map((t) => ({ ...t, etat: etat(t) })) }))
 		.filter((s) => s.tranches.some((t) => t.etat !== 'passee'));
 }
 

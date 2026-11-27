@@ -10,9 +10,10 @@ import { debutsCourts, disponibles, lireContexte } from '../src/remplacements/co
 import { demandeVue, nombreRemplacementsAValider, pourDemander, remplacementsAValider, remplacementsDe } from '../src/remplacements/lectures.ts';
 import { enTeteDe } from '../src/notifications.ts';
 import { accepterDemande, annulerDemande, demanderRemplacement, demanderRemplacementCourt, desister, refuserApresCoup } from '../src/remplacements/demandes.ts';
+import { lireDureesCourt, reglerDureesCourt } from '../src/remplacements/court.ts';
 import { remplacementsDuMoment } from '../src/remplacements/moment.ts';
 import { effectifs, requeteConclues } from '../src/remplacements/effectifs.ts';
-import { abonnementPush, affectationEquipe, aptitude, aptitudeAgent, attribution, avisRemplacement, demandeRemplacement, destinataireRemplacement, envoiPush, equipe, personne, profil, responsabilite, semaineChangee } from '../src/schema.ts';
+import { abonnementPush, affectationEquipe, aptitude, journal, aptitudeAgent, attribution, avisRemplacement, demandeRemplacement, destinataireRemplacement, envoiPush, equipe, personne, profil, responsabilite, semaineChangee } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
 const reglage = centreExemple.astreinte;
@@ -195,21 +196,21 @@ describe('remplacement court : délais', () => {
 });
 
 describe('remplacement court : pour les écrans', () => {
-	it('les débuts possibles : au quart d’heure, à venir, dans la tranche, 3 h seulement si elles tiennent ; rien sans astreinte du jour', async () => {
+	it('les débuts possibles : au quart d’heure, à venir, dans la tranche, 3 h seulement si elles tiennent (durées du centre par défaut) ; rien sans astreinte du jour', async () => {
 		const { base, alice, n } = await jeu();
 		const ctx = await lireContexte(base, maintenant, reglage);
 		const debuts = debutsCourts(ctx, n.alice);
-		expect(debuts[0]).toEqual({ debut: '2026-11-09T19:15', max: 3 });
-		expect(debuts.at(-1)).toEqual({ debut: '2026-11-10T04:00', max: 2 });
-		expect(debuts.find((x) => x.debut === '2026-11-10T03:00')).toEqual({ debut: '2026-11-10T03:00', max: 3 });
-		expect(debuts.find((x) => x.debut === '2026-11-10T03:15')).toEqual({ debut: '2026-11-10T03:15', max: 2 });
+		expect(debuts[0]).toEqual({ debut: '2026-11-09T19:15', durees: [2, 3] });
+		expect(debuts.at(-1)).toEqual({ debut: '2026-11-10T04:00', durees: [2] });
+		expect(debuts.find((x) => x.debut === '2026-11-10T03:00')).toEqual({ debut: '2026-11-10T03:00', durees: [2, 3] });
+		expect(debuts.find((x) => x.debut === '2026-11-10T03:15')).toEqual({ debut: '2026-11-10T03:15', durees: [2] });
 		expect(debutsCourts(ctx, n.bruno)).toEqual([]);
 		expect((await pourDemander(base, alice, maintenant, reglage)).court).toBe(true);
 		// Une plage déjà demandée n'est plus proposée, ni ce qui la chevauche.
 		await demanderRemplacementCourt(base, alice, { debut: '2026-11-09T20:00', duree: 2 }, maintenant, reglage);
 		const apres = debutsCourts(await lireContexte(base, maintenant, reglage), n.alice);
 		expect(apres.find((x) => x.debut === '2026-11-09T19:15')).toBeUndefined();
-		expect(apres.find((x) => x.debut === '2026-11-09T22:00')).toEqual({ debut: '2026-11-09T22:00', max: 3 });
+		expect(apres.find((x) => x.debut === '2026-11-09T22:00')).toEqual({ debut: '2026-11-09T22:00', durees: [2, 3] });
 	});
 
 	it('la page de la demande : court, et le refus offert au demandeur, au chef seulement si une aptitude manque', async () => {
@@ -333,5 +334,42 @@ describe('remplacement court : suites de la revue du coordinateur', () => {
 		expect(debuts).toContain('2027-03-28T03:00');
 		for (const h of ['02:00', '02:15', '02:30', '02:45']) expect(debuts).not.toContain(`2027-03-28T${h}`);
 		await expect(demanderRemplacementCourt(base, alice, { debut: '2027-03-28T02:15', duree: 2 }, veille, reglage)).rejects.toThrow(new DonneeInvalide('Cette heure n’existe pas cette nuit-là (passage à l’heure d’été)'));
+	});
+});
+
+describe('remplacement court : les durées du centre', () => {
+	it('par défaut 2 et 3 h ; le chef de centre les règle, rangées et sans doublon, au journal', async () => {
+		const { base, chef } = await jeu();
+		expect(await lireDureesCourt(base)).toEqual([2, 3]);
+		await reglerDureesCourt(base, chef, [4, 1, 1], maintenant);
+		expect(await lireDureesCourt(base)).toEqual([1, 4]);
+		expect(await base.select().from(journal).where(eq(journal.action, 'regler_court'))).toHaveLength(1);
+	});
+
+	it('refus : sans le droit de gérer les listes, aucune durée, une durée hors de 1 à 4 h', async () => {
+		const { base, chef, alice } = await jeu();
+		await expect(reglerDureesCourt(base, alice, [2], maintenant)).rejects.toThrow(RefusDroit);
+		await expect(reglerDureesCourt(base, chef, [], maintenant)).rejects.toThrow(new DonneeInvalide('Au moins une durée'));
+		await expect(reglerDureesCourt(base, chef, [5], maintenant)).rejects.toThrow(new DonneeInvalide('Durée de 1 à 4 h'));
+		await expect(reglerDureesCourt(base, chef, [1.5], maintenant)).rejects.toThrow(new DonneeInvalide('Durée de 1 à 4 h'));
+	});
+
+	it('1 et 4 h : les débuts et la demande suivent ; une demande en cours ne change pas', async () => {
+		const { base, alice, chef, n, demande } = await jeu();
+		const avant = await demanderRemplacementCourt(base, alice, { debut: '2026-11-09T23:00', duree: 3 }, maintenant, reglage);
+		await reglerDureesCourt(base, chef, [1, 4], maintenant);
+		const debuts = debutsCourts(await lireContexte(base, maintenant, reglage, true), n.alice);
+		expect(debuts[0]).toEqual({ debut: '2026-11-09T19:15', durees: [1] });
+		expect(debuts.find((x) => x.debut === '2026-11-09T22:00')).toEqual({ debut: '2026-11-09T22:00', durees: [1] });
+		await expect(demanderRemplacementCourt(base, alice, { debut: '2026-11-09T19:15', duree: 2 }, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Durée de 1 h ou 4 h'));
+		await expect(demanderRemplacementCourt(base, alice, { debut: '2026-11-09T19:15', duree: 4 }, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Période déjà dans une demande'));
+		await demanderRemplacementCourt(base, alice, { debut: '2026-11-09T19:15', duree: 1 }, maintenant, reglage);
+		expect(await demande(avant)).toMatchObject({ etat: 'attente', periodes: JSON.stringify([{ debut: '2026-11-09T23:00', fin: '2026-11-10T02:00' }]) });
+	});
+
+	it('une seule durée : le texte du refus la dit seule', async () => {
+		const { base, alice, chef } = await jeu();
+		await reglerDureesCourt(base, chef, [2], maintenant);
+		await expect(demanderRemplacementCourt(base, alice, { debut: '2026-11-09T20:00', duree: 3 }, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Durée de 2 h'));
 	});
 });
