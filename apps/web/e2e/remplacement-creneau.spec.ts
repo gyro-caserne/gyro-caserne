@@ -90,7 +90,9 @@ test.describe.serial('remplacement sur un créneau', () => {
 		await page.getByRole('button', { name: 'Continuer', exact: true }).click();
 		await expect(page.getByRole('heading', { level: 2, name: 'À qui ?', exact: true })).toBeVisible();
 		await expect(page.getByText(/^Votre créneau, .*de 20 h 10 à 22 h 40\.$/)).toBeVisible();
-		await page.getByLabel(/^Tout le monde/).check();
+		// « Tout le monde » est choisi d'office, comme pour les gardes. Le libellé enveloppe le bouton radio : sans ancre « ^ »,
+		// comme dans remplacements.spec.ts.
+		await expect(page.getByLabel(/Tout le monde/)).toBeChecked();
 		await page.getByRole('button', { name: 'Continuer', exact: true }).click();
 		await expect(page.getByText(/^Vous demandez à être remplacé .*de 20 h 10 à 22 h 40\.$/)).toBeVisible();
 		await sansViolation(page);
