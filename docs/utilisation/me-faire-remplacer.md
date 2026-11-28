@@ -11,4 +11,6 @@ Une fois conclu, mettez à jour votre disponibilité dans l'appli du SDIS : c'es
 
 Pour échanger avec un collègue : « Me faire remplacer » → « Échanger avec un collègue » : votre période, le collègue, sa période, vérifier.
 
+Pour quelques heures d'une astreinte à venir (« mardi de 20 h 10 à 22 h 40 ») : « Me faire remplacer » → « Un créneau » (voir [Comment me faire remplacer sur un créneau ?](me-faire-remplacer-sur-un-creneau.md)).
+
 Pour quelques heures seulement, le jour de votre astreinte : « Me faire remplacer » → « Quelques heures aujourd'hui » (voir [Comment me faire remplacer quelques heures ?](me-faire-remplacer-quelques-heures.md)).

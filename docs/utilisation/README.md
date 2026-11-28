@@ -57,6 +57,7 @@ Format d'une page :
 - [Comment régler les étapes de mon rôle ?](regler-les-etapes-de-mon-role.md)
 - [Comment me faire remplacer ?](me-faire-remplacer.md)
 - [Comment me faire remplacer quelques heures ?](me-faire-remplacer-quelques-heures.md)
+- [Comment me faire remplacer sur un créneau ?](me-faire-remplacer-sur-un-creneau.md)
 - [Comment accepter ou refuser un remplacement ?](repondre-a-une-demande-de-remplacement.md)
 - [Comment valider un remplacement ?](valider-un-remplacement.md)
 - [Comment échanger ma place à une manœuvre ?](echanger-une-manoeuvre.md)
