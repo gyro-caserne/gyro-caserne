@@ -773,9 +773,39 @@ describe('mon profil : date d’engagement', () => {
 		await modifierFiche(base, superAdmin, id, { engagementSpv: '2010-01-01' }, aujourdhui, []);
 		await expect(modifierMonProfil(base, moi, { engagementSpv: '2014-03-03', surnom: 'Bru' }, midi)).rejects.toThrow(new DonneeInvalide('Date d’engagement déjà renseignée'));
 		await modifierMonProfil(base, moi, { engagementSpv: '', surnom: 'Bru' }, midi);
+		// La même date que la fiche (envoi répété) : ignorée, sans erreur.
+		await modifierMonProfil(base, moi, { engagementSpv: '2010-01-01', telephone: '0600000000' }, midi);
 		const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
-		expect(fiche).toMatchObject({ engagementSpv: '2010-01-01', surnom: 'Bru' });
+		expect(fiche).toMatchObject({ engagementSpv: '2010-01-01', surnom: 'Bru', telephone: '0600000000' });
 		expect(await avis(base)).toEqual([]);
+	});
+
+	it('deux envois croisés : la date déjà écrite reste, personne n’est prévenu', async () => {
+		const { base, id, moi } = await avecDirection();
+		// Le chef enregistre une date entre la lecture de la fiche et l'écriture de l'agent.
+		const croise = new Proxy(base, {
+			get(cible, cle) {
+				if (cle === 'batch') return async (requetes: Parameters<typeof base.batch>[0]) => {
+					await cible.update(personne).set({ engagementSpv: '2010-01-01' }).where(eq(personne.id, id));
+					return cible.batch(requetes);
+				};
+				const valeur = Reflect.get(cible, cle);
+				return typeof valeur === 'function' ? valeur.bind(cible) : valeur;
+			}
+		});
+		await modifierMonProfil(croise, moi, { engagementSpv: '2014-03-03' }, midi);
+		const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
+		expect(fiche!.engagementSpv).toBe('2010-01-01');
+		expect(await avis(base)).toEqual([]);
+	});
+
+	it('vidée par le chef puis renseignée de nouveau : le chef et l’adjoint sont prévenus de nouveau', async () => {
+		const { base, id, moi } = await avecDirection();
+		await modifierMonProfil(base, moi, { engagementSpv: '2014-03-03' }, midi);
+		await modifierFiche(base, superAdmin, id, { engagementSpv: null }, aujourdhui, []);
+		await modifierMonProfil(base, moi, { engagementSpv: '2014-03-04' }, `${aujourdhui}T13:00`);
+		expect((await avis(base)).map((l) => l.texte)).toEqual(expect.arrayContaining(['Bruno Petit a renseigné le 4 mars 2014 comme date d’engagement.']));
+		expect(await avis(base)).toHaveLength(4);
 	});
 
 	it('vide et laissée vide : rien d’écrit, personne de prévenu', async () => {

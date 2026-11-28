@@ -423,7 +423,7 @@ function avisEngagement(base: Base, agent: { id: number; prenom: string; nom: st
 				lueLe: sql<string | null>`null`.as('lue_le')
 			})
 			.from(personne)
-			.where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), estChefOuAdjointSql(sql`"personne"."id"`, maintenant.slice(0, 10)), ne(personne.id, agent.id)))
+			.where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), estChefOuAdjointSql(sql`"personne"."id"`, maintenant.slice(0, 10)), ne(personne.id, agent.id), sql`changes() = 1`))
 	);
 }
 
@@ -473,23 +473,25 @@ export async function modifierMonProfil(base: Base, acteur: Acteur, champs: Cham
 	const engagement = champs.engagementSpv;
 	if (engagement !== undefined && engagement !== null && engagement !== '') {
 		if (ligne.typePersonne === 'exterieur') throw new DonneeInvalide('Une personne extérieure n’a pas de date d’engagement');
-		if (fiche.engagementSpv !== null) throw new DonneeInvalide('Date d’engagement déjà renseignée');
-		nouveaux.engagementSpv = engagementPlausible(engagement, nouveaux.naissance !== undefined ? nouveaux.naissance : fiche.naissance, aujourdhui);
+		// La même date renvoyée (double appui) ne change rien ; une autre est refusée.
+		if (fiche.engagementSpv !== null && engagement !== fiche.engagementSpv) throw new DonneeInvalide('Date d’engagement déjà renseignée');
+		if (fiche.engagementSpv === null) nouveaux.engagementSpv = engagementPlausible(engagement, nouveaux.naissance !== undefined ? nouveaux.naissance : fiche.naissance, aujourdhui);
 	}
 
 	exigerLongueurs(nouveaux);
 	const changes = Object.fromEntries(Object.entries(nouveaux).filter(([cle, valeur]) => valeur !== fiche[cle as keyof typeof fiche]));
 	if (Object.keys(changes).length === 0) return;
-	const ecritures = [
-		base.update(personne).set(changes).where(eq(personne.id, id)),
-		// Les noms des champs seulement : aucune valeur personnelle dans le journal.
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_mon_profil', cibleType: 'personne', cibleId: id, details: { champs: Object.keys(changes) } }, aujourdhui)
-	] as const;
+	// Date d'engagement : écrite seulement si elle est encore vide (deux envois croisés), et les chefs prévenus seulement si elle l'a été.
+	const engagementEcrit = typeof changes.engagementSpv === 'string' ? changes.engagementSpv : null;
+	const ecriture = base.update(personne).set(changes).where(engagementEcrit === null ? eq(personne.id, id) : and(eq(personne.id, id), isNull(personne.engagementSpv)));
 	// Anniversaire masqué ou date changée : les souhaits reçus partent avec.
 	const sansSouhaits = changes.anniversaireVisible === 0 || 'naissance' in changes;
 	await base.batch([
-		...ecritures,
-		...(sansSouhaits ? [base.delete(souhaitAnniversaire).where(eq(souhaitAnniversaire.personneId, id))] : []),
-		...(nouveaux.engagementSpv ? [avisEngagement(base, fiche, nouveaux.engagementSpv, maintenant)] : [])
+		ecriture,
+		// Juste après l'écriture : `changes()` dit si elle a eu lieu.
+		...(engagementEcrit === null ? [] : [avisEngagement(base, fiche, engagementEcrit, maintenant)]),
+		// Les noms des champs seulement : aucune valeur personnelle dans le journal.
+		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_mon_profil', cibleType: 'personne', cibleId: id, details: { champs: Object.keys(changes) } }, aujourdhui),
+		...(sansSouhaits ? [base.delete(souhaitAnniversaire).where(eq(souhaitAnniversaire.personneId, id))] : [])
 	]);
 }

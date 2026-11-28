@@ -24,7 +24,7 @@ test.describe('date d’engagement saisie par l’agent', () => {
 			INSERT INTO attribution (personne_id, responsabilite_id, perimetre_type, perimetre_id, debut, saisie_par, saisie_le) SELECT p.id, r.id, 'centre', NULL, '2026-01-01', '${MARQUE}', '2026-01-01' FROM personne p, responsabilite r WHERE p.email = 'test@exemple.fr' AND r.systeme = 'chef_centre';`);
 	});
 	test.afterAll(() => {
-		executer(`DELETE FROM attribution WHERE saisie_par = '${MARQUE}'; DELETE FROM avis_anciennete WHERE agent_id = (SELECT id FROM personne WHERE email = '${NORA}');`);
+		executer(`DELETE FROM attribution WHERE saisie_par = '${MARQUE}'; UPDATE personne SET engagement_spv = NULL WHERE email = '${NORA}'; DELETE FROM avis_anciennete WHERE agent_id = (SELECT id FROM personne WHERE email = '${NORA}');`);
 	});
 
 	test('renseignée une fois, puis en lecture ; le chef prévenu', async ({ browser }, info) => {

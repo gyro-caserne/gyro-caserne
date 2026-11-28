@@ -83,7 +83,6 @@ const CHAMP_DE_L_ERREUR: Record<string, string> = {
 	'Contact d’urgence trop long': 'contactUrgence',
 	'Date de naissance invalide': 'naissance',
 	'Date d’engagement invalide': 'engagementSpv',
-	'Date d’engagement déjà renseignée': 'engagementSpv',
 	'Statut impossible à la création': 'statut',
 	'Nom vide': 'nom',
 	'Nom invalide': 'nom',

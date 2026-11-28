@@ -5,7 +5,7 @@ import Page from './+page.svelte';
 
 const profil = { surnom: null, telephone: null, telephoneVisible: false, contactUrgence: null, naissance: '1990-05-17', anniversaireVisible: true, cochesLecture: true, engagementSpv: null, exterieur: false };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const html = (data: Record<string, unknown>) => render(Page as any, { props: { data: { profil, messagerie: true, ...data }, form: null } }).body.replace(/<!--[\s\S]*?-->/g, '');
+const html = (data: Record<string, unknown>, form: unknown = null) => render(Page as any, { props: { data: { profil, messagerie: true, ...data }, form } }).body.replace(/<!--[\s\S]*?-->/g, '');
 
 describe('page Mon profil', () => {
 	it('« Montrer quand j’ai lu les messages » : cochée selon le profil, expliquée, avec son repère', () => {
@@ -48,6 +48,13 @@ describe('page Mon profil', () => {
 		expect(page).not.toContain('name="engagementSpv"');
 		expect(page).toMatch(/<dt[^>]*>Date d’engagement SPV<\/dt>\s*<dd[^>]*>1er mars 2014<\/dd>/);
 		expect(page).toContain('Le chef de centre ou son adjoint la corrige.');
+	});
+
+	it('date d’engagement refusée car déjà renseignée : le message en tête, la date en lecture', () => {
+		const page = html({ profil: { ...profil, engagementSpv: '2014-03-03' } }, { message: 'Date d’engagement déjà renseignée', valeurs: { engagementSpv: '2015-01-01' } });
+		expect(page).toMatch(/<div role="alert"[^>]*><p class="echec[^"]*">Date d’engagement déjà renseignée<\/p>/);
+		expect(page).toMatch(/<dd[^>]*>3 mars 2014<\/dd>/);
+		expect(page).not.toContain('name="engagementSpv"');
 	});
 
 	it('personne extérieure : pas de date d’engagement', () => {

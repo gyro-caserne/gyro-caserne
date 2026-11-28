@@ -6,7 +6,7 @@ Ouvert à tout agent connecté. Le super administrateur n'a pas de fiche.
 2. Modifiez votre surnom, votre téléphone et votre contact d'urgence.
 3. Activez « Montrer mon téléphone au centre » : vos collègues le voient dans les infos d'une conversation avec vous.
 4. Inscrivez votre date de naissance, si vous le voulez (vide : effacée). Seuls le chef de centre et son adjoint la voient ; votre âge n'est jamais montré.
-5. Si votre date d'engagement SPV est vide, inscrivez-la. Le chef de centre et son adjoint en sont prévenus. Une fois enregistrée, elle se lit sans se modifier : en cas d'erreur, demandez-leur de la corriger.
+5. Si votre date d'engagement SPV est vide, inscrivez-la. Le chef de centre et son adjoint en sont prévenus. Une fois enregistrée, elle se lit sans se modifier. En cas d'erreur, demandez-leur de la corriger.
 6. Activez « Afficher mon anniversaire » pour que votre anniversaire apparaisse au centre le jour venu, et que vos collègues puissent vous le souhaiter.
 7. Si vous avez la messagerie, désactivez « Montrer quand j’ai lu les messages » pour que vos collègues ne voient plus ✓✓ sous leurs messages quand vous les avez lus. Vous ne voyez alors plus non plus celles des autres.
 8. Appuyez sur « Enregistrer ». Le message « Profil enregistré » apparaît.

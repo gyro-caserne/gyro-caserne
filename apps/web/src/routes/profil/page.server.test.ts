@@ -105,7 +105,12 @@ describe('/profil : envoi', () => {
 		expect((await charger({ base, acteur: alice })).profil).toMatchObject({ engagementSpv: '2014-03-03', exterieur: false });
 		const avis = await base.select().from(avisAnciennete);
 		expect(avis).toMatchObject([{ personneId: chef.id, agentId: alice.id, texte: 'Alice Test a renseigné le 3 mars 2014 comme date d’engagement.' }]);
-		expect(await envoyer({ base, acteur: alice }, { engagementSpv: '2015-01-01' })).toMatchObject({ status: 400, data: { erreurs: { engagementSpv: 'Date d’engagement déjà renseignée' } } });
+		// La même date renvoyée (double appui, retour arrière) : enregistré sans erreur.
+		expect(await envoyer({ base, acteur: alice }, { engagementSpv: '2014-03-03', surnom: 'Lili' })).toEqual({ succes: true, message: 'Profil enregistré' });
+		// Une autre date : un message général (le champ n'est plus à l'écran une fois la page relue).
+		const refus = await envoyer({ base, acteur: alice }, { engagementSpv: '2015-01-01' });
+		expect(refus).toMatchObject({ status: 400, data: { message: 'Date d’engagement déjà renseignée' } });
+		expect(refus.data.erreurs).toBeUndefined();
 		expect((await lire(base, alice.id)).engagementSpv).toBe('2014-03-03');
 	});
 });
