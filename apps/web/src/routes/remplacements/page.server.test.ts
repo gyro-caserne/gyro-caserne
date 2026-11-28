@@ -139,6 +139,10 @@ describe('/remplacements', () => {
 		expect(await charger(creneau, locaux(jeu.base, jeu.alice), '/remplacements/creneau')).toMatchObject({ etape: 'quand', creneau: null, message: null, candidats: [] });
 		const trop = await charger(creneau, locaux(jeu.base, jeu.alice), `/remplacements/creneau?${q(debut, decale(nuit.debut, 1.5))}&etape=qui`);
 		expect(trop).toMatchObject({ etape: 'quand', message: 'Un créneau dure au moins 1 h.', debut, creneau: null });
+		// Une heure ou une date qui n'existe pas : le socle la refuse.
+		for (const faux of [`${debut.slice(0, 10)}T24:00`, '2026-11-31T22:00'])
+			expect(await charger(creneau, locaux(jeu.base, jeu.alice), `/remplacements/creneau?${q(debut, faux)}&etape=qui`)).toMatchObject({ etape: 'quand', message: 'Indiquez le début et la fin du créneau.' });
+		expect(await envoyer(actionsCreneau, 'default', locaux(jeu.base, jeu.alice), [['debut', debut], ['fin', '2026-11-31T22:00'], ['pour', 'tous']])).toMatchObject({ status: 400, data: { message: 'Indiquez le début et la fin du créneau.' } });
 		const qui = await charger(creneau, locaux(jeu.base, jeu.alice), `/remplacements/creneau?${q(debut, fin)}&etape=qui`);
 		expect(qui).toMatchObject({ etape: 'qui', creneau: { debut, fin }, message: null });
 		expect(qui.candidats.map((c: { prenom: string }) => c.prenom)).toContain('Bruno');

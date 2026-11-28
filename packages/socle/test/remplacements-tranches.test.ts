@@ -73,6 +73,9 @@ describe('tranches', () => {
 		expect(texteCreneau({ debut: '2026-12-04T21:00', fin: '2026-12-05T07:00' })).toBe('du vendredi 4 décembre, 21 h au samedi 5 décembre, 7 h');
 		expect(texteCreneau({ debut: '2026-12-05T10:00', fin: '2026-12-06T10:00' })).toBe('du samedi 5 décembre, 10 h au dimanche 6 décembre, 10 h');
 		expect(texteCreneau({ debut: '2026-12-01T20:00', fin: '2026-12-02T00:00' })).toBe('mardi 1er décembre, de 20 h à minuit');
+		// Passé minuit : les deux jours, là où une tranche dirait « nuit du lundi ».
+		expect(texteCreneau({ debut: '2026-11-09T22:00', fin: '2026-11-10T02:00' })).toBe('du lundi 9 novembre, 22 h au mardi 10 novembre, 2 h');
+		expect(texteTranche({ debut: '2026-11-09T22:00', fin: '2026-11-10T02:00' })).toBe('nuit du lundi 9 novembre');
 		expect(texteDemande([{ debut: '2026-12-04T21:00', fin: '2026-12-05T07:00' }], true)).toBe('du vendredi 4 décembre, 21 h au samedi 5 décembre, 7 h');
 		// Sans la marque, les libellés d'avant.
 		expect(texteDemande([{ debut: '2026-12-04T21:00', fin: '2026-12-05T07:00' }])).toBe('nuit du vendredi 4 décembre');

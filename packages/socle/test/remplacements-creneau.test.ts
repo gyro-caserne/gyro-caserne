@@ -8,11 +8,12 @@ import { planningDe, publierAnnee, reglerRoulement } from '../src/planning/annee
 import { astreinteDe } from '../src/planning/astreinte.ts';
 import { agendaDe, monLienAgenda } from '../src/planning/agenda.ts';
 import { filDeNotifications } from '../src/notifications.ts';
+import { changerStatut } from '../src/actions/personnes.ts';
 import { aNePasManquer } from '../src/a-ne-pas-manquer.ts';
 import { remplacementsDuMoment } from '../src/remplacements/moment.ts';
 import { bandesDe, disponibles, lireContexte, morceaux } from '../src/remplacements/contexte.ts';
 import { demandeVue, pourDemanderCreneau, remplacementsAValider, remplacementsDe } from '../src/remplacements/lectures.ts';
-import { accepterDemande, annulerDemande, demanderCreneau, demanderRemplacement, demanderRemplacementCourt, desister, ouvrirATous, proposerEchange, refuserDemande, valider } from '../src/remplacements/demandes.ts';
+import { accepterDemande, annulerDemande, demanderCreneau, demanderRemplacement, demanderRemplacementCourt, desister, ouvrirATous, proposerEchange, refuserDemande, refuserValidation, valider } from '../src/remplacements/demandes.ts';
 import { abonnementPush, affectationEquipe, aptitude, aptitudeAgent, attribution, avisRemplacement, demandeRemplacement, destinataireRemplacement, envoiPush, equipe, personne, profil, responsabilite, vacancesAgent } from '../src/schema.ts';
 import { baseDeTest } from './base-de-test.ts';
 
@@ -82,6 +83,30 @@ describe('créneau : les règles', () => {
 		await refus({ debut: '2026-11-09T20:00', fin: '2026-11-09T22:00' }, 'Le créneau doit commencer pendant votre astreinte', bruno);
 		// Une heure qui n'existe pas (passage à l'heure d'été, 28 mars 2027).
 		await refus({ debut: '2027-03-28T02:30', fin: '2027-03-28T05:00' }, 'Cette heure n’existe pas cette nuit-là (passage à l’heure d’été)', alice, '2027-03-01T10:00');
+	});
+
+	it('une date ou une heure qui n’existe pas : refusée', async () => {
+		const { base, alice } = await jeu();
+		const refus = new DonneeInvalide('Indiquez le début et la fin du créneau');
+		await expect(demanderCreneau(base, alice, creneau({ debut: '2026-11-31T20:00', fin: '2026-11-31T22:00' }), maintenant, reglage)).rejects.toThrow(refus);
+		await expect(demanderCreneau(base, alice, creneau({ debut: '2026-11-09T22:00', fin: '2026-11-09T24:00' }), maintenant, reglage)).rejects.toThrow(refus);
+		await expect(demanderCreneau(base, alice, creneau({ debut: '2026-11-09T20:60', fin: '2026-11-09T22:00' }), maintenant, reglage)).rejects.toThrow(refus);
+	});
+
+	it('changement d’heure : la durée et le « 1 h avant » en heure réelle', async () => {
+		const { base, alice } = await jeu();
+		const refus = (p: { debut: string; fin: string }, quand: string) => demanderCreneau(base, alice, creneau(p), quand, reglage);
+		const horsAstreinte = new DonneeInvalide('Le créneau doit commencer pendant votre astreinte');
+		// Heure d'été, 28 mars 2027 : de 1 h 30 à 3 h 15, 45 min réelles.
+		await expect(refus({ debut: '2027-03-28T01:30', fin: '2027-03-28T03:15' }, '2027-03-01T10:00')).rejects.toThrow(new DonneeInvalide('Un créneau dure au moins 1 h'));
+		await expect(refus({ debut: '2027-03-28T01:30', fin: '2027-03-28T03:30' }, '2027-03-01T10:00')).rejects.toThrow(horsAstreinte);
+		await expect(refus({ debut: '2027-03-28T03:15', fin: '2027-03-28T05:00' }, '2027-03-28T01:30')).rejects.toThrow(new DonneeInvalide('Un créneau se demande au moins 1 h avant son début'));
+		// Une semaine d'horloge qui passe l'heure d'été : 167 h réelles, admise.
+		await expect(refus({ debut: '2027-03-21T03:00', fin: '2027-03-28T03:00' }, '2027-03-01T10:00')).rejects.toThrow(horsAstreinte);
+		// Heure d'hiver, 25 octobre 2026 : une semaine d'horloge fait 169 h réelles.
+		await expect(refus({ debut: '2026-10-18T03:00', fin: '2026-10-25T03:00' }, '2026-10-01T10:00')).rejects.toThrow(new DonneeInvalide('Un créneau dure une semaine au plus'));
+		// De 1 h 30 à 3 h, la nuit de l'heure d'hiver : 2 h 30 réelles, demandé à 0 h 15.
+		await expect(refus({ debut: '2026-10-25T01:30', fin: '2026-10-25T03:00' }, '2026-10-25T00:15')).rejects.toThrow(horsAstreinte);
 	});
 
 	it('au moins 1 h, 1 h avant ; deux astreintes qui se suivent (la nuit du vendredi et la garde du samedi)', async () => {
@@ -169,6 +194,32 @@ describe('créneau : le circuit de la garde entière', () => {
 		await expect(annulerDemande(base, alice, autre, maintenant, reglage)).rejects.toThrow(new DonneeInvalide('Déjà acceptée. Demandez au remplaçant de se désister'));
 		await desister(base, chloe, autre, maintenant, reglage);
 		expect((await demande(autre)).etat).toBe('attente');
+	});
+
+	it('refus du chef, puis désistement : la demande repart vers les autres disponibles, dite par ses heures', async () => {
+		const { base, alice, bruno, chloe, elodie, n, textesDe, destinataires } = await jeu();
+		const id = await demanderCreneau(base, alice, creneau(lundiSoir), maintenant, reglage);
+		await accepterDemande(base, bruno, id, maintenant, reglage);
+		await refuserValidation(base, elodie, id, null, maintenant, reglage);
+		const repart = 'Alice Test est de nouveau sans remplaçant, lundi 9 novembre, de 20 h 10 à 22 h 40';
+		expect((await textesDe(n.chloe)).filter((t) => t === repart)).toHaveLength(1);
+		expect(await textesDe(n.bruno)).not.toContain(repart);
+		await accepterDemande(base, chloe, id, maintenant, reglage);
+		await desister(base, chloe, id, maintenant, reglage);
+		// Ni Bruno, écarté par le chef, ni Chloé, qui se désiste.
+		expect((await textesDe(n.chef)).filter((t) => t === repart)).toHaveLength(2);
+		expect((await textesDe(n.chloe)).filter((t) => t === repart)).toHaveLength(1);
+		expect(await textesDe(n.bruno)).not.toContain(repart);
+		expect(await destinataires(id)).toEqual([n.chef, n.bruno, n.chloe].sort());
+	});
+
+	it('départ du remplaçant : le titulaire est prévenu, créneau dit par ses heures', async () => {
+		const { base, alice, chloe, chef, n, textesDe, demande } = await jeu();
+		const id = await demanderCreneau(base, alice, creneau(lundiSoir), maintenant, reglage);
+		await accepterDemande(base, chloe, id, maintenant, reglage);
+		await changerStatut(base, base.photos, chef, n.chloe, 'parti', maintenant);
+		expect(await demande(id)).toMatchObject({ etat: 'attente', remplacantId: null });
+		expect(await textesDe(n.alice)).toContain('Départ de votre remplaçant, lundi 9 novembre, de 20 h 10 à 22 h 40. Vous redevenez responsable.');
 	});
 
 	it('relancée la veille à 8 h, expirée à son début', async () => {

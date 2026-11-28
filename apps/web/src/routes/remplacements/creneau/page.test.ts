@@ -18,15 +18,26 @@ describe('Un créneau', () => {
 		expect(html).toMatch(/<input[^>]*name="debut"[^>]*type="datetime-local"[^>]*required/);
 		expect(html).toMatch(/<label for="fin"[^>]*>Fin<\/label>/);
 		expect(html).toMatch(/<input[^>]*name="fin"[^>]*type="datetime-local"[^>]*required/);
-		expect(html).toContain('Au moins 1 h, demandé au moins 1 h avant son début.');
+		expect(html).toContain('Au moins 1 h avant son début, dans vos astreintes.');
+		expect(html).not.toContain('aria-invalid');
 		expect(html).toMatch(/<form method="GET"/);
 		expect(html).toMatch(/name="etape" value="qui"[^>]*>[\s\S]*?Continuer/);
 		expect(html).toMatch(/href="\/remplacements\/demander"[\s\S]*?Me faire remplacer/);
 	});
 
-	it('un refus : dit en tête, le créneau saisi gardé', () => {
-		const html = page({ message: 'Le créneau doit finir mardi 2 décembre à 6 h au plus tard.', debut: '2026-12-01T20:00', fin: '2026-12-02T08:00' });
-		expect(html).toMatch(/role="alert"[^>]*>Le créneau doit finir mardi 2 décembre à 6 h au plus tard\./);
+	it('un refus : Début et Fin marqués en erreur, reliés à la règle et au message, le créneau saisi gardé', () => {
+		const message = 'Le créneau doit finir mardi 2 décembre à 6 h au plus tard.';
+		const html = page({ message, debut: '2026-12-01T20:00', fin: '2026-12-02T08:00' });
+		for (const id of ['debut', 'fin']) {
+			const champ = html.match(new RegExp(`<input[^>]*id="${id}"[^>]*>`))![0];
+			expect(champ).toContain('aria-invalid="true"');
+			expect(champ).toContain(`aria-describedby="${id}-aide ${id}-erreur"`);
+			expect(html).toMatch(new RegExp(`<p id="${id}-erreur"[^>]*>${message}</p>`));
+		}
+		expect(html).toMatch(/<p id="debut-aide"[^>]*>Au moins 1 h avant son début, dans vos astreintes\.<\/p>/);
+		expect(html).toMatch(/<p id="fin-aide"[^>]*>Au moins 1 h après le début\. Deux astreintes qui se suivent comptent, pas un trou entre elles\.<\/p>/);
+		// Le message n'est pas répété en tête.
+		expect(html.match(new RegExp(message.replace('.', '\\.'), 'g'))).toHaveLength(2);
 		expect(html).toContain('value="2026-12-01T20:00"');
 		expect(html).toContain('value="2026-12-02T08:00"');
 	});

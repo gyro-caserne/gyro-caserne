@@ -1,6 +1,6 @@
 import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import type { Base } from '../base.ts';
-import { ajouterJours, existeAParis } from '../dates.ts';
+import { ajouterJours, exigerDateHeure, existeAParis, instantDeParis } from '../dates.ts';
 import { DonneeInvalide } from '../erreurs.ts';
 import { STATUTS_AVEC_ACCES } from '../listes.ts';
 import { lecturesAgents } from '../murs.ts';
@@ -300,9 +300,17 @@ export function candidats(ctx: Contexte, demandeurId: number, periodes: Periode[
 		.sort((a, b) => Number(a.manque.length > 0) - Number(b.manque.length > 0) || a.nom.localeCompare(b.nom, 'fr') || a.prenom.localeCompare(b.prenom, 'fr'));
 }
 
-const MOMENT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
-const minutes = (de: string, a: string) => (Date.parse(`${a}:00Z`) - Date.parse(`${de}:00Z`)) / 60_000;
-const valide = (m: unknown): m is string => typeof m === 'string' && MOMENT.test(m) && !Number.isNaN(Date.parse(`${m}:00Z`));
+// En heure réelle : un créneau qui passe le changement d'heure dure une heure de plus ou de moins qu'à l'horloge.
+const minutes = (de: string, a: string) => (instantDeParis(a) - instantDeParis(de)) / 60_000;
+// Une date et une heure qui existent (ni 31 novembre ni 24 h), à la minute.
+function valide(m: unknown): m is string {
+	try {
+		exigerDateHeure(m, 'Moment');
+		return (m as string).length === 16;
+	} catch {
+		return false;
+	}
+}
 
 // Un créneau : dans ses astreintes (deux qui se suivent, jamais un trou), de 1 h à une semaine, demandé au moins 1 h avant,
 // dans les douze semaines à venir, sur des heures libres de toute autre demande.

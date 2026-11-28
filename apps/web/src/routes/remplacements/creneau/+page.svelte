@@ -40,6 +40,8 @@
 		return [`Vous demandez à être remplacé ${texte}.`, `${pluriel(n, 'collègue disponible est prévenu', 'collègues disponibles sont prévenus')}.`, informe];
 	});
 	const message = $derived(form?.message ?? data.message ?? '');
+	// À l'étape « Quand ? », un refus se dit sous Début et Fin, marqués en erreur, plutôt qu'en tête.
+	const surLesChamps = $derived(data.etape === 'quand' && message !== '');
 </script>
 
 <svelte:head>
@@ -64,17 +66,16 @@
 <div class="page">
 	<EnTetePage titre="Un créneau" phrase="Le début et la fin, dans vos astreintes à venir. Vous vérifiez avant d’envoyer." retour={{ href: '/remplacements/demander', libelle: 'Me faire remplacer' }} />
 	<Progression etapes={liste} courante={data.etape} lien={lienEtape} />
-	<p class="erreur" class:masque={!message} role="alert">{message}</p>
+	<p class="erreur" class:masque={!message || surLesChamps} role="alert">{surLesChamps ? '' : message}</p>
 
 	<section class="carte" aria-labelledby="titre-etape">
 		<h2 id="titre-etape" tabindex="-1">{liste[index]?.titre}</h2>
 
 		{#if data.etape === 'quand'}
-			<p class="doux">Au moins 1 h, demandé au moins 1 h avant son début. Il peut courir sur deux astreintes qui se suivent.</p>
 			<form method="GET" class="formulaire" data-sveltekit-reset="false">
 				{@render garder(['creneau'])}
-				<Champ id="debut" name="debut" type="datetime-local" libelle="Début" valeur={data.debut} requis />
-				<Champ id="fin" name="fin" type="datetime-local" libelle="Fin" valeur={data.fin} requis />
+				<Champ id="debut" name="debut" type="datetime-local" libelle="Début" valeur={data.debut} requis aide="Au moins 1 h avant son début, dans vos astreintes." erreur={surLesChamps ? message : undefined} />
+				<Champ id="fin" name="fin" type="datetime-local" libelle="Fin" valeur={data.fin} requis aide="Au moins 1 h après le début. Deux astreintes qui se suivent comptent, pas un trou entre elles." erreur={surLesChamps ? message : undefined} />
 				{@render boutons('qui')}
 			</form>
 		{:else}
@@ -139,9 +140,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--espace-16);
-	}
-	.doux {
-		color: var(--doux);
 	}
 	.resume {
 		display: flex;
