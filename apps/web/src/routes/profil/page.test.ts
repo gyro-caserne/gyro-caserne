@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import Page from './+page.svelte';
 
-const profil = { surnom: null, telephone: null, telephoneVisible: false, contactUrgence: null, naissance: '1990-05-17', anniversaireVisible: true, cochesLecture: true };
+const profil = { surnom: null, telephone: null, telephoneVisible: false, contactUrgence: null, naissance: '1990-05-17', anniversaireVisible: true, cochesLecture: true, engagementSpv: null, exterieur: false };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const html = (data: Record<string, unknown>) => render(Page as any, { props: { data: { profil, messagerie: true, ...data }, form: null } }).body.replace(/<!--[\s\S]*?-->/g, '');
 
@@ -33,6 +33,26 @@ describe('page Mon profil', () => {
 		expect(page).toContain('value="1990-05-17"');
 		expect(page).not.toMatch(/name="naissance"[^>]*required/);
 		expect(page).toContain('Vue du chef de centre et de son adjoint seulement. Votre âge n’est jamais montré.');
+	});
+
+	it('date d’engagement vide : un champ date, facultatif', () => {
+		const page = html({});
+		expect(page).toMatch(/<label for="engagement-spv"[^>]*>Date d’engagement SPV<\/label>/);
+		expect(page).toMatch(/<input[^>]*name="engagementSpv"[^>]*type="date"|<input[^>]*type="date"[^>]*name="engagementSpv"/);
+		expect(page).not.toMatch(/name="engagementSpv"[^>]*required/);
+		expect(page).toContain('Une fois enregistrée, seul le chef de centre ou son adjoint la corrige.');
+	});
+
+	it('date d’engagement remplie : en lecture, avec qui la corrige', () => {
+		const page = html({ profil: { ...profil, engagementSpv: '2014-03-01' } });
+		expect(page).not.toContain('name="engagementSpv"');
+		expect(page).toMatch(/<dt[^>]*>Date d’engagement SPV<\/dt>\s*<dd[^>]*>1er mars 2014<\/dd>/);
+		expect(page).toContain('Le chef de centre ou son adjoint la corrige.');
+	});
+
+	it('personne extérieure : pas de date d’engagement', () => {
+		const page = html({ profil: { ...profil, exterieur: true } });
+		expect(page).not.toContain('engagement');
 	});
 
 	it('sans messagerie : ni case ni repère', () => {

@@ -22,6 +22,14 @@ Une carte, en tête de la fiche de l'agent (chef de centre, adjoint) et dans Moi
 
 Sans date d'engagement, la carte dit seulement les années au centre, et « Date d'engagement à compléter » à qui peut modifier la fiche. Rien pour une personne extérieure (retraité, réserve citoyenne).
 
+## Qui renseigne la date d'engagement
+
+- Le **chef de centre** ou l'**adjoint**, sur la fiche de l'agent (bloc Parcours).
+- L'**agent lui-même**, dans Moi, Mon profil, seulement tant qu'elle est vide : il connaît sa date mieux que quiconque, surtout s'il vient d'un autre centre. Ensuite, il la lit sans pouvoir la changer ; seuls le chef et l'adjoint la corrigent.
+- À l'enregistrement par l'agent, le chef de centre et l'adjoint reçoivent chacun une ligne dans leur cloche : « Thomas Agent a renseigné le 3 mars 2014 comme date d'engagement. » Elle mène à sa fiche. Pas d'envoi au téléphone, pas d'e-mail. Si l'agent est lui-même chef ou adjoint, seul l'autre est prévenu.
+- La date doit être plausible : pas dans le futur, pas avant ses 16 ans si sa naissance est connue, sinon pas avant 1950.
+- Une personne extérieure n'a pas de date d'engagement.
+
 ## Le jour J
 
 - Dans **Aujourd'hui au centre**, sur l'accueil et dans Échanges : « Thomas Agent fête ses 10 ans de service », avec l'insigne et le bouton **Féliciter**. Les mêmes personnes que pour un anniversaire la voient.

@@ -6,7 +6,7 @@ export type TextesAnciennete = { nombre: string; sous: string; echelon: string |
 
 const annees = (n: number) => (n === 0 ? 'Moins d’un an' : ans(n));
 // « 3 mars 2029 », « 1er avril 2030 ».
-const date = (iso: string) => formatDeDate({ day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`)).replace(/^1(?=\s)/, '1er');
+export const dateEnLettres = (iso: string) => formatDeDate({ day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`)).replace(/^1(?=\s)/, '1er');
 
 export function textesAnciennete(a: Anciennete): TextesAnciennete | null {
 	if (a.annees === null) return a.auCentre === null ? null : { nombre: annees(a.auCentre), sous: 'au centre', echelon: null, prochain: null, part: null };
@@ -15,7 +15,7 @@ export function textesAnciennete(a: Anciennete): TextesAnciennete | null {
 		nombre: annees(a.annees),
 		sous: `de service${centre}`,
 		echelon: a.echelon ? `Échelon ${NOMS_ECHELON[a.echelon]}` : null,
-		prochain: a.prochain ? `Prochain palier, ${ans(a.prochain.annees)} le ${date(a.prochain.jour)}` : null,
+		prochain: a.prochain ? `Prochain palier, ${ans(a.prochain.annees)} le ${dateEnLettres(a.prochain.jour)}` : null,
 		part: a.prochain ? Math.round(a.prochain.part * 100) : null
 	};
 }

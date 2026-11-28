@@ -5,6 +5,7 @@
 	import EnTetePage from '#lib/ui/EnTetePage.svelte';
 	import Interrupteur from '#lib/ui/Interrupteur.svelte';
 	import Vide from '#lib/ui/Vide.svelte';
+	import { dateEnLettres } from '#lib/anciennete.ts';
 
 	let { data, form } = $props();
 
@@ -59,6 +60,26 @@
 					erreur={erreurs.naissance}
 				/>
 				<Interrupteur libelle="Afficher mon anniversaire" nom="anniversaireVisible" coche={profil.anniversaireVisible} />
+				<!-- Une personne extérieure n'a pas de date d'engagement. -->
+				{#if !profil.exterieur}
+					{#if profil.engagementSpv === null}
+						<Champ
+							id="engagement-spv"
+							name="engagementSpv"
+							type="date"
+							libelle="Date d’engagement SPV"
+							aide="Une fois enregistrée, seul le chef de centre ou son adjoint la corrige."
+							valeur={texte('engagementSpv', null)}
+							erreur={erreurs.engagementSpv}
+						/>
+					{:else}
+						<dl class="lecture">
+							<dt>Date d’engagement SPV</dt>
+							<dd>{dateEnLettres(profil.engagementSpv)}</dd>
+							<dd class="aide">Le chef de centre ou son adjoint la corrige.</dd>
+						</dl>
+					{/if}
+				{/if}
 				{#if data.messagerie}
 					<input type="hidden" name="avecCoches" value="1" />
 					<Interrupteur
@@ -91,6 +112,22 @@
 	}
 	p {
 		margin: 0;
+	}
+	.lecture {
+		display: flex;
+		flex-direction: column;
+		gap: var(--espace-6);
+		margin: 0;
+	}
+	dt {
+		font-weight: 600;
+	}
+	dd {
+		margin: 0;
+	}
+	.aide {
+		color: var(--doux);
+		font-size: var(--texte-15);
 	}
 	form :global(button) {
 		align-self: flex-start;
