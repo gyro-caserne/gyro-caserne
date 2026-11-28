@@ -7,6 +7,7 @@ import { actions as actionsDetail, load as detail } from './[id]/+page.server';
 import { actions as actionsDemander, load as demander } from './demander/+page.server';
 import { load as manoeuvre } from './manoeuvre/+page.server';
 import { actions as actionsCourt, load as court } from './court/+page.server';
+import { actions as actionsCreneau, load as creneau } from './creneau/+page.server';
 import { charger, envoyer, locaux, preparer } from './de-test.ts';
 
 // La première nuit libre d'Alice.
@@ -126,6 +127,31 @@ describe('/remplacements', () => {
 		expect(await charger(manoeuvre, locaux(jeu.base, jeu.alice), `/remplacements/manoeuvre?mienne=${m1}&depuis=planning&sienne=${bruno.id}:${m2}&etape=verifier`)).toMatchObject({ etape: 'verifier', sienne: { manoeuvre: { id: m2 } } });
 		expect(await charger(manoeuvre, locaux(jeu.base, jeu.alice), `/remplacements/manoeuvre?mienne=${m1}&depuis=planning&etape=verifier`)).toMatchObject({ etape: 'sienne', message: 'Choisissez la manœuvre d’un collègue.' });
 		expect(await charger(manoeuvre, locaux(jeu.base, jeu.alice), `/remplacements/manoeuvre?mienne=${tous}&depuis=planning`)).toMatchObject({ court: false, mienne: null, etape: 'mienne', message: expect.stringContaining('ne s’échange pas') });
+	});
+
+	it('un créneau : quand, à qui, vérifier ; un refus ramène à « quand » en disant pourquoi ; puis l’envoi', async () => {
+		const jeu = await preparer();
+		const nuit = await premiereNuit(jeu);
+		const decale = (m: string, h: number) => new Date(Date.parse(`${m}:00Z`) + h * 3_600_000).toISOString().slice(0, 16);
+		const q = (debut: string, fin: string) => `debut=${debut}&fin=${fin}`;
+		const debut = decale(nuit.debut, 1);
+		const fin = decale(nuit.debut, 3);
+		expect(await charger(creneau, locaux(jeu.base, jeu.alice), '/remplacements/creneau')).toMatchObject({ etape: 'quand', creneau: null, message: null, candidats: [] });
+		const trop = await charger(creneau, locaux(jeu.base, jeu.alice), `/remplacements/creneau?${q(debut, decale(nuit.debut, 1.5))}&etape=qui`);
+		expect(trop).toMatchObject({ etape: 'quand', message: 'Un créneau dure au moins 1 h.', debut, creneau: null });
+		// Une heure ou une date qui n'existe pas : le socle la refuse.
+		for (const faux of [`${debut.slice(0, 10)}T24:00`, '2026-11-31T22:00'])
+			expect(await charger(creneau, locaux(jeu.base, jeu.alice), `/remplacements/creneau?${q(debut, faux)}&etape=qui`)).toMatchObject({ etape: 'quand', message: 'Indiquez le début et la fin du créneau.' });
+		expect(await envoyer(actionsCreneau, 'default', locaux(jeu.base, jeu.alice), [['debut', debut], ['fin', '2026-11-31T22:00'], ['pour', 'tous']])).toMatchObject({ status: 400, data: { message: 'Indiquez le début et la fin du créneau.' } });
+		const qui = await charger(creneau, locaux(jeu.base, jeu.alice), `/remplacements/creneau?${q(debut, fin)}&etape=qui`);
+		expect(qui).toMatchObject({ etape: 'qui', creneau: { debut, fin }, message: null });
+		expect(qui.candidats.map((c: { prenom: string }) => c.prenom)).toContain('Bruno');
+		expect(await charger(creneau, locaux(jeu.base, jeu.alice), `/remplacements/creneau?${q(debut, fin)}&etape=verifier`)).toMatchObject({ etape: 'qui', message: 'Choisissez « Tout le monde » ou un collègue.' });
+		expect(await envoyer(actionsCreneau, 'default', locaux(jeu.base, jeu.alice), [['debut', debut], ['fin', 'demain'], ['pour', 'tous']])).toMatchObject({ status: 400, data: { message: 'Indiquez le début et la fin du créneau.' } });
+		expect(await envoyer(actionsCreneau, 'default', locaux(jeu.base, jeu.alice), [['debut', debut], ['fin', fin]])).toMatchObject({ status: 400, data: { message: 'Choisissez « Tout le monde » ou un collègue.' } });
+		await expect(envoyer(actionsCreneau, 'default', locaux(jeu.base, jeu.alice), [['debut', debut], ['fin', fin], ['pour', 'tous'], ['mot', 'Réunion']])).rejects.toMatchObject({ status: 303, location: expect.stringMatching(/^\/remplacements\/\d+\?envoyee$/) });
+		// Les mêmes heures, une seconde fois : le refus du socle, en phrase.
+		expect(await envoyer(actionsCreneau, 'default', locaux(jeu.base, jeu.alice), [['debut', debut], ['fin', fin], ['pour', 'tous']])).toMatchObject({ status: 400, data: { message: 'Période déjà dans une demande.' } });
 	});
 
 	it('sans paramètre, le choix ; tout lien précis va droit au parcours', async () => {

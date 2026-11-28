@@ -1,5 +1,5 @@
 import { ajouterJours } from '@gyro-caserne/socle/dates';
-import { dePlage, texteTranche, type PeriodePlanning, type SemaineCalculee, type Vacances } from '@gyro-caserne/socle';
+import { dePlage, texteCreneau, texteTranche, type PeriodePlanning, type SemaineCalculee, type Vacances } from '@gyro-caserne/socle';
 import { heure } from '../murs/quand.ts';
 import { pluriel } from '../pluriel.ts';
 import { dansLaSemaine, finDeSemaine, jourLong } from './dates.ts';
@@ -7,7 +7,8 @@ import { dansLaSemaine, finDeSemaine, jourLong } from './dates.ts';
 // Les vues de l'onglet Planning, sans affichage : ce qui se passe chaque jour, chaque semaine, chaque mois.
 
 export type Mode = 'moi' | 'equipes';
-export type Remplacement = { debut: string; fin: string; titulaire: string; remplacant: string; moi: 'cede' | 'prend' | null };
+// `creneau` : un remplacement sur un créneau, dit par ses heures.
+export type Remplacement = { debut: string; fin: string; titulaire: string; remplacant: string; moi: 'cede' | 'prend' | null; creneau?: boolean };
 export type Donnees = { annee: number; feries: { date: string; nom: string }[]; vacances: Vacances[]; manoeuvres: { id: number; debut: string; theme: string; convoque: boolean }[]; remplacements: Remplacement[]; equipes?: { id: number; nom: string }[] };
 export type Repere = { genre: 'ferie' | 'vacances' | 'manoeuvre' | 'fete' | 'remplacement'; texte: string; date: string };
 export const SIGNES: Record<Repere['genre'], string> = { ferie: 'Férié', vacances: 'Vacances', manoeuvre: 'Manœuvre', fete: 'Fête', remplacement: 'Remplacement' };
@@ -18,7 +19,7 @@ const contient = (s: SemaineCalculee, moment: string) => s.periodes.some((p) => 
 const estNuit = (p: PeriodePlanning) => p.fin <= `${lendemain(p.debut.slice(0, 10))}T12:00`;
 
 function texteRemplacement(r: Remplacement, avecQuand: boolean): string {
-	const quand = avecQuand ? `, ${texteTranche(r)}` : '';
+	const quand = avecQuand ? `, ${r.creneau ? texteCreneau(r) : texteTranche(r)}` : '';
 	if (r.moi === 'cede') return `${r.remplacant} me remplace${quand}`;
 	if (r.moi === 'prend') return `je remplace ${r.titulaire}${quand}`;
 	return `${r.remplacant} remplace ${r.titulaire}${quand}`;

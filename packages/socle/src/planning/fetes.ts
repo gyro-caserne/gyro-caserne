@@ -76,7 +76,7 @@ async function effets(base: Base, acteur: Acteur, avant: FeteCentre | null, apre
 		const a = ctx.agents.find((x) => x.id === id);
 		return a ? `${a.prenom} ${a.nom}` : 'un ancien agent';
 	};
-	const textes = inutiles.map((d) => `${majuscule(texteDemande(periodesDe(d.periodes)))}, ${d.remplacantId !== null && d.etat !== 'attente' ? `${nom(d.demandeurId)} remplacé par ${nom(d.remplacantId)}` : `${nom(d.demandeurId)} cherche un remplaçant`}`);
+	const textes = inutiles.map((d) => `${majuscule(texteDemande(periodesDe(d.periodes), d.creneau === 1))}, ${d.remplacantId !== null && d.etat !== 'attente' ? `${nom(d.demandeurId)} remplacé par ${nom(d.remplacantId)}` : `${nom(d.demandeurId)} cherche un remplaçant`}`);
 	if (inutiles.length > 0 && !confirme) return { inutiles: textes, ecritures: [] };
 	const equipeNom = (id: number) => ctx.equipes.find((e) => e.id === id)?.nom ?? 'Une autre équipe';
 	const phrase = apres ? `${quandFete(apres)}. ${equipeNom(apres.equipeId)} d’astreinte.` : `${quandFete(avant!)}, annulée. L’astreinte suit le roulement.`;

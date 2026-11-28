@@ -1,6 +1,6 @@
 import { and, eq, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import type { Base } from '../base.ts';
-import { ajouterJours, existeAParis } from '../dates.ts';
+import { ajouterJours, exigerDateHeure, existeAParis, instantDeParis } from '../dates.ts';
 import { DonneeInvalide } from '../erreurs.ts';
 import { STATUTS_AVEC_ACCES } from '../listes.ts';
 import { lecturesAgents } from '../murs.ts';
@@ -9,7 +9,7 @@ import { equipeLe, semainesCalculees } from '../planning/annee.ts';
 import { validesLe } from '../aptitudes.ts';
 import { affectationEquipe, anneePlanning, aptitude, aptitudeAgent, attribution, demandeRemplacement, equipe, personne, responsabilite, semaineChangee, vacancesAgent } from '../schema.ts';
 import { enVacances, heuresDe, lirePlage, requeteFetes, requetePlagesPubliees } from '../planning/plages.ts';
-import { chevauche, tranchesDe } from './tranches.ts';
+import { chevauche, heure, jourEnLettres, reunir, tranchesDe } from './tranches.ts';
 import { dureesDe, requeteDureesCourt } from './court.ts';
 
 // Ce qu'il faut savoir pour décider d'une demande, lu d'un seul bloc : les semaines publiées, les équipes de chacun,
@@ -178,6 +178,11 @@ export function exigerRemplacants(ctx: Contexte, ...ids: number[]) {
 	}
 }
 
+// Les périodes d'une demande, pour savoir qui est libre. Un créneau est coupé à ses tranches : les vacances se voient au jour
+// de chacune, comme pour une garde entière (un créneau du vendredi 21 h au samedi 7 h touche aussi le samedi).
+export const morceaux = (ctx: Contexte, periodes: Periode[]) => periodes.flatMap((p) => tranchesDe([p], ctx.reglages(Number(p.debut.slice(0, 4)))));
+export const aCouvrir = (ctx: Contexte, d: { periodes: string; creneau: number | null }) => (d.creneau === 1 ? morceaux(ctx, periodesDe(d.periodes)) : periodesDe(d.periodes));
+
 // Disponible : un opérationnel, ni d'astreinte ni en vacances sur l'une des périodes, ni engagé dans une demande qui les touche.
 export const disponible = (ctx: Contexte, id: number, periodes: Periode[], sauf: number | null = null) =>
 	peutRemplacer(ctx, id) && !periodes.some((p) => dAstreinte(ctx, id, p) || enVacances(ctx.vacances, id, p)) && sansEngagement(ctx, id, periodes, sauf);
@@ -293,4 +298,34 @@ export function candidats(ctx: Contexte, demandeurId: number, periodes: Periode[
 			};
 		})
 		.sort((a, b) => Number(a.manque.length > 0) - Number(b.manque.length > 0) || a.nom.localeCompare(b.nom, 'fr') || a.prenom.localeCompare(b.prenom, 'fr'));
+}
+
+// En heure réelle : un créneau qui passe le changement d'heure dure une heure de plus ou de moins qu'à l'horloge.
+const minutes = (de: string, a: string) => (instantDeParis(a) - instantDeParis(de)) / 60_000;
+// Une date et une heure qui existent (ni 31 novembre ni 24 h), à la minute.
+function valide(m: unknown): m is string {
+	try {
+		exigerDateHeure(m, 'Moment');
+		return (m as string).length === 16;
+	} catch {
+		return false;
+	}
+}
+
+// Un créneau : dans ses astreintes (deux qui se suivent, jamais un trou), de 1 h à une semaine, demandé au moins 1 h avant,
+// dans les douze semaines à venir, sur des heures libres de toute autre demande.
+export function exigerCreneau(ctx: Contexte, id: number, p: { debut: unknown; fin: unknown }): Periode {
+	const { debut, fin } = p;
+	if (!valide(debut) || !valide(fin)) throw new DonneeInvalide('Indiquez le début et la fin du créneau');
+	if (!existeAParis(debut) || !existeAParis(fin)) throw new DonneeInvalide('Cette heure n’existe pas cette nuit-là (passage à l’heure d’été)');
+	if (fin <= debut) throw new DonneeInvalide('La fin doit venir après le début');
+	if (minutes(debut, fin) < 60) throw new DonneeInvalide('Un créneau dure au moins 1 h');
+	if (minutes(debut, fin) > 7 * 24 * 60) throw new DonneeInvalide('Un créneau dure une semaine au plus');
+	if (minutes(ctx.maintenant, debut) < 60) throw new DonneeInvalide('Un créneau se demande au moins 1 h avant son début');
+	if (debut >= `${ajouterJours(ctx.maintenant.slice(0, 10), SEMAINES_PROPOSEES * 7)}T00:00`) throw new DonneeInvalide('Un créneau se demande dans les douze semaines à venir');
+	const astreinte = reunir(astreintesDe(ctx, id).flatMap((s) => s.periodes)).find((b) => b.debut <= debut && debut < b.fin);
+	if (!astreinte) throw new DonneeInvalide('Le créneau doit commencer pendant votre astreinte');
+	if (fin > astreinte.fin) throw new DonneeInvalide(`Le créneau doit finir ${jourEnLettres(astreinte.fin)} à ${heure(astreinte.fin)} au plus tard`);
+	if (!sansEngagement(ctx, id, [{ debut, fin }])) throw new DonneeInvalide('Période déjà dans une demande');
+	return { debut, fin };
 }

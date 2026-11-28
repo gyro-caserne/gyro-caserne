@@ -6,7 +6,7 @@ import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
 import type { EtatDemande, GenreDemande } from '../listes.ts';
 import type { Periode, Reglage } from '../planning/calendrier.ts';
 import { avisRemplacement, demandeRemplacement, destinataireRemplacement, manoeuvre, personne } from '../schema.ts';
-import { bandesDe, candidats, debutsCourts, disponibles, EN_COURS, lireContexte, manque, periodesDe, peutRemplacer, requeteChefs, valideurs, type Chef, type Contexte, type LigneDemande } from './contexte.ts';
+import { aCouvrir, bandesDe, candidats, debutsCourts, disponibles, EN_COURS, exigerCreneau, lireContexte, manque, morceaux, periodesDe, peutRemplacer, requeteChefs, valideurs, type Chef, type Contexte, type LigneDemande } from './contexte.ts';
 import { texteDemande } from './tranches.ts';
 
 // Ce que montrent les écrans : Pour moi, Mes demandes, À valider, l'historique, le détail d'une demande.
@@ -18,6 +18,8 @@ export type VueDemande = {
 	genre: GenreDemande;
 	// Remplacement court : 2 ou 3 h, conclu dès l'acceptation.
 	court: boolean;
+	// Sur un créneau : début et fin libres, le circuit de la garde entière.
+	creneau: boolean;
 	etat: EtatDemande;
 	demandeur: Qui;
 	cible: Qui | null;
@@ -60,7 +62,7 @@ function vue(d: LigneDemande, moi: number, lu: Lu, chefs: Chef[], ctx: Contexte 
 	const man = m(d.manoeuvreId);
 	const manCible = m(d.manoeuvreCibleId);
 	const texte =
-		d.genre === 'manoeuvre' ? `manœuvre « ${man?.theme ?? ''} » contre « ${manCible?.theme ?? ''} »` : d.genre === 'echange' ? `${texteDemande(periodes)} contre ${texteDemande(periodesCible)}` : texteDemande(periodes);
+		d.genre === 'manoeuvre' ? `manœuvre « ${man?.theme ?? ''} » contre « ${manCible?.theme ?? ''} »` : d.genre === 'echange' ? `${texteDemande(periodes)} contre ${texteDemande(periodesCible)}` : texteDemande(periodes, d.creneau === 1);
 	let manquePourMoi: string[] = [];
 	if (pourMoi && ctx && d.genre !== 'manoeuvre') {
 		manquePourMoi = manque(ctx, d.demandeurId, moi, d.debut.slice(0, 10));
@@ -71,6 +73,7 @@ function vue(d: LigneDemande, moi: number, lu: Lu, chefs: Chef[], ctx: Contexte 
 		id: d.id,
 		genre: d.genre,
 		court: d.court === 1,
+		creneau: d.creneau === 1,
 		etat: d.etat,
 		demandeur: qui(d.demandeurId)!,
 		cible: qui(d.cibleId),
@@ -164,7 +167,7 @@ export type VueReduite = { id: number; issue: 'annulee' | 'prise' | 'expiree' | 
 function reduite(d: LigneDemande, personnes: Qui[]): VueReduite {
 	const parLeDemandeur = d.etat === 'annulee' && d.motif === null && d.trancheePar === `personne:${d.demandeurId}`;
 	const issue = parLeDemandeur ? 'annulee' : d.etat === 'expiree' ? 'expiree' : d.etat === 'a_valider' || d.etat === 'conclue' ? 'prise' : 'close';
-	return { id: d.id, issue, demandeur: parLeDemandeur ? (personnes.find((p) => p.id === d.demandeurId) ?? inconnu(d.demandeurId)) : null, texte: texteDemande(periodesDe(d.periodes)) };
+	return { id: d.id, issue, demandeur: parLeDemandeur ? (personnes.find((p) => p.id === d.demandeurId) ?? inconnu(d.demandeurId)) : null, texte: texteDemande(periodesDe(d.periodes), d.creneau === 1) };
 }
 
 // Le détail d'une demande, pour qui y a part. Le demandeur d'une demande ouverte voit les disponibles, ceux qui ont ses aptitudes d'abord.
@@ -193,7 +196,7 @@ export async function demandeVue(base: Base, acteur: Acteur, id: number, mainten
 	const voitDisponibles = v.moi === 'demandeur' && d.genre === 'remplacement' && d.etat === 'attente' && d.debut > maintenant.slice(0, 16);
 	return {
 		demande: v,
-		disponibles: voitDisponibles && d.cibleId === null ? disponibles(ctx, d.demandeurId, v.periodes, d.id) : [],
+		disponibles: voitDisponibles && d.cibleId === null ? disponibles(ctx, d.demandeurId, aCouvrir(ctx, d), d.id) : [],
 		recue: d.cibleId === null ? destinataires.filter((x) => x.refuseLe === null).length : null,
 		valideurs: valideurs(ctx.chefs, d.equipeId, d.demandeurId, d.remplacantId).map((x) => personnes.find((p) => p.id === x) ?? inconnu(x))
 	};
@@ -240,14 +243,14 @@ export async function remplacementsAValider(base: Base, acteur: Acteur, maintena
 			texte:
 				d.court === 1
 					? `Remplacement court, ${nom(d.demandeurId)}, ${texteDemande(periodesDe(d.periodes))}, il manque ${(JSON.parse(d.manque ?? '[]') as string[]).join(', ')} à ${nom(d.remplacantId)}`
-					: `Remplacement à valider, ${nom(d.demandeurId)}, ${texteDemande(periodesDe(d.periodes))}`
+					: `Remplacement à valider, ${nom(d.demandeurId)}, ${texteDemande(periodesDe(d.periodes), d.creneau === 1)}`
 		}));
 }
 
 // Les demandes reçues qui attendent une réponse de l'acteur (À ne pas manquer). Une requête.
 export const requetePourMoi = (base: Base, moi: number, maintenant: string) =>
 	base
-		.select({ id: demandeRemplacement.id, genre: demandeRemplacement.genre, periodes: demandeRemplacement.periodes, periodesCible: demandeRemplacement.periodesCible, debut: demandeRemplacement.debut, prenom: personne.prenom, nom: personne.nom })
+		.select({ id: demandeRemplacement.id, genre: demandeRemplacement.genre, periodes: demandeRemplacement.periodes, periodesCible: demandeRemplacement.periodesCible, creneau: demandeRemplacement.creneau, debut: demandeRemplacement.debut, prenom: personne.prenom, nom: personne.nom })
 		.from(destinataireRemplacement)
 		.innerJoin(demandeRemplacement, eq(demandeRemplacement.id, destinataireRemplacement.demandeId))
 		.innerJoin(personne, eq(personne.id, demandeRemplacement.demandeurId))
@@ -292,4 +295,19 @@ export async function pourDemanderCourt(base: Base, acteur: Acteur, maintenant: 
 	const moi = moiDe(acteur);
 	const ctx = await lireContexte(base, maintenant, reglage, true);
 	return { debuts: debutsCourts(ctx, moi), durees: ctx.durees };
+}
+
+// Le remplacement sur un créneau : le créneau proposé, vérifié (sinon le refus, en clair), et les collègues libres dessus.
+export async function pourDemanderCreneau(base: Base, acteur: Acteur, maintenant: string, reglage: Reglage, creneau: Periode | null): Promise<{ creneau: Periode | null; erreur: string | null; candidats: ReturnType<typeof candidats> }> {
+	exigerDateHeure(maintenant, 'Date');
+	const moi = moiDe(acteur);
+	if (creneau === null) return { creneau: null, erreur: null, candidats: [] };
+	const ctx = await lireContexte(base, maintenant, reglage);
+	try {
+		const p = exigerCreneau(ctx, moi, creneau);
+		return { creneau: p, erreur: null, candidats: candidats(ctx, moi, morceaux(ctx, [p])) };
+	} catch (e) {
+		if (e instanceof DonneeInvalide) return { creneau: null, erreur: e.message, candidats: [] };
+		throw e;
+	}
 }

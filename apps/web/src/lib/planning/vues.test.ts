@@ -35,6 +35,14 @@ describe('vues du planning', () => {
 		expect(jours[5]!.reperes[0]).toMatchObject({ genre: 'ferie', texte: 'Armistice 1918' });
 	});
 
+	it('un créneau : dit par ses heures, jamais « nuit du »', () => {
+		const creneau = { ...d, remplacements: [{ debut: '2026-11-09T21:00', fin: '2026-11-10T05:00', titulaire: 'Alice Martin', remplacant: 'Bruno Petit', moi: 'cede' as const, creneau: true }] };
+		expect(reperesDe(semaine('2026-11-06'), creneau, 'moi').find((x) => x.genre === 'remplacement')).toEqual({ genre: 'remplacement', texte: 'Bruno Petit me remplace, du lundi 9 novembre, 21 h au mardi 10 novembre, 5 h', date: '2026-11-09' });
+		// Sans la marque, la même plage se dit comme avant.
+		const sans = { ...d, remplacements: [{ ...creneau.remplacements[0]!, creneau: undefined }] };
+		expect(reperesDe(semaine('2026-11-06'), sans, 'moi').find((x) => x.genre === 'remplacement')!.texte).toBe('Bruno Petit me remplace, nuit du lundi 9 novembre');
+	});
+
 	it('un remplacement court : sa seule plage, « de 20 h à 22 h »', () => {
 		const court = { ...d, remplacements: [{ debut: '2026-11-09T20:00', fin: '2026-11-09T22:00', titulaire: 'Alice Martin', remplacant: 'Bruno Petit', moi: 'cede' as const }] };
 		expect(reperesDe(semaine('2026-11-06'), court, 'moi').find((x) => x.genre === 'remplacement')).toEqual({ genre: 'remplacement', texte: 'Bruno Petit me remplace, lundi 9 novembre, de 20 h à 22 h', date: '2026-11-09' });

@@ -144,6 +144,13 @@ describe('les fêtes du centre, enregistrées', async () => {
 		expect(disponible(ctx, agents[2]!, [pendant])).toBe(false);
 	});
 
+	it('un créneau rendu inutile par la fête est dit par ses heures', async () => {
+		const { base, chef, agents, fete } = await jeu();
+		const p = { debut: '2026-12-05T21:00', fin: '2026-12-06T01:30' };
+		await base.insert(schema.demandeRemplacement).values({ genre: 'remplacement', creneau: 1, demandeurId: agents[0]!, remplacantId: agents[3]!, periodes: JSON.stringify([p]), debut: p.debut, etat: 'conclue', creeLe: '2026-11-20T10:00' });
+		expect(await enregistrerFete(base, chef, fete, AVANT, reglage)).toEqual({ inutiles: ['Du samedi 5 décembre, 21 h au dimanche 6 décembre, 1 h 30, un Test remplacé par quatre Test'] });
+	});
+
 	it('après la publication : les deux équipes prévenues ; un remplacement devenu inutile est montré, puis annulé avec avis', async () => {
 		const { base, chef, agents, fete } = await jeu();
 		const [quatre, un] = [agents[3]!, agents[0]!];

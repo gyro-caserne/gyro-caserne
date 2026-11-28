@@ -68,8 +68,16 @@ export function texteTranche(p: Periode): string {
 	return `du ${jourEnLettres(p.debut)}, ${heure(p.debut)} au ${jourEnLettres(p.fin)}, ${heure(p.fin)}`;
 }
 
+// Un créneau se dit par ses heures : « mardi 1er décembre, de 20 h 10 à 22 h 40 », « du vendredi 4 décembre, 21 h au samedi 5 décembre, 7 h ».
+export function texteCreneau(p: Periode): string {
+	const aMinuit = p.fin.slice(11, 16) === '00:00' && p.fin.slice(0, 10) === ajouterJours(p.debut.slice(0, 10), 1);
+	if (p.debut.slice(0, 10) === p.fin.slice(0, 10) || aMinuit) return `${jourEnLettres(p.debut)}, ${dePlage(p)}`;
+	return `du ${jourEnLettres(p.debut)}, ${heure(p.debut)} au ${jourEnLettres(p.fin)}, ${heure(p.fin)}`;
+}
+
 // Les périodes d'une demande, réunies quand elles se suivent : « nuit du lundi 9 novembre et nuit du mercredi 11 novembre ».
-export function texteDemande(periodes: Periode[]): string {
-	const textes = reunir(periodes).map(texteTranche);
+// `creneau` : une demande sur un créneau, dite par ses heures.
+export function texteDemande(periodes: Periode[], creneau: boolean = false): string {
+	const textes = reunir(periodes).map(creneau ? texteCreneau : texteTranche);
 	return textes.length <= 1 ? (textes[0] ?? '') : `${textes.slice(0, -1).join(', ')} et ${textes.at(-1)}`;
 }

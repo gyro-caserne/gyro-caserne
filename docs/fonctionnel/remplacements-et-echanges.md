@@ -24,10 +24,11 @@ Planning → « Remplacements » (avec le nombre de demandes à traiter). Quatre
 
 - **Quelques heures aujourd'hui** (2 ou 3 h de son astreinte du jour, ou les durées réglées par le centre), seulement le jour de son astreinte, tant qu'il reste une plage libre ;
 - **Une ou plusieurs gardes** : le parcours en 3 étapes ;
+- **Un créneau** : un début et une fin à la minute, dans une astreinte à venir ;
 - **Échanger avec un collègue** : sa garde contre la vôtre ;
 - **Échanger ma place à une manœuvre** : votre place contre celle d'un collègue.
 
-Chaque ligne a son icône à l'encre (horloge, calendrier, flèches d'échange, casque), décorative : le texte porte le sens.
+Chaque ligne a son icône à l'encre (horloge, calendrier, calendrier et aiguilles, flèches d'échange, casque), décorative : le texte porte le sens.
 
 Les liens précis vont droit au parcours : une semaine ou un jour de la vue Semaine, une semaine de la vue Année (parcours des gardes, semaine ouverte, jour pré-choisi), « Échanger ma place » sous la prochaine manœuvre du Planning. Chaque parcours ramène au choix par son retour « ‹ Me faire remplacer » (celui lancé depuis une manœuvre du Planning ramène au Planning).
 
@@ -55,6 +56,18 @@ Pour être remplacé **2 ou 3 h** (les durées du centre) pendant son astreinte 
 - La nuit du passage à l'heure d'été, les débuts de 2 h à 2 h 45 (heures qui n'existent pas) ne sont pas proposés.
 - **Durées** : Réglages → « Remplacement court », pour le chef de centre et l'adjoint (droit de gérer les listes) : 1 h, 2 h, 3 h ou 4 h, au moins une ; par défaut 2 h et 3 h. Seules les nouvelles demandes les suivent. Une demande en cours garde sa durée.
 
+## Remplacement sur un créneau
+
+Pour être remplacé quelques heures d'une astreinte **à venir**, que l'on connaît à l'avance. Exemple : Julie sait qu'elle a une réunion mardi prochain de 20 h 10 à 22 h 40, pendant sa nuit d'astreinte.
+
+- « Me faire remplacer » → « Un créneau ». Trois étapes, comme les gardes : **Quand ?** (le début et la fin, date et heure, au sélecteur du téléphone), **À qui ?** (« Tout le monde » ou un collègue libre sur ce créneau), **Vérifier et envoyer**.
+- Le créneau est **dans ses astreintes**. Il peut courir sur deux astreintes qui se suivent (la nuit du vendredi et la garde de 24 h du samedi), jamais sur un trou. **Au moins 1 h**, une semaine au plus, demandé **au moins 1 h avant son début**, dans les douze semaines à venir, sur des heures qui ne sont pas déjà dans une demande. La durée et le « 1 h avant » se comptent en heure réelle : la nuit du passage à l'heure d'été, de 1 h 30 à 3 h 15 ne fait que 45 min. Chaque refus dit pourquoi, sous les champs Début et Fin : « Un créneau dure au moins 1 h. », « Le créneau doit finir mardi 10 novembre à 6 h au plus tard. », « Période déjà dans une demande. ».
+- Ensuite, **les règles de la garde entière** : s'il manque au remplaçant une aptitude contrôlée, le chef de garde valide **avant** ; annulation tant que personne n'a accepté ; si le collègue visé refuse, « Ouvrir à tous » ; désistement ; relance la veille à 8 h ; expiration à son début.
+- Un collègue est **libre** s'il n'est ni d'astreinte, ni en vacances, ni engagé dans une demande sur une partie du créneau. Ses vacances se voient au jour de chaque tranche touchée (un créneau du vendredi 21 h au samedi 7 h touche aussi le samedi).
+- Les heures prises par un créneau ne se demandent plus autrement : la nuit qui le porte paraît « Déjà demandée » dans le parcours des gardes, ne s'échange pas, et le reste de la nuit se demande en créneau ou en quelques heures.
+- Partout, il se dit par ses heures, jamais « nuit du » : « Marc Petit remplace Julie Martin, mardi 10 novembre, de 20 h 10 à 22 h 40 », « du vendredi 4 décembre, 21 h au samedi 5 décembre, 7 h ». Le planning, la vue du chef de garde et l'agenda du téléphone montrent le seul créneau. La plaque d'astreinte dit « Remplacé par Marc Petit de 20 h 10 à 22 h 40 », quelle que soit sa durée, jusqu'à sa fin.
+- « Quelques heures aujourd'hui » reste tel quel : le jour même, 2 ou 3 h, conclu dès l'acceptation.
+
 ## Les règles
 
 - **Qui valide** : le chef de garde de l'équipe d'astreinte sur la première période, s'il n'est ni le demandeur ni le remplaçant. À défaut (pas d'autre chef dans l'équipe) : le chef de centre ou son adjoint. Une demande à valider reste comptée dans sa cloche tant qu'il n'a pas tranché.
@@ -81,3 +94,4 @@ Pour être remplacé **2 ou 3 h** (les durées du centre) pendant son astreinte 
 - Marc se blesse et passe inapte temporaire : il ne reçoit plus de demandes, mais ouvre à tous sa nuit du 12 ; Bruno la prend.
 - Julie, d'astreinte ce lundi soir, demande 2 h de 20 h à 22 h. Paul (sans CA1) accepte le premier : c'est conclu, le chef de l'équipe 1 reçoit une urgence et refuse ; Julie reste d'astreinte, Paul est prévenu.
 - Julie et Bruno (équipe 2) échangent la nuit du 9 contre celle du 16. Bruno accepte : chacun tient la nuit de l'autre.
+- Julie sait dix jours avant qu'elle a une réunion mardi de 20 h 10 à 22 h 40. Elle demande ce créneau à Bruno, qui refuse ; elle l'ouvre à tous. Paul (sans CA1) accepte : le chef de l'équipe 1 valide. Le planning dit « Paul remplace Julie, mardi 10 novembre, de 20 h 10 à 22 h 40 » ; Julie reste d'astreinte le reste de la nuit.

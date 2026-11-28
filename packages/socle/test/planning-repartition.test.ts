@@ -183,6 +183,15 @@ describe('été : proposer, ajuster, publier', () => {
 		expect(bandesDe(ctx, p.alice).find((s) => s.semaine === '2027-06-25')).toMatchObject({ equipeId: ids[1] });
 	});
 
+	it('un créneau conclu que la répartition contredit est dit par ses heures', async () => {
+		const { base, chef, p } = await jeu();
+		await proposerEte(base, chef, 2027, maintenant, reglage);
+		await base.insert(demandeRemplacement).values({ genre: 'remplacement', creneau: 1, demandeurId: p.fred, remplacantId: p.hugo, periodes: JSON.stringify([{ debut: '2027-06-29T21:00', fin: '2027-06-30T02:00' }]), debut: '2027-06-29T21:00', etat: 'conclue', creeLe: maintenant });
+		await publierEte(base, chef, 2027, maintenant, reglage);
+		await ajusterPlage(base, chef, 2027, MAR, p.fred, false, maintenant, reglage);
+		expect((await eteAPreparer(base, chef, 2027, maintenant, reglage)).conflits).toEqual(['du mardi 29 juin, 21 h au mercredi 30 juin, 2 h : Fred Test est remplacé par Hugo Test, mais n’est plus d’astreinte']);
+	});
+
 	it('après publication : un ajustement prévient l’agent ; des vacances changées préviennent le chef ; un remplacement conclu contredit est signalé', async () => {
 		const { base, chef, chefId, p, a } = await jeu();
 		await proposerEte(base, chef, 2027, maintenant, reglage);

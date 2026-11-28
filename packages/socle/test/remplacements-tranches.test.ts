@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import centreExemple from '../../../centres/exemple/centre.ts';
 import { feries, periodesDeLaSemaine } from '../src/planning/calendrier.ts';
-import { reunir, soustraire, texteDemande, texteTranche, tranchesDe } from '../src/remplacements/tranches.ts';
+import { reunir, soustraire, texteCreneau, texteDemande, texteTranche, tranchesDe } from '../src/remplacements/tranches.ts';
 
 const reglage = centreExemple.astreinte;
 const f2026 = new Set(feries(2026).map((f) => f.date));
@@ -66,5 +66,18 @@ describe('tranches', () => {
 		expect(texteTranche({ debut: '2026-11-16T12:00', fin: '2026-11-17T10:00' })).toBe('du lundi 16 novembre, 12 h au mardi 17 novembre, 10 h');
 		expect(texteDemande(semaine('2026-11-13').slice(0, 3))).toBe('du vendredi 13 novembre, 18 h au lundi 16 novembre, 6 h');
 		expect(texteDemande([semaine('2026-11-13')[3]!, semaine('2026-11-13')[5]!])).toBe('nuit du lundi 16 novembre et nuit du mercredi 18 novembre');
+	});
+
+	it('un créneau se dit toujours par ses heures, jamais « nuit du » ni « 24 h du »', () => {
+		expect(texteCreneau({ debut: '2026-12-01T20:10', fin: '2026-12-01T22:40' })).toBe('mardi 1er décembre, de 20 h 10 à 22 h 40');
+		expect(texteCreneau({ debut: '2026-12-04T21:00', fin: '2026-12-05T07:00' })).toBe('du vendredi 4 décembre, 21 h au samedi 5 décembre, 7 h');
+		expect(texteCreneau({ debut: '2026-12-05T10:00', fin: '2026-12-06T10:00' })).toBe('du samedi 5 décembre, 10 h au dimanche 6 décembre, 10 h');
+		expect(texteCreneau({ debut: '2026-12-01T20:00', fin: '2026-12-02T00:00' })).toBe('mardi 1er décembre, de 20 h à minuit');
+		// Passé minuit : les deux jours, là où une tranche dirait « nuit du lundi ».
+		expect(texteCreneau({ debut: '2026-11-09T22:00', fin: '2026-11-10T02:00' })).toBe('du lundi 9 novembre, 22 h au mardi 10 novembre, 2 h');
+		expect(texteTranche({ debut: '2026-11-09T22:00', fin: '2026-11-10T02:00' })).toBe('nuit du lundi 9 novembre');
+		expect(texteDemande([{ debut: '2026-12-04T21:00', fin: '2026-12-05T07:00' }], true)).toBe('du vendredi 4 décembre, 21 h au samedi 5 décembre, 7 h');
+		// Sans la marque, les libellés d'avant.
+		expect(texteDemande([{ debut: '2026-12-04T21:00', fin: '2026-12-05T07:00' }])).toBe('nuit du vendredi 4 décembre');
 	});
 });

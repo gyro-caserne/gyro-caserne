@@ -59,6 +59,18 @@ export function existeAParis(moment: string): boolean {
 	return [1, 2].some((h) => heureDeParis(new Date(t - h * 3_600_000)) === moment.slice(0, 16));
 }
 
+// L'instant réel (millisecondes) d'une heure de Paris « AAAA-MM-JJTHH:MM ». Une heure vécue deux fois (fin octobre) : la seconde.
+export function instantDeParis(moment: string): number {
+	const voulu = Date.parse(`${moment.slice(0, 16)}:00Z`);
+	let t = voulu - 3_600_000;
+	for (let i = 0; i < 3; i++) {
+		const vu = Date.parse(`${heureDeParis(new Date(t))}:00Z`);
+		if (vu === voulu) break;
+		t += voulu - vu;
+	}
+	return t;
+}
+
 // Date et heure de Paris, « AAAA-MM-JJTHH:MM » (secondes permises) ; rend la date seule.
 export function exigerDateHeure(valeur: unknown, libelle: string): string {
 	if (typeof valeur !== 'string' || !/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(valeur)) throw new DonneeInvalide(`${libelle} invalide`);

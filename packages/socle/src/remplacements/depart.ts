@@ -17,7 +17,7 @@ export async function remplacementsAuDepart(base: Base, personneId: number, main
 		.select()
 		.from(demandeRemplacement)
 		.where(and(or(eq(demandeRemplacement.demandeurId, personneId), eq(demandeRemplacement.remplacantId, personneId)), inArray(demandeRemplacement.etat, [...EN_COURS]), aVenir, pasManoeuvreConclue));
-	const texte = (d: (typeof touchees)[number]) => texteDemande(periodesDe(d.periodes)) || 'Échange de manœuvre';
+	const texte = (d: (typeof touchees)[number]) => texteDemande(periodesDe(d.periodes), d.creneau === 1) || 'Échange de manœuvre';
 	const prevenir = touchees.flatMap((d) =>
 		d.demandeurId === personneId
 			? avis(base, [...(d.remplacantId !== null && ['a_valider', 'conclue'].includes(d.etat) ? [d.remplacantId] : []), ...(d.cibleId !== null && d.etat === 'attente' ? [d.cibleId] : [])], d.id, 'annulee', `Départ du demandeur, ${texte(d)}`, `/remplacements/${d.id}`, maintenant)

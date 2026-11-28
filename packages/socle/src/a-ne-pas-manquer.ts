@@ -108,7 +108,7 @@ export async function aNePasManquer(base: Base, acteur: Acteur, aujourdhui: stri
 		remplacements: remplacements.map((r) => ({
 			id: r.id,
 			titre: r.genre === 'remplacement' ? `${r.prenom} ${r.nom} cherche un remplaçant` : `${r.prenom} ${r.nom} propose un échange`,
-			sous: r.genre === 'manoeuvre' ? 'Échange de manœuvre' : texteDemande(JSON.parse(r.periodes)),
+			sous: r.genre === 'manoeuvre' ? 'Échange de manœuvre' : texteDemande(JSON.parse(r.periodes), r.creneau === 1),
 			debut: r.debut
 		})),
 		nouveautes: murs.flatMap((m) => {

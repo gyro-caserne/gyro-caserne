@@ -34,12 +34,13 @@ describe('Me faire remplacer : le choix', () => {
 			.slice(1)
 			.map((a) => [a.match(/href="([^"]+)"/)?.[1], a.match(/class="titre[^"]*">([^<]+)/)?.[1], a.match(/class="sous[^"]*">([^<]+)/)?.[1], a.match(/<span class="tuile[^"]*" aria-hidden="true"[\s\S]*?<path d="([^"]+)"/)?.[1]]);
 
-	it('d’astreinte aujourd’hui : quatre lignes, quelques heures en tête', () => {
+	it('d’astreinte aujourd’hui : cinq lignes, quelques heures en tête, le créneau après les gardes', () => {
 		const html = choix(true);
 		expect(html).toMatch(/<h1[^>]*>Me faire remplacer<\/h1>/);
 		expect(lignes(html)).toEqual([
 			['/remplacements/court', 'Quelques heures aujourd’hui', '2 ou 3 h de votre astreinte du jour', DESSINS.horloge],
 			['/remplacements/demander?gardes', 'Une ou plusieurs gardes', 'Choisir la semaine, puis les jours', ICONES_ROLES.calendrier],
+			['/remplacements/creneau', 'Un créneau', 'Le début et la fin, dans une astreinte à venir', DESSINS.creneau],
 			['/remplacements/demander?mode=echange', 'Échanger avec un collègue', 'Sa garde contre la vôtre', DESSINS.remplacer],
 			['/remplacements/manoeuvre', 'Échanger ma place à une manœuvre', 'Votre place contre celle d’un collègue', ICONES_ROLES.casque]
 		]);
@@ -47,14 +48,14 @@ describe('Me faire remplacer : le choix', () => {
 		// Ni étapes, ni phrase d'introduction ; les icônes, à l'encre, sont décoratives : le texte porte le sens.
 		expect(html).not.toContain('Étape');
 		expect(html).not.toContain('class="phrase');
-		expect(html.match(/<span class="tuile[^"]*" aria-hidden="true"/g)).toHaveLength(4);
+		expect(html.match(/<span class="tuile[^"]*" aria-hidden="true"/g)).toHaveLength(5);
 		expect(html).toMatch(/href="\/remplacements"[^>]*>[\s\S]*?Remplacements/);
 	});
 
 	it('pas d’astreinte aujourd’hui : pas de « Quelques heures »', () => {
 		const html = choix(false);
 		expect(html).not.toContain('/remplacements/court');
-		expect(lignes(html).map((l) => l[1])).toEqual(['Une ou plusieurs gardes', 'Échanger avec un collègue', 'Échanger ma place à une manœuvre']);
+		expect(lignes(html).map((l) => l[1])).toEqual(['Une ou plusieurs gardes', 'Un créneau', 'Échanger avec un collègue', 'Échanger ma place à une manœuvre']);
 	});
 });
 

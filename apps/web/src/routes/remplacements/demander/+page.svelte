@@ -114,6 +114,7 @@
 		<ListeRangees>
 			{#if data.court}<li><Rangee href="/remplacements/court" icone="calendrier" dessin={DESSINS.horloge} titre="Quelques heures aujourd’hui" sous="2 ou 3 h de votre astreinte du jour" /></li>{/if}
 			<li><Rangee href="/remplacements/demander?gardes" icone="calendrier" titre="Une ou plusieurs gardes" sous="Choisir la semaine, puis les jours" /></li>
+			<li><Rangee href="/remplacements/creneau" icone="calendrier" dessin={DESSINS.creneau} titre="Un créneau" sous="Le début et la fin, dans une astreinte à venir" /></li>
 			<li><Rangee href="/remplacements/demander?mode=echange" icone="groupe" dessin={DESSINS.remplacer} titre="Échanger avec un collègue" sous="Sa garde contre la vôtre" /></li>
 			<li><Rangee href="/remplacements/manoeuvre" icone="casque" titre="Échanger ma place à une manœuvre" sous="Votre place contre celle d’un collègue" /></li>
 		</ListeRangees>

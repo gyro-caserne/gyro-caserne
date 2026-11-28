@@ -198,7 +198,7 @@ async function demandesDeSemaines(base: Base, semaines: SemaineCalculee[]) {
 	const au = ajouterJours(semaines.map((s) => s.debut).sort().at(-1)!, 7);
 	const nom = (colonne: SQLWrapper) => sql<string>`coalesce((select p.prenom || ' ' || p.nom from personne p where p.id = ${colonne}), '')`;
 	const lignes = await base
-		.select({ genre: demandeRemplacement.genre, etat: demandeRemplacement.etat, demandeurId: demandeRemplacement.demandeurId, remplacantId: demandeRemplacement.remplacantId, periodes: demandeRemplacement.periodes, periodesCible: demandeRemplacement.periodesCible, demandeur: nom(demandeRemplacement.demandeurId).as('nom_demandeur'), remplacant: nom(demandeRemplacement.remplacantId).as('nom_remplacant') })
+		.select({ genre: demandeRemplacement.genre, etat: demandeRemplacement.etat, demandeurId: demandeRemplacement.demandeurId, remplacantId: demandeRemplacement.remplacantId, periodes: demandeRemplacement.periodes, periodesCible: demandeRemplacement.periodesCible, creneau: demandeRemplacement.creneau, demandeur: nom(demandeRemplacement.demandeurId).as('nom_demandeur'), remplacant: nom(demandeRemplacement.remplacantId).as('nom_remplacant') })
 		.from(demandeRemplacement)
 		.where(and(inArray(demandeRemplacement.etat, [...ETATS_EN_JEU]), inArray(demandeRemplacement.genre, ['remplacement', 'echange']), gte(demandeRemplacement.debut, du), lte(demandeRemplacement.debut, `${au}T23:59`)))
 		.orderBy(asc(demandeRemplacement.debut));
@@ -207,7 +207,7 @@ async function demandesDeSemaines(base: Base, semaines: SemaineCalculee[]) {
 		return lignes.flatMap((d) => {
 			const dedans = [...(JSON.parse(d.periodes) as Periode[]), ...(d.periodesCible ? (JSON.parse(d.periodesCible) as Periode[]) : [])].filter((p) => p.debut < b.fin && b.debut < p.fin);
 			if (dedans.length === 0) return [];
-			const quand = texteDemande(dedans);
+			const quand = texteDemande(dedans, d.creneau === 1);
 			const qui = d.etat === 'conclue' ? (d.genre === 'echange' ? `${d.demandeur} échange avec ${d.remplacant}` : `${d.demandeur} remplacé par ${d.remplacant}`) : d.remplacantId !== null ? `${d.demandeur} remplacé par ${d.remplacant} (à valider)` : `${d.demandeur} cherche un remplaçant`;
 			return [{ semaine: s.debut, quand, texte: `${quand[0]!.toUpperCase()}${quand.slice(1)} : ${qui}`, conclu: d.etat === 'conclue', personnes: d.remplacantId !== null ? [d.demandeurId, d.remplacantId] : [d.demandeurId] }];
 		});
@@ -497,7 +497,7 @@ export async function planningDe(base: Base, acteur: Acteur, annee: number, main
 		remplacements: effectifs(conclues)
 			// Jusqu'à la fin de la dernière semaine, qui déborde sur janvier : une plage après minuit, la nuit du Nouvel An, en est.
 			.filter((r) => r.fin > `${annee}-01-01` && r.debut < semainesAnnee.at(-1)!.periodes.at(-1)!.fin)
-			.map(({ debut, fin, titulaire, remplacant, titulaireId, remplacantId }) => ({ debut, fin, titulaire, remplacant, moi: titulaireId === moi ? ('cede' as const) : remplacantId === moi ? ('prend' as const) : null })),
+			.map(({ debut, fin, titulaire, remplacant, titulaireId, remplacantId, creneau }) => ({ debut, fin, titulaire, remplacant, moi: titulaireId === moi ? ('cede' as const) : remplacantId === moi ? ('prend' as const) : null, ...(creneau ? { creneau } : {}) })),
 		prochaine: {
 			astreinte: prochaineSemaine
 				? { debut: prochaineSemaine.periodes[0]!.debut, fin: prochaineSemaine.periodes.at(-1)!.fin, equipeId: equipeAuMoment(prochaineSemaine, prochaineSemaine.periodes[0]!.debut), groupe: equipeAuMoment(prochaineSemaine, prochaineSemaine.periodes[0]!.debut) === prochaineSemaine.equipeId ? prochaineSemaine.groupe : null, enCours: prochaineSemaine.periodes[0]!.debut <= maintenant.slice(0, 16), periodes: prochaineSemaine.periodes, fetes: textesFetes(prochaineSemaine, equipes) }
