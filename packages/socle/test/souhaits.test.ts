@@ -136,13 +136,13 @@ describe('effacés vite', () => {
 	it('l’agent masque son anniversaire ou change sa date : ses souhaits partent', async () => {
 		const { base, zoe, paul, marc } = await jeu();
 		await souhaiter(base, acteur(paul), zoe, maintenant);
-		await modifierMonProfil(base, acteur(zoe), { surnom: 'Zo' }, aujourdhui);
+		await modifierMonProfil(base, acteur(zoe), { surnom: 'Zo' }, maintenant);
 		expect(await base.select().from(souhaitAnniversaire)).toHaveLength(1);
-		await modifierMonProfil(base, acteur(zoe), { anniversaireVisible: false }, aujourdhui);
+		await modifierMonProfil(base, acteur(zoe), { anniversaireVisible: false }, maintenant);
 		expect(await base.select().from(souhaitAnniversaire)).toEqual([]);
-		await modifierMonProfil(base, acteur(zoe), { anniversaireVisible: true }, aujourdhui);
+		await modifierMonProfil(base, acteur(zoe), { anniversaireVisible: true }, maintenant);
 		await souhaiter(base, acteur(marc), zoe, maintenant);
-		await modifierMonProfil(base, acteur(zoe), { naissance: '1990-10-29' }, aujourdhui);
+		await modifierMonProfil(base, acteur(zoe), { naissance: '1990-10-29' }, maintenant);
 		expect(await base.select().from(souhaitAnniversaire)).toEqual([]);
 	});
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { personne } from '@gyro-caserne/socle';
+import { avisAnciennete, personne } from '@gyro-caserne/socle';
 import { baseDeTest } from '@gyro-caserne/socle/base-de-test';
 import { preparer as avecLeCentre } from '../echanges/de-test.ts';
 import { actions, load } from './+page.server';
@@ -34,7 +34,7 @@ describe('/profil : load', () => {
 	it('charge les valeurs de l\'agent', async () => {
 		const { base, acteur } = await preparer();
 		expect(await charger({ base, acteur })).toEqual({
-			profil: { surnom: 'Ali', telephone: '06 00 00 00 00', telephoneVisible: true, contactUrgence: null, naissance: null, anniversaireVisible: true, cochesLecture: true },
+			profil: { surnom: 'Ali', telephone: '06 00 00 00 00', telephoneVisible: true, contactUrgence: null, naissance: null, anniversaireVisible: true, cochesLecture: true, engagementSpv: null, exterieur: false },
 			// Sans profil, pas de messagerie : pas de case pour les coches.
 			messagerie: false
 		});
@@ -92,5 +92,25 @@ describe('/profil : envoi', () => {
 		await envoyer({ base, acteur: alice }, { surnom: '', telephone: '', contactUrgence: '', avecCoches: '1', cochesLecture: 'on' });
 		expect((await lire(base, alice.id)).cochesLecture).toBe(1);
 		expect((await charger({ base, acteur: alice })).profil.cochesLecture).toBe(true);
+	});
+
+	it('la date d’engagement : renseignée une fois, le chef prévenu ; refusée sur le champ ensuite', async () => {
+		const { base, alice, chef } = await avecLeCentre();
+		// Un formulaire sans le champ (déjà remplie, ou page ancienne) n'y touche pas.
+		await envoyer({ base, acteur: alice }, { surnom: '' });
+		expect((await lire(base, alice.id)).engagementSpv).toBeNull();
+		expect(await envoyer({ base, acteur: alice }, { engagementSpv: '2999-01-01' })).toMatchObject({ status: 400, data: { erreurs: { engagementSpv: 'Date d’engagement invalide' }, valeurs: { engagementSpv: '2999-01-01' } } });
+		expect(await envoyer({ base, acteur: alice }, { engagementSpv: '2014-03-03' })).toEqual({ succes: true, message: 'Profil enregistré' });
+		expect((await lire(base, alice.id)).engagementSpv).toBe('2014-03-03');
+		expect((await charger({ base, acteur: alice })).profil).toMatchObject({ engagementSpv: '2014-03-03', exterieur: false });
+		const avis = await base.select().from(avisAnciennete);
+		expect(avis).toMatchObject([{ personneId: chef.id, agentId: alice.id, texte: 'Alice Test a renseigné le 3 mars 2014 comme date d’engagement.' }]);
+		// La même date renvoyée (double appui, retour arrière) : enregistré sans erreur.
+		expect(await envoyer({ base, acteur: alice }, { engagementSpv: '2014-03-03', surnom: 'Lili' })).toEqual({ succes: true, message: 'Profil enregistré' });
+		// Une autre date : un message général (le champ n'est plus à l'écran une fois la page relue).
+		const refus = await envoyer({ base, acteur: alice }, { engagementSpv: '2015-01-01' });
+		expect(refus).toMatchObject({ status: 400, data: { message: 'Date d’engagement déjà renseignée' } });
+		expect(refus.data.erreurs).toBeUndefined();
+		expect((await lire(base, alice.id)).engagementSpv).toBe('2014-03-03');
 	});
 });

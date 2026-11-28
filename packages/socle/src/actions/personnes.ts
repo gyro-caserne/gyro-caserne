@@ -1,8 +1,8 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import type { Base, BasePhotos } from '../base.ts';
 import { effacerPhotos } from '../commun.ts';
 import { effacerLiensVers, normaliserAdresse } from '../connexion.ts';
-import { enCours, exigerDate, exigerDateHeure, veille } from '../dates.ts';
+import { enCours, exigerDate, exigerDateHeure, formatDeDate, veille } from '../dates.ts';
 import { aLeDroit, couvre, droitsDe, estChefDeCentre, occupe, perimetreDe, type Acteur, type Perimetre } from '../droits.ts';
 import { DonneeInvalide, RefusDroit } from '../erreurs.ts';
 import { finirOuSupprimer } from '../fin-de-periode.ts';
@@ -12,8 +12,9 @@ import { departDesGroupes } from '../messagerie.ts';
 import { effacerNotificationsDe } from '../notifications.ts';
 import { annulerDemandesAuPassage } from '../demandes.ts';
 import { annulerAuDepart } from '../reservations.ts';
+import { estChefOuAdjointSql } from '../suivi.ts';
 import { remplacementsAuDepart } from '../remplacements/depart.ts';
-import { affectationEquipe, attribution, cleAgenda, equipe, grade, personne, profil, profilDroit, session, souhaitAnniversaire, user } from '../schema.ts';
+import { affectationEquipe, attribution, avisAnciennete, cleAgenda, equipe, grade, personne, profil, profilDroit, session, souhaitAnniversaire, user } from '../schema.ts';
 
 const centre: Perimetre = { type: 'centre' };
 
@@ -373,17 +374,57 @@ export async function affecterEquipe(base: Base, acteur: Acteur, personneId: num
 
 // `cochesLecture` : faux, l'agent ne montre plus ses lectures dans la messagerie et ne voit plus celles des autres.
 // `naissance` : AAAA-MM-JJ, vue des seuls gestionnaires ; l'anniversaire, s'il est affiché, sans l'âge.
-export type MonProfil = { surnom: string | null; telephone: string | null; telephoneVisible: boolean; contactUrgence: string | null; naissance: string | null; anniversaireVisible: boolean; cochesLecture: boolean };
+// `engagementSpv` : l'agent la renseigne si elle est vide, puis seuls le chef et l'adjoint la corrigent. `exterieur` : lu seulement.
+export type MonProfil = { surnom: string | null; telephone: string | null; telephoneVisible: boolean; contactUrgence: string | null; naissance: string | null; anniversaireVisible: boolean; cochesLecture: boolean; engagementSpv: string | null; exterieur: boolean };
+export type ChampsMonProfil = Partial<Omit<MonProfil, 'exterieur'>>;
 const TEXTES_PROFIL = ['surnom', 'telephone', 'contactUrgence'] as const;
 const BOOLEENS_PROFIL = ['telephoneVisible', 'anniversaireVisible', 'cochesLecture'] as const;
+
+const dateReelle = (valeur: unknown): valeur is string => {
+	if (typeof valeur !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(valeur)) return false;
+	const jour = new Date(`${valeur}T00:00:00Z`);
+	return !Number.isNaN(jour.getTime()) && jour.toISOString().slice(0, 10) === valeur;
+};
 
 // Vide : effacée. Sinon une vraie date, entre 1900 et aujourd'hui.
 function naissancePlausible(valeur: unknown, aujourdhui: string): string | null {
 	if (valeur === null || valeur === '') return null;
-	const jour = new Date(`${valeur}T00:00:00Z`);
-	const reelle = typeof valeur === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(valeur) && !Number.isNaN(jour.getTime()) && jour.toISOString().slice(0, 10) === valeur;
-	if (!reelle || valeur < '1900-01-01' || valeur > aujourdhui) throw new DonneeInvalide('Date de naissance invalide');
+	if (!dateReelle(valeur) || valeur < '1900-01-01' || valeur > aujourdhui) throw new DonneeInvalide('Date de naissance invalide');
 	return valeur;
+}
+
+// Pas dans le futur ; pas avant 16 ans si la naissance est connue, sinon pas avant 1950.
+function engagementPlausible(valeur: unknown, naissance: string | null, aujourdhui: string): string {
+	const auPlusTot = naissance === null ? '1950-01-01' : `${Number(naissance.slice(0, 4)) + 16}${naissance.slice(4)}`;
+	if (!dateReelle(valeur) || valeur < auPlusTot || valeur > aujourdhui) throw new DonneeInvalide('Date d’engagement invalide');
+	return valeur;
+}
+
+// « 3 mars 2014 », « 1er mars 2014 ».
+const dateEnLettres = (iso: string) => formatDeDate({ day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T00:00:00Z`)).replace(/^1(?=\s)/, '1er');
+
+// Le chef de centre et l'adjoint en fonction, chacun une ligne de cloche, jamais l'agent lui-même. Pas de téléphone, pas d'e-mail.
+// `auteurId` vide et `annees` à 0 : ni une félicitation, ni une annonce de palier (anciennete.ts).
+function avisEngagement(base: Base, agent: { id: number; prenom: string; nom: string }, engagement: string, maintenant: string) {
+	const texte = `${`${agent.prenom} ${agent.nom}`.trim()} a renseigné le ${dateEnLettres(engagement)} comme date d’engagement.`;
+	return base.insert(avisAnciennete).select(
+		base
+			.select({
+				id: sql<number | null>`null`.as('id'),
+				personneId: personne.id,
+				agentId: sql<number>`${agent.id}`.as('agent_id'),
+				auteurId: sql<number | null>`null`.as('auteur_id'),
+				annees: sql<number>`0`.as('annees'),
+				jour: sql<string>`${maintenant.slice(0, 10)}`.as('jour'),
+				titre: sql<string>`${'Date d’engagement renseignée'}`.as('titre'),
+				texte: sql<string>`${texte}`.as('texte'),
+				url: sql<string>`${`/agents/${agent.id}`}`.as('url'),
+				creeLe: sql<string>`${maintenant}`.as('cree_le'),
+				lueLe: sql<string | null>`null`.as('lue_le')
+			})
+			.from(personne)
+			.where(and(inArray(personne.statut, [...STATUTS_AVEC_ACCES]), estChefOuAdjointSql(sql`"personne"."id"`, maintenant.slice(0, 10)), ne(personne.id, agent.id), sql`changes() = 1`))
+	);
 }
 
 function exigerPersonne(acteur: Acteur): number {
@@ -391,24 +432,28 @@ function exigerPersonne(acteur: Acteur): number {
 	return acteur.id;
 }
 
+const ficheEtType = (base: Base, id: number) => base.select({ fiche: personne, typePersonne: profil.typePersonne }).from(personne).leftJoin(profil, eq(profil.id, personne.profilId)).where(eq(personne.id, id));
+
 export async function monProfil(base: Base, acteur: Acteur): Promise<MonProfil | null> {
 	if (acteur.type === 'super') return null;
-	const [fiche] = await base.select().from(personne).where(eq(personne.id, acteur.id));
-	if (!fiche) return null;
-	return { surnom: fiche.surnom, telephone: fiche.telephone, telephoneVisible: fiche.telephoneVisible === 1, contactUrgence: fiche.contactUrgence, naissance: fiche.naissance, anniversaireVisible: fiche.anniversaireVisible === 1, cochesLecture: fiche.cochesLecture === 1 };
+	const [ligne] = await ficheEtType(base, acteur.id);
+	if (!ligne) return null;
+	const { fiche } = ligne;
+	return { surnom: fiche.surnom, telephone: fiche.telephone, telephoneVisible: fiche.telephoneVisible === 1, contactUrgence: fiche.contactUrgence, naissance: fiche.naissance, anniversaireVisible: fiche.anniversaireVisible === 1, cochesLecture: fiche.cochesLecture === 1, engagementSpv: fiche.engagementSpv, exterieur: ligne.typePersonne === 'exterieur' };
 }
 
-export async function modifierMonProfil(base: Base, acteur: Acteur, champs: Partial<MonProfil>, aujourdhui: string): Promise<void> {
-	exigerDate(aujourdhui);
+export async function modifierMonProfil(base: Base, acteur: Acteur, champs: ChampsMonProfil, maintenant: string): Promise<void> {
+	const aujourdhui = exigerDateHeure(maintenant, 'Date');
 	const id = exigerPersonne(acteur);
-	const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
-	if (!fiche) throw new DonneeInvalide('Personne inconnue');
+	const [ligne] = await ficheEtType(base, id);
+	if (!ligne) throw new DonneeInvalide('Personne inconnue');
+	const { fiche } = ligne;
 
 	// Seuls ces champs : le reste de la fiche relève de la gestion.
-	const permis: readonly string[] = [...TEXTES_PROFIL, 'naissance', ...BOOLEENS_PROFIL];
+	const permis: readonly string[] = [...TEXTES_PROFIL, 'naissance', 'engagementSpv', ...BOOLEENS_PROFIL];
 	if (Object.keys(champs).some((cle) => !permis.includes(cle))) throw new DonneeInvalide('Champ non modifiable');
 
-	const nouveaux: Partial<Record<(typeof TEXTES_PROFIL)[number] | 'naissance', string | null>> & Partial<Record<(typeof BOOLEENS_PROFIL)[number], number>> = {};
+	const nouveaux: Partial<Record<(typeof TEXTES_PROFIL)[number] | 'naissance' | 'engagementSpv', string | null>> & Partial<Record<(typeof BOOLEENS_PROFIL)[number], number>> = {};
 	for (const cle of TEXTES_PROFIL) {
 		const valeur: unknown = champs[cle];
 		if (valeur === undefined) continue;
@@ -424,15 +469,29 @@ export async function modifierMonProfil(base: Base, acteur: Acteur, champs: Part
 
 	if (champs.naissance !== undefined) nouveaux.naissance = naissancePlausible(champs.naissance, aujourdhui);
 
+	// Vide : rien ne change (l'agent ne l'efface jamais). Remplie : refusée si la fiche en a déjà une.
+	const engagement = champs.engagementSpv;
+	if (engagement !== undefined && engagement !== null && engagement !== '') {
+		if (ligne.typePersonne === 'exterieur') throw new DonneeInvalide('Une personne extérieure n’a pas de date d’engagement');
+		// La même date renvoyée (double appui) ne change rien ; une autre est refusée.
+		if (fiche.engagementSpv !== null && engagement !== fiche.engagementSpv) throw new DonneeInvalide('Date d’engagement déjà renseignée');
+		if (fiche.engagementSpv === null) nouveaux.engagementSpv = engagementPlausible(engagement, nouveaux.naissance !== undefined ? nouveaux.naissance : fiche.naissance, aujourdhui);
+	}
+
 	exigerLongueurs(nouveaux);
 	const changes = Object.fromEntries(Object.entries(nouveaux).filter(([cle, valeur]) => valeur !== fiche[cle as keyof typeof fiche]));
 	if (Object.keys(changes).length === 0) return;
-	const ecritures = [
-		base.update(personne).set(changes).where(eq(personne.id, id)),
-		// Les noms des champs seulement : aucune valeur personnelle dans le journal.
-		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_mon_profil', cibleType: 'personne', cibleId: id, details: { champs: Object.keys(changes) } }, aujourdhui)
-	] as const;
+	// Date d'engagement : écrite seulement si elle est encore vide (deux envois croisés), et les chefs prévenus seulement si elle l'a été.
+	const engagementEcrit = typeof changes.engagementSpv === 'string' ? changes.engagementSpv : null;
+	const ecriture = base.update(personne).set(changes).where(engagementEcrit === null ? eq(personne.id, id) : and(eq(personne.id, id), isNull(personne.engagementSpv)));
 	// Anniversaire masqué ou date changée : les souhaits reçus partent avec.
 	const sansSouhaits = changes.anniversaireVisible === 0 || 'naissance' in changes;
-	await base.batch(sansSouhaits ? [...ecritures, base.delete(souhaitAnniversaire).where(eq(souhaitAnniversaire.personneId, id))] : ecritures);
+	await base.batch([
+		ecriture,
+		// Juste après l'écriture : `changes()` dit si elle a eu lieu.
+		...(engagementEcrit === null ? [] : [avisEngagement(base, fiche, engagementEcrit, maintenant)]),
+		// Les noms des champs seulement : aucune valeur personnelle dans le journal.
+		ligneJournal(base, { acteur: nomActeur(acteur), action: 'modifier_mon_profil', cibleType: 'personne', cibleId: id, details: { champs: Object.keys(changes) } }, aujourdhui),
+		...(sansSouhaits ? [base.delete(souhaitAnniversaire).where(eq(souhaitAnniversaire.personneId, id))] : [])
+	]);
 }

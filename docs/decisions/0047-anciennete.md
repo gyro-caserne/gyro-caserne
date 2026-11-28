@@ -9,5 +9,6 @@
   - le jour J se lit dans la lecture des anniversaires : la même requête dans Échanges (`fetesDuJourAuCentre`), le même batch sur l'accueil (`fetesPourMoi`), les paliers du centre lus dans la requête par une sous-requête ;
   - l'annonce aux chefs au réveil de 8 h (et 8 h 10), en une lecture bornée par la date, sans relire un palier déjà annoncé ; un e-mail par chef qui liste les agents, par Brevo, comme les autres e-mails aux chefs.
 - **Pourquoi** : pas de requête de plus sur l'accueil ni dans Échanges, un réglage simple, presque aucune donnée gardée (banc dans la PR).
+- **Ajout du 28/11/2026, la date saisie par l'agent** : dans Mon profil, l'agent renseigne sa date d'engagement si elle est vide, refusée par le socle sinon ; le chef et l'adjoint en ont une ligne dans `avis_anciennete` (`auteur_id` vide, `annees` à 0, ni félicitation ni annonce de palier), dans le même batch que l'écriture, sans téléphone ni e-mail. Spec : `docs/superpowers/specs/2026-11-28-engagement-par-l-agent-design.md`. Validé par le porteur le 28/11/2026 (option 1).
 - **Décisions prises en route, à valider** : voir la PR #131.
 - **Validé par** : le porteur, le 24/11/2026 (design) ; le reste dans la PR.

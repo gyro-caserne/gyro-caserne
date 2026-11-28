@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { exigerMessagerie, modifierMonProfil, monProfil, RefusDroit } from '@gyro-caserne/socle';
 import { echec } from '#lib/server/formulaire-agent.ts';
-import { aujourdhuiParis } from '#lib/aujourdhui.ts';
+import { aujourdhuiParis, maintenantParis } from '#lib/aujourdhui.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -31,15 +31,17 @@ export const actions: Actions = {
 			contactUrgence: texte('contactUrgence'),
 			// Absente d'un formulaire ancien (page ouverte avant la mise à jour) : la date ne bouge pas.
 			...(formulaire.has('naissance') ? { naissance: texte('naissance') } : {}),
+			// Le champ n'est dans le formulaire que tant que la date est vide.
+			...(formulaire.has('engagementSpv') ? { engagementSpv: texte('engagementSpv') } : {}),
 			telephoneVisible: formulaire.has('telephoneVisible'),
 			anniversaireVisible: formulaire.has('anniversaireVisible'),
 			// La case n'est dans le formulaire (avec son repère) que pour qui a la messagerie.
 			...(formulaire.has('avecCoches') ? { cochesLecture: formulaire.has('cochesLecture') } : {})
 		};
 		try {
-			await modifierMonProfil(locals.base, locals.acteur, champs, aujourdhuiParis());
+			await modifierMonProfil(locals.base, locals.acteur, champs, maintenantParis());
 		} catch (erreur) {
-			return echec(erreur, { valeurs: { surnom: champs.surnom, telephone: champs.telephone, contactUrgence: champs.contactUrgence, naissance: champs.naissance ?? '' } });
+			return echec(erreur, { valeurs: { surnom: champs.surnom, telephone: champs.telephone, contactUrgence: champs.contactUrgence, naissance: champs.naissance ?? '', engagementSpv: champs.engagementSpv ?? '' } });
 		}
 		return { succes: true, message: 'Profil enregistré' };
 	}

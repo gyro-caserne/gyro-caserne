@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { affecterEquipe, ajouterPersonne, changerStatut, modifierFiche, modifierMonProfil, monProfil, retirerEquipe } from '../src/actions/personnes.ts';
 import { adresseAutorisee } from '../src/connexion.ts';
 import { DonneeInvalide, RefusDroit } from '../src/erreurs.ts';
-import { affectationEquipe, attribution, equipe, grade, journal, personne, profil, profilDroit, responsabilite, responsabiliteDroit, session, user, verification } from '../src/schema.ts';
+import { abonnementPush, affectationEquipe, attribution, avisAnciennete, envoiPush, equipe, grade, journal, personne, profil, profilDroit, responsabilite, responsabiliteDroit, session, user, verification } from '../src/schema.ts';
 import type { Acteur } from '../src/droits.ts';
 import { vueEffectif } from '../src/effectif.ts';
 import { baseDeTest } from './base-de-test.ts';
@@ -679,9 +679,9 @@ describe('mon profil', () => {
 
 	it('lit et écrit ses propres champs', async () => {
 		const { base, id, moi } = await avecAgent();
-		expect(await monProfil(base, moi)).toEqual({ surnom: null, telephone: null, telephoneVisible: false, contactUrgence: null, naissance: null, anniversaireVisible: true, cochesLecture: true });
-		await modifierMonProfil(base, moi, { surnom: 'Bru', telephone: '0600000000', telephoneVisible: true, contactUrgence: 'Alice 0611111111', anniversaireVisible: false, cochesLecture: false }, aujourdhui);
-		expect(await monProfil(base, moi)).toEqual({ surnom: 'Bru', telephone: '0600000000', telephoneVisible: true, contactUrgence: 'Alice 0611111111', naissance: null, anniversaireVisible: false, cochesLecture: false });
+		expect(await monProfil(base, moi)).toEqual({ surnom: null, telephone: null, telephoneVisible: false, contactUrgence: null, naissance: null, anniversaireVisible: true, cochesLecture: true, engagementSpv: null, exterieur: false });
+		await modifierMonProfil(base, moi, { surnom: 'Bru', telephone: '0600000000', telephoneVisible: true, contactUrgence: 'Alice 0611111111', anniversaireVisible: false, cochesLecture: false }, midi);
+		expect(await monProfil(base, moi)).toEqual({ surnom: 'Bru', telephone: '0600000000', telephoneVisible: true, contactUrgence: 'Alice 0611111111', naissance: null, anniversaireVisible: false, cochesLecture: false, engagementSpv: null, exterieur: false });
 		const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
 		expect(fiche).toMatchObject({ telephoneVisible: 1, anniversaireVisible: 0, cochesLecture: 0 });
 	});
@@ -689,26 +689,26 @@ describe('mon profil', () => {
 	it('refuse un champ hors liste, sans rien écrire', async () => {
 		const { base, id, moi } = await avecAgent();
 		// @ts-expect-error `nom` n'est pas modifiable ici
-		await expect(modifierMonProfil(base, moi, { surnom: 'Bru', nom: 'Pirate' }, aujourdhui)).rejects.toBeInstanceOf(DonneeInvalide);
+		await expect(modifierMonProfil(base, moi, { surnom: 'Bru', nom: 'Pirate' }, midi)).rejects.toBeInstanceOf(DonneeInvalide);
 		const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
 		expect(fiche).toMatchObject({ nom: 'Petit', surnom: null });
 	});
 
 	it('refuse un type invalide', async () => {
 		const { base, moi } = await avecAgent();
-		await expect(modifierMonProfil(base, moi, { surnom: 5 as unknown as string }, aujourdhui)).rejects.toBeInstanceOf(DonneeInvalide);
-		await expect(modifierMonProfil(base, moi, { telephoneVisible: 'oui' as unknown as boolean }, aujourdhui)).rejects.toBeInstanceOf(DonneeInvalide);
-		await expect(modifierMonProfil(base, moi, { cochesLecture: 0 as unknown as boolean }, aujourdhui)).rejects.toBeInstanceOf(DonneeInvalide);
+		await expect(modifierMonProfil(base, moi, { surnom: 5 as unknown as string }, midi)).rejects.toBeInstanceOf(DonneeInvalide);
+		await expect(modifierMonProfil(base, moi, { telephoneVisible: 'oui' as unknown as boolean }, midi)).rejects.toBeInstanceOf(DonneeInvalide);
+		await expect(modifierMonProfil(base, moi, { cochesLecture: 0 as unknown as boolean }, midi)).rejects.toBeInstanceOf(DonneeInvalide);
 	});
 
 	it('sa date de naissance : une date plausible, vidable', async () => {
 		const { base, id, moi } = await avecAgent();
-		await modifierMonProfil(base, moi, { naissance: '1990-05-17' }, aujourdhui);
+		await modifierMonProfil(base, moi, { naissance: '1990-05-17' }, midi);
 		expect(await monProfil(base, moi)).toMatchObject({ naissance: '1990-05-17' });
 		for (const naissance of ['1990-02-30', '1990-13-45', '17/05/1990', '1899-12-31', '2099-01-01'])
-			await expect(modifierMonProfil(base, moi, { naissance }, aujourdhui)).rejects.toThrow('Date de naissance invalide');
-		await expect(modifierMonProfil(base, moi, { naissance: 5 as unknown as string }, aujourdhui)).rejects.toThrow('Date de naissance invalide');
-		await modifierMonProfil(base, moi, { naissance: '' }, aujourdhui);
+			await expect(modifierMonProfil(base, moi, { naissance }, midi)).rejects.toThrow('Date de naissance invalide');
+		await expect(modifierMonProfil(base, moi, { naissance: 5 as unknown as string }, midi)).rejects.toThrow('Date de naissance invalide');
+		await modifierMonProfil(base, moi, { naissance: '' }, midi);
 		const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
 		expect(fiche!.naissance).toBeNull();
 		// Le journal ne garde que le nom du champ.
@@ -720,26 +720,129 @@ describe('mon profil', () => {
 	it('refuse le super administrateur', async () => {
 		const { base } = await avecAgent();
 		await expect(monProfil(base, superAdmin)).resolves.toBeNull();
-		await expect(modifierMonProfil(base, superAdmin, { surnom: 'X' }, aujourdhui)).rejects.toThrow('Pas de fiche pour le super administrateur');
+		await expect(modifierMonProfil(base, superAdmin, { surnom: 'X' }, midi)).rejects.toThrow('Pas de fiche pour le super administrateur');
 	});
 
 	it('enregistre les chaînes vides comme null', async () => {
 		const { base, moi } = await avecAgent();
-		await modifierMonProfil(base, moi, { surnom: 'Bru', telephone: '06', contactUrgence: 'Alice' }, aujourdhui);
-		await modifierMonProfil(base, moi, { surnom: '  ', telephone: '', contactUrgence: '' }, aujourdhui);
+		await modifierMonProfil(base, moi, { surnom: 'Bru', telephone: '06', contactUrgence: 'Alice' }, midi);
+		await modifierMonProfil(base, moi, { surnom: '  ', telephone: '', contactUrgence: '' }, midi);
 		expect(await monProfil(base, moi)).toMatchObject({ surnom: null, telephone: null, contactUrgence: null });
 	});
 
 	it('journalise les noms des champs changés, jamais les valeurs', async () => {
 		const { base, id, moi } = await avecAgent();
-		await modifierMonProfil(base, moi, { surnom: 'Bru', telephone: '0600000000', anniversaireVisible: true }, aujourdhui);
+		await modifierMonProfil(base, moi, { surnom: 'Bru', telephone: '0600000000', anniversaireVisible: true }, midi);
 		const lignes = await base.select().from(journal).where(eq(journal.action, 'modifier_mon_profil'));
 		expect(lignes).toHaveLength(1);
 		expect(lignes[0]).toMatchObject({ acteur: `personne:${id}`, cibleType: 'personne', cibleId: id });
 		expect(JSON.parse(lignes[0]!.details!)).toEqual({ champs: ['surnom', 'telephone'] });
 		expect(JSON.stringify(lignes[0])).not.toContain('0600000000');
-		await modifierMonProfil(base, moi, { surnom: 'Bru' }, aujourdhui);
+		await modifierMonProfil(base, moi, { surnom: 'Bru' }, midi);
 		expect(await base.select().from(journal).where(eq(journal.action, 'modifier_mon_profil'))).toHaveLength(1);
+	});
+});
+
+// L'agent renseigne sa date d'engagement si elle est vide ; ensuite, seuls le chef et l'adjoint la corrigent.
+describe('mon profil : date d’engagement', () => {
+	async function avecDirection() {
+		const j = await jeu();
+		const { chefCentre, adjoint } = await direction(j.base, j.agent.id);
+		const id = await ajouterPersonne(j.base, superAdmin, { email: 'bruno@exemple.fr', prenom: 'Bruno', nom: 'Petit', profilId: j.agent.id }, aujourdhui, []);
+		return { ...j, chefCentre, adjoint, id, moi: { type: 'personne', id } as Acteur };
+	}
+	const avis = (base: Awaited<ReturnType<typeof jeu>>['base']) => base.select().from(avisAnciennete).orderBy(avisAnciennete.personneId);
+
+	it('vide : l’agent la renseigne, le chef et l’adjoint en ont chacun une ligne de cloche, sans téléphone', async () => {
+		const { base, id, moi, chefCentre, adjoint } = await avecDirection();
+		await base.insert(abonnementPush).values({ personneId: chefCentre, endpoint: 'https://fcm.googleapis.com/x', p256dh: 'p', auth: 'a', creeLe: midi });
+		await modifierMonProfil(base, moi, { engagementSpv: '2014-03-03' }, midi);
+		expect(await monProfil(base, moi)).toMatchObject({ engagementSpv: '2014-03-03', exterieur: false });
+		const lignes = await avis(base);
+		expect(lignes.map((l) => l.personneId)).toEqual([chefCentre, adjoint]);
+		for (const l of lignes) expect(l).toMatchObject({ agentId: id, auteurId: null, titre: 'Date d’engagement renseignée', texte: 'Bruno Petit a renseigné le 3 mars 2014 comme date d’engagement.', url: `/agents/${id}`, creeLe: midi, lueLe: null });
+		expect(await base.select().from(envoiPush)).toEqual([]);
+		// Le journal ne garde que le nom du champ.
+		const [ligne] = await base.select().from(journal).where(eq(journal.action, 'modifier_mon_profil'));
+		expect(JSON.parse(ligne!.details!)).toEqual({ champs: ['engagementSpv'] });
+		expect(JSON.stringify(ligne)).not.toContain('2014');
+	});
+
+	it('déjà remplie : refusée sans rien écrire ; un champ vide ne l’efface pas', async () => {
+		const { base, id, moi } = await avecDirection();
+		await modifierFiche(base, superAdmin, id, { engagementSpv: '2010-01-01' }, aujourdhui, []);
+		await expect(modifierMonProfil(base, moi, { engagementSpv: '2014-03-03', surnom: 'Bru' }, midi)).rejects.toThrow(new DonneeInvalide('Date d’engagement déjà renseignée'));
+		await modifierMonProfil(base, moi, { engagementSpv: '', surnom: 'Bru' }, midi);
+		// La même date que la fiche (envoi répété) : ignorée, sans erreur.
+		await modifierMonProfil(base, moi, { engagementSpv: '2010-01-01', telephone: '0600000000' }, midi);
+		const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
+		expect(fiche).toMatchObject({ engagementSpv: '2010-01-01', surnom: 'Bru', telephone: '0600000000' });
+		expect(await avis(base)).toEqual([]);
+	});
+
+	it('deux envois croisés : la date déjà écrite reste, personne n’est prévenu', async () => {
+		const { base, id, moi } = await avecDirection();
+		// Le chef enregistre une date entre la lecture de la fiche et l'écriture de l'agent.
+		const croise = new Proxy(base, {
+			get(cible, cle) {
+				if (cle === 'batch') return async (requetes: Parameters<typeof base.batch>[0]) => {
+					await cible.update(personne).set({ engagementSpv: '2010-01-01' }).where(eq(personne.id, id));
+					return cible.batch(requetes);
+				};
+				const valeur = Reflect.get(cible, cle);
+				return typeof valeur === 'function' ? valeur.bind(cible) : valeur;
+			}
+		});
+		await modifierMonProfil(croise, moi, { engagementSpv: '2014-03-03' }, midi);
+		const [fiche] = await base.select().from(personne).where(eq(personne.id, id));
+		expect(fiche!.engagementSpv).toBe('2010-01-01');
+		expect(await avis(base)).toEqual([]);
+	});
+
+	it('vidée par le chef puis renseignée de nouveau : le chef et l’adjoint sont prévenus de nouveau', async () => {
+		const { base, id, moi } = await avecDirection();
+		await modifierMonProfil(base, moi, { engagementSpv: '2014-03-03' }, midi);
+		await modifierFiche(base, superAdmin, id, { engagementSpv: null }, aujourdhui, []);
+		await modifierMonProfil(base, moi, { engagementSpv: '2014-03-04' }, `${aujourdhui}T13:00`);
+		expect((await avis(base)).map((l) => l.texte)).toEqual(expect.arrayContaining(['Bruno Petit a renseigné le 4 mars 2014 comme date d’engagement.']));
+		expect(await avis(base)).toHaveLength(4);
+	});
+
+	it('vide et laissée vide : rien d’écrit, personne de prévenu', async () => {
+		const { base, moi } = await avecDirection();
+		await modifierMonProfil(base, moi, { engagementSpv: '' }, midi);
+		await modifierMonProfil(base, moi, { engagementSpv: null }, midi);
+		expect(await avis(base)).toEqual([]);
+		expect(await base.select().from(journal).where(eq(journal.action, 'modifier_mon_profil'))).toEqual([]);
+	});
+
+	it('une date plausible : ni future, ni avant 1950, ni avant la naissance plus 16 ans', async () => {
+		const { base, moi } = await avecDirection();
+		for (const engagementSpv of ['2014-02-30', '03/03/2014', '1949-12-31', '2026-10-26', 5 as unknown as string])
+			await expect(modifierMonProfil(base, moi, { engagementSpv }, midi)).rejects.toThrow(new DonneeInvalide('Date d’engagement invalide'));
+		await modifierMonProfil(base, moi, { naissance: '1990-05-17' }, midi);
+		await expect(modifierMonProfil(base, moi, { engagementSpv: '2006-05-16' }, midi)).rejects.toThrow(new DonneeInvalide('Date d’engagement invalide'));
+		// La naissance envoyée en même temps compte.
+		await expect(modifierMonProfil(base, moi, { naissance: '1995-01-01', engagementSpv: '2010-01-01' }, midi)).rejects.toThrow(new DonneeInvalide('Date d’engagement invalide'));
+		await modifierMonProfil(base, moi, { engagementSpv: '2006-05-17' }, midi);
+		expect(await monProfil(base, moi)).toMatchObject({ engagementSpv: '2006-05-17' });
+	});
+
+	it('l’agent chef de centre : seul l’adjoint est prévenu ; « 1er » au premier du mois', async () => {
+		const { base, chefCentre, adjoint } = await avecDirection();
+		await modifierMonProfil(base, { type: 'personne', id: chefCentre }, { engagementSpv: '2014-03-01' }, midi);
+		const lignes = await avis(base);
+		expect(lignes.map((l) => l.personneId)).toEqual([adjoint]);
+		expect(lignes[0]!.texte).toBe('P N a renseigné le 1er mars 2014 comme date d’engagement.');
+	});
+
+	it('une personne extérieure n’a pas ce champ', async () => {
+		const { base, ext } = await avecDirection();
+		const id = await ajouterPersonne(base, superAdmin, { email: 'r@exemple.fr', prenom: 'René', nom: 'Ancien', profilId: ext.id }, aujourdhui, []);
+		const moi: Acteur = { type: 'personne', id };
+		expect(await monProfil(base, moi)).toMatchObject({ engagementSpv: null, exterieur: true });
+		await expect(modifierMonProfil(base, moi, { engagementSpv: '2014-03-03' }, midi)).rejects.toThrow(new DonneeInvalide('Une personne extérieure n’a pas de date d’engagement'));
+		expect(await avis(base)).toEqual([]);
 	});
 });
 
@@ -827,7 +930,7 @@ describe('longueurs maximales', () => {
 		const { base, agent } = await jeu();
 		const id = await ajouterPersonne(base, superAdmin, { email: 'a@exemple.fr', prenom: 'A', nom: 'B', profilId: agent.id }, aujourdhui, []);
 		const moi: Acteur = { type: 'personne', id };
-		const modif = (champs: object) => modifierMonProfil(base, moi, champs, aujourdhui);
+		const modif = (champs: object) => modifierMonProfil(base, moi, champs, midi);
 		await expect(modif({ surnom: trop(60) })).rejects.toThrow(new DonneeInvalide('Surnom trop long'));
 		await expect(modif({ telephone: trop(20) })).rejects.toThrow(new DonneeInvalide('Téléphone trop long'));
 		await expect(modif({ contactUrgence: trop(200) })).rejects.toThrow(new DonneeInvalide('Contact d’urgence trop long'));

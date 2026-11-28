@@ -1099,20 +1099,20 @@ describe('coches', () => {
 		await lireConversation(base, acteur(manon), id, {}, minute(2));
 		expect(await coche()).toBe('envoye');
 		// Claire a coupé ses coches : elle ne compte pas.
-		await modifierMonProfil(base, acteur(claire), { cochesLecture: false }, aujourdhui);
+		await modifierMonProfil(base, acteur(claire), { cochesLecture: false }, maintenant);
 		expect(await coche()).toBe('lu');
 		// Léa, arrivée après l'envoi, ne compte pas non plus.
 		await ajouterMembres(base, acteur(romain), id, [lea], minute(3));
 		await base.update(membreConversation).set({ luJusquA: 0 }).where(eq(membreConversation.personneId, lea));
 		expect(await coche()).toBe('lu');
-		await modifierMonProfil(base, acteur(claire), { cochesLecture: true }, aujourdhui);
+		await modifierMonProfil(base, acteur(claire), { cochesLecture: true }, maintenant);
 		expect(await coche()).toBe('envoye');
 		await lireConversation(base, acteur(claire), id, {}, minute(4));
 		expect(await coche()).toBe('lu');
 		// Les messages des autres et les messages système n'ont pas de coche.
 		const vue = await lireConversation(base, acteur(romain), id, {}, minute(9));
 		expect(vue.messages.filter((x) => x.id !== m.message).map((x) => x.coche)).toEqual([null, null]);
-		await modifierMonProfil(base, acteur(romain), { cochesLecture: false }, aujourdhui);
+		await modifierMonProfil(base, acteur(romain), { cochesLecture: false }, maintenant);
 		expect(await coche()).toBeNull();
 	});
 });
@@ -1120,7 +1120,7 @@ describe('coches', () => {
 describe('coches coupées chez le lecteur', () => {
 	it('un lecteur qui a coupé ses coches n’avance pas lu_le', async () => {
 		const { base, manon, romain } = await jeu();
-		await modifierMonProfil(base, acteur(romain), { cochesLecture: false }, aujourdhui);
+		await modifierMonProfil(base, acteur(romain), { cochesLecture: false }, maintenant);
 		const m1 = await envoyer(base, base.photos, acteur(manon), { personne: romain }, { texte: 'Salut' }, minute(0));
 		await lireConversation(base, acteur(romain), m1.conversation, {}, minute(1));
 		const m2 = await envoyer(base, base.photos, acteur(manon), { conversation: m1.conversation }, { texte: 'Tu es là ?' }, minute(2));
