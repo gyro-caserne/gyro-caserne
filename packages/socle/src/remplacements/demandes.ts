@@ -11,7 +11,7 @@ import type { Convocation } from '../murs.ts';
 import { convoque, equipeLe } from '../planning/annee.ts';
 import { anneePlanning, demandeRemplacement, destinataireRemplacement, manoeuvre, personne, publication, reponseEvenement } from '../schema.ts';
 import { avis } from './avis.ts';
-import { astreintesDe, disponible, disponibles, lireContexte, manque, mesTranches, periodesDe, exigerRemplacants, peutRemplacer, sansEngagement, tranchesDuJour, valideurs, type Contexte, type LigneDemande } from './contexte.ts';
+import { aCouvrir, astreintesDe, disponible, disponibles, exigerCreneau, lireContexte, manque, mesTranches, morceaux, periodesDe, exigerRemplacants, peutRemplacer, sansEngagement, tranchesDuJour, valideurs, type Contexte, type LigneDemande } from './contexte.ts';
 import { heure, texteDemande } from './tranches.ts';
 import { texteDurees } from './court.ts';
 
@@ -77,22 +77,38 @@ export async function demanderRemplacement(base: Base, acteur: Acteur, d: { peri
 	const moi = await exigerDemander(base, acteur, maintenant);
 	const ctx = await lireContexte(base, maintenant, reglage);
 	const periodes = exigerTranches(ctx, moi, d.periodes);
+	return envoyerRemplacement(base, ctx, moi, { periodes, cibleId: d.cibleId, mot: d.mot, creneau: false }, maintenant);
+}
+
+// Un remplacement sur un créneau : début et fin libres dans ses astreintes (exigerCreneau), puis le circuit de la garde entière.
+export async function demanderCreneau(base: Base, acteur: Acteur, d: { debut: string; fin: string; cibleId: number | null; mot?: string | null }, maintenant: string, reglage: Reglage): Promise<number> {
+	const moi = await exigerDemander(base, acteur, maintenant);
+	const ctx = await lireContexte(base, maintenant, reglage);
+	const creneau = exigerCreneau(ctx, moi, d);
+	return envoyerRemplacement(base, ctx, moi, { periodes: [creneau], cibleId: d.cibleId, mot: d.mot, creneau: true }, maintenant);
+}
+
+// L'envoi d'une demande de gardes ou d'un créneau : ciblée sur un collègue libre, ou ouverte à tous les disponibles.
+async function envoyerRemplacement(base: Base, ctx: Contexte, moi: number, d: { periodes: Periode[]; cibleId: number | null; mot?: string | null; creneau: boolean }, maintenant: string): Promise<number> {
+	const { periodes } = d;
 	const mot = motDe(d.mot);
+	const libres = d.creneau ? morceaux(ctx, periodes) : periodes;
+	const indisponible = new DonneeInvalide(d.creneau ? 'Collègue indisponible sur ce créneau' : 'Collègue indisponible sur ces périodes');
 	let destinataires: number[];
 	if (d.cibleId !== null) {
-		if (!Number.isInteger(d.cibleId) || d.cibleId === moi) throw new DonneeInvalide('Collègue indisponible sur ces périodes');
+		if (!Number.isInteger(d.cibleId) || d.cibleId === moi) throw indisponible;
 		exigerRemplacants(ctx, d.cibleId);
-		if (!disponible(ctx, d.cibleId, periodes)) throw new DonneeInvalide('Collègue indisponible sur ces périodes');
+		if (!disponible(ctx, d.cibleId, libres)) throw indisponible;
 		destinataires = [d.cibleId];
-	} else destinataires = disponibles(ctx, moi, periodes).map((a) => a.id);
-	const texte = `${nomDe(ctx, moi)}, ${texteDemande(periodes)}`;
+	} else destinataires = disponibles(ctx, moi, libres).map((a) => a.id);
+	const texte = `${nomDe(ctx, moi)}, ${texteDemande(periodes, d.creneau)}`;
 	const [lignes] = await base.batch([
 		base
 			.insert(demandeRemplacement)
-			.values({ genre: 'remplacement', demandeurId: moi, cibleId: d.cibleId, periodes: JSON.stringify(periodes), equipeId: equipeDe(ctx, moi, periodes[0]!), debut: periodes[0]!.debut, mot, etat: 'attente', creeLe: maintenant })
+			.values({ genre: 'remplacement', creneau: d.creneau ? 1 : null, demandeurId: moi, cibleId: d.cibleId, periodes: JSON.stringify(periodes), equipeId: equipeDe(ctx, moi, periodes[0]!), debut: periodes[0]!.debut, mot, etat: 'attente', creeLe: maintenant })
 			.returning({ id: demandeRemplacement.id }),
 		ecrireDestinataires(base, derniere, destinataires),
-		journalDemande(base, moi, 'demander_remplacement', derniere, { periodes: periodes.length, ciblee: d.cibleId !== null, destinataires: destinataires.length }, maintenant),
+		journalDemande(base, moi, d.creneau ? 'demander_creneau' : 'demander_remplacement', derniere, { periodes: periodes.length, ciblee: d.cibleId !== null, destinataires: destinataires.length }, maintenant),
 		...avis(base, destinataires, derniere, 'recue', texte, URL_POUR_MOI, maintenant)
 	]);
 	return lignes[0]!.id;
@@ -324,7 +340,7 @@ const decidee = (id: number, etat: EtatDemande, maintenant: string, par?: number
 	sql`exists (select 1 from ${demandeRemplacement} where ${demandeRemplacement.id} = ${id} and ${demandeRemplacement.etat} = ${etat} and ${demandeRemplacement.trancheeLe} = ${maintenant}${par === undefined ? sql`` : sql` and ${demandeRemplacement.trancheePar} = ${`personne:${par}`}`})`;
 
 export const texteDe = (ctx: Contexte, d: LigneDemande) =>
-	d.genre === 'echange' ? `${texteDemande(periodesDe(d.periodes))} contre ${texteDemande(periodesDe(d.periodesCible))}` : texteDemande(periodesDe(d.periodes));
+	d.genre === 'echange' ? `${texteDemande(periodesDe(d.periodes))} contre ${texteDemande(periodesDe(d.periodesCible))}` : texteDemande(periodesDe(d.periodes), d.creneau === 1);
 
 // Accepter : le collègue visé, ou un destinataire d'une demande ouverte. Une aptitude contrôlée manque : à valider par le chef.
 export async function accepterDemande(base: Base, acteur: Acteur, id: number, maintenant: string, reglage: Reglage): Promise<'conclue' | 'a_valider'> {
@@ -349,7 +365,7 @@ export async function accepterDemande(base: Base, acteur: Acteur, id: number, ma
 		manquantes = [...new Set([...manque(ctx, d.demandeurId, moi, date), ...manque(ctx, moi, d.demandeurId, periodesCible[0]!.debut.slice(0, 10))])];
 	} else {
 		if (d.genre !== 'remplacement') throw new DonneeInvalide('Demande inconnue');
-		if (!disponible(ctx, moi, periodes, id)) throw new DonneeInvalide('Vous n’êtes pas disponible sur ces périodes');
+		if (!disponible(ctx, moi, aCouvrir(ctx, d), id)) throw new DonneeInvalide('Vous n’êtes pas disponible sur ces périodes');
 		manquantes = manque(ctx, d.demandeurId, moi, date);
 	}
 	const chefs = valideurs(ctx.chefs, d.equipeId, d.demandeurId, moi);
@@ -430,7 +446,7 @@ export async function ouvrirATous(base: Base, acteur: Acteur, id: number, mainte
 	const deja = new Set(destinataires.map((x) => x.personneId));
 	// Rien n'est envoyé si la cible a accepté entre-temps.
 	const ouverteATous = sql`exists (select 1 from ${demandeRemplacement} where ${demandeRemplacement.id} = ${id} and ${demandeRemplacement.etat} = 'attente' and ${demandeRemplacement.cibleId} is null)`;
-	const nouveaux = disponibles(ctx, moi, periodesDe(d.periodes), id)
+	const nouveaux = disponibles(ctx, moi, aCouvrir(ctx, d), id)
 		.map((a) => a.id)
 		.filter((x) => !deja.has(x));
 	await base.batch([
@@ -450,7 +466,7 @@ export async function ouvrirATous(base: Base, acteur: Acteur, id: number, mainte
 // `depuis` : les états d'où la demande repart (un refus du chef : seulement « à valider », pas une validation passée avant lui).
 function rouvrir(base: Base, ctx: Contexte, d: LigneDemande, destinataires: { personneId: number; refuseLe: string | null }[], qui: number, motif: string | null, maintenant: string, depuis: EtatDemande[] = ['a_valider', 'conclue']) {
 	const ouverte = d.genre === 'remplacement' && d.cibleId === null;
-	const periodes = periodesDe(d.periodes);
+	const periodes = aCouvrir(ctx, d);
 	const encore = ouverte ? destinataires.filter((x) => x.refuseLe === null && x.personneId !== d.remplacantId && disponible(ctx, x.personneId, periodes, d.id)).map((x) => x.personneId) : [];
 	return [
 		base

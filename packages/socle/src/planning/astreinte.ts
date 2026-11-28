@@ -14,7 +14,7 @@ import { courtsCedes, requeteCourtsCedes } from '../remplacements/effectifs.ts';
 export type Astreinte = { debut: string; fin: string; equipe: EquipePlanning; enCours: boolean; mienne: boolean; periodes: Periode[]; fetes?: string[] };
 // À l'Accueil, en plus : mes plages courtes cédées du jour, pas encore finies (qui me remplace quelques heures), et la relève en cours
 // (prise de garde), aux horaires de son année.
-export type AstreinteAccueil = Astreinte & { courtsCedes: (Periode & { remplacant: string })[]; releve: string };
+export type AstreinteAccueil = Astreinte & { courtsCedes: (Periode & { remplacant: string; creneau?: true })[]; releve: string };
 
 // La fenêtre cherchée d'abord, en semaines après aujourd'hui.
 const FENETRE_SEMAINES = 8;

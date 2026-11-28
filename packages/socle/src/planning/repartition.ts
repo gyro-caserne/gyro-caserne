@@ -9,7 +9,7 @@ import { ligneJournal } from '../journal.ts';
 import { nomActeur } from '../actions/personnes.ts';
 import { STATUTS_AVEC_ACCES } from '../listes.ts';
 import { effectifs, requeteConclues } from '../remplacements/effectifs.ts';
-import { chevauche, jourEnLettres, texteTranche, tranchesDe } from '../remplacements/tranches.ts';
+import { chevauche, jourEnLettres, texteCreneau, texteTranche, tranchesDe } from '../remplacements/tranches.ts';
 import { affectationEquipe, anneePlanning, aptitude, aptitudeAgent, avisEte, equipe, ete, personne, plageEte, reponseEte, semaineChangee, vacancesAgent } from '../schema.ts';
 import { equipeLe, exigerAnnee, semainesCalculees } from './annee.ts';
 import { dansLaSemaine, enVacances, heuresDe, lirePlage, type PlageLue } from './plages.ts';
@@ -209,12 +209,13 @@ export async function eteAPreparer(base: Base, acteur: Acteur, annee: number, ma
 	const conflits: string[] = [];
 	if (proposee) {
 		for (const r of effectifs(lu.conclues)) {
+			const quand = r.creneau ? texteCreneau(r) : texteTranche(r);
 			const s = lu.semaines.find((x) => x.periodes.some((y) => y.debut <= r.debut && r.debut < y.fin));
 			if (!s) continue;
 			const ecarts = lu.plages.filter((x) => dansLaSemaine(s, x));
 			const heures = heuresDe(s, equipeLe(lu.affectationsDe(r.titulaireId), s.debut), r.titulaireId, ecarts);
-			if (!heures.some((h) => chevauche(h, r))) conflits.push(`${texteTranche(r)} : ${r.titulaire} est remplacé par ${r.remplacant}, mais n’est plus d’astreinte`);
-			else if (enVacances(lu.vacances, r.remplacantId, r)) conflits.push(`${texteTranche(r)} : ${r.remplacant} remplace ${r.titulaire}, mais est en vacances`);
+			if (!heures.some((h) => chevauche(h, r))) conflits.push(`${quand} : ${r.titulaire} est remplacé par ${r.remplacant}, mais n’est plus d’astreinte`);
+			else if (enVacances(lu.vacances, r.remplacantId, r)) conflits.push(`${quand} : ${r.remplacant} remplace ${r.titulaire}, mais est en vacances`);
 		}
 	}
 	// Un agent en vacances qui se retrouve présent (équipe changée, vacances données après la proposition).

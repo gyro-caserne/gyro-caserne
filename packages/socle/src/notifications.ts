@@ -288,7 +288,7 @@ const avisDe = (base: Base, moi: number) =>
 // Les avis de remplacement reçus par la personne, les plus récents d'abord.
 const avisRemplacementsDe = (base: Base, moi: number) =>
 	base
-		.select({ id: avisRemplacement.id, demandeId: avisRemplacement.demandeId, quoi: avisRemplacement.quoi, creeLe: avisRemplacement.creeLe, lueLe: avisRemplacement.lueLe, genre: demandeRemplacement.genre, periodes: demandeRemplacement.periodes, etat: demandeRemplacement.etat, remplacantId: demandeRemplacement.remplacantId, prenom: personne.prenom, nom: personne.nom })
+		.select({ id: avisRemplacement.id, demandeId: avisRemplacement.demandeId, quoi: avisRemplacement.quoi, creeLe: avisRemplacement.creeLe, lueLe: avisRemplacement.lueLe, genre: demandeRemplacement.genre, periodes: demandeRemplacement.periodes, creneau: demandeRemplacement.creneau, etat: demandeRemplacement.etat, remplacantId: demandeRemplacement.remplacantId, prenom: personne.prenom, nom: personne.nom })
 		.from(avisRemplacement)
 		.innerJoin(demandeRemplacement, eq(demandeRemplacement.id, avisRemplacement.demandeId))
 		.innerJoin(personne, eq(personne.id, demandeRemplacement.demandeurId))
@@ -372,7 +372,7 @@ export async function filDeNotifications(base: Base, acteur: Acteur, maintenant:
 			demandeId: a.demandeId,
 			quoi: a.quoi,
 			titre: TITRES_AVIS[a.quoi],
-			texte: `${a.prenom} ${a.nom}, ${a.genre === 'manoeuvre' ? 'échange de manœuvre' : texteDemande(JSON.parse(a.periodes))}`,
+			texte: `${a.prenom} ${a.nom}, ${a.genre === 'manoeuvre' ? 'échange de manœuvre' : texteDemande(JSON.parse(a.periodes), a.creneau === 1)}`,
 			issue,
 			creeLe: a.creeLe,
 			lue: a.lueLe !== null || issue !== null

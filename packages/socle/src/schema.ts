@@ -689,7 +689,9 @@ export const demandeRemplacement = sqliteTable(
 		motif: text('motif'),
 		relanceLe: text('relance_le'),
 		// 1 : remplacement court, de 2 ou 3 h dans l'astreinte du jour (décision 0039). Vide sinon.
-		court: integer('court')
+		court: integer('court'),
+		// 1 : remplacement sur un créneau, début et fin libres dans ses astreintes (décision 0050). Vide sinon.
+		creneau: integer('creneau')
 	},
 	(t) => [
 		check('demande_remplacement_genre', checkDans('genre', GENRES_DEMANDE)),
