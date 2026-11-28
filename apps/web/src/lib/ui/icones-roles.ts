@@ -67,6 +67,8 @@ export const DESSINS = {
 	sonCoupe: 'M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z M16 9.5l5 5 M21 9.5l-5 5',
 	photo: 'M4 8h3.5l2-3h5l2 3H20v11H4z M12 16.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
 	horloge: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18 M12 7v5l3 2',
+	// Un calendrier et ses aiguilles : le créneau de « Me faire remplacer ».
+	creneau: 'M4 6h16v14H4z M4 10h16 M8 3v5 M16 3v5 M12 12.5v3l2 1.5',
 	// Les flèches d'échange de « Me faire remplacer ».
 	remplacer: 'M7 7h11l-3-3 M17 17H6l3 3'
 } as const;

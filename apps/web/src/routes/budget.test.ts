@@ -44,6 +44,7 @@ import { load as demandeRemplacementPage } from './remplacements/[id]/+page.serv
 import { actions as actionsDemander, load as pageDemander } from './remplacements/demander/+page.server';
 import { load as pageEchangeManoeuvre } from './remplacements/manoeuvre/+page.server';
 import { load as pageCourt } from './remplacements/court/+page.server';
+import { actions as actionsCreneau, load as pageCreneau } from './remplacements/creneau/+page.server';
 import { load as reglagesAptitudes } from './reglages/aptitudes/+page.server';
 import { load as eteDeLAnnee } from './planning/ete/+layout.server';
 import { actions as actionsEte, load as pageEte } from './planning/ete/+page.server';
@@ -868,12 +869,23 @@ describe('budget de requêtes, chef de centre avec 150 agents', () => {
 			await expect((actionsDemander as any).default({ locals: deLAgent, request: new Request('http://x', { method: 'POST', body: new URLSearchParams([['periode', `${nuit.debut}|${nuit.fin}`], ['pour', 'tous']]) }) })).rejects.toMatchObject({ status: 303 });
 		});
 		expect(demander, 'demander').toBeLessThanOrEqual(BUDGET);
+		// Un créneau de 2 h dans une autre nuit, une heure après son début.
+		const autre = (await pourDemander(base, deLAgent.acteur, maintenantParis(), centre.astreinte)).semaines.flatMap((s) => s.tranches).filter((t) => t.etat === 'libre')[1]!;
+		const decale = (m: string, h: number) => new Date(Date.parse(`${m}:00Z`) + h * 3_600_000).toISOString().slice(0, 16);
+		const creneau = new URLSearchParams([['debut', decale(autre.debut, 1)], ['fin', decale(autre.debut, 3)]]);
+		const envoyerCreneau = await compter(async () => {
+			await expect((actionsCreneau as any).default({ locals: deLAgent, request: new Request('http://x', { method: 'POST', body: new URLSearchParams([...creneau, ['pour', 'tous']]) }) })).rejects.toMatchObject({ status: 303 });
+		});
+		expect(envoyerCreneau, 'demander un créneau').toBeLessThanOrEqual(BUDGET);
 		for (const [nom, page, l, url] of [
 			['demander, le choix', pageDemander, deLAgent, '/remplacements/demander'],
 			['demander, des gardes', pageDemander, deLAgent, '/remplacements/demander?gardes'],
 			['demander, à qui ?', pageDemander, deLAgent, `/remplacements/demander?p=${encodeURIComponent(`${nuit.debut}|${nuit.fin}`)}&etape=qui`],
 			['manoeuvre', pageEchangeManoeuvre, deLAgent, '/remplacements/manoeuvre'],
 			['quelques heures', pageCourt, deLAgent, '/remplacements/court'],
+			['un créneau', pageCreneau, deLAgent, '/remplacements/creneau'],
+			['un créneau, à qui ?', pageCreneau, deLAgent, `/remplacements/creneau?${creneau}&etape=qui`],
+			['un créneau, vérifier', pageCreneau, deLAgent, `/remplacements/creneau?${creneau}&pour=tous&etape=verifier`],
 			['liste', remplacements, locals, '/remplacements'],
 			['aptitudes', reglagesAptitudes, locals, '/reglages/aptitudes']
 		] as const) {

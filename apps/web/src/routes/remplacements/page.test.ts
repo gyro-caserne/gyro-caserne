@@ -10,6 +10,7 @@ const demande = (v: Partial<VueDemande> = {}): VueDemande => ({
 	id: 7,
 	genre: 'remplacement',
 	court: false,
+	creneau: false,
 	etat: 'attente',
 	demandeur: { id: 1, prenom: 'Alice', nom: 'Test' },
 	cible: null,

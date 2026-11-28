@@ -1,5 +1,5 @@
 import { formatDeDate } from '@gyro-caserne/socle/dates';
-import { dePlage, texteTranche, type Astreinte } from '@gyro-caserne/socle';
+import { dePlage, texteCreneau, texteTranche, type Astreinte } from '@gyro-caserne/socle';
 import { heure } from '../murs/quand.ts';
 
 // Les dates du planning sont à l'heure de Paris, lues telles quelles.
@@ -44,12 +44,12 @@ export function phraseAstreinte(a: Astreinte, maintenant: string): { titre: stri
 	return { titre, quand, plage: suivante ? `Prochaine plage : ${quandRelatif(suivante.debut, m)} – ${finPlage}` : null, jours };
 }
 
-// Sur la plaque : qui me remplace quelques heures (3 h au plus) dans cette astreinte, tant que ce n'est pas fini.
+// Sur la plaque : qui me remplace quelques heures (3 h au plus, ou sur un créneau, quelle que soit sa durée) dans cette astreinte, tant que ce n'est pas fini.
 // « Marc Petit de 20 h à 22 h » aujourd'hui, avec le jour sinon. Lu dans les remplacements du planning, sans lecture de plus.
-export function remplacantsCourts(a: { debut: string; fin: string }, remplacements: { debut: string; fin: string; remplacant: string; moi: 'cede' | 'prend' | null }[], maintenant: string): string[] {
+export function remplacantsCourts(a: { debut: string; fin: string }, remplacements: { debut: string; fin: string; remplacant: string; moi: 'cede' | 'prend' | null; creneau?: boolean }[], maintenant: string): string[] {
 	const heures = (r: { debut: string; fin: string }) => (Date.parse(`${r.fin}:00Z`) - Date.parse(`${r.debut}:00Z`)) / 3_600_000;
 	return remplacements
-		.filter((r) => r.moi === 'cede' && heures(r) <= 3 && r.fin > maintenant && a.debut <= r.debut && r.debut < a.fin)
+		.filter((r) => r.moi === 'cede' && (r.creneau || heures(r) <= 3) && r.fin > maintenant && a.debut <= r.debut && r.debut < a.fin)
 		.sort((x, y) => x.debut.localeCompare(y.debut))
-		.map((r) => `${r.remplacant} ${r.debut.slice(0, 10) === maintenant.slice(0, 10) ? dePlage(r) : texteTranche(r)}`);
+		.map((r) => `${r.remplacant} ${r.debut.slice(0, 10) === maintenant.slice(0, 10) ? dePlage(r) : r.creneau ? texteCreneau(r) : texteTranche(r)}`);
 }

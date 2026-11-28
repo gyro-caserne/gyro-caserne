@@ -15,7 +15,8 @@
 		recherche,
 		etape,
 		tous = null,
-		legende
+		legende,
+		sur = 'ces périodes'
 	}: {
 		collegues: Collegue[];
 		name: string;
@@ -24,6 +25,8 @@
 		etape: string;
 		tous?: number | null;
 		legende: string;
+		// Ce que les collègues prendraient : « ces périodes », « ce créneau ».
+		sur?: string;
 	} = $props();
 
 	// svelte-ignore state_referenced_locally
@@ -45,12 +48,12 @@
 			<input type="radio" {name} value="tous" checked={coche === 'tous'} onchange={() => (coche = 'tous')} />
 			<span class="corps">
 				<span class="titre">Tout le monde</span>
-				<span class="sous">{tous > 0 ? `${pluriel(tous, 'collègue disponible prévenu', 'collègues disponibles prévenus')} en même temps. Le premier qui accepte vous remplace.` : 'Aucun collègue n’est libre sur ces périodes pour l’instant.'}</span>
+				<span class="sous">{tous > 0 ? `${pluriel(tous, 'collègue disponible prévenu', 'collègues disponibles prévenus')} en même temps. Le premier qui accepte vous remplace.` : `Aucun collègue n’est libre sur ${sur} pour l’instant.`}</span>
 			</span>
 		</label>
 		<p class="ou">Ou un collègue précis</p>
 	{/if}
-	<p class="aide" id="{name}-aide">Seuls les collègues libres sur ces périodes sont proposés.</p>
+	<p class="aide" id="{name}-aide">Seuls les collègues libres sur {sur} sont proposés.</p>
 	{#if collegues.length > 0}
 		<div class="recherche">
 			<label for="{name}-q" class="masque">Chercher un collègue</label>
@@ -74,7 +77,7 @@
 				</label>
 			</li>
 		{:else}
-			<li class="vide">{collegues.length === 0 ? 'Personne n’est libre sur ces périodes pour l’instant.' : 'Aucun collègue libre à ce nom.'}</li>
+			<li class="vide">{collegues.length === 0 ? `Personne n’est libre sur ${sur} pour l’instant.` : 'Aucun collègue libre à ce nom.'}</li>
 		{/each}
 	</ul>
 </fieldset>

@@ -28,6 +28,7 @@ const demande = (v: Partial<VueDemande> = {}) =>
 		fin: '2026-11-10T06:00',
 		ouverte: true,
 		court: false,
+		creneau: false,
 		moi: 'demandeur',
 		manquePourMoi: [],
 		gestes,
